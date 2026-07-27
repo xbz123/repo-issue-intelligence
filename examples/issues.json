@@ -1,0 +1,20 @@
+[
+  {
+    "number": 184,
+    "title": "Expired refresh token returns HTTP 500",
+    "body": "Steps to reproduce: create an expired JWT refresh token and POST it to /auth/refresh. The latest release returns HTTP 500 instead of HTTP 401. This affects production and no workaround is available. Stack trace includes ExpiredSignatureError.",
+    "labels": ["bug", "authentication", "regression"],
+    "comments_count": 12,
+    "created_at": "2026-07-20T10:00:00Z",
+    "updated_at": "2026-07-26T15:00:00Z"
+  },
+  {
+    "number": 191,
+    "title": "Refresh endpoint crashes on expired JWT",
+    "body": "Minimal reproduction available. Calling /auth/refresh with an expired token raises ExpiredSignatureError and produces a 500 response.",
+    "labels": ["bug", "authentication"],
+    "comments_count": 4,
+    "created_at": "2026-07-23T08:00:00Z",
+    "updated_at": "2026-07-25T09:30:00Z"
+  }
+]
