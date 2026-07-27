@@ -32,7 +32,7 @@ Requirements: Python 3.11+ and uv.
 ```bash
 git clone https://github.com/xbz123/repo-issue-intelligence.git
 cd repo-issue-intelligence
-uv sync --extra dev
+uv sync --frozen --extra dev
 uv run pytest -q
 ```
 
@@ -49,7 +49,7 @@ uv run rii investigate-issue examples/issues.json --issue 184 --repo . --output 
 
 ```bash
 cp .env.example .env
-# Set GITHUB_TOKEN in .env
+# Set GITHUB_TOKEN in .env; the CLI loads this file automatically.
 uv run rii sync owner/repository --limit 100 --output data/issues.json
 uv run rii rank data/issues.json --output data/ranked.json
 uv run rii investigate-issue data/issues.json --issue 123 --repo /path/to/clone --output reports/issue-123.json

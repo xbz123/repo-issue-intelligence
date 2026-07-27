@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
+from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
@@ -29,7 +30,7 @@ def _load(path: Path) -> list[IssueRecord]:
 @app.command()
 def sync(repository: str, output: Path = Path("data/issues.json"), limit: int = 100) -> None:
     """Synchronize open issues from a GitHub repository."""
-    client = GitHubClient(os.getenv("GITHUB_TOKEN"))
+    client = GitHubClient(Settings().github_token)
     try:
         issues = client.fetch_open_issues(repository, limit)
     finally:
@@ -81,8 +82,8 @@ def index(repository_path: Path, output: Path = Path("data/repository-map.json")
 @app.command("investigate-issue")
 def investigate_issue(
     issues_file: Path,
-    issue: int,
-    repo: Path,
+    issue: Annotated[int, typer.Option("--issue", help="Issue number to investigate.")],
+    repo: Annotated[Path, typer.Option("--repo", help="Repository path to inspect.")],
     output: Path = Path("reports/investigation.json"),
 ) -> None:
     """Generate evidence-backed candidate locations and a reproduction plan."""

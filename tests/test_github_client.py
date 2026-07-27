@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import httpx
+import pytest
 
 from repo_issue_intelligence.github_client import GitHubClient
 
@@ -41,11 +42,11 @@ def test_pagination_uses_stable_page_size_and_filters_pull_requests() -> None:
             return httpx.Response(200, json=[payload_item(101)])
         return httpx.Response(200, json=[])
 
-    client = GitHubClient(token=None)
-    client.client.close()
-    client.client = httpx.Client(
-        base_url="https://api.github.test",
+    client = GitHubClient(
+        token=None,
+        api_url="https://api.github.test",
         transport=httpx.MockTransport(handler),
+        trust_env=False,
     )
     try:
         issues = client.fetch_open_issues("example/project", limit=2)
@@ -56,14 +57,30 @@ def test_pagination_uses_stable_page_size_and_filters_pull_requests() -> None:
     assert [request.url.params["page"] for request in requests] == ["1", "2"]
 
 
-def test_rejects_invalid_repository_name() -> None:
-    client = GitHubClient(token=None)
+@pytest.mark.parametrize(
+    "repository",
+    [
+        "invalid",
+        "/project",
+        "owner/",
+        "owner/project/extra",
+        "owner name/project",
+        "owner/project name",
+    ],
+)
+def test_rejects_invalid_repository_name(repository: str) -> None:
+    client = GitHubClient(token=None, trust_env=False)
     try:
-        try:
-            client.fetch_open_issues("invalid", limit=1)
-        except ValueError as error:
-            assert "owner/name" in str(error)
-        else:
-            raise AssertionError("Expected ValueError")
+        with pytest.raises(ValueError, match="owner/name"):
+            client.fetch_open_issues(repository, limit=1)
+    finally:
+        client.close()
+
+
+def test_rejects_non_positive_limit() -> None:
+    client = GitHubClient(token=None, trust_env=False)
+    try:
+        with pytest.raises(ValueError, match="at least 1"):
+            client.fetch_open_issues("owner/project", limit=0)
     finally:
         client.close()

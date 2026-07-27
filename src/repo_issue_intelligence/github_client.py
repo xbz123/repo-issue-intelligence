@@ -1,14 +1,24 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 import httpx
 
 from .models import IssueRecord
 
+REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9_.-]+")
+
 
 class GitHubClient:
-    def __init__(self, token: str | None, api_url: str = "https://api.github.com") -> None:
+    def __init__(
+        self,
+        token: str | None,
+        api_url: str = "https://api.github.com",
+        *,
+        transport: httpx.BaseTransport | None = None,
+        trust_env: bool = True,
+    ) -> None:
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -20,21 +30,20 @@ class GitHubClient:
             base_url=api_url.rstrip("/"),
             headers=headers,
             timeout=30.0,
+            transport=transport,
+            trust_env=trust_env,
         )
 
     def close(self) -> None:
         self.client.close()
 
     def fetch_open_issues(self, repository: str, limit: int = 100) -> list[IssueRecord]:
-        if "/" not in repository:
+        if REPOSITORY_PATTERN.fullmatch(repository) is None:
             raise ValueError("repository must use the owner/name format")
         if limit < 1:
             raise ValueError("limit must be at least 1")
 
         owner, repo = repository.split("/", maxsplit=1)
-        if not owner or not repo:
-            raise ValueError("repository must use the owner/name format")
-
         collected: list[IssueRecord] = []
         page = 1
         per_page = 100
