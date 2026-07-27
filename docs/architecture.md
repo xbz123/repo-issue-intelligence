@@ -31,29 +31,45 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 `investigator.py` ranks candidate files and symbols using explicit evidence signals. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
-### Interfaces
+### Agent runtime
 
-- Typer CLI for synchronization, ranking, duplicate detection, indexing, investigation, and API startup.
-- FastAPI endpoints for health checks, issue scoring, issue ranking, and repository indexing.
-
-## Current boundaries
-
-The MVP is deterministic and does not yet include LangGraph, LLM calls, persistent Agent state, tool-call tracing, or a benchmark against historical fix PRs. These are subsequent milestones and must not be claimed as completed functionality.
-
-## Planned Agent workflow
+`agent_workflow.py` compiles a LangGraph `StateGraph` with five deterministic nodes:
 
 ```text
-sync_issues
-  -> normalize_issue
-  -> detect_duplicates
-  -> score_priority
+rank_issues
   -> route_top_k
   -> build_repository_map
-  -> locate_candidates
-  -> inspect_git_and_tests
-  -> generate_hypotheses
-  -> build_reproduction_plan
+  -> investigate_issues
   -> human_review
 ```
 
-Each future node should persist inputs, outputs, evidence, confidence, errors, retries, latency, and the next transition. The human review node remains mandatory before any future execution step.
+Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
+
+`agent_store.py` persists three SQLite records:
+
+- the current `AgentRun`;
+- append-only node traces;
+- a state snapshot after every completed node and after a terminal node failure.
+
+The persisted snapshots make intermediate state inspectable. Automatic process-resume from a snapshot is not implemented in this version.
+
+### Interfaces
+
+- Typer CLI for synchronization, ranking, indexing, investigation, Agent runs, human review, and API startup.
+- FastAPI endpoints for issue analysis, repository indexing, Agent run creation/query, and review.
+
+## Current boundaries
+
+The MVP uses LangGraph and persistent Agent state, but remains synchronous and deterministic. It does not yet include LLM calls, background workers, automatic snapshot resume, generated-command execution, or a benchmark against historical fix PRs. These capabilities must not be claimed as completed functionality.
+
+## Next workflow extensions
+
+```text
+current human_review
+  -> stack_trace_and_content_evidence
+  -> inspect_git_and_tests
+  -> optional_llm_reranking
+  -> benchmark
+```
+
+The human review node remains mandatory before any future execution step.

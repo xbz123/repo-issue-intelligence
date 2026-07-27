@@ -1,0 +1,125 @@
+from datetime import UTC, datetime
+from pathlib import Path
+from uuid import UUID
+
+import pytest
+
+from repo_issue_intelligence.agent_store import AgentStore
+from repo_issue_intelligence.agent_workflow import run_agent
+from repo_issue_intelligence.models import (
+    AgentRunStatus,
+    IssueRecord,
+    ReviewDecision,
+)
+
+
+def issue(number: int, title: str, body: str) -> IssueRecord:
+    timestamp = datetime(2026, 7, 27, tzinfo=UTC)
+    return IssueRecord(
+        number=number,
+        title=title,
+        body=body,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+
+
+def create_repository(root: Path) -> Path:
+    repository = root / "repository"
+    repository.mkdir()
+    (repository / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
+    (repository / "data_store.py").write_text(
+        'def persist_data():\n    """Persist user data safely."""\n',
+        encoding="utf-8",
+    )
+    return repository
+
+
+def test_agent_run_persists_state_traces_snapshots_and_review(tmp_path: Path) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    issues = [
+        issue(
+            1,
+            "Data loss in persistence layer",
+            "Data loss is reproducible with steps to reproduce and a stack trace.",
+        ),
+        issue(2, "Improve documentation", "Add more examples to the setup guide."),
+    ]
+
+    run = run_agent(issues, repository, top_k=1, store=store)
+
+    assert run.status is AgentRunStatus.AWAITING_REVIEW
+    assert run.selected_issue_numbers == [1]
+    assert len(run.investigations) == 1
+    assert [trace.node_name for trace in run.traces] == [
+        "rank_issues",
+        "route_top_k",
+        "build_repository_map",
+        "investigate_issues",
+        "human_review",
+    ]
+    assert all(trace.status == "completed" for trace in run.traces)
+    assert len(store.list_snapshots(run.run_id)) == 5
+    assert store.get_run(run.run_id) == run
+
+    reviewed = store.review(run.run_id, ReviewDecision.APPROVED, "Evidence looks reasonable")
+
+    assert reviewed.status is AgentRunStatus.APPROVED
+    assert reviewed.review_notes == "Evidence looks reasonable"
+
+
+def test_agent_node_retries_once_before_succeeding(tmp_path: Path, monkeypatch) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    issues = [issue(1, "Data persistence failure", "Steps to reproduce data failure")]
+
+    from repo_issue_intelligence import agent_workflow
+
+    original = agent_workflow.build_repository_map
+    attempts = 0
+
+    def flaky_build(path: Path):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise OSError("temporary index failure")
+        return original(path)
+
+    monkeypatch.setattr(agent_workflow, "build_repository_map", flaky_build)
+
+    run = run_agent(issues, repository, top_k=1, store=store)
+    build_traces = [trace for trace in run.traces if trace.node_name == "build_repository_map"]
+
+    assert [(trace.status, trace.attempt) for trace in build_traces] == [
+        ("failed", 1),
+        ("completed", 2),
+    ]
+
+
+def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypatch) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    issues = [issue(1, "Data persistence failure", "Steps to reproduce data failure")]
+    run_id = "c9f6baed-c09b-4d34-b3e2-d5a8073c1f67"
+
+    from repo_issue_intelligence import agent_workflow
+
+    monkeypatch.setattr(agent_workflow, "uuid4", lambda: UUID(run_id))
+
+    def broken_build(path: Path):
+        raise OSError(f"cannot index {path.name}")
+
+    monkeypatch.setattr(agent_workflow, "build_repository_map", broken_build)
+
+    with pytest.raises(OSError, match="cannot index repository"):
+        run_agent(issues, repository, top_k=1, store=store)
+
+    failed_run = store.get_run(run_id)
+    assert failed_run is not None
+    assert failed_run.status is AgentRunStatus.FAILED
+    assert failed_run.error == "OSError: cannot index repository"
+    assert [(trace.node_name, trace.status, trace.attempt) for trace in failed_run.traces[-2:]] == [
+        ("build_repository_map", "failed", 1),
+        ("build_repository_map", "failed", 2),
+    ]

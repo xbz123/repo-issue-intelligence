@@ -13,6 +13,9 @@ from .models import (
 )
 
 GENERIC_TERMS = {
+    "and",
+    "are",
+    "for",
     "issue",
     "error",
     "fails",
@@ -21,6 +24,7 @@ GENERIC_TERMS = {
     "when",
     "with",
     "from",
+    "the",
     "this",
     "that",
     "have",

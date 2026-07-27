@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions.
 
 ## What it does
 
@@ -13,6 +13,9 @@ The project is an initial, runnable MVP. It does not require an LLM API to produ
 - Builds a cacheable repository map with languages, runtime files, entrypoints, imports, classes, functions, tests, and detected frameworks.
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
+- Uses LangGraph to route Top-K issues through a repository investigation workflow.
+- Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
+- Stops at a queryable human review state with explicit approve/reject actions.
 - Exposes both a Typer CLI and FastAPI endpoints.
 
 ## Why two stages
@@ -41,9 +44,30 @@ Run the included offline demo:
 ```bash
 uv run rii rank examples/issues.json --output data/ranked.json
 uv run rii duplicates examples/issues.json --threshold 0.35
-uv run rii index . --output data/repository-map.json
-uv run rii investigate-issue examples/issues.json --issue 184 --repo . --output reports/issue-184.json
+uv run rii index examples/demo_repository --output data/repository-map.json
+uv run rii investigate-issue examples/issues.json \
+  --issue 184 \
+  --repo examples/demo_repository \
+  --output reports/issue-184.json
 ```
+
+Run the Agent workflow up to human review:
+
+```bash
+uv run rii agent-run examples/issues.json \
+  --repo examples/demo_repository \
+  --top-k 1 \
+  --database data/agent-runs.sqlite3 \
+  --output reports/agent-run.json
+
+uv run rii agent-show <run-id> --database data/agent-runs.sqlite3
+uv run rii agent-review <run-id> \
+  --decision approved \
+  --notes "Evidence reviewed" \
+  --database data/agent-runs.sqlite3
+```
+
+The workflow is synchronous in this version. Approval records a decision but does not execute the generated reproduction plan.
 
 ## Analyze a real GitHub repository
 
@@ -69,6 +93,9 @@ Core endpoints:
 - `POST /v1/issues/score`
 - `POST /v1/issues/rank`
 - `POST /v1/repository/index`
+- `POST /v1/agent/runs`
+- `GET /v1/agent/runs/{run_id}`
+- `POST /v1/agent/runs/{run_id}/review`
 
 ## Priority model
 
@@ -96,6 +123,8 @@ Every result includes factor values and human-readable reasons.
 
 ```text
 src/repo_issue_intelligence/
+  agent_store.py         SQLite run, trace, and snapshot persistence
+  agent_workflow.py      LangGraph Top-K investigation workflow
   api.py                 FastAPI service
   cli.py                 command-line interface
   duplicates.py          issue similarity and duplicate candidates
@@ -123,7 +152,7 @@ Use closed issues with linked fix PRs as ground truth:
 
 ## Safety and scope
 
-The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. Investigation ends at a human review gate.
+The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. The Agent is deterministic and does not yet call an LLM. Investigation ends at a human review gate.
 
 ## License
 

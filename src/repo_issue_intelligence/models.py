@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -129,3 +130,43 @@ class InvestigationReport(BaseModel):
     hypotheses: list[Hypothesis]
     reproduction_plan: ReproductionPlan
     repository_root: Path
+
+
+class AgentRunStatus(StrEnum):
+    RUNNING = "running"
+    AWAITING_REVIEW = "awaiting_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    FAILED = "failed"
+
+
+class ReviewDecision(StrEnum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class NodeTrace(BaseModel):
+    node_name: str
+    status: str
+    attempt: int
+    started_at: datetime
+    finished_at: datetime
+    elapsed_ms: float
+    input_summary: dict[str, Any] = Field(default_factory=dict)
+    output_summary: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
+
+
+class AgentRun(BaseModel):
+    run_id: str
+    status: AgentRunStatus
+    repository_root: Path
+    top_k: int
+    created_at: datetime
+    updated_at: datetime
+    ranked_issues: list[PriorityResult] = Field(default_factory=list)
+    selected_issue_numbers: list[int] = Field(default_factory=list)
+    investigations: list[InvestigationReport] = Field(default_factory=list)
+    traces: list[NodeTrace] = Field(default_factory=list)
+    review_notes: str | None = None
+    error: str | None = None

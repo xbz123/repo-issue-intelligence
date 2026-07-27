@@ -8,11 +8,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .agent_store import AgentStore
+from .agent_workflow import run_agent
 from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
-from .models import IssueRecord
+from .models import IssueRecord, ReviewDecision
 from .repository_index import build_repository_map, save_repository_map
 from .service import rank_issues
 
@@ -94,6 +96,76 @@ def investigate_issue(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(report.model_dump_json(indent=2), encoding="utf-8")
     console.print(f"Saved investigation report to {output}")
+
+
+@app.command("agent-run")
+def agent_run_command(
+    issues_file: Path,
+    repo: Annotated[Path, typer.Option("--repo", help="Repository path to inspect.")],
+    top_k: Annotated[
+        int,
+        typer.Option("--top-k", min=1, help="Number of ranked issues to investigate."),
+    ] = 1,
+    database: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database for Agent run state."),
+    ] = None,
+    output: Path = Path("reports/agent-run.json"),
+) -> None:
+    """Run the synchronous LangGraph workflow up to human review."""
+    database = database or Settings().agent_db_path
+    try:
+        run = run_agent(_load(issues_file), repo, top_k, AgentStore(database))
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
+    console.print(
+        f"Run {run.run_id} is {run.status}; "
+        f"selected issue(s): {', '.join(f'#{number}' for number in run.selected_issue_numbers)}"
+    )
+    console.print(f"Saved Agent run to {output}")
+
+
+@app.command("agent-show")
+def agent_show_command(
+    run_id: str,
+    database: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database for Agent run state."),
+    ] = None,
+) -> None:
+    """Show a persisted Agent run."""
+    database = database or Settings().agent_db_path
+    run = AgentStore(database).get_run(run_id)
+    if run is None:
+        raise typer.BadParameter(f"Run {run_id} was not found")
+    console.print_json(run.model_dump_json())
+
+
+@app.command("agent-review")
+def agent_review_command(
+    run_id: str,
+    decision: Annotated[
+        ReviewDecision,
+        typer.Option("--decision", help="Approve or reject the generated investigation."),
+    ],
+    notes: Annotated[str | None, typer.Option("--notes", help="Optional review notes.")] = None,
+    database: Annotated[
+        Path | None,
+        typer.Option("--database", help="SQLite database for Agent run state."),
+    ] = None,
+) -> None:
+    """Record the human review decision without executing generated commands."""
+    database = database or Settings().agent_db_path
+    store = AgentStore(database)
+    try:
+        run = store.review(run_id, decision, notes)
+    except KeyError as error:
+        raise typer.BadParameter(f"Run {run_id} was not found") from error
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    console.print(f"Run {run.run_id} is now {run.status}")
 
 
 @app.command()
