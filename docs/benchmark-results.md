@@ -1,6 +1,42 @@
 # Real-Project File Localization Benchmark
 
-## Current result: Retrieval v2
+## Current result: 20-case expansion
+
+On 2026-07-30, the deterministic runner completed all 20 frozen Issue/Fix-PR cases across
+Starlette, Typer, Textual, AnyIO, FastAPI, pytest, and Rich.
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 20/20 | 0.2750 | 0.5917 | 0.8750 | 0.9250 | 0.4925 | 1,085 ms |
+| Main | 7/7 | 0.4286 | 0.6429 | 1.0000 | 1.0000 | 0.6036 | 1,053 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 0.8750 | 0.3817 | 619 ms |
+| Generalization | 9/9 | 0.2222 | 0.5370 | 0.8889 | 0.8889 | 0.4552 | 1,317 ms |
+
+The expansion added 11 manually reviewed cases to the historical nine: three AnyIO, three
+FastAPI, three pytest, and two Rich cases. Every case has a frozen public Issue snapshot, linked
+fix PR, reviewed production-file labels, and a pre-fix SHA. The discovery pipeline rejected
+blocking failures automatically but never auto-accepted ground truth; the committed selection
+file records the manual acceptance notes.
+
+The expanded suite exposed harder retrieval behavior that the 9-case aggregate hid. FastAPI's
+PEP 695 and JSON-form cases first appear at ranks 8 and 10, pytest's fixture-ordering case at rank
+9, AnyIO's Trio task-name case at rank 9, and Rich's ANSI case at rank 13. One of two expected
+files in the AnyIO free-threading case and one of two Rich JSON files remain outside the Top-20
+pool. These misses motivate graph and test-to-source evidence rather than prompt-only tuning.
+
+The machine-readable artifacts are:
+
+- `benchmarks/cases.json` — current manifest version 3;
+- `benchmarks/cases-v0.3.json` — preserved 9-case manifest version 2;
+- `benchmarks/expansion-v0.4-selection.json` — explicit manual selections;
+- `benchmarks/candidates-v0.4.json` — accepted candidate audit records;
+- `benchmarks/results/deterministic-v0.4-20-cases.json` — current deterministic output.
+
+The 20-case Hybrid run has not yet been recorded. Historical model results below remain useful for
+integration and model-size decisions, but they must not be presented as LLM results on the
+expanded dataset.
+
+## Historical 9-case result: Retrieval v2
 
 Retrieval v2 was evaluated on 2026-07-30 without changing the nine frozen cases or their expected
 fix files.
@@ -51,7 +87,7 @@ requests averaged 589 ms and consumed 21,980 input tokens plus 1,237 output toke
 Analysis time starts inside `evaluate_case`, after repository preparation, and excludes clone,
 fetch, checkout, and the configured 30-second inter-case quota delay.
 
-## Dataset and protocol
+## Historical 9-case dataset and protocol
 
 The projects have distinct roles:
 
@@ -81,10 +117,10 @@ file exists, and indexes only paths returned by `git ls-files`. Pull-request tes
 files are not treated as required source-file labels.
 
 File Recall@K is the macro-average fraction of each case's expected source files present in the
-first K candidates. MRR uses the rank of the first expected source file. The manifest and raw
-outputs are:
+first K candidates. MRR uses the rank of the first expected source file. The preserved manifest
+and raw outputs are:
 
-- `benchmarks/cases.json`
+- `benchmarks/cases-v0.3.json`
 - `benchmarks/results/deterministic-v1.json`
 - `benchmarks/results/hybrid-v1.json`
 
@@ -126,16 +162,14 @@ hypothesis-format failure from being counted as a file-localization failure.
 
 ## Limitations and next experiment
 
-Nine cases are too few for a strong general quality claim. The Hybrid path only reranks evidence
-that deterministic retrieval already found. It cannot recover a file outside the 20-file candidate
-pool. Token totals include successful final requests only; they do not estimate development-time
-failed requests.
+Twenty cases across seven repositories are materially better for error analysis but still too few
+for a strong general quality claim. The Hybrid path only reranks evidence that deterministic
+retrieval already found and cannot recover a file outside the 20-file candidate pool. Token totals
+include successful final requests only; they do not estimate development-time failed requests.
 
-Retrieval v2 implemented exact file-path and stack-trace extraction, identifier normalization,
-repository content matching, and the wider candidate pool. Its remaining miss is one of two
-expected files in Textual's `remove_children` case: `src/textual/_compositor.py` has no strong
-lexical link in the Issue. The next iteration should add import/call-graph distance and
-test-to-source mapping, then expand the benchmark to 20-30 issues and add symbol-level labels.
+The next retrieval iteration should add import/call-graph distance and test-to-source mapping,
+then label symbols for the most reliable cases. After that change, rerun both deterministic and
+GPT-OSS 20B Hybrid variants on the same manifest version 3 before expanding toward 30-50 cases.
 
 ## GPT-OSS 20B versus 120B
 

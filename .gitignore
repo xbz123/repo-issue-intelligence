@@ -7,3 +7,4 @@ __pycache__/
 data/
 reports/
 benchmarks/workspaces/
+benchmarks/candidates/

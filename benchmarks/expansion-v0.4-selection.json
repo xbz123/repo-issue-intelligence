@@ -1,0 +1,95 @@
+{
+  "name": "v0.4-python-project-expansion",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "agronholm-anyio-issue-1203-pr-1211",
+      "case_id": "anyio-runvar-memory-leak",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1211 closes Issue #1203.",
+        "The reviewed diff modifies one existing AnyIO asyncio backend source file."
+      ]
+    },
+    {
+      "candidate_id": "agronholm-anyio-issue-1220-pr-1224",
+      "case_id": "anyio-freethreading-runvar",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1224 closes Issue #1220.",
+        "The reviewed diff modifies two existing AnyIO production source files."
+      ]
+    },
+    {
+      "candidate_id": "agronholm-anyio-issue-1231-pr-1232",
+      "case_id": "anyio-trio-taskhandle-name",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1232 closes Issue #1231.",
+        "The reviewed diff modifies one existing Trio backend source file."
+      ]
+    },
+    {
+      "candidate_id": "fastapi-fastapi-issue-10719-pr-13920",
+      "case_id": "fastapi-pep695-annotated-dependency",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #13920 closes Issue #10719.",
+        "The reviewed diff modifies FastAPI dependency analysis source code."
+      ]
+    },
+    {
+      "candidate_id": "fastapi-fastapi-issue-10997-pr-14616",
+      "case_id": "fastapi-pydantic-json-form",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14616 closes Issue #10997.",
+        "The reviewed diff modifies one existing FastAPI dependency source file."
+      ]
+    },
+    {
+      "candidate_id": "fastapi-fastapi-issue-15401-pr-15077",
+      "case_id": "fastapi-sse-include-router",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #15077 closes Issue #15401.",
+        "The reviewed diff modifies one existing FastAPI routing source file."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-issue-634-pr-1766",
+      "case_id": "pytest-metafunc-scope-override",
+      "review_notes": [
+        "PR #1766 explicitly says Fixes #634 and its body describes the same scope defect.",
+        "The reviewed diff modifies one existing pytest parametrization source file."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-issue-3862-pr-14746",
+      "case_id": "pytest-parametrize-fixture-ordering",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14746 closes Issue #3862.",
+        "Only the existing src/_pytest/fixtures.py production change is used as ground truth."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-issue-14683-pr-14694",
+      "case_id": "pytest-rootdir-doctest-namespace",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14694 closes Issue #14683.",
+        "Only the existing src/_pytest/fixtures.py production change is used as ground truth."
+      ]
+    },
+    {
+      "candidate_id": "textualize-rich-issue-2027-pr-2038",
+      "case_id": "rich-print-json-no-indent",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #2038 closes Issue #2027.",
+        "The reviewed diff modifies existing console and highlighter source files."
+      ]
+    },
+    {
+      "candidate_id": "textualize-rich-issue-3577-pr-4076",
+      "case_id": "rich-ansi-trailing-newline",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #4076 closes Issue #3577.",
+        "The reviewed diff modifies one existing ANSI parsing source file."
+      ]
+    }
+  ]
+}

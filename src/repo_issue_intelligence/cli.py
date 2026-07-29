@@ -11,10 +11,22 @@ from rich.table import Table
 from .agent_store import AgentStore
 from .agent_workflow import run_agent
 from .benchmark import (
+    BenchmarkTier,
     BenchmarkVariant,
     load_manifest,
     run_benchmark,
     save_benchmark_run,
+)
+from .benchmark_discovery import (
+    CandidateStatus,
+    curate_benchmark_expansion,
+    discover_candidates,
+    inspect_candidate,
+    load_candidate_selection,
+    load_candidate_sources,
+    save_benchmark_candidate,
+    save_candidate_catalog,
+    save_curated_expansion,
 )
 from .config import Settings
 from .duplicates import detect_duplicates
@@ -289,6 +301,169 @@ def benchmark(
     console.print(f"Saved benchmark results to {output}")
     if run.overall.failed:
         raise typer.Exit(code=1)
+
+
+def _parse_tier_assignments(values: list[str] | None) -> dict[str, BenchmarkTier]:
+    assignments: dict[str, BenchmarkTier] = {}
+    for value in values or []:
+        repository, separator, tier = value.partition("=")
+        if not separator or not repository or not tier:
+            raise typer.BadParameter("--tier must use repository=tier")
+        try:
+            assignments[repository] = BenchmarkTier(tier)
+        except ValueError as error:
+            choices = ", ".join(item.value for item in BenchmarkTier)
+            raise typer.BadParameter(f"tier must be one of: {choices}") from error
+    return assignments
+
+
+@app.command("benchmark-discover")
+def benchmark_discover(
+    repositories: Annotated[
+        list[str],
+        typer.Argument(help="GitHub repositories in owner/name form."),
+    ],
+    output: Path = Path("benchmarks/candidates/latest.json"),
+    target_per_repository: Annotated[
+        int,
+        typer.Option(
+            "--target-per-repository",
+            min=1,
+            help="Stop after this many reviewable candidates per repository.",
+        ),
+    ] = 5,
+    scan_limit_per_repository: Annotated[
+        int,
+        typer.Option(
+            "--scan-limit-per-repository",
+            min=1,
+            help="Maximum linked closed Issues inspected per repository.",
+        ),
+    ] = 50,
+    max_source_files: Annotated[
+        int,
+        typer.Option(
+            "--max-source-files",
+            min=1,
+            help="Maximum production source files in a reviewable fix.",
+        ),
+    ] = 5,
+    tier: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--tier",
+            help="Suggested benchmark tier as repository=tier; repeat as needed.",
+        ),
+    ] = None,
+) -> None:
+    """Discover Issue/Fix-PR pairs for manual benchmark audit."""
+    client = GitHubClient(Settings().github_token)
+    try:
+        catalog = discover_candidates(
+            client,
+            repositories,
+            target_per_repository=target_per_repository,
+            scan_limit_per_repository=scan_limit_per_repository,
+            max_source_files=max_source_files,
+            suggested_tiers=_parse_tier_assignments(tier),
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    finally:
+        client.close()
+    save_candidate_catalog(catalog, output)
+    reviewable = sum(
+        candidate.status is CandidateStatus.NEEDS_REVIEW
+        for candidate in catalog.candidates
+    )
+    rejected = sum(
+        candidate.status is CandidateStatus.REJECTED
+        for candidate in catalog.candidates
+    )
+    console.print(
+        f"Discovered {len(catalog.candidates)} candidate(s): "
+        f"{reviewable} need review, {rejected} rejected by blocking checks."
+    )
+    console.print(f"Saved benchmark candidates to {output}")
+
+
+@app.command("benchmark-audit")
+def benchmark_audit(
+    repository: str,
+    issue_number: Annotated[int, typer.Argument(min=1)],
+    fix_pr_number: Annotated[int, typer.Argument(min=1)],
+    output: Path = Path("benchmarks/candidates/audit.json"),
+    max_source_files: Annotated[
+        int,
+        typer.Option("--max-source-files", min=1),
+    ] = 5,
+    tier: Annotated[
+        BenchmarkTier | None,
+        typer.Option("--tier", help="Suggested benchmark tier after manual review."),
+    ] = None,
+) -> None:
+    """Audit one explicit Issue/Fix-PR pair without accepting it."""
+    client = GitHubClient(Settings().github_token)
+    try:
+        candidate = inspect_candidate(
+            client,
+            repository,
+            issue_number,
+            fix_pr_number,
+            max_source_files=max_source_files,
+            suggested_tier=tier,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    finally:
+        client.close()
+    save_benchmark_candidate(candidate, output)
+    failed_blocking = [
+        check.code
+        for check in candidate.audit_checks
+        if check.blocking and not check.passed
+    ]
+    console.print(
+        f"Candidate {candidate.id}: {candidate.status}; "
+        f"expected_files={len(candidate.expected_files)}; "
+        f"blocking_failures={', '.join(failed_blocking) or 'none'}."
+    )
+    console.print(f"Saved candidate audit to {output}")
+
+
+@app.command("benchmark-curate")
+def benchmark_curate(
+    base_manifest: Path,
+    selection: Path,
+    candidate_sources: Annotated[
+        list[Path],
+        typer.Argument(help="Candidate catalogs or individual candidate audits."),
+    ],
+    catalog_output: Path = Path("benchmarks/candidates-v0.4.json"),
+    manifest_output: Path = Path("benchmarks/cases-v0.4.json"),
+) -> None:
+    """Accept manually selected candidates into a new frozen manifest."""
+    try:
+        curated_catalog, expanded_manifest = curate_benchmark_expansion(
+            load_manifest(base_manifest),
+            load_candidate_sources(candidate_sources),
+            load_candidate_selection(selection),
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    save_curated_expansion(
+        curated_catalog,
+        expanded_manifest,
+        catalog_output=catalog_output,
+        manifest_output=manifest_output,
+    )
+    console.print(
+        f"Accepted {len(curated_catalog.candidates)} candidate(s); "
+        f"expanded manifest to {len(expanded_manifest.cases)} case(s), "
+        f"version {expanded_manifest.version}."
+    )
+    console.print(f"Saved curated audit to {catalog_output}")
+    console.print(f"Saved expanded benchmark manifest to {manifest_output}")
 
 
 @app.command()

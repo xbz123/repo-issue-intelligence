@@ -13,9 +13,9 @@ outside the deterministic candidate pool.
 
 ## Dataset
 
-The current frozen dataset contains nine closed issues that link to a fix pull request. Manifest
-version 2 stores the complete evaluated Issue snapshot and never fetches mutable Issue text during
-a benchmark run. It records:
+The current frozen dataset contains 20 closed issues across seven repositories that link to a fix
+pull request. Manifest version 3 stores the complete evaluated Issue snapshot and never fetches
+mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
@@ -27,7 +27,13 @@ a benchmark run. It records:
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
 ignored artifacts in reused workspaces cannot change candidate rankings.
 
-Do not include API keys, private repository content, or unreviewed generated labels.
+Candidate discovery can reject invalid pairs, derive a proposed pre-fix SHA, and identify eligible
+production files, but it cannot accept benchmark ground truth. Every accepted case must appear in
+a committed manual selection file with Issue/PR relationship and changed-file review notes.
+
+Do not include API keys, private repository content, or unreviewed generated labels. The original
+nine-case manifest version 2 is preserved as `benchmarks/cases-v0.3.json` for historical model
+comparisons.
 
 ## Metrics
 
@@ -63,5 +69,6 @@ This is an integration and grounding smoke test over one synthetic case. The rea
 localization benchmark is reported separately in `docs/benchmark-results.md`.
 
 The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison and a separate
-three-case full-schema stability smoke test. Model-size conclusions must not mix the localization
-and schema-reliability endpoints.
+three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
+conclusions must not mix datasets or the localization and schema-reliability endpoints. A 20-case
+Hybrid result must be recorded before claiming LLM gains on manifest version 3.
