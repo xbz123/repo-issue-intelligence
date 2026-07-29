@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional Groq-backed analysis step can inspect bounded code evidence for Top-K issues while preserving the offline baseline.
 
 ## What it does
 
@@ -14,6 +14,9 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
+- Optionally calls Groq-hosted GPT-OSS 20B with strict JSON Schema output.
+- Requires one support/contradiction/neutral observation per repository evidence ID.
+- Validates every LLM hypothesis against repository evidence IDs and named missing artifacts.
 - Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
 - Stops at a queryable human review state with explicit approve/reject actions.
 - Exposes both a Typer CLI and FastAPI endpoints.
@@ -37,6 +40,15 @@ git clone https://github.com/xbz123/repo-issue-intelligence.git
 cd repo-issue-intelligence
 uv sync --frozen --extra dev
 uv run pytest -q
+```
+
+An equivalent named Conda development environment can be created with:
+
+```bash
+conda create -n agent_dev python=3.11 -y
+uv pip install --python "$(conda run -n agent_dev python -c 'import sys; print(sys.executable)')" \
+  -e '.[dev]'
+conda run -n agent_dev python -m pytest -q
 ```
 
 Run the included offline demo:
@@ -69,6 +81,27 @@ uv run rii agent-review <run-id> \
 
 The workflow is synchronous in this version. Approval records a decision but does not execute the generated reproduction plan.
 
+Enable optional Groq analysis for the selected Top-K issues:
+
+```bash
+export GROQ_API_KEY="..."
+
+uv run rii agent-run examples/issues.json \
+  --repo examples/demo_repository \
+  --top-k 1 \
+  --llm \
+  --model openai/gpt-oss-20b \
+  --database data/agent-runs.sqlite3 \
+  --output reports/agent-run-llm.json
+```
+
+`--llm` is explicit: without it the workflow remains offline and makes no model requests.
+The API key is read from the environment and is never added to run state or traces. Evidence
+collection rejects paths outside the repository, skips sensitive filenames, numbers source
+lines, and applies a configurable character budget before sending content. GPT-OSS defaults to
+low reasoning effort and a bounded output budget so strict structured generation fits within the
+free-tier token limits; both values can be changed through `.env`.
+
 ## Analyze a real GitHub repository
 
 ```bash
@@ -96,6 +129,9 @@ Core endpoints:
 - `POST /v1/agent/runs`
 - `GET /v1/agent/runs/{run_id}`
 - `POST /v1/agent/runs/{run_id}/review`
+
+The v0.3 API continues to run the offline workflow. Optional Groq analysis is exposed through
+the CLI first so model credentials and quota use remain an explicit local operator decision.
 
 ## Priority model
 
@@ -130,6 +166,8 @@ src/repo_issue_intelligence/
   duplicates.py          issue similarity and duplicate candidates
   github_client.py       paginated GitHub REST synchronization
   investigator.py        file/symbol ranking and hypothesis generation
+  evidence.py            bounded repository source evidence collection
+  llm_client.py           strict-schema Groq GPT-OSS analysis
   models.py              typed domain models
   repository_index.py    repository map and Python AST index
   scoring.py             severity, urgency, priority rules
@@ -152,7 +190,7 @@ Use closed issues with linked fix PRs as ground truth:
 
 ## Safety and scope
 
-The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. The Agent is deterministic and does not yet call an LLM. Investigation ends at a human review gate.
+The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. The default Agent path is deterministic and offline. The optional LLM path analyzes only supplied Top-K evidence, cannot expand repository access, and still ends at the same human review gate. LLM output is an evidence-linked hypothesis, not a confirmed root cause.
 
 ## License
 

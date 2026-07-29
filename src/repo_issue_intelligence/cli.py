@@ -14,6 +14,7 @@ from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
+from .llm_client import GroqIssueAnalyzer
 from .models import IssueRecord, ReviewDecision
 from .repository_index import build_repository_map, save_repository_map
 from .service import rank_issues
@@ -110,14 +111,44 @@ def agent_run_command(
         Path | None,
         typer.Option("--database", help="SQLite database for Agent run state."),
     ] = None,
+    llm: Annotated[
+        bool,
+        typer.Option("--llm", help="Enable evidence-grounded Groq analysis."),
+    ] = False,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Groq model ID used when --llm is enabled."),
+    ] = None,
     output: Path = Path("reports/agent-run.json"),
 ) -> None:
     """Run the synchronous LangGraph workflow up to human review."""
-    database = database or Settings().agent_db_path
+    settings = Settings()
+    database = database or settings.agent_db_path
+    analyzer = None
+    if llm:
+        if settings.groq_api_key is None:
+            raise typer.BadParameter("GROQ_API_KEY is required when --llm is enabled")
+        analyzer = GroqIssueAnalyzer(
+            api_key=settings.groq_api_key.get_secret_value(),
+            model=model or settings.llm_model,
+            max_output_tokens=settings.llm_max_output_tokens,
+            timeout_seconds=settings.llm_timeout_seconds,
+            reasoning_effort=settings.llm_reasoning_effort,
+        )
     try:
-        run = run_agent(_load(issues_file), repo, top_k, AgentStore(database))
+        run = run_agent(
+            _load(issues_file),
+            repo,
+            top_k,
+            AgentStore(database),
+            llm_analyzer=analyzer,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+        )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
+    finally:
+        if analyzer is not None:
+            analyzer.close()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
     console.print(
