@@ -166,14 +166,37 @@ class LLMAnalysis(StrictOutputModel):
     needs_more_evidence: bool
 
 
+class LLMAnalysisResponse(LLMAnalysis):
+    """Strict contract for new provider responses; persisted analyses remain compatible."""
+
+    hypotheses: list[LLMHypothesis] = Field(max_length=2)
+
+
 class LLMAnalysisResult(BaseModel):
     provider: str
     model: str
     request_id: str | None = None
+    system_fingerprint: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     elapsed_ms: float
     analysis: LLMAnalysis
+
+
+class EvidenceRerankAnalysis(StrictOutputModel):
+    summary: str
+    reranked_evidence_ids: list[str] = Field(min_length=1)
+
+
+class EvidenceRerankResult(BaseModel):
+    provider: str
+    model: str
+    request_id: str | None = None
+    system_fingerprint: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    elapsed_ms: float
+    analysis: EvidenceRerankAnalysis
 
 
 class Hypothesis(BaseModel):

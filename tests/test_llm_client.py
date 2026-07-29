@@ -4,6 +4,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from repo_issue_intelligence.llm_client import GroqAPIError, GroqIssueAnalyzer
 from repo_issue_intelligence.models import (
@@ -11,6 +12,8 @@ from repo_issue_intelligence.models import (
     EvidenceSnippet,
     InvestigationReport,
     IssueRecord,
+    LLMAnalysis,
+    LLMAnalysisResponse,
     ReproductionPlan,
 )
 
@@ -85,7 +88,7 @@ def structured_payload(evidence_id: str = "E1") -> dict:
                 "confidence": 0.72,
                 "evidence_ids": [evidence_id],
                 "missing_evidence": ["Runtime stack trace"],
-                "validation_step": "Add a failing refresh-token test.",
+                "validation_step": "Run the existing refresh-token test and inspect the error.",
             }
         ],
         "needs_more_evidence": True,
@@ -101,6 +104,7 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
             200,
             json={
                 "id": "request-1",
+                "system_fingerprint": "fingerprint-1",
                 "choices": [
                     {
                         "message": {
@@ -116,7 +120,12 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
         base_url="https://api.groq.com/openai/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = GroqIssueAnalyzer(
+        "test-key",
+        temperature=0.1,
+        seed=1337,
+        client=client,
+    )
     record = issue()
 
     result = analyzer.analyze(record, report(record), evidence())
@@ -124,11 +133,98 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
     assert result.request_id == "request-1"
     assert result.input_tokens == 300
     assert result.output_tokens == 120
+    assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
     assert captured_request["response_format"]["json_schema"]["strict"] is True
     assert captured_request["reasoning_effort"] == "low"
+    assert captured_request["temperature"] == 0.1
+    assert captured_request["seed"] == 1337
     schema = captured_request["response_format"]["json_schema"]["schema"]
     assert schema["additionalProperties"] is False
+    assert schema["properties"]["hypotheses"]["maxItems"] == 2
+
+
+def test_groq_analyzer_uses_minimal_schema_for_evidence_reranking() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "rerank-request",
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "Authentication evidence is most relevant.",
+                                    "reranked_evidence_ids": ["E1"],
+                                }
+                            )
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://api.groq.com/openai/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = GroqIssueAnalyzer("test-key", client=client)
+
+    result = analyzer.rerank(issue(), evidence())
+
+    schema = captured_request["response_format"]["json_schema"]["schema"]
+    assert set(schema["properties"]) == {"summary", "reranked_evidence_ids"}
+    assert schema["properties"]["reranked_evidence_ids"]["minItems"] == 1
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+    assert result.input_tokens == 100
+    assert result.output_tokens == 20
+
+
+def test_groq_analyzer_rejects_empty_evidence_reranking() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "empty-rerank-request",
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "No evidence was ranked.",
+                                    "reranked_evidence_ids": [],
+                                }
+                            )
+                        }
+                    }
+                ],
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://api.groq.com/openai/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = GroqIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="invalid rerank response"):
+        analyzer.rerank(issue(), evidence())
+
+
+def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
+    payload = structured_payload()
+    payload["hypotheses"] = payload["hypotheses"] * 3
+
+    historical = LLMAnalysis.model_validate(payload)
+
+    assert len(historical.hypotheses) == 3
+    with pytest.raises(ValidationError):
+        LLMAnalysisResponse.model_validate(payload)
 
 
 def test_groq_analyzer_rejects_unknown_evidence_id() -> None:

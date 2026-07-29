@@ -10,6 +10,12 @@ from rich.table import Table
 
 from .agent_store import AgentStore
 from .agent_workflow import run_agent
+from .benchmark import (
+    BenchmarkVariant,
+    load_manifest,
+    run_benchmark,
+    save_benchmark_run,
+)
 from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
@@ -197,6 +203,92 @@ def agent_review_command(
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     console.print(f"Run {run.run_id} is now {run.status}")
+
+
+@app.command()
+def benchmark(
+    manifest: Path,
+    variant: Annotated[
+        BenchmarkVariant,
+        typer.Option(
+            "--variant",
+            help="Deterministic, minimal hybrid, or full-schema hybrid variant.",
+        ),
+    ] = BenchmarkVariant.DETERMINISTIC,
+    case_id: Annotated[
+        list[str] | None,
+        typer.Option("--case-id", help="Run only the selected case ID; repeat as needed."),
+    ] = None,
+    workspace: Path = Path("benchmarks/workspaces"),
+    output: Path = Path("benchmarks/results/latest.json"),
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Groq model ID for the hybrid variant."),
+    ] = None,
+    llm_delay_seconds: Annotated[
+        float,
+        typer.Option(
+            "--llm-delay-seconds",
+            min=0,
+            help="Delay between hybrid cases and failed LLM retries.",
+        ),
+    ] = 0,
+    temperature: Annotated[
+        float,
+        typer.Option(
+            "--temperature",
+            min=0,
+            max=2,
+            help="Sampling temperature for reproducible model comparisons.",
+        ),
+    ] = 0.1,
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Best-effort deterministic sampling seed."),
+    ] = 1337,
+) -> None:
+    """Evaluate file localization against historical Issue/Fix-PR pairs."""
+    settings = Settings()
+    analyzer = None
+    if variant is not BenchmarkVariant.DETERMINISTIC:
+        if settings.groq_api_key is None:
+            raise typer.BadParameter("GROQ_API_KEY is required for the hybrid variant")
+        analyzer = GroqIssueAnalyzer(
+            api_key=settings.groq_api_key.get_secret_value(),
+            model=model or settings.llm_model,
+            max_output_tokens=settings.llm_max_output_tokens,
+            timeout_seconds=settings.llm_timeout_seconds,
+            reasoning_effort=settings.llm_reasoning_effort,
+            temperature=temperature,
+            seed=seed,
+        )
+    try:
+        run = run_benchmark(
+            load_manifest(manifest),
+            workspace,
+            variant,
+            analyzer,
+            case_ids=set(case_id) if case_id else None,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            llm_delay_seconds=llm_delay_seconds,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    finally:
+        if analyzer is not None:
+            analyzer.close()
+    save_benchmark_run(run, output)
+    console.print(
+        f"{run.variant} benchmark: {run.overall.completed}/{run.overall.cases} completed; "
+        f"Recall@1={run.overall.file_recall_at_1:.4f}, "
+        f"Recall@5={run.overall.file_recall_at_5:.4f}, "
+        f"Recall@10={run.overall.file_recall_at_10:.4f}, "
+        f"Recall@20={run.overall.file_recall_at_20:.4f}, "
+        f"MRR={run.overall.mean_reciprocal_rank:.4f}"
+    )
+    console.print(f"Saved benchmark results to {output}")
+    if run.overall.failed:
+        raise typer.Exit(code=1)
 
 
 @app.command()

@@ -1,0 +1,218 @@
+{
+  "name": "starlette-typer-textual-real-issues",
+  "version": 2,
+  "cases": [
+    {
+      "id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "issue_updated_at": "2026-03-15T11:59:17Z",
+      "issue_snapshot": {
+        "number": 3048,
+        "title": "Can not use `send_denial_response` with `StreamingResponse`",
+        "body": "\n### Discussed in https://github.com/Kludex/starlette/discussions/2566\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **WSH032** April  6, 2024</sup>\n## Describe the bug\r\n\r\nIf we use `FileResponse` or `StreamingResponse` when sending the Websocket Denial Response, a `RuntimeError` will occur.\r\n\r\n## To Reproduce\r\n\r\n```py\r\nfrom fastapi import FastAPI, WebSocket\r\nfrom fastapi.responses import StreamingResponse\r\nfrom uvicorn import run\r\n\r\napp = FastAPI()\r\n\r\n\r\n@app.websocket(\"/\")\r\nasync def _(ws: WebSocket):\r\n    async def foo():\r\n        yield \"hello\"\r\n        yield \"world\"\r\n\r\n    resp = StreamingResponse(content=foo())\r\n    await ws.send_denial_response(resp)\r\n\r\n\r\nrun(app)\r\n```\r\n\r\nSteps to reproduce the behavior:\r\n1. Launch the server\r\n2. Try to establish the websocket connection\r\n3. You will see following error\r\n\r\n```console\r\n  |   File \"e:\\GitHub\\fastapi-proxy\\Untitled-8.py\", line 16, in _\r\n  |     await ws.send_denial_response(resp)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 209, in send_denial_response        \r\n  |     await response(self.scope, self.receive, self.send)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 258, in __call__\r\n  |     async with anyio.create_task_group() as task_group:\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 678, in __aexit__\r\n  |     raise BaseExceptionGroup(\r\n  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\r\n  +-+---------------- 1 ----------------\r\n    | Traceback (most recent call last):\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 261, in wrap\r\n    |     await func()\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 243, in stream_response\r\n    |     await send(\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 75, in send\r\n    |     raise RuntimeError(\r\n    | RuntimeError: Expected ASGI message \"websocket.accept\",\"websocket.close\" or \"websocket.http.response.start\",but got 'http.response.start'\r\n    +------------------------------------\r\n```\r\n\r\n## Expected behavior\r\n\r\n`FileResponse` and `StreamingResponse` override the `__call__` method, but they do not add the `\"websocket.\"` prefix like the parent class `Response` does.\r\n\r\nhttps://github.com/encode/starlette/blob/4e453ce91940cc7c995e6c728e3fdf341c039056/starlette/responses.py#L151-L154\r\n\r\nIf this is expected behavior, I didn't see any relevant information in the documentation, and at least the type checker didn't raise any errors\r\n\r\n## Configuration\r\n```\r\nstarlette == 0.37.2\r\n```\r\n</div>",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2025-10-29T08:14:32Z",
+        "updated_at": "2026-03-15T11:59:17Z",
+        "html_url": "https://github.com/Kludex/starlette/issues/3048",
+        "author": "Kludex"
+      },
+      "fix_pr_number": 3189,
+      "pre_fix_sha": "5d748111b0f8116053f3bd09870d9af8aef971db",
+      "expected_files": [
+        "starlette/responses.py"
+      ]
+    },
+    {
+      "id": "starlette-session-cookie-refresh",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2019,
+      "issue_updated_at": "2026-03-01T20:30:20Z",
+      "issue_snapshot": {
+        "number": 2019,
+        "title": "SessionMiddleware sends a new set-cookie for every request, with unintended results",
+        "body": "### Discussed in https://github.com/encode/starlette/discussions/2018\r\n\r\n<div type='discussions-op-text'>\r\n\r\n<sup>Originally posted by **sm-Fifteen** January 27, 2023</sup>\r\nThe way SessionMiddleware currently works is that it encodes session data in a signed base64 object with timestamp, in a format not entirely dissimilar to (but incompatible with) JWT. Because of the way it works, being run right before the headers for an HTTP response are sent, and because it doesn't perform many checks besides whether or not there is session data to encode, it will try to update the session cookie whenever a route is called. This is somewhat wasteful, as session data is not usually updated on every request, but it leads to interesting issues as well.\r\n\r\nI have a FastAPI application where login is handeled via a session cookie with a separate login process. Several routes are unlocked based on whether or not the cookie is present and based on the user authorizations recorded in said session cookie. When the frontend fetches API data, if the user is logged in, every response contains a new `Set-Cookie` header, which *Firefox ignores, but Chrome acknowledges*. None of the API routes alter session data, so the cookie value is always the same, save for the timestamp and signature at the end. This actually runs into [an interesting Chrome issue](https://bugs.chromium.org/p/chromium/issues/detail?id=696204#c107) where responses to fetch requests that arrive after the page has been navigated away from still alter the session cookie, even if if the new page changed the session data on load. This means I have this strange, Chrome-exclusive, race-condition-y bug that matches lepture/authlib#334, where the session state data setup by the Oauth flow before redirecting to the third party login form may get clobbered if some `/api/slow_route` query was pending when the user clicked the login button.\r\n\r\nIt's unclear if it's actually a chrome bug or unintended behavior from everything working as intended. If Starlette wasn't updating cookies for every request, and the ``Set-Cookie`` was actually important here, it's difficult to argue whether or not Chrome should have ignored it.\r\n\r\nSee here the Starlette test case from the Chromium bug report, which doesn't use SessionMiddleware, but shows the Chrome behavior in action.\r\n\r\n```py\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse\r\nfrom starlette.routing import Route\r\nimport uvicorn\r\nimport datetime\r\nfrom asyncio import sleep\r\n\r\nhtml_content = \"\"\"\r\n    <!DOCTYPE html>\r\n    <html>\r\n        <head>\r\n            <meta http-equiv=\"refresh\" content=\"2;url=/set_cookie_and_redirect\" />\r\n            <script>fetch(\"/set_cookie_on_fetch\")</script>\r\n        </head>\r\n        <body>\r\n            Calling slow route via fetch() before changing page.\r\n        </body>\r\n    </html>\r\n\"\"\"\r\n\r\n\r\nasync def homepage(request):\r\n    return HTMLResponse(html_content)\r\n\r\nasync def set_cookie_on_fetch(request):\r\n    res = JSONResponse({'hello':'world'})\r\n    await sleep(5)\r\n    res.set_cookie(\"my_cookie\", \"a__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def set_cookie_and_redirect(request):\r\n    res = RedirectResponse(\"/final\")\r\n    res.set_cookie(\"my_cookie\", \"b__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def final(request):\r\n    cookie_val = request.cookies.get('my_cookie')\r\n    cookie_is_b = cookie_val.partition(\"__\")[0] == 'b'\r\n\r\n    if (cookie_is_b):\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", all is well. Try refreshing the page.\", 200)\r\n    else:\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", it shouldn't be.\", 400)\r\n    return res\r\n\r\nroutes = [\r\n    Route('/', homepage),\r\n    Route('/set_cookie_on_fetch', set_cookie_on_fetch),\r\n    Route('/set_cookie_and_redirect', set_cookie_and_redirect),\r\n    Route('/final', final),\r\n]\r\n\r\napp = Starlette(debug=True, routes=routes)\r\nuvicorn.run(app, host=\"0.0.0.0\", port=8000)\r\n```</div>\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/2019\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
+        "labels": ["need confirmation"],
+        "comments_count": 13,
+        "created_at": "2023-01-27T19:49:14Z",
+        "updated_at": "2026-03-01T20:30:20Z",
+        "html_url": "https://github.com/Kludex/starlette/issues/2019",
+        "author": "Kludex"
+      },
+      "fix_pr_number": 3166,
+      "pre_fix_sha": "dce3495a9c67c4092b790b50aa8e0a3dfd062a52",
+      "expected_files": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ]
+    },
+    {
+      "id": "starlette-base-middleware-no-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2516,
+      "issue_updated_at": "2025-07-30T06:54:49Z",
+      "issue_snapshot": {
+        "number": 2516,
+        "title": "`RuntimeError(\"No response returned\")` in `BaseHTTPMiddleware`",
+        "body": "Previously, a \"No response returned\"-error has been discussed in this discussion: https://github.com/encode/starlette/discussions/1527, and was supposedly fixed in this PR: https://github.com/encode/starlette/pull/1715\r\n\r\nHowever, the bug is still present. It's a race condition, so quite tough to reproduce, but the following reproducer works.\r\n\r\nReproducer\r\n--\r\n\r\nUse anyio 4.2.0 It does happen also with anyio 3.0.0, but it happens much more regularly on 4.2.\r\n\r\nFirst, apply the following patch to the Starlette codebase, so that we have a breakpoint in case it happens:\r\n```diff\r\n--- a/starlette/middleware/base.py\r\n+++ b/starlette/middleware/base.py\r\n@@ -134,7 +134,8 @@ class BaseHTTPMiddleware:\r\n             async def send_no_error(message: Message) -> None:\r\n                 try:\r\n@@ -163,6 +164,7 @@ class BaseHTTPMiddleware:\r\n             except anyio.EndOfStream:\r\n                 if app_exc is not None:\r\n                     raise app_exc\r\n+                breakpoint()\r\n                 raise RuntimeError(\"No response returned.\")\r\n\r\n             assert message[\"type\"] == \"http.response.start\"\r\n```\r\n\r\nThen run this code:\r\n\r\n```python\r\nimport asyncio\r\nfrom hypercorn.asyncio import serve\r\nfrom hypercorn.config import Config\r\n\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import JSONResponse\r\nfrom starlette.routing import Route\r\nfrom starlette.middleware.base import BaseHTTPMiddleware\r\nfrom starlette.requests import Request\r\nfrom starlette.responses import Response\r\nfrom starlette.middleware.base import RequestResponseEndpoint\r\nfrom starlette.middleware import Middleware\r\n\r\n\r\nclass DummyMiddleware(BaseHTTPMiddleware):\r\n    async def dispatch(\r\n        self, request: Request, call_next: RequestResponseEndpoint\r\n    ) -> Response:\r\n        return await call_next(request)\r\n\r\n\r\nasync def homepage(request):\r\n    return JSONResponse({})\r\n\r\n\r\napp = Starlette(\r\n    routes=[\r\n        Route(\"/\", homepage),\r\n    ],\r\n    middleware=[Middleware(DummyMiddleware) for i in range(100)],  # Yes, 100x the same middleware.\r\n)\r\n\r\nconfig = Config.from_mapping({})\r\nconfig.bind = [\"127.0.0.1:8000\"]\r\nasyncio.run(serve(app, config))\r\n```\r\n\r\nOpen either Firefox or Chrome, navigate to http://localhost:8000 and hold down command-r (refresh) to repeatedly have the browser refresh the page. After a couple of seconds, we'll enter the breakpoint.\r\n\r\n(Feel free to turn this issue into a discussion if that's more appropriate. I'm also looking for a fix but have a hard time understanding `BaseHTTPMiddleware`.)\r\n\r\nedit: I updated the above snippet and added the missing imports.\r\n\r\nThis PR contains a possible fix: https://github.com/encode/starlette/pull/2519\r\n\r\n<!-- POLAR PLEDGE BADGE START -->\r\n> [!IMPORTANT]\r\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\r\n> - We receive the funding once the issue is completed & confirmed by you.\r\n> - Thank you in advance for helping prioritize & fund our backlog.\r\n\r\n<a href=\"https://polar.sh/encode/starlette/issues/2516\">\r\n<picture>\r\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2516/pledge.svg?darkmode=1\">\r\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2516/pledge.svg\">\r\n</picture>\r\n</a>\r\n<!-- POLAR PLEDGE BADGE END -->\r\n",
+        "labels": [],
+        "comments_count": 17,
+        "created_at": "2024-02-16T11:26:28Z",
+        "updated_at": "2025-07-30T06:54:49Z",
+        "html_url": "https://github.com/Kludex/starlette/issues/2516",
+        "author": "jonathanslenders"
+      },
+      "fix_pr_number": 2620,
+      "pre_fix_sha": "c50731db62dc86a86ef9238ce895dada1e56cc40",
+      "expected_files": [
+        "starlette/middleware/base.py"
+      ]
+    },
+    {
+      "id": "starlette-http2-cookie-headers",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2977,
+      "issue_updated_at": "2025-09-20T21:43:27Z",
+      "issue_snapshot": {
+        "number": 2977,
+        "title": "Request Header cookie parsing doesn't follow RFC 7540 spec",
+        "body": "Only the first cookie in a header gets parsed. but multiple \"cookie\" headers may be sent and the server should concatenate them per [RFC 7540](https://datatracker.ietf.org/doc/html/rfc7540)\n\n```\n...\n   If there are multiple Cookie header fields after\n   decompression, these MUST be concatenated into a single octet string\n   using the two-octet delimiter of 0x3B, 0x20 (the ASCII string \"; \")\n   before being passed into a non-HTTP/2 context, such as an HTTP/1.1\n   connection, or a generic HTTP server application.\n\n   Therefore, the following two lists of Cookie header fields are\n   semantically equivalent.\n\n     cookie: a=b; c=d; e=f\n\n     cookie: a=b\n     cookie: c=d\n     cookie: e=f\n```\n\nThe issue lies here\nhttps://github.com/encode/starlette/blob/6ee94f2cac955eeae68d2898a8dec8cf17b48736/starlette/requests.py#L143\n\n---\n\n- [ ] Initially raised as discussion #2916 \n",
+        "labels": ["bug"],
+        "comments_count": 2,
+        "created_at": "2025-08-05T18:50:15Z",
+        "updated_at": "2025-09-20T21:43:27Z",
+        "html_url": "https://github.com/Kludex/starlette/issues/2977",
+        "author": "brian316"
+      },
+      "fix_pr_number": 3029,
+      "pre_fix_sha": "03284373cdcf3ed13f80d5e7ad549ba3d743dca6",
+      "expected_files": [
+        "starlette/requests.py"
+      ]
+    },
+    {
+      "id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "issue_updated_at": "2026-05-26T17:51:15Z",
+      "issue_snapshot": {
+        "number": 1787,
+        "title": "bug: envvar not working for `typer.Options` with `typer==0.26.0`",
+        "body": "Confirmed that this is a regression, we're working on this.\n\n### Discussed in https://github.com/fastapi/typer/discussions/1786\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **wpk-nist-gov** May 26, 2026</sup>\n### First Check\n\n- [X] I added a very descriptive title here.\n- [X] I used the GitHub search to find a similar question and didn't find it.\n- [X] I searched the documentation, with the integrated search.\n- [X] I already searched in Google \"How to X\" and didn't find any information.\n- [X] I already read and followed all the tutorials in the docs and didn't find an answer.\n\n### Example Code\n\n```python\nfrom typing import Annotated\n\nimport typer\n\napp = typer.Typer()\n\n\n@app.command(\"arg\")\ndef from_argument(user: Annotated[str, typer.Argument(envvar=\"ME\")]):\n    print(f\"Hello {user}\")\n\n\n@app.command(\"opt\")\ndef from_option(user: Annotated[str, typer.Option(envvar=\"ME\")]):\n    print(f\"Hello {user}\")\n\n\nif __name__ == \"__main__\":\n    app()\n```\n\n\n### Description\n\nThe `envvar` option is not respected for `typer.Option`.  It is respected for `typer.Argument`.  For the above code snippert, with `typer==0.26.0`, I get\n\n```bash\n❯ python tmp.py arg foo\nHello foo\n❯ ME=bar python tmp.py arg\nHello bar\n❯ python tmp.py opt --user foo\nHello foo\n❯ ME=bar python tmp.py opt\nUsage: tmp.py opt [OPTIONS]\n....\n```\n\nWith `typer<0.26.0`, the last one works as expected printing `Hello bar`. \n\n\n\n### Operating System\n\nmacOS\n\n### Operating System Details\n\n_No response_\n\n### Project Version\n\n0.26.0\n\n### Python Version\n\n3.14\n\n### Additional Context\n\n_No response_</div>",
+        "labels": ["bug"],
+        "comments_count": 1,
+        "created_at": "2026-05-26T17:11:30Z",
+        "updated_at": "2026-05-26T17:51:15Z",
+        "html_url": "https://github.com/fastapi/typer/issues/1787",
+        "author": "svlandeg"
+      },
+      "fix_pr_number": 1788,
+      "pre_fix_sha": "56d96165c3ba71eca73880bc999587a29b57656e",
+      "expected_files": [
+        "typer/core.py"
+      ]
+    },
+    {
+      "id": "typer-rich-help-width",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1159,
+      "issue_updated_at": "2026-02-10T16:52:53Z",
+      "issue_snapshot": {
+        "number": 1159,
+        "title": "[BUG] help line length miscalculated when using stylized text",
+        "body": "\n### Discussed in https://github.com/fastapi/typer/discussions/1101\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **zmeir** December 23, 2024</sup>\n### First Check\n\n- [X] I added a very descriptive title here.\n- [X] I used the GitHub search to find a similar question and didn't find it.\n- [X] I searched the Typer documentation, with the integrated search.\n- [X] I already searched in Google \"How to X in Typer\" and didn't find any information.\n- [X] I already read and followed all the tutorials in the docs and didn't find an answer.\n- [X] I already checked if it is not related to Typer but to [Click](https://github.com/pallets/click).\n\n### Commit to Help\n\n- [X] I commit to help with one of those options 👆\n\n### Example Code\n\n```python\nfrom typing import Annotated\r\n\r\nimport typer\r\n\r\n\r\napp = typer.Typer()\r\n\r\n\r\n@app.command()\r\ndef example(\r\n    a: Annotated[str, typer.Option(help=\"This is A\")],\r\n    b: Annotated[str, typer.Option(help=f\"This is {typer.style('B', underline=True)}\")],\r\n):\r\n    pass\r\n\r\n\r\nif __name__ == \"__main__\":\r\n    app()\n```\n\n\n### Description\n\nWhen using `typer.style` in the help text of a command option, the rightmost `|` in the \"frame\" of the Options output is misaligned. This seems to be due to a miscalculation of the help line length, caused by the invisible style characters.\r\n\r\nUsing the example script - run `python example.py --help` and you should get this output:\r\n![image](https://github.com/user-attachments/assets/ed8dd11b-f32f-45da-8e7a-6542535b0a97)\r\n(highlighted the misaligned part)\n\n### Operating System\n\nmacOS\n\n### Operating System Details\n\nmacOS version: 13.7.1 (22H221)\n\n### Typer Version\n\n0.15.1\n\n### Python Version\n\n3.10.13\n\n### Additional Context\n\n_No response_</div>",
+        "labels": ["bug"],
+        "comments_count": 6,
+        "created_at": "2025-02-20T06:50:34Z",
+        "updated_at": "2026-02-10T16:52:53Z",
+        "html_url": "https://github.com/fastapi/typer/issues/1159",
+        "author": "zmeir"
+      },
+      "fix_pr_number": 1356,
+      "pre_fix_sha": "4d30a89a4f699cbe06c734df2c4c67063141ead2",
+      "expected_files": [
+        "typer/rich_utils.py"
+      ]
+    },
+    {
+      "id": "textual-selection-common-ancestor",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6452,
+      "issue_updated_at": "2026-03-29T03:56:10Z",
+      "issue_snapshot": {
+        "number": 6452,
+        "title": "Selection crash with 'ValueError: No common ancestor found'",
+        "body": "This might seem like a contrived example, but it honestly happened my first time trying out the new auto-scrolling on select feature.\n\nI ran the textual demo and started trying to select the text on the home page. The notification toast ends up getting selected as well, which actually prevents the auto-scrolling.\n\n![Screenshot](https://github.com/user-attachments/assets/e2136394-f061-4959-ba38-5f25c5a2eedc)\n\nAfter the waiting for the notification to timeout and moving the mouse to try to auto-scroll the selection, the app crashes with `ValueError: No common ancestor found`.\n\nPerhaps the notifications just shouldn't be included in the selection, but presumably this could be a problem with any widget that could be removed from the DOM?",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2026-03-28T12:42:11Z",
+        "updated_at": "2026-03-29T03:56:10Z",
+        "html_url": "https://github.com/Textualize/textual/issues/6452",
+        "author": "TomJGooding"
+      },
+      "fix_pr_number": 6455,
+      "pre_fix_sha": "bba5c9c4e26d3fdf64c79f2592777fbb342dbdff",
+      "expected_files": [
+        "src/textual/screen.py",
+        "src/textual/widget.py"
+      ]
+    },
+    {
+      "id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "issue_updated_at": "2025-11-03T17:35:46Z",
+      "issue_snapshot": {
+        "number": 6205,
+        "title": "Height not refreshed after remove_childre",
+        "body": "Have you checked closed issues? Yes\n\nHave you checked against the most recent version of Textual? Yes\n\n## The bug\n\nHere as an example to reproduce.\n\n```python\nfrom textual.app import App, ComposeResult\nfrom textual.containers import VerticalGroup\nfrom textual.widgets import Static\nfrom textual.binding import Binding\n\n\nclass ExampleApp(App):\n    BINDINGS = [Binding(\"c\", \"clear\", priority=True)]\n\n    def compose(self) -> ComposeResult:\n        yield Static(\"Hello\")\n        with VerticalGroup():\n            for i in range(10):\n                yield Static(str(i))\n        yield Static(\"World\")\n\n    async def action_clear(self) -> None:\n        vs = self.query_one(VerticalGroup)\n        await vs.remove_children()\n\n\nif __name__ == \"__main__\":\n    app = ExampleApp()\n    app.run()\n```\n\nAfter pressing \"c\" the children of VerticalGroup are removed but it is not being shrunk. The issue seems to first appear in textual==6.3.0",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2025-10-31T21:37:41Z",
+        "updated_at": "2025-11-03T17:35:46Z",
+        "html_url": "https://github.com/Textualize/textual/issues/6205",
+        "author": "lyovushka"
+      },
+      "fix_pr_number": 6206,
+      "pre_fix_sha": "7308d9fa9ea59e16d27785d1d776a2a340a68ae5",
+      "expected_files": [
+        "src/textual/_compositor.py",
+        "src/textual/widget.py"
+      ]
+    },
+    {
+      "id": "textual-kitty-keyboard-protocol",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6417,
+      "issue_updated_at": "2026-05-16T07:54:48Z",
+      "issue_snapshot": {
+        "number": 6417,
+        "title": "Support more of the Kitty keyboard protocol",
+        "body": "In particular, support key release event so an app could detect long-presses.",
+        "labels": ["Mistral"],
+        "comments_count": 3,
+        "created_at": "2026-03-13T02:01:44Z",
+        "updated_at": "2026-05-16T07:54:48Z",
+        "html_url": "https://github.com/Textualize/textual/issues/6417",
+        "author": "willmcgugan"
+      },
+      "fix_pr_number": 6542,
+      "pre_fix_sha": "da7e6721082a2bb0f3db4961d1f917ca7b0e177e",
+      "expected_files": [
+        "src/textual/_keyboard_protocol.py",
+        "src/textual/_xterm_parser.py",
+        "src/textual/drivers/linux_driver.py"
+      ]
+    }
+  ]
+}

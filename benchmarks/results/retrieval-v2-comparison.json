@@ -1,0 +1,51 @@
+{
+  "benchmark": "real-project-file-localization",
+  "cases": 9,
+  "retrieval_v1_deterministic": {
+    "file_recall_at_1": 0.2222,
+    "file_recall_at_5": 0.4444,
+    "mean_reciprocal_rank": 0.3518,
+    "average_analysis_elapsed_ms": 450.978
+  },
+  "retrieval_v2_deterministic": {
+    "file_recall_at_1": 0.2222,
+    "file_recall_at_5": 0.7593,
+    "file_recall_at_10": 0.9444,
+    "file_recall_at_20": 0.9444,
+    "candidate_pool_recall": 0.9444,
+    "mean_reciprocal_rank": 0.5083,
+    "average_analysis_elapsed_ms": 834.693
+  },
+  "retrieval_v2_hybrid_gpt_oss_20b": {
+    "file_recall_at_1": 0.5,
+    "file_recall_at_5": 0.8148,
+    "file_recall_at_10": 0.9444,
+    "file_recall_at_20": 0.9444,
+    "candidate_pool_recall": 0.9444,
+    "mean_reciprocal_rank": 0.8333,
+    "llm_successes": 8,
+    "llm_cases": 9,
+    "llm_fallbacks": 1,
+    "average_successful_llm_elapsed_ms": 792.961,
+    "successful_input_tokens": 38117,
+    "successful_output_tokens": 1218
+  },
+  "absolute_delta_v2_deterministic_minus_v1": {
+    "file_recall_at_1": 0.0,
+    "file_recall_at_5": 0.3149,
+    "mean_reciprocal_rank": 0.1565,
+    "average_analysis_elapsed_ms": 383.715
+  },
+  "absolute_delta_v2_hybrid_minus_v2_deterministic": {
+    "file_recall_at_1": 0.2778,
+    "file_recall_at_5": 0.0555,
+    "file_recall_at_10": 0.0,
+    "file_recall_at_20": 0.0,
+    "mean_reciprocal_rank": 0.325
+  },
+  "notes": [
+    "The Hybrid aggregate includes the deterministic fallback for one Groq HTTP 429 case.",
+    "The eight successful Hybrid cases had Recall@1 0.5625, Recall@5 0.8750, and MRR 0.8750.",
+    "Retrieval v1 and v2 Hybrid runs used different evidence budgets, so their token and latency totals are not a paired model comparison."
+  ]
+}

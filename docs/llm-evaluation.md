@@ -6,20 +6,26 @@ quality improvement is claimed.
 ## Variants
 
 1. `deterministic`: rules, duplicate similarity, AST index, and lexical candidate ranking.
-2. `llm-only`: GPT-OSS 20B receives issue text and the same bounded evidence, without the
-   deterministic candidate confidence.
-3. `hybrid`: deterministic retrieval followed by GPT-OSS 20B structured reranking.
+2. `hybrid`: deterministic retrieval followed by GPT-OSS 20B evidence-ID reranking.
+
+An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
+outside the deterministic candidate pool.
 
 ## Dataset
 
-Start with 20-30 closed issues that link to a fix pull request. Record:
+The current frozen dataset contains nine closed issues that link to a fix pull request. Manifest
+version 2 stores the complete evaluated Issue snapshot and never fetches mutable Issue text during
+a benchmark run. It records:
 
-- issue number and text;
+- issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
 - symbols changed by the fix, when recoverable;
 - repository commit used for indexing;
 - the labeling source and any ambiguity.
+
+Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
+ignored artifacts in reused workspaces cannot change candidate rankings.
 
 Do not include API keys, private repository content, or unreviewed generated labels.
 
@@ -32,13 +38,12 @@ Do not include API keys, private repository content, or unreviewed generated lab
 - Invalid structured-response rate.
 - Unknown evidence-reference rate.
 - Input and output tokens per issue.
-- End-to-end latency per issue.
+- Analysis latency per issue, measured after repository preparation.
 
 ## Reporting
 
-Save machine-readable results under `benchmarks/results/` and a reviewed summary under
-`reports/`. Report all evaluated issues, including failures. A smoke test proves integration
-only; it does not prove that the LLM improves investigation quality.
+Machine-readable results are saved under `benchmarks/results/`; the reviewed result is
+`docs/benchmark-results.md`. All evaluated issues, including failures, must remain in the output.
 
 ## Current smoke result
 
@@ -54,6 +59,9 @@ Groq run with `openai/gpt-oss-20b`:
 - hypotheses were limited to unverified routing/middleware and deployment-version mismatches;
 - the generated report, traces, and snapshots contained no API key.
 
-This is an integration and grounding smoke test over one synthetic case, not evidence that the
-hybrid method outperforms the deterministic baseline. The historical fix-PR benchmark above is
-still required before making a quality claim.
+This is an integration and grounding smoke test over one synthetic case. The real-project
+localization benchmark is reported separately in `docs/benchmark-results.md`.
+
+The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison and a separate
+three-case full-schema stability smoke test. Model-size conclusions must not mix the localization
+and schema-reliability endpoints.

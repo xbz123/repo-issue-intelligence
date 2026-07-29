@@ -47,6 +47,7 @@ def collect_evidence(
     max_total_chars: int = 16_000,
     max_lines_per_snippet: int = 80,
     context_lines: int = 12,
+    max_chars_per_snippet: int | None = None,
 ) -> list[EvidenceSnippet]:
     if max_total_chars < 1:
         raise ValueError("max_total_chars must be positive")
@@ -54,6 +55,8 @@ def collect_evidence(
         raise ValueError("max_lines_per_snippet must be positive")
     if context_lines < 0:
         raise ValueError("context_lines cannot be negative")
+    if max_chars_per_snippet is not None and max_chars_per_snippet < 1:
+        raise ValueError("max_chars_per_snippet must be positive")
 
     root = report.repository_root.expanduser().resolve()
     snippets: list[EvidenceSnippet] = []
@@ -82,8 +85,11 @@ def collect_evidence(
             for line_number in range(start, end + 1)
         ]
         content = "\n".join(numbered_lines)
-        if len(content) > remaining:
-            content = content[:remaining].rstrip()
+        snippet_limit = remaining
+        if max_chars_per_snippet is not None:
+            snippet_limit = min(snippet_limit, max_chars_per_snippet)
+        if len(content) > snippet_limit:
+            content = content[:snippet_limit].rstrip()
         if not content:
             break
         snippets.append(

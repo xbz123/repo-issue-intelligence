@@ -32,18 +32,49 @@ class GitHubClient:
             timeout=30.0,
             transport=transport,
             trust_env=trust_env,
+            follow_redirects=True,
         )
 
     def close(self) -> None:
         self.client.close()
 
-    def fetch_open_issues(self, repository: str, limit: int = 100) -> list[IssueRecord]:
+    @staticmethod
+    def _validate_repository(repository: str) -> tuple[str, str]:
         if REPOSITORY_PATTERN.fullmatch(repository) is None:
             raise ValueError("repository must use the owner/name format")
+        owner, repo = repository.split("/", maxsplit=1)
+        return owner, repo
+
+    @staticmethod
+    def _issue_record(item: dict) -> IssueRecord:
+        return IssueRecord(
+            number=item["number"],
+            title=item["title"],
+            body=item.get("body") or "",
+            labels=[label["name"] for label in item.get("labels", [])],
+            comments_count=item.get("comments", 0),
+            created_at=datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")),
+            updated_at=datetime.fromisoformat(item["updated_at"].replace("Z", "+00:00")),
+            html_url=item.get("html_url"),
+            author=(item.get("user") or {}).get("login"),
+        )
+
+    def fetch_issue(self, repository: str, issue_number: int) -> IssueRecord:
+        owner, repo = self._validate_repository(repository)
+        if issue_number < 1:
+            raise ValueError("issue_number must be at least 1")
+        response = self.client.get(f"/repos/{owner}/{repo}/issues/{issue_number}")
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or "pull_request" in payload:
+            raise ValueError("GitHub issue response must describe an issue")
+        return self._issue_record(payload)
+
+    def fetch_open_issues(self, repository: str, limit: int = 100) -> list[IssueRecord]:
+        owner, repo = self._validate_repository(repository)
         if limit < 1:
             raise ValueError("limit must be at least 1")
 
-        owner, repo = repository.split("/", maxsplit=1)
         collected: list[IssueRecord] = []
         page = 1
         per_page = 100
@@ -64,23 +95,7 @@ class GitHubClient:
                 # GitHub's issues endpoint also returns pull requests.
                 if "pull_request" in item:
                     continue
-                collected.append(
-                    IssueRecord(
-                        number=item["number"],
-                        title=item["title"],
-                        body=item.get("body") or "",
-                        labels=[label["name"] for label in item.get("labels", [])],
-                        comments_count=item.get("comments", 0),
-                        created_at=datetime.fromisoformat(
-                            item["created_at"].replace("Z", "+00:00")
-                        ),
-                        updated_at=datetime.fromisoformat(
-                            item["updated_at"].replace("Z", "+00:00")
-                        ),
-                        html_url=item.get("html_url"),
-                        author=(item.get("user") or {}).get("login"),
-                    )
-                )
+                collected.append(self._issue_record(item))
                 if len(collected) >= limit:
                     break
 

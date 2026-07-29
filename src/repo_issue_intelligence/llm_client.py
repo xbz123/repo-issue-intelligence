@@ -10,20 +10,28 @@ from pydantic import ValidationError
 
 from .models import (
     EvidenceAlignment,
+    EvidenceRerankAnalysis,
+    EvidenceRerankResult,
     EvidenceSnippet,
     InvestigationReport,
     IssueRecord,
     LLMAnalysis,
+    LLMAnalysisResponse,
     LLMAnalysisResult,
 )
 
 GROQ_API_BASE_URL = "https://api.groq.com/openai/v1"
+RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item is to
+contain the source location that must change to fix the GitHub issue. Use only evidence IDs from
+the input. Return the most relevant IDs first. Do not diagnose a root cause or propose a patch."""
 SYSTEM_PROMPT = """You investigate a GitHub issue using only the supplied repository evidence.
 
 Return the requested structured analysis. Candidate locations and hypotheses are not confirmed
 root causes. Every hypothesis must cite one or more evidence IDs from the input. Do not invent
 files, symbols, stack traces, runtime results, or affected versions. If the evidence is not enough,
 set needs_more_evidence to true and explain what is missing.
+Return no more than two hypotheses. Omit a weak hypothesis instead of returning one with an empty
+evidence_ids list.
 
 Before forming hypotheses, inspect every repository_evidence item line by line and add exactly one
 evidence_observation for each evidence ID. Set its alignment to supports_issue, contradicts_issue,
@@ -66,15 +74,21 @@ class GroqIssueAnalyzer:
         max_output_tokens: int = 1_600,
         timeout_seconds: float = 30.0,
         reasoning_effort: str = "low",
+        temperature: float = 1.0,
+        seed: int | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("Groq API key is required")
         if reasoning_effort not in {"low", "medium", "high"}:
             raise ValueError("reasoning_effort must be low, medium, or high")
+        if not 0 <= temperature <= 2:
+            raise ValueError("temperature must be between 0 and 2")
         self.model = model
         self.max_output_tokens = max_output_tokens
         self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
+        self.seed = seed
         self._client = client or httpx.Client(
             base_url=GROQ_API_BASE_URL,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -86,37 +100,17 @@ class GroqIssueAnalyzer:
         if self._owns_client:
             self._client.close()
 
-    def analyze(
+    def _request_structured(
         self,
-        issue: IssueRecord,
-        report: InvestigationReport,
-        evidence: Sequence[EvidenceSnippet],
-    ) -> LLMAnalysisResult:
-        user_payload = {
-            "issue": {
-                "number": issue.number,
-                "title": issue.title,
-                "body": issue.body[:6_000],
-                "labels": issue.labels,
-            },
-            "deterministic_candidates": [
-                {
-                    "file": candidate.file,
-                    "symbol": candidate.symbol,
-                    "lines": candidate.lines,
-                    "confidence": candidate.confidence,
-                    "evidence": candidate.evidence,
-                }
-                for candidate in report.candidates
-            ],
-            "repository_evidence": [
-                snippet.model_dump(mode="json") for snippet in evidence
-            ],
-        }
+        system_prompt: str,
+        user_payload: dict,
+        schema: dict,
+        schema_name: str,
+    ) -> tuple[str, dict, float]:
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
                     "content": json.dumps(user_payload, ensure_ascii=False),
@@ -125,13 +119,16 @@ class GroqIssueAnalyzer:
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
-                    "name": "issue_investigation",
+                    "name": schema_name,
                     "strict": True,
-                    "schema": LLMAnalysis.model_json_schema(),
+                    "schema": schema,
                 },
             },
             "max_completion_tokens": self.max_output_tokens,
+            "temperature": self.temperature,
         }
+        if self.seed is not None:
+            payload["seed"] = self.seed
         if self.model.startswith("openai/gpt-oss-"):
             payload["reasoning_effort"] = self.reasoning_effort
 
@@ -170,8 +167,94 @@ class GroqIssueAnalyzer:
         try:
             response_payload = response.json()
             content = response_payload["choices"][0]["message"]["content"]
-            analysis = LLMAnalysis.model_validate_json(content)
-        except (KeyError, IndexError, TypeError, ValueError, ValidationError) as error:
+        except (KeyError, IndexError, TypeError, ValueError) as error:
+            raise GroqAPIError("Groq returned an invalid structured response") from error
+        return content, response_payload, elapsed_ms
+
+    def rerank(
+        self,
+        issue: IssueRecord,
+        evidence: Sequence[EvidenceSnippet],
+    ) -> EvidenceRerankResult:
+        user_payload = {
+            "issue": {
+                "number": issue.number,
+                "title": issue.title,
+                "body": issue.body[:3_000],
+                "labels": issue.labels,
+            },
+            "repository_evidence": [
+                snippet.model_dump(mode="json") for snippet in evidence
+            ],
+        }
+        content, response_payload, elapsed_ms = self._request_structured(
+            RERANK_SYSTEM_PROMPT,
+            user_payload,
+            EvidenceRerankAnalysis.model_json_schema(),
+            "evidence_rerank",
+        )
+        try:
+            analysis = EvidenceRerankAnalysis.model_validate_json(content)
+        except (TypeError, ValueError, ValidationError) as error:
+            raise GroqAPIError("Groq returned an invalid rerank response") from error
+
+        valid_ids = {snippet.id for snippet in evidence}
+        reranked_ids = analysis.reranked_evidence_ids
+        if not reranked_ids:
+            raise GroqAPIError("Groq returned an empty evidence rerank")
+        unknown_ids = set(reranked_ids) - valid_ids
+        if unknown_ids:
+            raise GroqAPIError(
+                f"Groq referenced unknown evidence IDs: {', '.join(sorted(unknown_ids))}"
+            )
+        usage = response_payload.get("usage") or {}
+        return EvidenceRerankResult(
+            provider="groq",
+            model=self.model,
+            request_id=response_payload.get("id"),
+            system_fingerprint=response_payload.get("system_fingerprint"),
+            input_tokens=int(usage.get("prompt_tokens") or 0),
+            output_tokens=int(usage.get("completion_tokens") or 0),
+            elapsed_ms=elapsed_ms,
+            analysis=analysis,
+        )
+
+    def analyze(
+        self,
+        issue: IssueRecord,
+        report: InvestigationReport,
+        evidence: Sequence[EvidenceSnippet],
+    ) -> LLMAnalysisResult:
+        user_payload = {
+            "issue": {
+                "number": issue.number,
+                "title": issue.title,
+                "body": issue.body[:6_000],
+                "labels": issue.labels,
+            },
+            "deterministic_candidates": [
+                {
+                    "file": candidate.file,
+                    "symbol": candidate.symbol,
+                    "lines": candidate.lines,
+                    "confidence": candidate.confidence,
+                    "evidence": candidate.evidence,
+                }
+                for candidate in report.candidates
+            ],
+            "repository_evidence": [
+                snippet.model_dump(mode="json") for snippet in evidence
+            ],
+        }
+        content, response_payload, elapsed_ms = self._request_structured(
+            SYSTEM_PROMPT,
+            user_payload,
+            LLMAnalysisResponse.model_json_schema(),
+            "issue_investigation",
+        )
+        try:
+            analysis = LLMAnalysisResponse.model_validate_json(content)
+        except (TypeError, ValueError, ValidationError) as error:
             raise GroqAPIError("Groq returned an invalid structured response") from error
 
         analysis = self._normalize_contradictions(analysis)
@@ -181,6 +264,7 @@ class GroqIssueAnalyzer:
             provider="groq",
             model=self.model,
             request_id=response_payload.get("id"),
+            system_fingerprint=response_payload.get("system_fingerprint"),
             input_tokens=int(usage.get("prompt_tokens") or 0),
             output_tokens=int(usage.get("completion_tokens") or 0),
             elapsed_ms=elapsed_ms,

@@ -4,6 +4,7 @@ import ast
 import json
 import os
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 
 from .models import FileRecord, RepositoryMap, SymbolRecord
@@ -87,7 +88,32 @@ def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str]]:
     return sorted(symbols, key=lambda item: item.line), sorted(set(imports))
 
 
-def build_repository_map(root: Path) -> RepositoryMap:
+def _repository_files(
+    root: Path,
+    included_files: Iterable[str] | None,
+) -> Iterable[tuple[Path, Path]]:
+    if included_files is not None:
+        for value in sorted(set(included_files)):
+            relative = Path(value)
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError(f"Repository file must be relative to the root: {value}")
+            path = (root / relative).resolve()
+            if path.is_relative_to(root) and path.is_file():
+                yield path, relative
+        return
+
+    for current_root, dirs, filenames in os.walk(root):
+        dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS]
+        current = Path(current_root)
+        for filename in filenames:
+            path = current / filename
+            yield path, path.relative_to(root)
+
+
+def build_repository_map(
+    root: Path,
+    included_files: Iterable[str] | None = None,
+) -> RepositoryMap:
     root = root.resolve()
     files: list[FileRecord] = []
     languages: Counter[str] = Counter()
@@ -95,39 +121,35 @@ def build_repository_map(root: Path) -> RepositoryMap:
     entrypoints: list[str] = []
     runtime_files: list[str] = []
     test_directories: set[str] = set()
-    for current_root, dirs, filenames in os.walk(root):
-        dirs[:] = [directory for directory in dirs if directory not in SKIP_DIRS]
-        current = Path(current_root)
-        relative_dir = current.relative_to(root)
-        if any(part in {"test", "tests"} for part in relative_dir.parts):
-            test_directories.add(str(relative_dir))
-        for filename in filenames:
-            path = current / filename
-            relative = path.relative_to(root)
-            if filename in RUNTIME_FILES:
-                runtime_files.append(str(relative))
-            if filename in ENTRYPOINT_NAMES:
-                entrypoints.append(str(relative))
-            language = LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
-            if not language:
-                continue
-            languages[language] += 1
-            symbols, imports = ([], [])
-            if language == "Python":
-                symbols, imports = _python_metadata(path)
-                for imported in imports:
-                    framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
-                    if framework:
-                        frameworks.add(framework)
-            files.append(
-                FileRecord(
-                    path=str(relative),
-                    language=language,
-                    symbols=symbols,
-                    imports=imports,
-                    test_file="test" in filename.lower() or "tests" in relative.parts,
-                )
+    for path, relative in _repository_files(root, included_files):
+        filename = path.name
+        for index, part in enumerate(relative.parts[:-1]):
+            if part in {"test", "tests"}:
+                test_directories.add(str(Path(*relative.parts[: index + 1])))
+        if filename in RUNTIME_FILES:
+            runtime_files.append(str(relative))
+        if filename in ENTRYPOINT_NAMES:
+            entrypoints.append(str(relative))
+        language = LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
+        if not language:
+            continue
+        languages[language] += 1
+        symbols, imports = ([], [])
+        if language == "Python":
+            symbols, imports = _python_metadata(path)
+            for imported in imports:
+                framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
+                if framework:
+                    frameworks.add(framework)
+        files.append(
+            FileRecord(
+                path=str(relative),
+                language=language,
+                symbols=symbols,
+                imports=imports,
+                test_file="test" in filename.lower() or "tests" in relative.parts,
             )
+        )
     return RepositoryMap(
         root=str(root),
         languages=dict(languages.most_common()),

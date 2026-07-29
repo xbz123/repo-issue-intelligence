@@ -66,3 +66,38 @@ def test_collect_evidence_rejects_paths_outside_repository(tmp_path: Path) -> No
     )
 
     assert collect_evidence(report) == []
+
+
+def test_collect_evidence_caps_each_snippet_to_preserve_candidate_breadth(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    for name in ("first.py", "second.py"):
+        (repository / name).write_text(
+            "\n".join(f"{name}_line_{line}" for line in range(30)),
+            encoding="utf-8",
+        )
+    report = investigate(issue(), build_repository_map(repository))
+    report = report.model_copy(
+        update={
+            "candidates": [
+                CandidateLocation(
+                    file=name,
+                    lines="1-20",
+                    confidence=0.9,
+                    evidence=["Synthetic candidate"],
+                )
+                for name in ("first.py", "second.py")
+            ]
+        }
+    )
+
+    evidence = collect_evidence(
+        report,
+        max_total_chars=400,
+        max_chars_per_snippet=200,
+    )
+
+    assert [snippet.file for snippet in evidence] == ["first.py", "second.py"]
+    assert all(len(snippet.content) <= 200 for snippet in evidence)

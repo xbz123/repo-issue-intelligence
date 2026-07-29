@@ -19,6 +19,7 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Validates every LLM hypothesis against repository evidence IDs and named missing artifacts.
 - Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
 - Stops at a queryable human review state with explicit approve/reject actions.
+- Evaluates file localization on frozen historical Issue/Fix-PR pairs.
 - Exposes both a Typer CLI and FastAPI endpoints.
 
 ## Why two stages
@@ -102,6 +103,31 @@ lines, and applies a configurable character budget before sending content. GPT-O
 low reasoning effort and a bounded output budget so strict structured generation fits within the
 free-tier token limits; both values can be changed through `.env`.
 
+Run the frozen real-project benchmark:
+
+```bash
+uv run rii benchmark benchmarks/cases.json \
+  --variant deterministic \
+  --output benchmarks/results/deterministic-retrieval-v2.json
+
+LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --model openai/gpt-oss-20b \
+  --temperature 0.1 \
+  --seed 1337 \
+  --llm-delay-seconds 40 \
+  --output benchmarks/results/hybrid-20b-retrieval-v2.json
+```
+
+The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
+schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
+misclassifying schema failures as localization failures. Each evidence snippet is capped so the
+model sees a broad candidate set under the same total character budget. Manifest version 2 embeds
+the complete evaluated Issue snapshot, and repository indexing is restricted to `git ls-files`;
+live Issue edits and ignored artifacts in reused workspaces therefore cannot change benchmark
+inputs.
+
 ## Analyze a real GitHub repository
 
 ```bash
@@ -162,6 +188,7 @@ src/repo_issue_intelligence/
   agent_store.py         SQLite run, trace, and snapshot persistence
   agent_workflow.py      LangGraph Top-K investigation workflow
   api.py                 FastAPI service
+  benchmark.py           frozen real-Issue file-localization evaluation
   cli.py                 command-line interface
   duplicates.py          issue similarity and duplicate candidates
   github_client.py       paginated GitHub REST synchronization
@@ -176,17 +203,34 @@ src/repo_issue_intelligence/
 
 See `docs/architecture.md` for boundaries and planned milestones.
 
-## Evaluation plan
+## Evaluation
 
-Use closed issues with linked fix PRs as ground truth:
+The first frozen benchmark contains nine closed issues with linked fix PRs:
 
-- Priority agreement with maintainer behavior.
-- Duplicate detection precision/recall/F1.
-- File Recall@5 against files changed by the fix PR.
-- Symbol Recall@10 against functions modified by the fix.
-- Hypothesis evidence coverage.
-- Reproduction-plan acceptance rate.
-- Latency and cost per issue.
+- Starlette: four main benchmark cases.
+- Typer: two simple calibration cases.
+- Textual: three complex generalization cases.
+
+Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
+eligible for candidate retrieval.
+
+At the frozen pre-fix commits, Retrieval v2's deterministic path achieved File Recall@1 `0.2222`,
+Recall@5 `0.7593`, Recall@10/20 `0.9444`, and MRR `0.5083`. This improved Recall@5 by `0.3149`
+absolute over Retrieval v1. GPT-OSS 20B reranking achieved Recall@1 `0.5000`, Recall@5 `0.8148`,
+and MRR `0.8333`. Eight of nine model requests succeeded; the remaining Groq HTTP 429 case used
+the deterministic fallback and remains included in the aggregate.
+
+This supports two bounded claims: deterministic retrieval now finds most labeled fix files in its
+Top-20 pool, and the small model materially improves first-file ordering when the evidence is
+available. It still does not establish root-cause accuracy.
+
+See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
+limitations, and next retrieval improvements.
+
+A fixed-seed comparison found identical localization metrics for GPT-OSS 20B and 120B. The 120B
+run was 16.31% slower and used 48.38% more output tokens, so 20B remains the default reranker.
+On a separate three-case full-schema smoke test, 120B succeeded on the first attempt in 3/3 cases
+versus 2/3 for 20B; this sample is too small to establish a production routing rule.
 
 ## Safety and scope
 

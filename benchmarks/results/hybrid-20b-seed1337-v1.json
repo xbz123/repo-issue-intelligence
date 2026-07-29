@@ -1,0 +1,395 @@
+{
+  "manifest_name": "starlette-typer-textual-real-issues",
+  "manifest_version": 1,
+  "variant": "hybrid",
+  "model": "openai/gpt-oss-20b",
+  "max_evidence_chars": 6000,
+  "max_output_tokens": 600,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 30.0,
+  "reasoning_effort": "low",
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-07-29T21:37:02.758177Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "issue_url": "https://github.com/encode/starlette/issues/3048",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/3189",
+      "pre_fix_sha": "5d748111b0f8116053f3bd09870d9af8aef971db",
+      "issue_updated_at": "2026-03-15T11:59:17Z",
+      "expected_files": [
+        "starlette/responses.py"
+      ],
+      "candidate_files": [
+        "starlette/applications.py",
+        "starlette/middleware/errors.py",
+        "starlette/routing.py",
+        "tests/test_staticfiles.py",
+        "tests/middleware/test_base.py"
+      ],
+      "matched_files_at_5": [],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 881.685,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-3fc1f935-3ddc-44e5-b462-35c43aa7b972",
+      "llm_system_fingerprint": "fp_66f3850a1a",
+      "llm_input_tokens": 2748,
+      "llm_output_tokens": 181,
+      "llm_elapsed_ms": 709.907,
+      "error": null
+    },
+    {
+      "case_id": "starlette-session-cookie-refresh",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2019,
+      "issue_url": "https://github.com/encode/starlette/issues/2019",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/3166",
+      "pre_fix_sha": "dce3495a9c67c4092b790b50aa8e0a3dfd062a52",
+      "issue_updated_at": "2026-03-01T20:30:20Z",
+      "expected_files": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ],
+      "candidate_files": [
+        "starlette/applications.py",
+        "starlette/requests.py",
+        "starlette/templating.py",
+        "starlette/middleware/errors.py",
+        "tests/test_testclient.py"
+      ],
+      "matched_files_at_5": [
+        "starlette/requests.py"
+      ],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.5,
+      "reciprocal_rank": 0.5,
+      "analysis_elapsed_ms": 766.784,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-16a8669b-446d-4d44-a30a-baf6fda9139a",
+      "llm_system_fingerprint": "fp_639a5351c8",
+      "llm_input_tokens": 2650,
+      "llm_output_tokens": 142,
+      "llm_elapsed_ms": 608.209,
+      "error": null
+    },
+    {
+      "case_id": "starlette-base-middleware-no-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2516,
+      "issue_url": "https://github.com/encode/starlette/issues/2516",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/2620",
+      "pre_fix_sha": "c50731db62dc86a86ef9238ce895dada1e56cc40",
+      "issue_updated_at": "2025-07-30T06:54:49Z",
+      "expected_files": [
+        "starlette/middleware/base.py"
+      ],
+      "candidate_files": [
+        "starlette/applications.py",
+        "starlette/routing.py",
+        "tests/test_staticfiles.py",
+        "tests/middleware/test_base.py",
+        "starlette/middleware/errors.py"
+      ],
+      "matched_files_at_5": [],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 830.295,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-b56b96c3-6d22-4e6c-a5fa-4770dcb0c229",
+      "llm_system_fingerprint": "fp_7d448090ba",
+      "llm_input_tokens": 2730,
+      "llm_output_tokens": 93,
+      "llm_elapsed_ms": 669.108,
+      "error": null
+    },
+    {
+      "case_id": "starlette-http2-cookie-headers",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2977,
+      "issue_url": "https://github.com/encode/starlette/issues/2977",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/3029",
+      "pre_fix_sha": "03284373cdcf3ed13f80d5e7ad549ba3d743dca6",
+      "issue_updated_at": "2025-09-20T21:43:27Z",
+      "expected_files": [
+        "starlette/requests.py"
+      ],
+      "candidate_files": [
+        "starlette/requests.py",
+        "tests/middleware/test_base.py",
+        "starlette/applications.py",
+        "tests/test_testclient.py",
+        "starlette/routing.py"
+      ],
+      "matched_files_at_5": [
+        "starlette/requests.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 723.502,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-3a57806a-6e00-4d79-99f2-dbabf7e4a026",
+      "llm_system_fingerprint": "fp_84bb35977d",
+      "llm_input_tokens": 2215,
+      "llm_output_tokens": 87,
+      "llm_elapsed_ms": 575.182,
+      "error": null
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "issue_url": "https://github.com/fastapi/typer/issues/1787",
+      "fix_pr_url": "https://github.com/fastapi/typer/pull/1788",
+      "pre_fix_sha": "56d96165c3ba71eca73880bc999587a29b57656e",
+      "issue_updated_at": "2026-05-26T17:51:15Z",
+      "expected_files": [
+        "typer/core.py"
+      ],
+      "candidate_files": [
+        "typer/params.py",
+        "typer/main.py",
+        "typer/models.py",
+        "typer/_click/termui.py",
+        "typer/rich_utils.py"
+      ],
+      "matched_files_at_5": [],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 1417.78,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-8993125c-0380-488b-af5b-accf9018c734",
+      "llm_system_fingerprint": "fp_24bfb4a850",
+      "llm_input_tokens": 2587,
+      "llm_output_tokens": 118,
+      "llm_elapsed_ms": 1139.302,
+      "error": null
+    },
+    {
+      "case_id": "typer-rich-help-width",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1159,
+      "issue_url": "https://github.com/fastapi/typer/issues/1159",
+      "fix_pr_url": "https://github.com/fastapi/typer/pull/1356",
+      "pre_fix_sha": "4d30a89a4f699cbe06c734df2c4c67063141ead2",
+      "issue_updated_at": "2026-02-10T16:52:53Z",
+      "expected_files": [
+        "typer/rich_utils.py"
+      ],
+      "candidate_files": [
+        "typer/rich_utils.py",
+        "typer/main.py",
+        "typer/cli.py",
+        "scripts/docs.py",
+        "docs_src/commands/help/tutorial005_an_py39.py"
+      ],
+      "matched_files_at_5": [
+        "typer/rich_utils.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 1224.513,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-c154c290-0500-4c4f-9d47-5bec956637df",
+      "llm_system_fingerprint": "fp_3cdd24b83b",
+      "llm_input_tokens": 2640,
+      "llm_output_tokens": 149,
+      "llm_elapsed_ms": 1054.663,
+      "error": null
+    },
+    {
+      "case_id": "textual-selection-common-ancestor",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6452,
+      "issue_url": "https://github.com/Textualize/textual/issues/6452",
+      "fix_pr_url": "https://github.com/Textualize/textual/pull/6455",
+      "pre_fix_sha": "bba5c9c4e26d3fdf64c79f2592777fbb342dbdff",
+      "issue_updated_at": "2026-03-29T03:56:10Z",
+      "expected_files": [
+        "src/textual/screen.py",
+        "src/textual/widget.py"
+      ],
+      "candidate_files": [
+        "src/textual/widgets/_select.py",
+        "src/textual/app.py",
+        "src/textual/widget.py",
+        "src/textual/document/_document_navigator.py",
+        "src/textual/screen.py"
+      ],
+      "matched_files_at_5": [
+        "src/textual/screen.py",
+        "src/textual/widget.py"
+      ],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 1.0,
+      "reciprocal_rank": 0.3333,
+      "analysis_elapsed_ms": 1559.115,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-0fe0f30c-43b8-4124-a838-d36c0022cfe4",
+      "llm_system_fingerprint": "fp_5979a0e1b7",
+      "llm_input_tokens": 2082,
+      "llm_output_tokens": 124,
+      "llm_elapsed_ms": 495.631,
+      "error": null
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "issue_url": "https://github.com/Textualize/textual/issues/6205",
+      "fix_pr_url": "https://github.com/Textualize/textual/pull/6206",
+      "pre_fix_sha": "7308d9fa9ea59e16d27785d1d776a2a340a68ae5",
+      "issue_updated_at": "2025-11-03T17:35:46Z",
+      "expected_files": [
+        "src/textual/_compositor.py",
+        "src/textual/widget.py"
+      ],
+      "candidate_files": [
+        "src/textual/widget.py",
+        "src/textual/widgets/_markdown.py",
+        "src/textual/getters.py",
+        "src/textual/compose.py",
+        "src/textual/app.py"
+      ],
+      "matched_files_at_5": [
+        "src/textual/widget.py"
+      ],
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 1679.154,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-79448f8f-cb18-4719-a512-842204cd0c07",
+      "llm_system_fingerprint": "fp_e23fc997ca",
+      "llm_input_tokens": 2306,
+      "llm_output_tokens": 128,
+      "llm_elapsed_ms": 613.63,
+      "error": null
+    },
+    {
+      "case_id": "textual-kitty-keyboard-protocol",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6417,
+      "issue_url": "https://github.com/Textualize/textual/issues/6417",
+      "fix_pr_url": "https://github.com/Textualize/textual/pull/6542",
+      "pre_fix_sha": "da7e6721082a2bb0f3db4961d1f917ca7b0e177e",
+      "issue_updated_at": "2026-05-16T07:54:48Z",
+      "expected_files": [
+        "src/textual/_keyboard_protocol.py",
+        "src/textual/_xterm_parser.py",
+        "src/textual/drivers/linux_driver.py"
+      ],
+      "candidate_files": [
+        "src/textual/_dispatch_key.py",
+        "src/textual/driver.py",
+        "src/textual/app.py",
+        "src/textual/pilot.py",
+        "src/textual/_doc.py"
+      ],
+      "matched_files_at_5": [],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 1592.514,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_request_id": "chatcmpl-fb42e38f-17ac-4418-94b3-b4ab462f9ebb",
+      "llm_system_fingerprint": "fp_3cdd24b83b",
+      "llm_input_tokens": 2022,
+      "llm_output_tokens": 123,
+      "llm_elapsed_ms": 553.084,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 9,
+    "completed": 9,
+    "failed": 0,
+    "file_recall_at_1": 0.2778,
+    "file_recall_at_5": 0.4444,
+    "mean_reciprocal_rank": 0.4259,
+    "average_analysis_elapsed_ms": 1186.149,
+    "llm_success_rate": 1.0,
+    "llm_cases": 9,
+    "llm_successes": 9,
+    "llm_fallbacks": 0,
+    "average_llm_elapsed_ms": 713.191,
+    "llm_input_tokens": 21980,
+    "llm_output_tokens": 1145
+  },
+  "by_tier": {
+    "main": {
+      "cases": 4,
+      "completed": 4,
+      "failed": 0,
+      "file_recall_at_1": 0.25,
+      "file_recall_at_5": 0.375,
+      "mean_reciprocal_rank": 0.375,
+      "average_analysis_elapsed_ms": 800.566,
+      "llm_success_rate": 1.0,
+      "llm_cases": 4,
+      "llm_successes": 4,
+      "llm_fallbacks": 0,
+      "average_llm_elapsed_ms": 640.601,
+      "llm_input_tokens": 10343,
+      "llm_output_tokens": 503
+    },
+    "calibration": {
+      "cases": 2,
+      "completed": 2,
+      "failed": 0,
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "mean_reciprocal_rank": 0.5,
+      "average_analysis_elapsed_ms": 1321.146,
+      "llm_success_rate": 1.0,
+      "llm_cases": 2,
+      "llm_successes": 2,
+      "llm_fallbacks": 0,
+      "average_llm_elapsed_ms": 1096.983,
+      "llm_input_tokens": 5227,
+      "llm_output_tokens": 267
+    },
+    "generalization": {
+      "cases": 3,
+      "completed": 3,
+      "failed": 0,
+      "file_recall_at_1": 0.1667,
+      "file_recall_at_5": 0.5,
+      "mean_reciprocal_rank": 0.4444,
+      "average_analysis_elapsed_ms": 1610.261,
+      "llm_success_rate": 1.0,
+      "llm_cases": 3,
+      "llm_successes": 3,
+      "llm_fallbacks": 0,
+      "average_llm_elapsed_ms": 554.115,
+      "llm_input_tokens": 6410,
+      "llm_output_tokens": 375
+    }
+  }
+}
