@@ -77,6 +77,27 @@ normalizes paths and identifiers, gives explicit stack-trace/source-path referen
 signal, searches bounded source content, downranks tests and documentation, and retains 20
 candidates. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
 
+### Benchmark candidate pipeline
+
+`benchmark_discovery.py` separates generated candidates from accepted ground truth:
+
+```text
+GitHub closed linked Issues
+  -> discover linked fix PRs
+  -> derive pre-fix SHA
+  -> classify changed production files
+  -> blocking and advisory audit checks
+  -> needs_review / rejected catalog
+  -> committed manual selection with review notes
+  -> accepted catalog + next frozen manifest version
+```
+
+Blocking checks require a same-repository merged PR, an Issue that predates the fix, a derivable
+pre-fix SHA, and a bounded non-empty set of existing production source files. Advisory checks flag
+weak Issue descriptions, missing bug/diagnostic signals, ambiguous multi-commit history, and
+missing textual closing references. Automation never changes a candidate to `accepted`; only the
+explicit curation step can do that, and duplicate Issues, fix PRs, and case IDs are rejected.
+
 `agent_store.py` persists three SQLite records:
 
 - the current `AgentRun`;
@@ -87,7 +108,8 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 
 ### Interfaces
 
-- Typer CLI for synchronization, ranking, indexing, investigation, Agent runs, human review, and API startup.
+- Typer CLI for synchronization, ranking, indexing, investigation, Agent runs, human review,
+  benchmark discovery/audit/curation, evaluation, and API startup.
 - FastAPI endpoints for issue analysis, repository indexing, Agent run creation/query, and review.
 
 ## Current boundaries
@@ -95,10 +117,11 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded Groq LLM analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current historical benchmark contains nine cases, which is sufficient for integration and
-error analysis but not for a statistically strong quality claim. LLM hypotheses are not confirmed
-root causes. Retrieval remains lexical/content based; it has no import graph, call graph,
-test-to-source mapping, or semantic vector index.
+The current benchmark contains 20 cases across seven repositories, which is useful for error
+analysis but not statistically strong enough for a broad quality claim. The historical nine-case
+manifest remains frozen for comparisons. LLM hypotheses are not confirmed root causes. Retrieval
+remains lexical/content based; it has no import graph, call graph, test-to-source mapping, or
+semantic vector index.
 
 ## Next workflow extensions
 
@@ -106,8 +129,8 @@ test-to-source mapping, or semantic vector index.
 current human_review
   -> import/call-graph evidence
   -> inspect Git history and related tests
-  -> multi-model evaluation and routing
-  -> expand historical benchmark to 20-30 cases
+  -> rerun deterministic and Hybrid on manifest v3
+  -> add symbol labels and expand to 30-50 cases
 ```
 
 The human review node remains mandatory before any future execution step.

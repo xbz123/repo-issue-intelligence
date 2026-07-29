@@ -108,7 +108,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-retrieval-v2.json
+  --output benchmarks/results/deterministic-v0.4-20-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases.json \
@@ -117,16 +117,42 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 40 \
-  --output benchmarks/results/hybrid-20b-retrieval-v2.json
+  --output benchmarks/results/hybrid-v0.4-20-cases.json
 ```
 
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget. Manifest version 2 embeds
-the complete evaluated Issue snapshot, and repository indexing is restricted to `git ls-files`;
-live Issue edits and ignored artifacts in reused workspaces therefore cannot change benchmark
-inputs.
+model sees a broad candidate set under the same total character budget. Manifest version 3 embeds
+20 complete Issue snapshots across seven repositories, and repository indexing is restricted to
+`git ls-files`; live Issue edits and ignored artifacts in reused workspaces therefore cannot
+change benchmark inputs.
+
+Discover and curate additional Issue/Fix-PR cases:
+
+```bash
+uv run rii benchmark-discover agronholm/anyio fastapi/fastapi pytest-dev/pytest \
+  Textualize/rich \
+  --target-per-repository 3 \
+  --scan-limit-per-repository 50 \
+  --output benchmarks/candidates/discovered.json
+
+uv run rii benchmark-audit pytest-dev/pytest 634 1766 \
+  --tier generalization \
+  --output benchmarks/candidates/pytest-634-pr-1766.json
+
+uv run rii benchmark-curate \
+  benchmarks/cases-v0.3.json \
+  benchmarks/expansion-v0.4-selection.json \
+  benchmarks/candidates-v0.4.json \
+  --catalog-output benchmarks/candidates/rebuilt-v0.4.json \
+  --manifest-output benchmarks/candidates/rebuilt-cases-v0.4.json
+```
+
+Discovery only produces `needs_review` or `rejected` candidates. A case enters a frozen manifest
+only through a committed manual selection file with review notes; generated raw catalogs under
+`benchmarks/candidates/` are intentionally ignored. The committed accepted catalog can be loaded
+again to reproduce the manifest without relying on a later, mutable GitHub search result.
 
 ## Analyze a real GitHub repository
 
@@ -156,7 +182,7 @@ Core endpoints:
 - `GET /v1/agent/runs/{run_id}`
 - `POST /v1/agent/runs/{run_id}/review`
 
-The v0.3 API continues to run the offline workflow. Optional Groq analysis is exposed through
+The v0.4 API continues to run the offline workflow. Optional Groq analysis is exposed through
 the CLI first so model credentials and quota use remain an explicit local operator decision.
 
 ## Priority model
@@ -189,6 +215,7 @@ src/repo_issue_intelligence/
   agent_workflow.py      LangGraph Top-K investigation workflow
   api.py                 FastAPI service
   benchmark.py           frozen real-Issue file-localization evaluation
+  benchmark_discovery.py candidate discovery, audit, and manual curation
   cli.py                 command-line interface
   duplicates.py          issue similarity and duplicate candidates
   github_client.py       paginated GitHub REST synchronization
@@ -201,36 +228,40 @@ src/repo_issue_intelligence/
   service.py             ranking orchestration
 ```
 
-See `docs/architecture.md` for boundaries and planned milestones.
+See `docs/architecture.md` for system boundaries and
+`docs/benchmark-expansion.md` for candidate acceptance and expansion protocol.
 
 ## Evaluation
 
-The first frozen benchmark contains nine closed issues with linked fix PRs:
+The current frozen benchmark contains 20 closed issues with linked fix PRs across seven projects:
 
-- Starlette: four main benchmark cases.
-- Typer: two simple calibration cases.
-- Textual: three complex generalization cases.
+- Main: Starlette (4) and FastAPI (3).
+- Calibration: Typer (2) and Rich (2).
+- Generalization: Textual (3), AnyIO (3), and pytest (3).
 
 Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
 eligible for candidate retrieval.
 
-At the frozen pre-fix commits, Retrieval v2's deterministic path achieved File Recall@1 `0.2222`,
-Recall@5 `0.7593`, Recall@10/20 `0.9444`, and MRR `0.5083`. This improved Recall@5 by `0.3149`
-absolute over Retrieval v1. GPT-OSS 20B reranking achieved Recall@1 `0.5000`, Recall@5 `0.8148`,
-and MRR `0.8333`. Eight of nine model requests succeeded; the remaining Groq HTTP 429 case used
-the deterministic fallback and remains included in the aggregate.
+On the 20-case manifest, the deterministic path completed every case and achieved File Recall@1
+`0.2750`, Recall@5 `0.5917`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR `0.4925`. The wider
+suite deliberately includes harder lexical and multi-file cases; its metrics must not be compared
+as if it were the same dataset as the historical 9-case run.
 
-This supports two bounded claims: deterministic retrieval now finds most labeled fix files in its
-Top-20 pool, and the small model materially improves first-file ordering when the evidence is
-available. It still does not establish root-cause accuracy.
+On the preserved 9-case manifest, Retrieval v2 achieved deterministic Recall@5 `0.7593` and MRR
+`0.5083`; GPT-OSS 20B reranking achieved Recall@5 `0.8148` and MRR `0.8333`. The 20-case Hybrid
+run has not yet been recorded, so no LLM improvement is claimed for the expanded dataset.
+
+This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
+pool across the expanded suite. It still does not establish root-cause accuracy.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.
 
-A fixed-seed comparison found identical localization metrics for GPT-OSS 20B and 120B. The 120B
-run was 16.31% slower and used 48.38% more output tokens, so 20B remains the default reranker.
-On a separate three-case full-schema smoke test, 120B succeeded on the first attempt in 3/3 cases
-versus 2/3 for 20B; this sample is too small to establish a production routing rule.
+On the historical 9-case suite, a fixed-seed comparison found identical localization metrics for
+GPT-OSS 20B and 120B. The 120B run was 16.31% slower and used 48.38% more output tokens, so 20B
+remains the default reranker. On a separate three-case full-schema smoke test, 120B succeeded on
+the first attempt in 3/3 cases versus 2/3 for 20B; this sample is too small to establish a
+production routing rule.
 
 ## Safety and scope
 

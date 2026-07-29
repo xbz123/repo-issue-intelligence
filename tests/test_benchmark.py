@@ -130,15 +130,20 @@ class ReverseEvidenceAnalyzer:
 def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     manifest = load_manifest(Path("benchmarks/cases.json"))
 
-    assert manifest.version == 2
-    assert len(manifest.cases) == 9
-    assert sum(case.tier is BenchmarkTier.MAIN for case in manifest.cases) == 4
-    assert sum(case.tier is BenchmarkTier.CALIBRATION for case in manifest.cases) == 2
-    assert sum(case.tier is BenchmarkTier.GENERALIZATION for case in manifest.cases) == 3
+    assert manifest.version == 3
+    assert len(manifest.cases) == 20
+    assert sum(case.tier is BenchmarkTier.MAIN for case in manifest.cases) == 7
+    assert sum(case.tier is BenchmarkTier.CALIBRATION for case in manifest.cases) == 4
+    assert sum(case.tier is BenchmarkTier.GENERALIZATION for case in manifest.cases) == 9
+    assert len({case.repository for case in manifest.cases}) == 7
     assert all(case.issue_snapshot.number == case.issue_number for case in manifest.cases)
     assert all(case.issue_snapshot.updated_at == case.issue_updated_at for case in manifest.cases)
     assert all(case.issue_snapshot.title for case in manifest.cases)
     assert all(case.issue_snapshot.body for case in manifest.cases)
+
+    historical = load_manifest(Path("benchmarks/cases-v0.3.json"))
+    assert historical.version == 2
+    assert len(historical.cases) == 9
 
 
 def test_evaluate_case_measures_deterministic_file_recall(tmp_path: Path) -> None:

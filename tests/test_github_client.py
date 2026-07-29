@@ -151,3 +151,56 @@ def test_fetch_issue_follows_repository_redirect() -> None:
         "/repos/example/project/issues/42",
         "/repositories/123/issues/42",
     ]
+
+
+def test_benchmark_discovery_github_endpoints() -> None:
+    commit_sha = "a" * 40
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/search/issues":
+            assert request.url.params["q"] == (
+                "repo:example/project is:issue is:closed linked:pr"
+            )
+            return httpx.Response(200, json={"items": [payload_item(42)]})
+        if request.url.path == "/repos/example/project/issues/42/timeline":
+            return httpx.Response(200, json=[{"event": "connected"}])
+        if request.url.path == "/repos/example/project/pulls/43":
+            return httpx.Response(200, json={"number": 43})
+        if request.url.path == "/repos/example/project/pulls/43/files":
+            return httpx.Response(
+                200,
+                json=[{"filename": "src/service.py", "status": "modified"}],
+            )
+        if request.url.path == "/repos/example/project/pulls/43/commits":
+            return httpx.Response(200, json=[{"sha": "b" * 40}])
+        if request.url.path == f"/repos/example/project/commits/{commit_sha}":
+            return httpx.Response(
+                200,
+                json={"sha": commit_sha, "parents": [{"sha": "c" * 40}]},
+            )
+        return httpx.Response(404)
+
+    client = GitHubClient(
+        token=None,
+        api_url="https://api.github.test",
+        transport=httpx.MockTransport(handler),
+        trust_env=False,
+    )
+    try:
+        issues = client.search_closed_linked_issues("example/project", limit=1)
+        timeline = client.fetch_issue_timeline("example/project", 42)
+        pull = client.fetch_pull_request("example/project", 43)
+        files = client.fetch_pull_request_files("example/project", 43)
+        commits = client.fetch_pull_request_commits("example/project", 43)
+        commit = client.fetch_commit("example/project", commit_sha)
+    finally:
+        client.close()
+
+    assert [item.number for item in issues] == [42]
+    assert timeline == [{"event": "connected"}]
+    assert pull["number"] == 43
+    assert files[0]["filename"] == "src/service.py"
+    assert commits[0]["sha"] == "b" * 40
+    assert commit["parents"][0]["sha"] == "c" * 40

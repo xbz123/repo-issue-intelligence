@@ -1,8 +1,11 @@
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from typer.testing import CliRunner
 
+from repo_issue_intelligence.benchmark import BenchmarkTier
+from repo_issue_intelligence.benchmark_discovery import CandidateCatalog
 from repo_issue_intelligence.cli import app
 from repo_issue_intelligence.models import LLMAnalysis, LLMAnalysisResult
 
@@ -177,3 +180,56 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["llm_enabled"] is True
     assert payload["investigations"][0]["llm_analysis"]["request_id"] == "cli-request"
+
+
+def test_benchmark_discover_writes_audit_catalog(tmp_path: Path, monkeypatch) -> None:
+    class FakeClient:
+        def __init__(self, token):
+            self.token = token
+
+        def close(self):
+            return None
+
+    def fake_discover(client, repositories, **options):
+        assert repositories == ["example/project"]
+        assert options["target_per_repository"] == 2
+        assert options["suggested_tiers"] == {
+            "example/project": BenchmarkTier.GENERALIZATION
+        }
+        return CandidateCatalog(
+            name="test-candidates",
+            version=1,
+            generated_at=datetime(2026, 7, 30, tzinfo=UTC),
+            repositories=repositories,
+            search_query="test",
+            target_per_repository=2,
+            scan_limit_per_repository=10,
+            max_source_files=5,
+            candidates=[],
+        )
+
+    monkeypatch.setattr("repo_issue_intelligence.cli.GitHubClient", FakeClient)
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.discover_candidates",
+        fake_discover,
+    )
+    output = tmp_path / "candidates.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark-discover",
+            "example/project",
+            "--target-per-repository",
+            "2",
+            "--scan-limit-per-repository",
+            "10",
+            "--tier",
+            "example/project=generalization",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(output.read_text(encoding="utf-8"))["name"] == "test-candidates"
