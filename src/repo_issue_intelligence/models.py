@@ -162,8 +162,14 @@ class LLMAnalysis(StrictOutputModel):
     evidence_observations: list[LLMEvidenceObservation]
     contradictions: list[str]
     reranked_evidence_ids: list[str]
-    hypotheses: list[LLMHypothesis] = Field(max_length=2)
+    hypotheses: list[LLMHypothesis]
     needs_more_evidence: bool
+
+
+class LLMAnalysisResponse(LLMAnalysis):
+    """Strict contract for new provider responses; persisted analyses remain compatible."""
+
+    hypotheses: list[LLMHypothesis] = Field(max_length=2)
 
 
 class LLMAnalysisResult(BaseModel):
@@ -179,7 +185,7 @@ class LLMAnalysisResult(BaseModel):
 
 class EvidenceRerankAnalysis(StrictOutputModel):
     summary: str
-    reranked_evidence_ids: list[str]
+    reranked_evidence_ids: list[str] = Field(min_length=1)
 
 
 class EvidenceRerankResult(BaseModel):

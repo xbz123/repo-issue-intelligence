@@ -137,7 +137,9 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
                             "confidence": 0.7,
                             "evidence_ids": [evidence[0].id],
                             "missing_evidence": ["Runtime trace"],
-                            "validation_step": "Add a failing refresh-token test.",
+                            "validation_step": (
+                                "Run the existing refresh-token test and inspect the error."
+                            ),
                         }
                     ],
                     needs_more_evidence=True,

@@ -68,13 +68,14 @@ GPT-OSS uses low reasoning effort and a bounded completion budget by default.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 
 Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
-out each frozen pre-fix SHA, verifies that the labeled fix files exist, runs deterministic
-retrieval, and optionally asks Groq only to rerank the bounded evidence IDs. Root-cause
-hypotheses are intentionally excluded from this benchmark contract so their schema reliability
-does not contaminate file-ranking metrics. Retrieval normalizes paths and identifiers, gives
-explicit stack-trace/source-path references the strongest signal, searches bounded source
-content, downranks tests and documentation, and retains 20 candidates. Per-candidate evidence
-caps preserve candidate breadth before LLM reranking.
+out each frozen pre-fix SHA, loads the complete Issue snapshot from the manifest rather than the
+live GitHub API, verifies that the labeled fix files exist, and indexes only paths returned by
+`git ls-files`. It runs deterministic retrieval and optionally asks Groq only to rerank the
+bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this benchmark
+contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
+normalizes paths and identifiers, gives explicit stack-trace/source-path references the strongest
+signal, searches bounded source content, downranks tests and documentation, and retains 20
+candidates. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
 
 `agent_store.py` persists three SQLite records:
 

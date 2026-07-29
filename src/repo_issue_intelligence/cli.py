@@ -262,13 +262,11 @@ def benchmark(
             temperature=temperature,
             seed=seed,
         )
-    github_client = GitHubClient(settings.github_token)
     try:
         run = run_benchmark(
             load_manifest(manifest),
             workspace,
             variant,
-            github_client,
             analyzer,
             case_ids=set(case_id) if case_id else None,
             max_evidence_chars=settings.llm_max_evidence_chars,
@@ -277,7 +275,6 @@ def benchmark(
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     finally:
-        github_client.close()
         if analyzer is not None:
             analyzer.close()
     save_benchmark_run(run, output)

@@ -14,7 +14,7 @@ from typing import Protocol
 from pydantic import BaseModel, Field
 
 from .evidence import collect_evidence
-from .github_client import REPOSITORY_PATTERN, GitHubClient
+from .github_client import REPOSITORY_PATTERN
 from .investigator import investigate
 from .llm_client import GroqAPIError
 from .models import (
@@ -64,6 +64,7 @@ class BenchmarkCase(BaseModel):
     repository: str
     issue_number: int = Field(ge=1)
     issue_updated_at: datetime
+    issue_snapshot: IssueRecord
     fix_pr_number: int = Field(ge=1)
     pre_fix_sha: str
     expected_files: list[str] = Field(min_length=1)
@@ -75,6 +76,10 @@ class BenchmarkCase(BaseModel):
             raise ValueError("pre_fix_sha must be a 40-character lowercase Git SHA")
         if len(set(self.expected_files)) != len(self.expected_files):
             raise ValueError("expected_files must not contain duplicates")
+        if self.issue_snapshot.number != self.issue_number:
+            raise ValueError("issue_snapshot number must match issue_number")
+        if self.issue_snapshot.updated_at != self.issue_updated_at:
+            raise ValueError("issue_snapshot updated_at must match issue_updated_at")
 
 
 class BenchmarkManifest(BaseModel):
@@ -117,6 +122,7 @@ class BenchmarkCaseResult(BaseModel):
     llm_output_tokens: int = 0
     llm_elapsed_ms: float = 0
     error: str | None = None
+    execution_succeeded: bool = True
 
 
 class BenchmarkAggregate(BaseModel):
@@ -214,6 +220,11 @@ def prepare_repository(case: BenchmarkCase, workspace: Path) -> Path:
     return target
 
 
+def tracked_repository_files(repository_root: Path) -> list[str]:
+    output = _run_git(["ls-files", "-z"], cwd=repository_root)
+    return [value for value in output.split("\0") if value]
+
+
 def _unique_files(values: Sequence[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
@@ -244,9 +255,18 @@ def _hybrid_candidate_files(
             else:
                 analysis = analyzer.rerank(issue, evidence)
             evidence_files = {snippet.id: snippet.file for snippet in evidence}
+            reranked_ids = analysis.analysis.reranked_evidence_ids
+            if not reranked_ids:
+                raise GroqAPIError("Reranker returned no evidence IDs")
+            unknown_ids = set(reranked_ids) - evidence_files.keys()
+            if unknown_ids:
+                raise GroqAPIError(
+                    "Reranker returned unknown evidence IDs: "
+                    + ", ".join(sorted(unknown_ids))
+                )
             reranked = [
                 evidence_files[evidence_id]
-                for evidence_id in analysis.analysis.reranked_evidence_ids
+                for evidence_id in reranked_ids
             ]
             remaining = [candidate.file for candidate in report.candidates]
             return _unique_files([*reranked, *remaining]), analysis, attempt
@@ -273,16 +293,18 @@ def evaluate_case(
     max_evidence_chars: int = 16_000,
     max_llm_attempts: int = 2,
     llm_retry_delay_seconds: float = 0,
+    included_files: Sequence[str] | None = None,
 ) -> BenchmarkCaseResult:
-    if issue.updated_at != case.issue_updated_at:
-        raise ValueError(
-            f"Issue #{case.issue_number} changed after the benchmark manifest was created"
-        )
+    if issue != case.issue_snapshot:
+        raise ValueError(f"Issue #{case.issue_number} does not match the frozen snapshot")
     if variant is not BenchmarkVariant.DETERMINISTIC and analyzer is None:
         raise ValueError("Hybrid benchmark requires an EvidenceReranker")
 
     started = perf_counter()
-    report = investigate(issue, build_repository_map(repository_root))
+    report = investigate(
+        issue,
+        build_repository_map(repository_root, included_files=included_files),
+    )
     candidate_files = _unique_files([candidate.file for candidate in report.candidates])
     llm_result = None
     llm_attempts = 0
@@ -351,7 +373,7 @@ def evaluate_case(
 
 
 def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
-    completed = [result for result in results if result.candidate_files]
+    completed = [result for result in results if result.execution_succeeded]
     llm_results = [result for result in completed if result.llm_attempts]
     successful_llm_results = [
         result for result in llm_results if not result.llm_fallback_used
@@ -409,7 +431,6 @@ def run_benchmark(
     manifest: BenchmarkManifest,
     workspace: Path,
     variant: BenchmarkVariant,
-    github_client: GitHubClient,
     analyzer: EvidenceReranker | None = None,
     case_ids: set[str] | None = None,
     max_evidence_chars: int = 16_000,
@@ -431,17 +452,17 @@ def run_benchmark(
     results: list[BenchmarkCaseResult] = []
     for case in selected:
         try:
-            issue = github_client.fetch_issue(case.repository, case.issue_number)
             repository_root = prepare_repository(case, workspace)
             result = evaluate_case(
                 case,
-                issue,
+                case.issue_snapshot.model_copy(deep=True),
                 repository_root,
                 variant,
                 analyzer,
                 max_evidence_chars=max_evidence_chars,
                 max_llm_attempts=max_llm_attempts,
                 llm_retry_delay_seconds=llm_delay_seconds,
+                included_files=tracked_repository_files(repository_root),
             )
         except Exception as error:
             result = BenchmarkCaseResult(
@@ -455,6 +476,7 @@ def run_benchmark(
                 issue_updated_at=case.issue_updated_at,
                 expected_files=case.expected_files,
                 error=f"{type(error).__name__}: {error}",
+                execution_succeeded=False,
             )
         results.append(result)
         if (

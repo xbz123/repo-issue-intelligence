@@ -123,7 +123,10 @@ uv run rii benchmark benchmarks/cases.json \
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget.
+model sees a broad candidate set under the same total character budget. Manifest version 2 embeds
+the complete evaluated Issue snapshot, and repository indexing is restricted to `git ls-files`;
+live Issue edits and ignored artifacts in reused workspaces therefore cannot change benchmark
+inputs.
 
 ## Analyze a real GitHub repository
 
@@ -207,6 +210,9 @@ The first frozen benchmark contains nine closed issues with linked fix PRs:
 - Starlette: four main benchmark cases.
 - Typer: two simple calibration cases.
 - Textual: three complex generalization cases.
+
+Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
+eligible for candidate retrieval.
 
 At the frozen pre-fix commits, Retrieval v2's deterministic path achieved File Recall@1 `0.2222`,
 Recall@5 `0.7593`, Recall@10/20 `0.9444`, and MRR `0.5083`. This improved Recall@5 by `0.3149`

@@ -70,7 +70,9 @@ class FakeAnalyzer:
                         "confidence": 0.8,
                         "evidence_ids": ["E1"],
                         "missing_evidence": ["Failing test"],
-                        "validation_step": "Add a data persistence regression test.",
+                        "validation_step": (
+                            "Run the existing persistence test and inspect the stored state."
+                        ),
                     }
                 ],
                 needs_more_evidence=True,
@@ -180,6 +182,15 @@ def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) ->
     llm_trace = next(trace for trace in run.traces if trace.node_name == "llm_analyze")
     assert llm_trace.metadata["input_tokens"] == 250
     assert llm_trace.metadata["request_ids"] == ["request-test"]
+
+    hypothesis = analysis.analysis.hypotheses[0]
+    analysis.analysis.hypotheses = [hypothesis.model_copy() for _ in range(3)]
+    store.save_run(run)
+    restored = store.get_run(run.run_id)
+    assert restored is not None
+    restored_analysis = restored.investigations[0].llm_analysis
+    assert restored_analysis is not None
+    assert len(restored_analysis.analysis.hypotheses) == 3
 
 
 def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypatch) -> None:

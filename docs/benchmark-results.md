@@ -14,8 +14,8 @@ fix files.
 The deterministic improvement came from exact stack-trace/source-path extraction, normalized
 CamelCase, snake_case, dotted and plural identifiers, bounded repository content matching,
 source-over-test preference, and a 20-file candidate pool. Recall@5 improved by 0.3149 absolute
-and MRR by 0.1565 compared with v1. Average deterministic analysis time increased from 451 ms to
-762 ms per case.
+and MRR by 0.1565 compared with v1. In the latest manifest-v2 rerun, average deterministic
+analysis time was 835 ms per case; the earlier v1 run averaged 451 ms.
 
 GPT-OSS 20B then improved ordering within the same candidate pool: Recall@1 increased by 0.2778
 and MRR by 0.3250 over deterministic Retrieval v2. Eight requests returned valid structured
@@ -37,7 +37,7 @@ The v2 Hybrid run used `openai/gpt-oss-20b`, a 16,000-character total evidence b
 
 On 2026-07-29, both variants completed all nine frozen Issue/Fix-PR cases.
 
-| Variant | Cases | File Recall@1 | File Recall@5 | MRR | End-to-end per case |
+| Variant | Cases | File Recall@1 | File Recall@5 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|
 | Deterministic | 9/9 | 0.2222 | 0.4444 | 0.3518 | 451 ms |
 | Hybrid, GPT-OSS 20B rerank | 9/9 | 0.2778 | 0.4444 | 0.4259 | 1,063 ms |
@@ -48,7 +48,8 @@ evidence, while deterministic candidate generation remains the main recall bottl
 
 The Hybrid run produced nine of nine valid structured responses with no fallback. Successful model
 requests averaged 589 ms and consumed 21,980 input tokens plus 1,237 output tokens in total.
-End-to-end time excludes the configured 30-second inter-case quota delay.
+Analysis time starts inside `evaluate_case`, after repository preparation, and excludes clone,
+fetch, checkout, and the configured 30-second inter-case quota delay.
 
 ## Dataset and protocol
 
@@ -72,11 +73,12 @@ The projects have distinct roles:
 | Textual generalization | [#6205](https://github.com/Textualize/textual/issues/6205) | [#6206](https://github.com/Textualize/textual/pull/6206) | `src/textual/_compositor.py`, `src/textual/widget.py` |
 | Textual generalization | [#6417](https://github.com/Textualize/textual/issues/6417) | [#6542](https://github.com/Textualize/textual/pull/6542) | `src/textual/_keyboard_protocol.py`, `src/textual/_xterm_parser.py`, `src/textual/drivers/linux_driver.py` |
 
-Each case records a public closed issue, its linked fix PR, the PR parent commit used as the
-pre-fix checkout, the issue `updated_at` value, and source files changed by the fix. The runner
-verifies the exact checkout SHA and confirms that every expected source file exists before
-evaluation. Pull-request test and documentation files are not treated as required source-file
-labels.
+Each case records a complete snapshot of the public closed issue (title, body, labels, timestamps,
+URL, author, and comment count), its linked fix PR, the PR parent commit used as the pre-fix
+checkout, and source files changed by the fix. The runner uses the snapshot directly rather than
+fetching mutable issue text, verifies the exact checkout SHA, confirms that every expected source
+file exists, and indexes only paths returned by `git ls-files`. Pull-request test and documentation
+files are not treated as required source-file labels.
 
 File Recall@K is the macro-average fraction of each case's expected source files present in the
 first K candidates. MRR uses the rank of the first expected source file. The manifest and raw

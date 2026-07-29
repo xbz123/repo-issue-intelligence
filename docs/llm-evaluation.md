@@ -13,14 +13,19 @@ outside the deterministic candidate pool.
 
 ## Dataset
 
-The current frozen dataset contains nine closed issues that link to a fix pull request. It records:
+The current frozen dataset contains nine closed issues that link to a fix pull request. Manifest
+version 2 stores the complete evaluated Issue snapshot and never fetches mutable Issue text during
+a benchmark run. It records:
 
-- issue number and text;
+- issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
 - symbols changed by the fix, when recoverable;
 - repository commit used for indexing;
 - the labeling source and any ambiguity.
+
+Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
+ignored artifacts in reused workspaces cannot change candidate rankings.
 
 Do not include API keys, private repository content, or unreviewed generated labels.
 
@@ -33,7 +38,7 @@ Do not include API keys, private repository content, or unreviewed generated lab
 - Invalid structured-response rate.
 - Unknown evidence-reference rate.
 - Input and output tokens per issue.
-- End-to-end latency per issue.
+- Analysis latency per issue, measured after repository preparation.
 
 ## Reporting
 

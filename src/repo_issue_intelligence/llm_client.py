@@ -16,6 +16,7 @@ from .models import (
     InvestigationReport,
     IssueRecord,
     LLMAnalysis,
+    LLMAnalysisResponse,
     LLMAnalysisResult,
 )
 
@@ -199,6 +200,8 @@ class GroqIssueAnalyzer:
 
         valid_ids = {snippet.id for snippet in evidence}
         reranked_ids = analysis.reranked_evidence_ids
+        if not reranked_ids:
+            raise GroqAPIError("Groq returned an empty evidence rerank")
         unknown_ids = set(reranked_ids) - valid_ids
         if unknown_ids:
             raise GroqAPIError(
@@ -246,11 +249,11 @@ class GroqIssueAnalyzer:
         content, response_payload, elapsed_ms = self._request_structured(
             SYSTEM_PROMPT,
             user_payload,
-            LLMAnalysis.model_json_schema(),
+            LLMAnalysisResponse.model_json_schema(),
             "issue_investigation",
         )
         try:
-            analysis = LLMAnalysis.model_validate_json(content)
+            analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:
             raise GroqAPIError("Groq returned an invalid structured response") from error
 

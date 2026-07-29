@@ -1,6 +1,6 @@
 {
   "manifest_name": "starlette-typer-textual-real-issues",
-  "manifest_version": 1,
+  "manifest_version": 2,
   "variant": "deterministic",
   "model": null,
   "max_evidence_chars": null,
@@ -10,7 +10,7 @@
   "reasoning_effort": null,
   "temperature": null,
   "seed": null,
-  "created_at": "2026-07-29T22:16:23.132288Z",
+  "created_at": "2026-07-29T22:49:15.960324Z",
   "results": [
     {
       "case_id": "starlette-streaming-denial-response",
@@ -39,12 +39,12 @@
         "starlette/_utils.py",
         "starlette/testclient.py",
         "tests/test_websockets.py",
-        "tests/test_endpoints.py",
         "tests/test_applications.py",
         "tests/test_testclient.py",
         "starlette/authentication.py",
         "starlette/applications.py",
-        "starlette/requests.py"
+        "starlette/requests.py",
+        "tests/test_responses.py"
       ],
       "matched_files_at_5": [
         "starlette/responses.py"
@@ -61,7 +61,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 422.643,
+      "analysis_elapsed_ms": 445.703,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -69,7 +69,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "starlette-session-cookie-refresh",
@@ -123,7 +124,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 484.604,
+      "analysis_elapsed_ms": 528.094,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -131,7 +132,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "starlette-base-middleware-no-response",
@@ -182,7 +184,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 421.304,
+      "analysis_elapsed_ms": 422.83,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -190,7 +192,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "starlette-http2-cookie-headers",
@@ -241,7 +244,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 224.221,
+      "analysis_elapsed_ms": 233.06,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -249,7 +252,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "typer-option-envvar",
@@ -300,7 +304,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 551.837,
+      "analysis_elapsed_ms": 617.709,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -308,7 +312,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "typer-rich-help-width",
@@ -359,7 +364,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.2,
-      "analysis_elapsed_ms": 362.72,
+      "analysis_elapsed_ms": 412.677,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -367,7 +372,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "textual-selection-common-ancestor",
@@ -422,7 +428,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 1487.938,
+      "analysis_elapsed_ms": 1658.031,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -430,7 +436,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "textual-remove-children-reflow",
@@ -480,7 +487,7 @@
       "file_recall_at_20": 0.5,
       "candidate_pool_recall": 0.5,
       "reciprocal_rank": 0.125,
-      "analysis_elapsed_ms": 1798.725,
+      "analysis_elapsed_ms": 1917.032,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -488,7 +495,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     },
     {
       "case_id": "textual-kitty-keyboard-protocol",
@@ -545,7 +553,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 1104.197,
+      "analysis_elapsed_ms": 1277.1,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -553,7 +561,8 @@
       "llm_input_tokens": 0,
       "llm_output_tokens": 0,
       "llm_elapsed_ms": 0.0,
-      "error": null
+      "error": null,
+      "execution_succeeded": true
     }
   ],
   "overall": {
@@ -566,7 +575,7 @@
     "file_recall_at_20": 0.9444,
     "candidate_pool_recall": 0.9444,
     "mean_reciprocal_rank": 0.5083,
-    "average_analysis_elapsed_ms": 762.021,
+    "average_analysis_elapsed_ms": 834.693,
     "llm_success_rate": null,
     "llm_cases": 0,
     "llm_successes": 0,
@@ -586,7 +595,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.75,
-      "average_analysis_elapsed_ms": 388.193,
+      "average_analysis_elapsed_ms": 407.422,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -605,7 +614,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.225,
-      "average_analysis_elapsed_ms": 457.279,
+      "average_analysis_elapsed_ms": 515.193,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -624,7 +633,7 @@
       "file_recall_at_20": 0.8333,
       "candidate_pool_recall": 0.8333,
       "mean_reciprocal_rank": 0.375,
-      "average_analysis_elapsed_ms": 1463.62,
+      "average_analysis_elapsed_ms": 1617.388,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,

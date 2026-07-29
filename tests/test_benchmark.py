@@ -1,3 +1,4 @@
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -6,9 +7,11 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkManifest,
     BenchmarkTier,
     BenchmarkVariant,
+    _aggregate,
     evaluate_case,
     load_manifest,
     run_benchmark,
+    tracked_repository_files,
 )
 from repo_issue_intelligence.models import (
     EvidenceRerankAnalysis,
@@ -17,6 +20,7 @@ from repo_issue_intelligence.models import (
     LLMAnalysis,
     LLMAnalysisResult,
 )
+from repo_issue_intelligence.repository_index import build_repository_map
 
 
 def benchmark_issue(updated_at: datetime) -> IssueRecord:
@@ -37,6 +41,7 @@ def benchmark_case(updated_at: datetime) -> BenchmarkCase:
         repository="example/project",
         issue_number=42,
         issue_updated_at=updated_at,
+        issue_snapshot=benchmark_issue(updated_at),
         fix_pr_number=43,
         pre_fix_sha="a" * 40,
         expected_files=["src/token_service.py"],
@@ -125,10 +130,15 @@ class ReverseEvidenceAnalyzer:
 def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     manifest = load_manifest(Path("benchmarks/cases.json"))
 
+    assert manifest.version == 2
     assert len(manifest.cases) == 9
     assert sum(case.tier is BenchmarkTier.MAIN for case in manifest.cases) == 4
     assert sum(case.tier is BenchmarkTier.CALIBRATION for case in manifest.cases) == 2
     assert sum(case.tier is BenchmarkTier.GENERALIZATION for case in manifest.cases) == 3
+    assert all(case.issue_snapshot.number == case.issue_number for case in manifest.cases)
+    assert all(case.issue_snapshot.updated_at == case.issue_updated_at for case in manifest.cases)
+    assert all(case.issue_snapshot.title for case in manifest.cases)
+    assert all(case.issue_snapshot.body for case in manifest.cases)
 
 
 def test_evaluate_case_measures_deterministic_file_recall(tmp_path: Path) -> None:
@@ -195,10 +205,83 @@ def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:
             manifest,
             tmp_path,
             BenchmarkVariant.DETERMINISTIC,
-            github_client=None,  # type: ignore[arg-type]
             case_ids={"misspelled-case"},
         )
     except ValueError as error:
         assert "Unknown benchmark case IDs: misspelled-case" in str(error)
     else:
         raise AssertionError("Expected an unknown case ID to fail")
+
+
+def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    repository = tmp_path / "empty-repository"
+    repository.mkdir()
+
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        repository,
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    aggregate = _aggregate([result])
+
+    assert result.execution_succeeded is True
+    assert result.candidate_files == []
+    assert aggregate.completed == 1
+    assert aggregate.failed == 0
+    assert aggregate.file_recall_at_5 == 0
+    assert aggregate.mean_reciprocal_rank == 0
+
+
+def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    source = repository / "src"
+    ignored = repository / ".tox"
+    source.mkdir(parents=True)
+    ignored.mkdir()
+    (repository / ".gitignore").write_text(".tox/\n", encoding="utf-8")
+    (source / "target.py").write_text("def target():\n    pass\n", encoding="utf-8")
+    (ignored / "noise.py").write_text("def noise():\n    pass\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "add", ".gitignore", "src/target.py"],
+        check=True,
+    )
+
+    included_files = tracked_repository_files(repository)
+    repository_map = build_repository_map(repository, included_files=included_files)
+
+    assert included_files == [".gitignore", "src/target.py"]
+    assert [record.path for record in repository_map.files] == ["src/target.py"]
+
+
+class UnknownEvidenceAnalyzer(ReverseEvidenceAnalyzer):
+    def rerank(self, issue, evidence):
+        return EvidenceRerankResult(
+            provider="custom",
+            model=self.model,
+            elapsed_ms=1,
+            analysis=EvidenceRerankAnalysis(
+                summary="Invalid custom rerank",
+                reranked_evidence_ids=["E999"],
+            ),
+        )
+
+
+def test_hybrid_unknown_evidence_id_retries_then_falls_back(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.HYBRID,
+        analyzer=UnknownEvidenceAnalyzer(),
+    )
+
+    assert result.execution_succeeded is True
+    assert result.llm_attempts == 2
+    assert result.llm_fallback_used is True
+    assert result.candidate_files
+    assert result.error == "GroqAPIError: Reranker returned unknown evidence IDs: E999"
