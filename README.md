@@ -19,6 +19,7 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Validates every LLM hypothesis against repository evidence IDs and named missing artifacts.
 - Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
 - Stops at a queryable human review state with explicit approve/reject actions.
+- Evaluates file localization on frozen historical Issue/Fix-PR pairs.
 - Exposes both a Typer CLI and FastAPI endpoints.
 
 ## Why two stages
@@ -102,6 +103,25 @@ lines, and applies a configurable character budget before sending content. GPT-O
 low reasoning effort and a bounded output budget so strict structured generation fits within the
 free-tier token limits; both values can be changed through `.env`.
 
+Run the frozen real-project benchmark:
+
+```bash
+uv run rii benchmark benchmarks/cases.json \
+  --variant deterministic \
+  --output benchmarks/results/deterministic-v1.json
+
+LLM_MAX_EVIDENCE_CHARS=6000 LLM_MAX_OUTPUT_TOKENS=600 \
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --model openai/gpt-oss-20b \
+  --llm-delay-seconds 30 \
+  --output benchmarks/results/hybrid-v1.json
+```
+
+The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
+schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
+misclassifying schema failures as localization failures.
+
 ## Analyze a real GitHub repository
 
 ```bash
@@ -162,6 +182,7 @@ src/repo_issue_intelligence/
   agent_store.py         SQLite run, trace, and snapshot persistence
   agent_workflow.py      LangGraph Top-K investigation workflow
   api.py                 FastAPI service
+  benchmark.py           frozen real-Issue file-localization evaluation
   cli.py                 command-line interface
   duplicates.py          issue similarity and duplicate candidates
   github_client.py       paginated GitHub REST synchronization
@@ -176,17 +197,22 @@ src/repo_issue_intelligence/
 
 See `docs/architecture.md` for boundaries and planned milestones.
 
-## Evaluation plan
+## Evaluation
 
-Use closed issues with linked fix PRs as ground truth:
+The first frozen benchmark contains nine closed issues with linked fix PRs:
 
-- Priority agreement with maintainer behavior.
-- Duplicate detection precision/recall/F1.
-- File Recall@5 against files changed by the fix PR.
-- Symbol Recall@10 against functions modified by the fix.
-- Hypothesis evidence coverage.
-- Reproduction-plan acceptance rate.
-- Latency and cost per issue.
+- Starlette: four main benchmark cases.
+- Typer: two simple calibration cases.
+- Textual: three complex generalization cases.
+
+At the frozen pre-fix commits, the deterministic baseline achieved File Recall@1 `0.2222`,
+Recall@5 `0.4444`, and MRR `0.3518`. GPT-OSS 20B reranking achieved Recall@1 `0.2778`,
+Recall@5 `0.4444`, and MRR `0.4259`, with nine of nine valid structured responses and no
+fallbacks. The result supports a narrow claim: the small model improved ordering within the
+retrieved candidate set, but did not improve candidate recall.
+
+See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
+limitations, and next retrieval improvements.
 
 ## Safety and scope
 

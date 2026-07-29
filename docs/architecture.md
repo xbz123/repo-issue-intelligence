@@ -67,6 +67,12 @@ model requests more evidence, at least one hypothesis must name the missing arti
 GPT-OSS uses low reasoning effort and a bounded completion budget by default.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 
+Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
+out each frozen pre-fix SHA, verifies that the labeled fix files exist, runs deterministic
+retrieval, and optionally asks Groq only to rerank the bounded evidence IDs. Root-cause
+hypotheses are intentionally excluded from this benchmark contract so their schema reliability
+does not contaminate file-ranking metrics.
+
 `agent_store.py` persists three SQLite records:
 
 - the current `AgentRun`;
@@ -84,8 +90,10 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded Groq LLM analysis step. It does
-not include background workers, automatic snapshot resume, generated-command execution, or a
-completed benchmark against historical fix PRs. LLM hypotheses are not confirmed root causes.
+not include background workers, automatic snapshot resume, or generated-command execution.
+The current historical benchmark contains nine cases, which is sufficient for integration and
+error analysis but not for a statistically strong quality claim. LLM hypotheses are not confirmed
+root causes.
 
 ## Next workflow extensions
 
@@ -94,7 +102,7 @@ current human_review
   -> stack_trace evidence
   -> inspect Git history and related tests
   -> multi-model evaluation and routing
-  -> historical fix-PR benchmark
+  -> expand historical benchmark to 20-30 cases
 ```
 
 The human review node remains mandatory before any future execution step.

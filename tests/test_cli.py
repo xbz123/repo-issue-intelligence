@@ -73,15 +73,18 @@ def test_agent_run_and_review_commands(tmp_path: Path) -> None:
 
 
 def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
+    issues_file = Path("examples/issues.json").resolve()
+    repository = Path("examples/demo_repository").resolve()
+    monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
 
     result = runner.invoke(
         app,
         [
             "agent-run",
-            "examples/issues.json",
+            str(issues_file),
             "--repo",
-            "examples/demo_repository",
+            str(repository),
             "--llm",
             "--database",
             str(tmp_path / "agent.sqlite3"),

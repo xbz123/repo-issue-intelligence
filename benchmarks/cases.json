@@ -1,0 +1,119 @@
+{
+  "name": "starlette-typer-textual-real-issues",
+  "version": 1,
+  "cases": [
+    {
+      "id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "issue_updated_at": "2026-03-15T11:59:17Z",
+      "fix_pr_number": 3189,
+      "pre_fix_sha": "5d748111b0f8116053f3bd09870d9af8aef971db",
+      "expected_files": [
+        "starlette/responses.py"
+      ]
+    },
+    {
+      "id": "starlette-session-cookie-refresh",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2019,
+      "issue_updated_at": "2026-03-01T20:30:20Z",
+      "fix_pr_number": 3166,
+      "pre_fix_sha": "dce3495a9c67c4092b790b50aa8e0a3dfd062a52",
+      "expected_files": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ]
+    },
+    {
+      "id": "starlette-base-middleware-no-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2516,
+      "issue_updated_at": "2025-07-30T06:54:49Z",
+      "fix_pr_number": 2620,
+      "pre_fix_sha": "c50731db62dc86a86ef9238ce895dada1e56cc40",
+      "expected_files": [
+        "starlette/middleware/base.py"
+      ]
+    },
+    {
+      "id": "starlette-http2-cookie-headers",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2977,
+      "issue_updated_at": "2025-09-20T21:43:27Z",
+      "fix_pr_number": 3029,
+      "pre_fix_sha": "03284373cdcf3ed13f80d5e7ad549ba3d743dca6",
+      "expected_files": [
+        "starlette/requests.py"
+      ]
+    },
+    {
+      "id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "issue_updated_at": "2026-05-26T17:51:15Z",
+      "fix_pr_number": 1788,
+      "pre_fix_sha": "56d96165c3ba71eca73880bc999587a29b57656e",
+      "expected_files": [
+        "typer/core.py"
+      ]
+    },
+    {
+      "id": "typer-rich-help-width",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1159,
+      "issue_updated_at": "2026-02-10T16:52:53Z",
+      "fix_pr_number": 1356,
+      "pre_fix_sha": "4d30a89a4f699cbe06c734df2c4c67063141ead2",
+      "expected_files": [
+        "typer/rich_utils.py"
+      ]
+    },
+    {
+      "id": "textual-selection-common-ancestor",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6452,
+      "issue_updated_at": "2026-03-29T03:56:10Z",
+      "fix_pr_number": 6455,
+      "pre_fix_sha": "bba5c9c4e26d3fdf64c79f2592777fbb342dbdff",
+      "expected_files": [
+        "src/textual/screen.py",
+        "src/textual/widget.py"
+      ]
+    },
+    {
+      "id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "issue_updated_at": "2025-11-03T17:35:46Z",
+      "fix_pr_number": 6206,
+      "pre_fix_sha": "7308d9fa9ea59e16d27785d1d776a2a340a68ae5",
+      "expected_files": [
+        "src/textual/_compositor.py",
+        "src/textual/widget.py"
+      ]
+    },
+    {
+      "id": "textual-kitty-keyboard-protocol",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6417,
+      "issue_updated_at": "2026-05-16T07:54:48Z",
+      "fix_pr_number": 6542,
+      "pre_fix_sha": "da7e6721082a2bb0f3db4961d1f917ca7b0e177e",
+      "expected_files": [
+        "src/textual/_keyboard_protocol.py",
+        "src/textual/_xterm_parser.py",
+        "src/textual/drivers/linux_driver.py"
+      ]
+    }
+  ]
+}

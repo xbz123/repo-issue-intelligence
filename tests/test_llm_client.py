@@ -131,6 +131,46 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
     assert schema["additionalProperties"] is False
 
 
+def test_groq_analyzer_uses_minimal_schema_for_evidence_reranking() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "rerank-request",
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "Authentication evidence is most relevant.",
+                                    "reranked_evidence_ids": ["E1"],
+                                }
+                            )
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://api.groq.com/openai/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = GroqIssueAnalyzer("test-key", client=client)
+
+    result = analyzer.rerank(issue(), evidence())
+
+    schema = captured_request["response_format"]["json_schema"]["schema"]
+    assert set(schema["properties"]) == {"summary", "reranked_evidence_ids"}
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+    assert result.input_tokens == 100
+    assert result.output_tokens == 20
+
+
 def test_groq_analyzer_rejects_unknown_evidence_id() -> None:
     response_payload = structured_payload()
     response_payload["reranked_evidence_ids"] = ["E999"]

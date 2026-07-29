@@ -162,7 +162,7 @@ class LLMAnalysis(StrictOutputModel):
     evidence_observations: list[LLMEvidenceObservation]
     contradictions: list[str]
     reranked_evidence_ids: list[str]
-    hypotheses: list[LLMHypothesis]
+    hypotheses: list[LLMHypothesis] = Field(max_length=2)
     needs_more_evidence: bool
 
 
@@ -174,6 +174,21 @@ class LLMAnalysisResult(BaseModel):
     output_tokens: int = 0
     elapsed_ms: float
     analysis: LLMAnalysis
+
+
+class EvidenceRerankAnalysis(StrictOutputModel):
+    summary: str
+    reranked_evidence_ids: list[str]
+
+
+class EvidenceRerankResult(BaseModel):
+    provider: str
+    model: str
+    request_id: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    elapsed_ms: float
+    analysis: EvidenceRerankAnalysis
 
 
 class Hypothesis(BaseModel):

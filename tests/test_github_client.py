@@ -84,3 +84,70 @@ def test_rejects_non_positive_limit() -> None:
             client.fetch_open_issues("owner/project", limit=0)
     finally:
         client.close()
+
+
+def test_fetch_issue_returns_closed_issue() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/repos/example/project/issues/42"
+        return httpx.Response(200, json=payload_item(42))
+
+    client = GitHubClient(
+        token=None,
+        api_url="https://api.github.test",
+        transport=httpx.MockTransport(handler),
+        trust_env=False,
+    )
+    try:
+        issue = client.fetch_issue("example/project", 42)
+    finally:
+        client.close()
+
+    assert issue.number == 42
+    assert issue.author == "reporter"
+
+
+def test_fetch_issue_rejects_pull_request_payload() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload_item(42, pull_request=True))
+
+    client = GitHubClient(
+        token=None,
+        api_url="https://api.github.test",
+        transport=httpx.MockTransport(handler),
+        trust_env=False,
+    )
+    try:
+        with pytest.raises(ValueError, match="must describe an issue"):
+            client.fetch_issue("example/project", 42)
+    finally:
+        client.close()
+
+
+def test_fetch_issue_follows_repository_redirect() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if len(requests) == 1:
+            return httpx.Response(
+                301,
+                headers={"location": "/repositories/123/issues/42"},
+            )
+        return httpx.Response(200, json=payload_item(42))
+
+    client = GitHubClient(
+        token=None,
+        api_url="https://api.github.test",
+        transport=httpx.MockTransport(handler),
+        trust_env=False,
+    )
+    try:
+        issue = client.fetch_issue("example/project", 42)
+    finally:
+        client.close()
+
+    assert issue.number == 42
+    assert [request.url.path for request in requests] == [
+        "/repos/example/project/issues/42",
+        "/repositories/123/issues/42",
+    ]

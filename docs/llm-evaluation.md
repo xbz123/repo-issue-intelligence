@@ -6,13 +6,14 @@ quality improvement is claimed.
 ## Variants
 
 1. `deterministic`: rules, duplicate similarity, AST index, and lexical candidate ranking.
-2. `llm-only`: GPT-OSS 20B receives issue text and the same bounded evidence, without the
-   deterministic candidate confidence.
-3. `hybrid`: deterministic retrieval followed by GPT-OSS 20B structured reranking.
+2. `hybrid`: deterministic retrieval followed by GPT-OSS 20B evidence-ID reranking.
+
+An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
+outside the deterministic candidate pool.
 
 ## Dataset
 
-Start with 20-30 closed issues that link to a fix pull request. Record:
+The current frozen dataset contains nine closed issues that link to a fix pull request. It records:
 
 - issue number and text;
 - duplicate master, when applicable;
@@ -36,9 +37,8 @@ Do not include API keys, private repository content, or unreviewed generated lab
 
 ## Reporting
 
-Save machine-readable results under `benchmarks/results/` and a reviewed summary under
-`reports/`. Report all evaluated issues, including failures. A smoke test proves integration
-only; it does not prove that the LLM improves investigation quality.
+Machine-readable results are saved under `benchmarks/results/`; the reviewed result is
+`docs/benchmark-results.md`. All evaluated issues, including failures, must remain in the output.
 
 ## Current smoke result
 
@@ -54,6 +54,5 @@ Groq run with `openai/gpt-oss-20b`:
 - hypotheses were limited to unverified routing/middleware and deployment-version mismatches;
 - the generated report, traces, and snapshots contained no API key.
 
-This is an integration and grounding smoke test over one synthetic case, not evidence that the
-hybrid method outperforms the deterministic baseline. The historical fix-PR benchmark above is
-still required before making a quality claim.
+This is an integration and grounding smoke test over one synthetic case. The real-project
+localization benchmark is reported separately in `docs/benchmark-results.md`.
