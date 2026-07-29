@@ -56,3 +56,7 @@ Groq run with `openai/gpt-oss-20b`:
 
 This is an integration and grounding smoke test over one synthetic case. The real-project
 localization benchmark is reported separately in `docs/benchmark-results.md`.
+
+The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison and a separate
+three-case full-schema stability smoke test. Model-size conclusions must not mix the localization
+and schema-reliability endpoints.

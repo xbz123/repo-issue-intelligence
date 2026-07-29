@@ -101,6 +101,7 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
             200,
             json={
                 "id": "request-1",
+                "system_fingerprint": "fingerprint-1",
                 "choices": [
                     {
                         "message": {
@@ -116,7 +117,12 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
         base_url="https://api.groq.com/openai/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = GroqIssueAnalyzer(
+        "test-key",
+        temperature=0.1,
+        seed=1337,
+        client=client,
+    )
     record = issue()
 
     result = analyzer.analyze(record, report(record), evidence())
@@ -124,9 +130,12 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
     assert result.request_id == "request-1"
     assert result.input_tokens == 300
     assert result.output_tokens == 120
+    assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
     assert captured_request["response_format"]["json_schema"]["strict"] is True
     assert captured_request["reasoning_effort"] == "low"
+    assert captured_request["temperature"] == 0.1
+    assert captured_request["seed"] == 1337
     schema = captured_request["response_format"]["json_schema"]["schema"]
     assert schema["additionalProperties"] is False
 

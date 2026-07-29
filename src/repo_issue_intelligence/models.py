@@ -170,6 +170,7 @@ class LLMAnalysisResult(BaseModel):
     provider: str
     model: str
     request_id: str | None = None
+    system_fingerprint: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     elapsed_ms: float
@@ -185,6 +186,7 @@ class EvidenceRerankResult(BaseModel):
     provider: str
     model: str
     request_id: str | None = None
+    system_fingerprint: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
     elapsed_ms: float

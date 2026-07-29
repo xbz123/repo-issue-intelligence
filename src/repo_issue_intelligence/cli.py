@@ -210,7 +210,10 @@ def benchmark(
     manifest: Path,
     variant: Annotated[
         BenchmarkVariant,
-        typer.Option("--variant", help="Deterministic or hybrid retrieval variant."),
+        typer.Option(
+            "--variant",
+            help="Deterministic, minimal hybrid, or full-schema hybrid variant.",
+        ),
     ] = BenchmarkVariant.DETERMINISTIC,
     case_id: Annotated[
         list[str] | None,
@@ -230,11 +233,24 @@ def benchmark(
             help="Delay between hybrid cases and failed LLM retries.",
         ),
     ] = 0,
+    temperature: Annotated[
+        float,
+        typer.Option(
+            "--temperature",
+            min=0,
+            max=2,
+            help="Sampling temperature for reproducible model comparisons.",
+        ),
+    ] = 0.1,
+    seed: Annotated[
+        int,
+        typer.Option("--seed", help="Best-effort deterministic sampling seed."),
+    ] = 1337,
 ) -> None:
     """Evaluate file localization against historical Issue/Fix-PR pairs."""
     settings = Settings()
     analyzer = None
-    if variant is BenchmarkVariant.HYBRID:
+    if variant is not BenchmarkVariant.DETERMINISTIC:
         if settings.groq_api_key is None:
             raise typer.BadParameter("GROQ_API_KEY is required for the hybrid variant")
         analyzer = GroqIssueAnalyzer(
@@ -243,6 +259,8 @@ def benchmark(
             max_output_tokens=settings.llm_max_output_tokens,
             timeout_seconds=settings.llm_timeout_seconds,
             reasoning_effort=settings.llm_reasoning_effort,
+            temperature=temperature,
+            seed=seed,
         )
     github_client = GitHubClient(settings.github_token)
     try:

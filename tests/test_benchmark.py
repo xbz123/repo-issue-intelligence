@@ -14,6 +14,8 @@ from repo_issue_intelligence.models import (
     EvidenceRerankAnalysis,
     EvidenceRerankResult,
     IssueRecord,
+    LLMAnalysis,
+    LLMAnalysisResult,
 )
 
 
@@ -58,6 +60,9 @@ def create_repository(root: Path) -> Path:
 
 class ReverseEvidenceAnalyzer:
     model = "openai/gpt-oss-20b"
+    reasoning_effort = "low"
+    temperature = 0.1
+    seed = 1337
 
     def rerank(self, issue, evidence):
         reversed_ids = [snippet.id for snippet in reversed(evidence)]
@@ -65,12 +70,51 @@ class ReverseEvidenceAnalyzer:
             provider="groq",
             model=self.model,
             request_id="benchmark-request",
+            system_fingerprint="benchmark-fingerprint",
             input_tokens=200,
             output_tokens=100,
             elapsed_ms=10,
             analysis=EvidenceRerankAnalysis(
                 summary="The service evidence is more specific.",
                 reranked_evidence_ids=reversed_ids,
+            ),
+        )
+
+    def analyze(self, issue, report, evidence):
+        reversed_ids = [snippet.id for snippet in reversed(evidence)]
+        return LLMAnalysisResult(
+            provider="groq",
+            model=self.model,
+            request_id="full-benchmark-request",
+            system_fingerprint="full-benchmark-fingerprint",
+            input_tokens=300,
+            output_tokens=150,
+            elapsed_ms=15,
+            analysis=LLMAnalysis(
+                summary="The service evidence is more specific.",
+                issue_type="bug",
+                affected_component="token",
+                reproduction_completeness="partial",
+                evidence_observations=[
+                    {
+                        "evidence_id": snippet.id,
+                        "alignment": "supports_issue",
+                        "observation": f"{snippet.file} contains token handling.",
+                    }
+                    for snippet in evidence
+                ],
+                contradictions=[],
+                reranked_evidence_ids=reversed_ids,
+                hypotheses=[
+                    {
+                        "description": "Token validation may fail.",
+                        "confidence": 0.7,
+                        "evidence_ids": [reversed_ids[0]],
+                        "missing_evidence": ["Failing test"],
+                        "validation_step": "Inspect the existing token tests.",
+                    }
+                ],
+                needs_more_evidence=True,
             ),
         )
 
@@ -115,7 +159,24 @@ def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None
     assert result.file_recall_at_1 == 1
     assert result.llm_attempts == 1
     assert result.llm_request_id == "benchmark-request"
+    assert result.llm_system_fingerprint == "benchmark-fingerprint"
     assert result.llm_input_tokens == 200
+
+
+def test_evaluate_case_supports_full_schema_hybrid(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.HYBRID_FULL,
+        analyzer=ReverseEvidenceAnalyzer(),
+    )
+
+    assert result.candidate_files[0] == "src/token_service.py"
+    assert result.llm_request_id == "full-benchmark-request"
+    assert result.llm_input_tokens == 300
+    assert result.llm_fallback_used is False
 
 
 def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:

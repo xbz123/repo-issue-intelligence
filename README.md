@@ -214,6 +214,11 @@ retrieved candidate set, but did not improve candidate recall.
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.
 
+A fixed-seed comparison found identical localization metrics for GPT-OSS 20B and 120B. The 120B
+run was 16.31% slower and used 48.38% more output tokens, so 20B remains the default reranker.
+On a separate three-case full-schema smoke test, 120B succeeded on the first attempt in 3/3 cases
+versus 2/3 for 20B; this sample is too small to establish a production routing rule.
+
 ## Safety and scope
 
 The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. The default Agent path is deterministic and offline. The optional LLM path analyzes only supplied Top-K evidence, cannot expand repository access, and still ends at the same human review gate. LLM output is an evidence-linked hypothesis, not a confirmed root cause.

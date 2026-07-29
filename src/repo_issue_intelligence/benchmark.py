@@ -17,7 +17,13 @@ from .evidence import collect_evidence
 from .github_client import REPOSITORY_PATTERN, GitHubClient
 from .investigator import investigate
 from .llm_client import GroqAPIError
-from .models import EvidenceRerankResult, EvidenceSnippet, IssueRecord
+from .models import (
+    EvidenceRerankResult,
+    EvidenceSnippet,
+    InvestigationReport,
+    IssueRecord,
+    LLMAnalysisResult,
+)
 from .repository_index import build_repository_map
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
@@ -32,6 +38,7 @@ class BenchmarkTier(StrEnum):
 class BenchmarkVariant(StrEnum):
     DETERMINISTIC = "deterministic"
     HYBRID = "hybrid"
+    HYBRID_FULL = "hybrid-full"
 
 
 class EvidenceReranker(Protocol):
@@ -42,6 +49,13 @@ class EvidenceReranker(Protocol):
         issue: IssueRecord,
         evidence: Sequence[EvidenceSnippet],
     ) -> EvidenceRerankResult: ...
+
+    def analyze(
+        self,
+        issue: IssueRecord,
+        report: InvestigationReport,
+        evidence: Sequence[EvidenceSnippet],
+    ) -> LLMAnalysisResult: ...
 
 
 class BenchmarkCase(BaseModel):
@@ -93,6 +107,7 @@ class BenchmarkCaseResult(BaseModel):
     llm_attempts: int = 0
     llm_fallback_used: bool = False
     llm_request_id: str | None = None
+    llm_system_fingerprint: str | None = None
     llm_input_tokens: int = 0
     llm_output_tokens: int = 0
     llm_elapsed_ms: float = 0
@@ -125,6 +140,9 @@ class BenchmarkRun(BaseModel):
     max_output_tokens: int | None = None
     max_llm_attempts: int | None = None
     llm_delay_seconds: float | None = None
+    reasoning_effort: str | None = None
+    temperature: float | None = None
+    seed: int | None = None
     created_at: datetime
     results: list[BenchmarkCaseResult]
     overall: BenchmarkAggregate
@@ -199,14 +217,18 @@ def _hybrid_candidate_files(
     max_evidence_chars: int,
     max_attempts: int,
     retry_delay_seconds: float,
-) -> tuple[list[str], EvidenceRerankResult, int]:
+    full_analysis: bool,
+) -> tuple[list[str], EvidenceRerankResult | LLMAnalysisResult, int]:
     evidence = collect_evidence(report, max_total_chars=max_evidence_chars)
     if not evidence:
         raise GroqAPIError("No repository evidence was available for hybrid reranking")
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
-            analysis = analyzer.rerank(issue, evidence)
+            if full_analysis:
+                analysis = analyzer.analyze(issue, report, evidence)
+            else:
+                analysis = analyzer.rerank(issue, evidence)
             evidence_files = {snippet.id: snippet.file for snippet in evidence}
             reranked = [
                 evidence_files[evidence_id]
@@ -242,7 +264,7 @@ def evaluate_case(
         raise ValueError(
             f"Issue #{case.issue_number} changed after the benchmark manifest was created"
         )
-    if variant is BenchmarkVariant.HYBRID and analyzer is None:
+    if variant is not BenchmarkVariant.DETERMINISTIC and analyzer is None:
         raise ValueError("Hybrid benchmark requires an EvidenceReranker")
 
     started = perf_counter()
@@ -252,7 +274,7 @@ def evaluate_case(
     llm_attempts = 0
     fallback_used = False
     error = None
-    if variant is BenchmarkVariant.HYBRID:
+    if variant is not BenchmarkVariant.DETERMINISTIC:
         try:
             candidate_files, llm_result, llm_attempts = _hybrid_candidate_files(
                 issue,
@@ -261,6 +283,7 @@ def evaluate_case(
                 max_evidence_chars,
                 max_llm_attempts,
                 llm_retry_delay_seconds,
+                variant is BenchmarkVariant.HYBRID_FULL,
             )
         except GroqAPIError as llm_error:
             fallback_used = True
@@ -294,6 +317,9 @@ def evaluate_case(
         llm_attempts=llm_attempts,
         llm_fallback_used=fallback_used,
         llm_request_id=llm_result.request_id if llm_result else None,
+        llm_system_fingerprint=(
+            llm_result.system_fingerprint if llm_result else None
+        ),
         llm_input_tokens=llm_result.input_tokens if llm_result else 0,
         llm_output_tokens=llm_result.output_tokens if llm_result else 0,
         llm_elapsed_ms=llm_result.elapsed_ms if llm_result else 0,
@@ -397,7 +423,7 @@ def run_benchmark(
             )
         results.append(result)
         if (
-            variant is BenchmarkVariant.HYBRID
+            variant is not BenchmarkVariant.DETERMINISTIC
             and llm_delay_seconds > 0
             and case is not selected[-1]
         ):
@@ -417,6 +443,9 @@ def run_benchmark(
         max_output_tokens=getattr(analyzer, "max_output_tokens", None),
         max_llm_attempts=max_llm_attempts if analyzer else None,
         llm_delay_seconds=llm_delay_seconds if analyzer else None,
+        reasoning_effort=getattr(analyzer, "reasoning_effort", None),
+        temperature=getattr(analyzer, "temperature", None),
+        seed=getattr(analyzer, "seed", None),
         created_at=datetime.now(UTC),
         results=results,
         overall=_aggregate(results),

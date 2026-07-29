@@ -99,3 +99,44 @@ The next retrieval iteration should add exact file-path and stack-trace extracti
 snake_case token splitting, repository content search, and a wider pre-rerank candidate pool. The
 same frozen cases should then be rerun before expanding the benchmark to 20-30 issues and adding
 symbol-level labels.
+
+## GPT-OSS 20B versus 120B
+
+A paired model-size experiment used the same nine cases, evidence, prompt, low reasoning effort,
+6,000-character evidence budget, 600-token output budget, `temperature=0.1`, `seed=1337`, and
+30-second quota delay.
+
+| Model | Recall@1 | Recall@5 | MRR | Valid responses | Model latency | Output tokens |
+|---|---:|---:|---:|---:|---:|---:|
+| GPT-OSS 20B | 0.2778 | 0.4444 | 0.4259 | 9/9 | 713 ms | 1,145 |
+| GPT-OSS 120B | 0.2778 | 0.4444 | 0.4259 | 9/9 | 830 ms | 1,699 |
+
+All nine cases had the same first-relevant-file rank. Five cases changed the order of non-decisive
+Top-5 candidates, but no quality metric changed. In this bounded reranking task, 120B was 16.31%
+slower and generated 48.38% more output tokens without a localization gain. The evidence supports
+keeping 20B as the default reranker.
+
+The API returned multiple `system_fingerprint` values for each run, so the fixed seed is
+best-effort reproducibility rather than a guarantee of an identical backend.
+
+### Full investigation schema smoke test
+
+One representative case from each project was also run through the full hypothesis schema.
+
+| Model | Final success | First-attempt success | Fallbacks | Successful-call latency |
+|---|---:|---:|---:|---:|
+| GPT-OSS 20B | 3/3 | 2/3 | 0 | 1,010 ms |
+| GPT-OSS 120B | 3/3 | 3/3 | 0 | 1,946 ms |
+
+This is only a three-case stability smoke test. It provides a preliminary signal that 120B may be
+more reliable for the complex schema, but it is insufficient to justify routing all investigations
+to 120B. The current runner records that a retry happened but not the intermediate provider error
+type, so the single 20B retry cannot be attributed specifically to JSON schema validation.
+
+The paired artifacts are:
+
+- `benchmarks/results/hybrid-20b-seed1337-v1.json`
+- `benchmarks/results/hybrid-120b-seed1337-v1.json`
+- `benchmarks/results/hybrid-full-20b-seed1337-smoke-v1.json`
+- `benchmarks/results/hybrid-full-120b-seed1337-smoke-v1.json`
+- `benchmarks/results/model-comparison-seed1337-v1.json`

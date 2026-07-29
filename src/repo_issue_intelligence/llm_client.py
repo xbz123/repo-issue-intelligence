@@ -73,15 +73,21 @@ class GroqIssueAnalyzer:
         max_output_tokens: int = 1_600,
         timeout_seconds: float = 30.0,
         reasoning_effort: str = "low",
+        temperature: float = 1.0,
+        seed: int | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("Groq API key is required")
         if reasoning_effort not in {"low", "medium", "high"}:
             raise ValueError("reasoning_effort must be low, medium, or high")
+        if not 0 <= temperature <= 2:
+            raise ValueError("temperature must be between 0 and 2")
         self.model = model
         self.max_output_tokens = max_output_tokens
         self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
+        self.seed = seed
         self._client = client or httpx.Client(
             base_url=GROQ_API_BASE_URL,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -118,7 +124,10 @@ class GroqIssueAnalyzer:
                 },
             },
             "max_completion_tokens": self.max_output_tokens,
+            "temperature": self.temperature,
         }
+        if self.seed is not None:
+            payload["seed"] = self.seed
         if self.model.startswith("openai/gpt-oss-"):
             payload["reasoning_effort"] = self.reasoning_effort
 
@@ -200,6 +209,7 @@ class GroqIssueAnalyzer:
             provider="groq",
             model=self.model,
             request_id=response_payload.get("id"),
+            system_fingerprint=response_payload.get("system_fingerprint"),
             input_tokens=int(usage.get("prompt_tokens") or 0),
             output_tokens=int(usage.get("completion_tokens") or 0),
             elapsed_ms=elapsed_ms,
@@ -251,6 +261,7 @@ class GroqIssueAnalyzer:
             provider="groq",
             model=self.model,
             request_id=response_payload.get("id"),
+            system_fingerprint=response_payload.get("system_fingerprint"),
             input_tokens=int(usage.get("prompt_tokens") or 0),
             output_tokens=int(usage.get("completion_tokens") or 0),
             elapsed_ms=elapsed_ms,
