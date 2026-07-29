@@ -4,6 +4,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from repo_issue_intelligence.cli import app
+from repo_issue_intelligence.models import LLMAnalysis, LLMAnalysisResult
 
 runner = CliRunner()
 
@@ -69,3 +70,105 @@ def test_agent_run_and_review_commands(tmp_path: Path) -> None:
     )
 
     assert review_result.exit_code == 0, review_result.output
+
+
+def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+
+    result = runner.invoke(
+        app,
+        [
+            "agent-run",
+            "examples/issues.json",
+            "--repo",
+            "examples/demo_repository",
+            "--llm",
+            "--database",
+            str(tmp_path / "agent.sqlite3"),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "GROQ_API_KEY is required" in result.output
+
+
+def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> None:
+    class FakeAnalyzer:
+        def __init__(
+            self,
+            api_key,
+            model,
+            max_output_tokens,
+            timeout_seconds,
+            reasoning_effort,
+        ):
+            assert api_key == "test-key"
+            assert reasoning_effort == "low"
+            self.model = model
+
+        def analyze(self, issue, report, evidence):
+            return LLMAnalysisResult(
+                provider="groq",
+                model=self.model,
+                request_id="cli-request",
+                input_tokens=100,
+                output_tokens=50,
+                elapsed_ms=5,
+                analysis=LLMAnalysis(
+                    summary="Authentication evidence matches the issue.",
+                    issue_type="bug",
+                    affected_component="authentication",
+                    reproduction_completeness="partial",
+                    evidence_observations=[
+                        {
+                            "evidence_id": evidence[0].id,
+                            "alignment": "supports_issue",
+                            "observation": "The file contains the token validation path.",
+                        }
+                    ],
+                    contradictions=[],
+                    reranked_evidence_ids=[evidence[0].id],
+                    hypotheses=[
+                        {
+                            "description": "Validation errors may escape the refresh path.",
+                            "confidence": 0.7,
+                            "evidence_ids": [evidence[0].id],
+                            "missing_evidence": ["Runtime trace"],
+                            "validation_step": "Add a failing refresh-token test.",
+                        }
+                    ],
+                    needs_more_evidence=True,
+                ),
+            )
+
+        def close(self):
+            return None
+
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.GroqIssueAnalyzer",
+        FakeAnalyzer,
+    )
+    output = tmp_path / "agent-run-llm.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "agent-run",
+            "examples/issues.json",
+            "--repo",
+            "examples/demo_repository",
+            "--top-k",
+            "1",
+            "--llm",
+            "--database",
+            str(tmp_path / "agent.sqlite3"),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["llm_enabled"] is True
+    assert payload["investigations"][0]["llm_analysis"]["request_id"] == "cli-request"

@@ -9,6 +9,8 @@ from repo_issue_intelligence.agent_workflow import run_agent
 from repo_issue_intelligence.models import (
     AgentRunStatus,
     IssueRecord,
+    LLMAnalysis,
+    LLMAnalysisResult,
     ReviewDecision,
 )
 
@@ -33,6 +35,50 @@ def create_repository(root: Path) -> Path:
         encoding="utf-8",
     )
     return repository
+
+
+class FakeAnalyzer:
+    model = "openai/gpt-oss-20b"
+
+    def analyze(self, issue, report, evidence):
+        assert issue.number == report.issue.number
+        assert evidence[0].id == "E1"
+        return LLMAnalysisResult(
+            provider="groq",
+            model=self.model,
+            request_id="request-test",
+            input_tokens=250,
+            output_tokens=100,
+            elapsed_ms=12.5,
+            analysis=LLMAnalysis(
+                summary="Persistence evidence matches the issue.",
+                issue_type="bug",
+                affected_component="data_store",
+                reproduction_completeness="partial",
+                evidence_observations=[
+                    {
+                        "evidence_id": "E1",
+                        "alignment": "supports_issue",
+                        "observation": "The file contains the persistence function.",
+                    }
+                ],
+                contradictions=[],
+                reranked_evidence_ids=["E1"],
+                hypotheses=[
+                    {
+                        "description": "The persistence path may lose data.",
+                        "confidence": 0.8,
+                        "evidence_ids": ["E1"],
+                        "missing_evidence": ["Failing test"],
+                        "validation_step": "Add a data persistence regression test.",
+                    }
+                ],
+                needs_more_evidence=True,
+            ),
+        )
+
+    def close(self) -> None:
+        return None
 
 
 def test_agent_run_persists_state_traces_snapshots_and_review(tmp_path: Path) -> None:
@@ -95,6 +141,45 @@ def test_agent_node_retries_once_before_succeeding(tmp_path: Path, monkeypatch) 
         ("failed", 1),
         ("completed", 2),
     ]
+
+
+def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    issues = [
+        issue(
+            1,
+            "Data loss in persistence layer",
+            "Data loss is reproducible with steps to reproduce.",
+        )
+    ]
+
+    run = run_agent(
+        issues,
+        repository,
+        top_k=1,
+        store=store,
+        llm_analyzer=FakeAnalyzer(),
+    )
+
+    assert run.status is AgentRunStatus.AWAITING_REVIEW
+    assert run.llm_enabled is True
+    assert run.llm_model == "openai/gpt-oss-20b"
+    assert [trace.node_name for trace in run.traces] == [
+        "rank_issues",
+        "route_top_k",
+        "build_repository_map",
+        "investigate_issues",
+        "collect_code_evidence",
+        "llm_analyze",
+        "human_review",
+    ]
+    analysis = run.investigations[0].llm_analysis
+    assert analysis is not None
+    assert analysis.analysis.reranked_evidence_ids == ["E1"]
+    llm_trace = next(trace for trace in run.traces if trace.node_name == "llm_analyze")
+    assert llm_trace.metadata["input_tokens"] == 250
+    assert llm_trace.metadata["request_ids"] == ["request-test"]
 
 
 def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypatch) -> None:

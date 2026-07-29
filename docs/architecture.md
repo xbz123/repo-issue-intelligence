@@ -45,6 +45,28 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
 
+When an operator explicitly enables Groq analysis, two nodes are inserted before review:
+
+```text
+rank_issues
+  -> route_top_k
+  -> build_repository_map
+  -> investigate_issues
+  -> collect_code_evidence
+  -> llm_analyze
+  -> human_review
+```
+
+`collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
+paths remain inside the repository, skips sensitive filenames, and enforces a total character
+budget. `llm_analyze` calls `openai/gpt-oss-20b` through Groq with strict JSON Schema output.
+Every snippet must receive one support/contradiction/neutral observation, and every hypothesis
+must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
+provide a deterministic fallback when the model omits the free-form contradiction list. If the
+model requests more evidence, at least one hypothesis must name the missing artifact.
+GPT-OSS uses low reasoning effort and a bounded completion budget by default.
+The trace records model, request ID, token usage, and latency, but never stores the API key.
+
 `agent_store.py` persists three SQLite records:
 
 - the current `AgentRun`;
@@ -60,16 +82,19 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 
 ## Current boundaries
 
-The MVP uses LangGraph and persistent Agent state, but remains synchronous and deterministic. It does not yet include LLM calls, background workers, automatic snapshot resume, generated-command execution, or a benchmark against historical fix PRs. These capabilities must not be claimed as completed functionality.
+The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
+deterministic and offline; the CLI can optionally add a bounded Groq LLM analysis step. It does
+not include background workers, automatic snapshot resume, generated-command execution, or a
+completed benchmark against historical fix PRs. LLM hypotheses are not confirmed root causes.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> stack_trace_and_content_evidence
-  -> inspect_git_and_tests
-  -> optional_llm_reranking
-  -> benchmark
+  -> stack_trace evidence
+  -> inspect Git history and related tests
+  -> multi-model evaluation and routing
+  -> historical fix-PR benchmark
 ```
 
 The human review node remains mandatory before any future execution step.

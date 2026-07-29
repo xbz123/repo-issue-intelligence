@@ -5,7 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Severity(StrEnum):
@@ -26,6 +26,32 @@ class Priority(StrEnum):
     P1 = "P1"
     P2 = "P2"
     P3 = "P3"
+
+
+class IssueType(StrEnum):
+    BUG = "bug"
+    FEATURE = "feature"
+    SECURITY = "security"
+    PERFORMANCE = "performance"
+    DOCUMENTATION = "documentation"
+    QUESTION = "question"
+    OTHER = "other"
+
+
+class ReproductionCompleteness(StrEnum):
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    INSUFFICIENT = "insufficient"
+
+
+class EvidenceAlignment(StrEnum):
+    SUPPORTS_ISSUE = "supports_issue"
+    CONTRADICTS_ISSUE = "contradicts_issue"
+    NEUTRAL = "neutral"
+
+
+class StrictOutputModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class IssueRecord(BaseModel):
@@ -106,6 +132,50 @@ class CandidateLocation(BaseModel):
     evidence: list[str]
 
 
+class EvidenceSnippet(BaseModel):
+    id: str
+    file: str
+    symbol: str | None = None
+    lines: str
+    content: str
+
+
+class LLMEvidenceObservation(StrictOutputModel):
+    evidence_id: str
+    alignment: EvidenceAlignment
+    observation: str
+
+
+class LLMHypothesis(StrictOutputModel):
+    description: str
+    confidence: float = Field(ge=0, le=1)
+    evidence_ids: list[str] = Field(min_length=1)
+    missing_evidence: list[str]
+    validation_step: str
+
+
+class LLMAnalysis(StrictOutputModel):
+    summary: str
+    issue_type: IssueType
+    affected_component: str
+    reproduction_completeness: ReproductionCompleteness
+    evidence_observations: list[LLMEvidenceObservation]
+    contradictions: list[str]
+    reranked_evidence_ids: list[str]
+    hypotheses: list[LLMHypothesis]
+    needs_more_evidence: bool
+
+
+class LLMAnalysisResult(BaseModel):
+    provider: str
+    model: str
+    request_id: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    elapsed_ms: float
+    analysis: LLMAnalysis
+
+
 class Hypothesis(BaseModel):
     id: str
     description: str
@@ -130,6 +200,7 @@ class InvestigationReport(BaseModel):
     hypotheses: list[Hypothesis]
     reproduction_plan: ReproductionPlan
     repository_root: Path
+    llm_analysis: LLMAnalysisResult | None = None
 
 
 class AgentRunStatus(StrEnum):
@@ -154,6 +225,7 @@ class NodeTrace(BaseModel):
     elapsed_ms: float
     input_summary: dict[str, Any] = Field(default_factory=dict)
     output_summary: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
 
 
@@ -162,6 +234,8 @@ class AgentRun(BaseModel):
     status: AgentRunStatus
     repository_root: Path
     top_k: int
+    llm_enabled: bool = False
+    llm_model: str | None = None
     created_at: datetime
     updated_at: datetime
     ranked_issues: list[PriorityResult] = Field(default_factory=list)
