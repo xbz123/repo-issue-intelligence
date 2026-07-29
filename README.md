@@ -108,19 +108,22 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v1.json
+  --output benchmarks/results/deterministic-retrieval-v2.json
 
-LLM_MAX_EVIDENCE_CHARS=6000 LLM_MAX_OUTPUT_TOKENS=600 \
+LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
   --model openai/gpt-oss-20b \
-  --llm-delay-seconds 30 \
-  --output benchmarks/results/hybrid-v1.json
+  --temperature 0.1 \
+  --seed 1337 \
+  --llm-delay-seconds 40 \
+  --output benchmarks/results/hybrid-20b-retrieval-v2.json
 ```
 
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
-misclassifying schema failures as localization failures.
+misclassifying schema failures as localization failures. Each evidence snippet is capped so the
+model sees a broad candidate set under the same total character budget.
 
 ## Analyze a real GitHub repository
 
@@ -205,11 +208,15 @@ The first frozen benchmark contains nine closed issues with linked fix PRs:
 - Typer: two simple calibration cases.
 - Textual: three complex generalization cases.
 
-At the frozen pre-fix commits, the deterministic baseline achieved File Recall@1 `0.2222`,
-Recall@5 `0.4444`, and MRR `0.3518`. GPT-OSS 20B reranking achieved Recall@1 `0.2778`,
-Recall@5 `0.4444`, and MRR `0.4259`, with nine of nine valid structured responses and no
-fallbacks. The result supports a narrow claim: the small model improved ordering within the
-retrieved candidate set, but did not improve candidate recall.
+At the frozen pre-fix commits, Retrieval v2's deterministic path achieved File Recall@1 `0.2222`,
+Recall@5 `0.7593`, Recall@10/20 `0.9444`, and MRR `0.5083`. This improved Recall@5 by `0.3149`
+absolute over Retrieval v1. GPT-OSS 20B reranking achieved Recall@1 `0.5000`, Recall@5 `0.8148`,
+and MRR `0.8333`. Eight of nine model requests succeeded; the remaining Groq HTTP 429 case used
+the deterministic fallback and remains included in the aggregate.
+
+This supports two bounded claims: deterministic retrieval now finds most labeled fix files in its
+Top-20 pool, and the small model materially improves first-file ordering when the evidence is
+available. It still does not establish root-cause accuracy.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.

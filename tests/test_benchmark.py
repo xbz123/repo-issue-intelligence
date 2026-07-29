@@ -142,6 +142,9 @@ def test_evaluate_case_measures_deterministic_file_recall(tmp_path: Path) -> Non
 
     assert "src/token_service.py" in result.candidate_files
     assert result.file_recall_at_5 == 1
+    assert result.file_recall_at_10 == 1
+    assert result.file_recall_at_20 == 1
+    assert result.candidate_pool_recall == 1
     assert result.reciprocal_rank > 0
 
 

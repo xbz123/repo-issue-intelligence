@@ -100,8 +100,13 @@ class BenchmarkCaseResult(BaseModel):
     expected_files: list[str]
     candidate_files: list[str] = Field(default_factory=list)
     matched_files_at_5: list[str] = Field(default_factory=list)
+    matched_files_at_10: list[str] = Field(default_factory=list)
+    matched_files_at_20: list[str] = Field(default_factory=list)
     file_recall_at_1: float = 0
     file_recall_at_5: float = 0
+    file_recall_at_10: float = 0
+    file_recall_at_20: float = 0
+    candidate_pool_recall: float = 0
     reciprocal_rank: float = 0
     analysis_elapsed_ms: float = 0
     llm_attempts: int = 0
@@ -120,6 +125,9 @@ class BenchmarkAggregate(BaseModel):
     failed: int
     file_recall_at_1: float
     file_recall_at_5: float
+    file_recall_at_10: float = 0
+    file_recall_at_20: float = 0
+    candidate_pool_recall: float = 0
     mean_reciprocal_rank: float
     average_analysis_elapsed_ms: float
     llm_success_rate: float | None = None
@@ -219,7 +227,13 @@ def _hybrid_candidate_files(
     retry_delay_seconds: float,
     full_analysis: bool,
 ) -> tuple[list[str], EvidenceRerankResult | LLMAnalysisResult, int]:
-    evidence = collect_evidence(report, max_total_chars=max_evidence_chars)
+    evidence = collect_evidence(
+        report,
+        max_total_chars=max_evidence_chars,
+        max_lines_per_snippet=20,
+        context_lines=4,
+        max_chars_per_snippet=600,
+    )
     if not evidence:
         raise GroqAPIError("No repository evidence was available for hybrid reranking")
     last_error: Exception | None = None
@@ -293,7 +307,11 @@ def evaluate_case(
     expected = set(case.expected_files)
     top_1 = candidate_files[:1]
     top_5 = candidate_files[:5]
+    top_10 = candidate_files[:10]
+    top_20 = candidate_files[:20]
     matched_at_5 = sorted(expected.intersection(top_5))
+    matched_at_10 = sorted(expected.intersection(top_10))
+    matched_at_20 = sorted(expected.intersection(top_20))
     first_rank = next(
         (index for index, path in enumerate(candidate_files, start=1) if path in expected),
         None,
@@ -310,8 +328,13 @@ def evaluate_case(
         expected_files=case.expected_files,
         candidate_files=candidate_files,
         matched_files_at_5=matched_at_5,
+        matched_files_at_10=matched_at_10,
+        matched_files_at_20=matched_at_20,
         file_recall_at_1=round(len(expected.intersection(top_1)) / len(expected), 4),
         file_recall_at_5=round(len(matched_at_5) / len(expected), 4),
+        file_recall_at_10=round(len(matched_at_10) / len(expected), 4),
+        file_recall_at_20=round(len(matched_at_20) / len(expected), 4),
+        candidate_pool_recall=round(len(expected.intersection(candidate_files)) / len(expected), 4),
         reciprocal_rank=round(1 / first_rank, 4) if first_rank else 0,
         analysis_elapsed_ms=round((perf_counter() - started) * 1000, 3),
         llm_attempts=llm_attempts,
@@ -341,6 +364,18 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         if completed
         else 0,
         file_recall_at_5=round(fmean(r.file_recall_at_5 for r in completed), 4)
+        if completed
+        else 0,
+        file_recall_at_10=round(fmean(r.file_recall_at_10 for r in completed), 4)
+        if completed
+        else 0,
+        file_recall_at_20=round(fmean(r.file_recall_at_20 for r in completed), 4)
+        if completed
+        else 0,
+        candidate_pool_recall=round(
+            fmean(r.candidate_pool_recall for r in completed),
+            4,
+        )
         if completed
         else 0,
         mean_reciprocal_rank=round(fmean(r.reciprocal_rank for r in completed), 4)

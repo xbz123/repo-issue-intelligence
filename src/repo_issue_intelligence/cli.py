@@ -285,6 +285,8 @@ def benchmark(
         f"{run.variant} benchmark: {run.overall.completed}/{run.overall.cases} completed; "
         f"Recall@1={run.overall.file_recall_at_1:.4f}, "
         f"Recall@5={run.overall.file_recall_at_5:.4f}, "
+        f"Recall@10={run.overall.file_recall_at_10:.4f}, "
+        f"Recall@20={run.overall.file_recall_at_20:.4f}, "
         f"MRR={run.overall.mean_reciprocal_rank:.4f}"
     )
     console.print(f"Saved benchmark results to {output}")

@@ -71,7 +71,10 @@ Historical localization evaluation uses a separate, smaller LLM contract. `bench
 out each frozen pre-fix SHA, verifies that the labeled fix files exist, runs deterministic
 retrieval, and optionally asks Groq only to rerank the bounded evidence IDs. Root-cause
 hypotheses are intentionally excluded from this benchmark contract so their schema reliability
-does not contaminate file-ranking metrics.
+does not contaminate file-ranking metrics. Retrieval normalizes paths and identifiers, gives
+explicit stack-trace/source-path references the strongest signal, searches bounded source
+content, downranks tests and documentation, and retains 20 candidates. Per-candidate evidence
+caps preserve candidate breadth before LLM reranking.
 
 `agent_store.py` persists three SQLite records:
 
@@ -93,13 +96,14 @@ deterministic and offline; the CLI can optionally add a bounded Groq LLM analysi
 not include background workers, automatic snapshot resume, or generated-command execution.
 The current historical benchmark contains nine cases, which is sufficient for integration and
 error analysis but not for a statistically strong quality claim. LLM hypotheses are not confirmed
-root causes.
+root causes. Retrieval remains lexical/content based; it has no import graph, call graph,
+test-to-source mapping, or semantic vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> stack_trace evidence
+  -> import/call-graph evidence
   -> inspect Git history and related tests
   -> multi-model evaluation and routing
   -> expand historical benchmark to 20-30 cases

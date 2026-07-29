@@ -1,6 +1,39 @@
 # Real-Project File Localization Benchmark
 
-## Result
+## Current result: Retrieval v2
+
+Retrieval v2 was evaluated on 2026-07-30 without changing the nine frozen cases or their expected
+fix files.
+
+| Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR |
+|---|---:|---:|---:|---:|---:|---:|
+| Retrieval v1, deterministic | 9/9 | 0.2222 | 0.4444 | — | — | 0.3518 |
+| Retrieval v2, deterministic | 9/9 | 0.2222 | 0.7593 | 0.9444 | 0.9444 | 0.5083 |
+| Retrieval v2, GPT-OSS 20B rerank | 9/9 | 0.5000 | 0.8148 | 0.9444 | 0.9444 | 0.8333 |
+
+The deterministic improvement came from exact stack-trace/source-path extraction, normalized
+CamelCase, snake_case, dotted and plural identifiers, bounded repository content matching,
+source-over-test preference, and a 20-file candidate pool. Recall@5 improved by 0.3149 absolute
+and MRR by 0.1565 compared with v1. Average deterministic analysis time increased from 451 ms to
+762 ms per case.
+
+GPT-OSS 20B then improved ordering within the same candidate pool: Recall@1 increased by 0.2778
+and MRR by 0.3250 over deterministic Retrieval v2. Eight requests returned valid structured
+responses on the first attempt and averaged 793 ms. The ninth case hit Groq HTTP 429 twice and
+used the deterministic fallback, so the aggregate reports 8/9 model successes rather than
+concealing the quota failure. A separate retry after a 60-second backoff also received 429,
+evidence of an unresolved provider quota window rather than a schema failure.
+
+The v2 Hybrid run used `openai/gpt-oss-20b`, a 16,000-character total evidence budget, a
+600-character per-candidate cap, a 1,600-token completion limit, low reasoning effort,
+`temperature=0.1`, `seed=1337`, and a 40-second inter-case delay. The raw artifacts are:
+
+- `benchmarks/results/deterministic-retrieval-v2.json`
+- `benchmarks/results/hybrid-20b-retrieval-v2.json`
+- `benchmarks/results/hybrid-20b-retrieval-v2-kitty-retry.json`
+- `benchmarks/results/retrieval-v2-comparison.json`
+
+## Retrieval v1 baseline
 
 On 2026-07-29, both variants completed all nine frozen Issue/Fix-PR cases.
 
@@ -92,13 +125,15 @@ hypothesis-format failure from being counted as a file-localization failure.
 ## Limitations and next experiment
 
 Nine cases are too few for a strong general quality claim. The Hybrid path only reranks evidence
-that deterministic retrieval already found, so unchanged Recall@5 is expected. Token totals include
-successful final requests only; they do not estimate development-time failed requests.
+that deterministic retrieval already found. It cannot recover a file outside the 20-file candidate
+pool. Token totals include successful final requests only; they do not estimate development-time
+failed requests.
 
-The next retrieval iteration should add exact file-path and stack-trace extraction, CamelCase and
-snake_case token splitting, repository content search, and a wider pre-rerank candidate pool. The
-same frozen cases should then be rerun before expanding the benchmark to 20-30 issues and adding
-symbol-level labels.
+Retrieval v2 implemented exact file-path and stack-trace extraction, identifier normalization,
+repository content matching, and the wider candidate pool. Its remaining miss is one of two
+expected files in Textual's `remove_children` case: `src/textual/_compositor.py` has no strong
+lexical link in the Issue. The next iteration should add import/call-graph distance and
+test-to-source mapping, then expand the benchmark to 20-30 issues and add symbol-level labels.
 
 ## GPT-OSS 20B versus 120B
 
