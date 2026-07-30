@@ -64,6 +64,7 @@ def create_repository(root: Path) -> Path:
 
 
 class ReverseEvidenceAnalyzer:
+    provider = "groq"
     model = "openai/gpt-oss-20b"
     reasoning_effort = "low"
     temperature = 0.1
@@ -218,6 +219,30 @@ def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:
         raise AssertionError("Expected an unknown case ID to fail")
 
 
+def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    manifest = BenchmarkManifest(name="test", version=1, cases=[case])
+    repository = create_repository(tmp_path)
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda selected, workspace: repository,
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.tracked_repository_files",
+        lambda root: ["src/token_router.py", "src/token_service.py"],
+    )
+
+    run = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.HYBRID,
+        analyzer=ReverseEvidenceAnalyzer(),
+    )
+
+    assert run.provider == "groq"
+
+
 def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
     repository = tmp_path / "empty-repository"
@@ -289,4 +314,4 @@ def test_hybrid_unknown_evidence_id_retries_then_falls_back(tmp_path: Path) -> N
     assert result.llm_attempts == 2
     assert result.llm_fallback_used is True
     assert result.candidate_files
-    assert result.error == "GroqAPIError: Reranker returned unknown evidence IDs: E999"
+    assert result.error == "LLMProviderError: Reranker returned unknown evidence IDs: E999"

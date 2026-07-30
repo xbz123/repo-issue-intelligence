@@ -25,11 +25,18 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 ### Repository indexing
 
-`repository_index.py` scans supported source files and uses Python AST parsing to collect imports, classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
+`repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
+locally resolved Python import targets, imported symbols, called names, classes, functions, line
+ranges, entrypoints, runtime files, tests, and framework indicators.
 
 ### Investigation
 
-`investigator.py` ranks candidate files and symbols using explicit evidence signals. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
+`investigator.py` ranks candidate files and symbols using explicit evidence signals. Lexical and
+bounded content matching define the candidate pool. Static local-import, imported-symbol call,
+call-name definition, two-hop import, and matching-test import relations then rerank within fixed
+Top-10 bands. This lets graph evidence improve ordering without changing the lexical Top-10 or
+Top-20 membership. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and
+a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
@@ -45,7 +52,8 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
 
-When an operator explicitly enables Groq analysis, two nodes are inserted before review:
+When an operator explicitly enables an OpenAI-compatible provider, two nodes are inserted before
+review:
 
 ```text
 rank_issues
@@ -59,23 +67,33 @@ rank_issues
 
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
-budget. `llm_analyze` calls `openai/gpt-oss-20b` through Groq with strict JSON Schema output.
+budget. `llm_analyze` can call GPT-OSS through Groq or DeepSeek V4 Flash through OpenCode.
+Both providers use `/chat/completions`; only their base URL, credential, model, and structured
+output capability differ. Groq uses strict JSON Schema output. OpenCode uses `json_object` plus
+an explicit schema/example prompt and the same local Pydantic validation.
 Every snippet must receive one support/contradiction/neutral observation, and every hypothesis
 must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
 provide a deterministic fallback when the model omits the free-form contradiction list. If the
 model requests more evidence, at least one hypothesis must name the missing artifact.
-GPT-OSS uses low reasoning effort and a bounded completion budget by default.
+GPT-OSS uses low reasoning effort and a 1,600-token completion budget by default. OpenCode uses a
+4,096-token budget and 60-second timeout because reasoning tokens share the completion budget and
+observed valid responses can exceed 30 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
+Settings may load a primary and fallback Groq credential as `SecretStr` values, but automatic
+credential failover is not enabled; operators must select the intended credential explicitly.
+The OpenCode credential is also stored as `SecretStr` and selected explicitly with
+`--provider opencode`.
 
 Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
 out each frozen pre-fix SHA, loads the complete Issue snapshot from the manifest rather than the
 live GitHub API, verifies that the labeled fix files exist, and indexes only paths returned by
-`git ls-files`. It runs deterministic retrieval and optionally asks Groq only to rerank the
-bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this benchmark
-contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
+`git ls-files`. It runs deterministic retrieval and optionally asks the selected provider only to
+rerank the bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this
+benchmark contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
 normalizes paths and identifiers, gives explicit stack-trace/source-path references the strongest
-signal, searches bounded source content, downranks tests and documentation, and retains 20
-candidates. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
+signal, searches bounded source content, downranks tests and documentation, retains 20
+candidates, and applies bounded static graph evidence inside fixed rank bands. Per-candidate
+evidence caps preserve candidate breadth before LLM reranking.
 
 ### Benchmark candidate pipeline
 
@@ -115,21 +133,20 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 ## Current boundaries
 
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
-deterministic and offline; the CLI can optionally add a bounded Groq LLM analysis step. It does
+deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
 The current benchmark contains 20 cases across seven repositories, which is useful for error
 analysis but not statistically strong enough for a broad quality claim. The historical nine-case
 manifest remains frozen for comparisons. LLM hypotheses are not confirmed root causes. Retrieval
-remains lexical/content based; it has no import graph, call graph, test-to-source mapping, or
-semantic vector index.
+has bounded Python static relations, not a control-flow-aware call graph, cross-language graph,
+semantic test-to-source mapping, or vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> import/call-graph evidence
   -> inspect Git history and related tests
-  -> rerun deterministic and Hybrid on manifest v3
+  -> add reverse references and control-flow-aware graph evidence
   -> add symbol labels and expand to 30-50 cases
 ```
 

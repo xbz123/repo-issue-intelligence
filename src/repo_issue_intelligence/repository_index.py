@@ -53,13 +53,14 @@ FRAMEWORK_IMPORTS = {
 }
 
 
-def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str]]:
+def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str], list[str]]:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError, OSError):
-        return [], []
+        return [], [], []
     symbols: list[SymbolRecord] = []
     imports: list[str] = []
+    calls: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             symbols.append(
@@ -83,9 +84,27 @@ def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str]]:
             )
         elif isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            imports.append(node.module)
-    return sorted(symbols, key=lambda item: item.line), sorted(set(imports))
+        elif isinstance(node, ast.ImportFrom):
+            prefix = f"{'.' * node.level}{node.module or ''}"
+            if prefix:
+                imports.append(prefix)
+            for alias in node.names:
+                candidate = (
+                    f"{prefix}.{alias.name}"
+                    if node.module
+                    else f"{'.' * node.level}{alias.name}"
+                )
+                imports.append(candidate)
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                calls.append(node.func.id)
+            elif isinstance(node.func, ast.Attribute):
+                calls.append(node.func.attr)
+    return (
+        sorted(symbols, key=lambda item: item.line),
+        sorted(set(imports)),
+        sorted(set(calls)),
+    )
 
 
 def _repository_files(
@@ -108,6 +127,76 @@ def _repository_files(
         for filename in filenames:
             path = current / filename
             yield path, path.relative_to(root)
+
+
+def _python_module(relative_path: str) -> tuple[str, str]:
+    relative = Path(relative_path)
+    parts = list(relative.with_suffix("").parts)
+    is_package = bool(parts and parts[-1] == "__init__")
+    if is_package:
+        parts.pop()
+    if parts and parts[0] in {"src", "lib"}:
+        parts.pop(0)
+    module = ".".join(parts)
+    package = module if is_package else module.rpartition(".")[0]
+    return module, package
+
+
+def _resolve_python_local_imports(files: list[FileRecord]) -> None:
+    module_paths: dict[str, set[str]] = {}
+    module_by_path: dict[str, tuple[str, str]] = {}
+    for file in files:
+        if file.language != "Python":
+            continue
+        module, package = _python_module(file.path)
+        module_by_path[file.path] = (module, package)
+        if module:
+            module_paths.setdefault(module, set()).add(file.path)
+
+    for file in files:
+        module_info = module_by_path.get(file.path)
+        if module_info is None:
+            continue
+        _, package = module_info
+        resolved: set[str] = set()
+        imported_symbols: dict[str, set[str]] = {}
+        for imported in file.imports:
+            level = len(imported) - len(imported.lstrip("."))
+            suffix = imported[level:]
+            if level:
+                package_parts = package.split(".") if package else []
+                parent_count = max(0, level - 1)
+                if parent_count > len(package_parts):
+                    continue
+                base_parts = (
+                    package_parts[: len(package_parts) - parent_count]
+                    if parent_count
+                    else package_parts
+                )
+                imported_parts = [*base_parts, *suffix.split(".")]
+                candidate = ".".join(part for part in imported_parts if part)
+            else:
+                candidate = suffix
+
+            parts = candidate.split(".")
+            while parts:
+                module_candidate = ".".join(parts)
+                paths = module_paths.get(module_candidate)
+                if paths:
+                    resolved.update(paths)
+                    symbol_suffix = candidate.removeprefix(module_candidate).lstrip(".")
+                    if symbol_suffix:
+                        symbol = symbol_suffix.split(".", maxsplit=1)[0]
+                        for path in paths:
+                            imported_symbols.setdefault(path, set()).add(symbol)
+                    break
+                parts.pop()
+        file.local_imports = sorted(resolved - {file.path})
+        file.local_import_symbols = {
+            path: sorted(symbols)
+            for path, symbols in sorted(imported_symbols.items())
+            if path != file.path
+        }
 
 
 def build_repository_map(
@@ -134,9 +223,9 @@ def build_repository_map(
         if not language:
             continue
         languages[language] += 1
-        symbols, imports = ([], [])
+        symbols, imports, calls = ([], [], [])
         if language == "Python":
-            symbols, imports = _python_metadata(path)
+            symbols, imports, calls = _python_metadata(path)
             for imported in imports:
                 framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
                 if framework:
@@ -147,9 +236,11 @@ def build_repository_map(
                 language=language,
                 symbols=symbols,
                 imports=imports,
+                calls=calls,
                 test_file="test" in filename.lower() or "tests" in relative.parts,
             )
         )
+    _resolve_python_local_imports(files)
     return RepositoryMap(
         root=str(root),
         languages=dict(languages.most_common()),

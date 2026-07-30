@@ -9,10 +9,15 @@ class Settings(BaseSettings):
     github_token: str | None = None
     agent_db_path: Path = Path("data/agent-runs.sqlite3")
     groq_api_key: SecretStr | None = None
+    groq_api_key_fallback: SecretStr | None = None
+    opencode_api_key: SecretStr | None = None
     llm_model: str = "openai/gpt-oss-20b"
+    opencode_model: str = "deepseek-v4-flash-free"
     llm_max_evidence_chars: int = 16_000
     llm_max_output_tokens: int = 1_600
+    opencode_max_output_tokens: int = 4_096
     llm_timeout_seconds: float = 30.0
+    opencode_timeout_seconds: float = 60.0
     llm_reasoning_effort: Literal["low", "medium", "high"] = "low"
 
     model_config = SettingsConfigDict(

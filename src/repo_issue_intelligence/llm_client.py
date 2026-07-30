@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from enum import StrEnum
 from time import perf_counter
-from typing import Protocol
+from typing import Literal, Protocol
 
 import httpx
 from pydantic import ValidationError
@@ -21,6 +22,8 @@ from .models import (
 )
 
 GROQ_API_BASE_URL = "https://api.groq.com/openai/v1"
+OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
+OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash-free"
 RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item is to
 contain the source location that must change to fix the GitHub issue. Use only evidence IDs from
 the input. Return the most relevant IDs first. Do not diagnose a root cause or propose a patch."""
@@ -48,6 +51,7 @@ emit or execute shell commands.
 
 
 class IssueAnalyzer(Protocol):
+    provider: str
     model: str
 
     def analyze(
@@ -60,17 +64,29 @@ class IssueAnalyzer(Protocol):
     def close(self) -> None: ...
 
 
-class GroqAPIError(RuntimeError):
+class LLMProviderError(RuntimeError):
     def __init__(self, message: str, retry_after: float | None = None) -> None:
         super().__init__(message)
         self.retry_after = retry_after
 
 
-class GroqIssueAnalyzer:
+# Compatibility alias for callers that imported the original provider-specific name.
+GroqAPIError = LLMProviderError
+
+
+class LLMProvider(StrEnum):
+    GROQ = "groq"
+    OPENCODE = "opencode"
+
+
+class OpenAICompatibleIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
-        model: str = "openai/gpt-oss-20b",
+        model: str,
+        provider: str,
+        base_url: str,
+        structured_output: Literal["json_schema", "json_object"],
         max_output_tokens: int = 1_600,
         timeout_seconds: float = 30.0,
         reasoning_effort: str = "low",
@@ -79,20 +95,30 @@ class GroqIssueAnalyzer:
         client: httpx.Client | None = None,
     ) -> None:
         if not api_key:
-            raise ValueError("Groq API key is required")
+            raise ValueError(f"{provider} API key is required")
         if reasoning_effort not in {"low", "medium", "high"}:
             raise ValueError("reasoning_effort must be low, medium, or high")
         if not 0 <= temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
+        self.provider = provider
+        self.provider_label = (
+            "OpenCode" if provider == LLMProvider.OPENCODE else provider.capitalize()
+        )
         self.model = model
+        self.structured_output = structured_output
         self.max_output_tokens = max_output_tokens
-        self.reasoning_effort = reasoning_effort
+        self.reasoning_effort = (
+            reasoning_effort
+            if provider == LLMProvider.GROQ and model.startswith("openai/gpt-oss-")
+            else None
+        )
         self.temperature = temperature
         self.seed = seed
         self._client = client or httpx.Client(
-            base_url=GROQ_API_BASE_URL,
+            base_url=base_url,
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=timeout_seconds,
+            trust_env=False,
         )
         self._owns_client = client is None
 
@@ -107,6 +133,18 @@ class GroqIssueAnalyzer:
         schema: dict,
         schema_name: str,
     ) -> tuple[str, dict, float]:
+        if self.structured_output == "json_object":
+            schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+            example = ""
+            if schema_name == "evidence_rerank":
+                example = (
+                    '\nExample shape: {"summary":"Brief ranking rationale.",'
+                    '"reranked_evidence_ids":["E1","E2"]}'
+                )
+            system_prompt = (
+                f"{system_prompt}\nReturn only one minified JSON object, without Markdown, "
+                f"that validates against this JSON Schema:\n{schema_text}{example}"
+            )
         payload = {
             "model": self.model,
             "messages": [
@@ -116,20 +154,24 @@ class GroqIssueAnalyzer:
                     "content": json.dumps(user_payload, ensure_ascii=False),
                 },
             ],
-            "response_format": {
+            "temperature": self.temperature,
+        }
+        if self.structured_output == "json_schema":
+            payload["response_format"] = {
                 "type": "json_schema",
                 "json_schema": {
                     "name": schema_name,
                     "strict": True,
                     "schema": schema,
                 },
-            },
-            "max_completion_tokens": self.max_output_tokens,
-            "temperature": self.temperature,
-        }
+            }
+            payload["max_completion_tokens"] = self.max_output_tokens
+        else:
+            payload["response_format"] = {"type": "json_object"}
+            payload["max_tokens"] = self.max_output_tokens
         if self.seed is not None:
             payload["seed"] = self.seed
-        if self.model.startswith("openai/gpt-oss-"):
+        if self.provider == LLMProvider.GROQ and self.model.startswith("openai/gpt-oss-"):
             payload["reasoning_effort"] = self.reasoning_effort
 
         started = perf_counter()
@@ -137,7 +179,7 @@ class GroqIssueAnalyzer:
             response = self._client.post("/chat/completions", json=payload)
         except httpx.HTTPError as error:
             raise GroqAPIError(
-                f"Groq request failed: {type(error).__name__}"
+                f"{self.provider_label} request failed: {type(error).__name__}"
             ) from error
         elapsed_ms = round((perf_counter() - started) * 1000, 3)
         if response.status_code >= 400:
@@ -160,7 +202,7 @@ class GroqIssueAnalyzer:
                 if parts:
                     detail = f": {' - '.join(parts)}"
             raise GroqAPIError(
-                f"Groq API returned HTTP {response.status_code}{detail}",
+                f"{self.provider_label} API returned HTTP {response.status_code}{detail}",
                 retry_after=retry_after,
             )
 
@@ -168,7 +210,9 @@ class GroqIssueAnalyzer:
             response_payload = response.json()
             content = response_payload["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError, ValueError) as error:
-            raise GroqAPIError("Groq returned an invalid structured response") from error
+            raise GroqAPIError(
+                f"{self.provider_label} returned an invalid structured response"
+            ) from error
         return content, response_payload, elapsed_ms
 
     def rerank(
@@ -195,21 +239,34 @@ class GroqIssueAnalyzer:
         )
         try:
             analysis = EvidenceRerankAnalysis.model_validate_json(content)
-        except (TypeError, ValueError, ValidationError) as error:
-            raise GroqAPIError("Groq returned an invalid rerank response") from error
+        except ValidationError as error:
+            details = ", ".join(
+                f"{'.'.join(str(value) for value in item['loc']) or '<root>'}:{item['type']}"
+                for item in error.errors(include_input=False, include_url=False)[:5]
+            )
+            raise GroqAPIError(
+                f"{self.provider_label} returned an invalid rerank response ({details})"
+            ) from error
+        except (TypeError, ValueError) as error:
+            raise GroqAPIError(
+                f"{self.provider_label} returned an invalid rerank response"
+            ) from error
 
         valid_ids = {snippet.id for snippet in evidence}
         reranked_ids = analysis.reranked_evidence_ids
         if not reranked_ids:
-            raise GroqAPIError("Groq returned an empty evidence rerank")
+            raise GroqAPIError(
+                f"{self.provider_label} returned an empty evidence rerank"
+            )
         unknown_ids = set(reranked_ids) - valid_ids
         if unknown_ids:
             raise GroqAPIError(
-                f"Groq referenced unknown evidence IDs: {', '.join(sorted(unknown_ids))}"
+                f"{self.provider_label} referenced unknown evidence IDs: "
+                f"{', '.join(sorted(unknown_ids))}"
             )
         usage = response_payload.get("usage") or {}
         return EvidenceRerankResult(
-            provider="groq",
+            provider=self.provider,
             model=self.model,
             request_id=response_payload.get("id"),
             system_fingerprint=response_payload.get("system_fingerprint"),
@@ -255,13 +312,15 @@ class GroqIssueAnalyzer:
         try:
             analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:
-            raise GroqAPIError("Groq returned an invalid structured response") from error
+            raise GroqAPIError(
+                f"{self.provider_label} returned an invalid structured response"
+            ) from error
 
         analysis = self._normalize_contradictions(analysis)
         self._validate_evidence_references(analysis, evidence)
         usage = response_payload.get("usage") or {}
         return LLMAnalysisResult(
-            provider="groq",
+            provider=self.provider,
             model=self.model,
             request_id=response_payload.get("id"),
             system_fingerprint=response_payload.get("system_fingerprint"),
@@ -284,8 +343,8 @@ class GroqIssueAnalyzer:
             return analysis
         return analysis.model_copy(update={"contradictions": derived})
 
-    @staticmethod
     def _validate_evidence_references(
+        self,
         analysis: LLMAnalysis,
         evidence: Sequence[EvidenceSnippet],
     ) -> None:
@@ -296,7 +355,8 @@ class GroqIssueAnalyzer:
         }
         if observed_ids != valid_ids or len(analysis.evidence_observations) != len(evidence):
             raise GroqAPIError(
-                "Groq did not provide exactly one observation for every evidence ID"
+                f"{self.provider_label} did not provide exactly one observation "
+                "for every evidence ID"
             )
         if (
             analysis.needs_more_evidence
@@ -304,7 +364,8 @@ class GroqIssueAnalyzer:
             and not any(hypothesis.missing_evidence for hypothesis in analysis.hypotheses)
         ):
             raise GroqAPIError(
-                "Groq requested more evidence without naming a missing artifact"
+                f"{self.provider_label} requested more evidence without naming "
+                "a missing artifact"
             )
         referenced_ids.update(observed_ids)
         for hypothesis in analysis.hypotheses:
@@ -312,4 +373,58 @@ class GroqIssueAnalyzer:
         unknown_ids = referenced_ids - valid_ids
         if unknown_ids:
             unknown = ", ".join(sorted(unknown_ids))
-            raise GroqAPIError(f"Groq cited unknown evidence IDs: {unknown}")
+            raise GroqAPIError(
+                f"{self.provider_label} cited unknown evidence IDs: {unknown}"
+            )
+
+
+class GroqIssueAnalyzer(OpenAICompatibleIssueAnalyzer):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "openai/gpt-oss-20b",
+        max_output_tokens: int = 1_600,
+        timeout_seconds: float = 30.0,
+        reasoning_effort: str = "low",
+        temperature: float = 1.0,
+        seed: int | None = None,
+        client: httpx.Client | None = None,
+    ) -> None:
+        super().__init__(
+            api_key=api_key,
+            model=model,
+            provider=LLMProvider.GROQ,
+            base_url=GROQ_API_BASE_URL,
+            structured_output="json_schema",
+            max_output_tokens=max_output_tokens,
+            timeout_seconds=timeout_seconds,
+            reasoning_effort=reasoning_effort,
+            temperature=temperature,
+            seed=seed,
+            client=client,
+        )
+
+
+class OpenCodeIssueAnalyzer(OpenAICompatibleIssueAnalyzer):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = OPENCODE_DEFAULT_MODEL,
+        max_output_tokens: int = 4_096,
+        timeout_seconds: float = 60.0,
+        temperature: float = 1.0,
+        seed: int | None = None,
+        client: httpx.Client | None = None,
+    ) -> None:
+        super().__init__(
+            api_key=api_key,
+            model=model,
+            provider=LLMProvider.OPENCODE,
+            base_url=OPENCODE_API_BASE_URL,
+            structured_output="json_object",
+            max_output_tokens=max_output_tokens,
+            timeout_seconds=timeout_seconds,
+            temperature=temperature,
+            seed=seed,
+            client=client,
+        )

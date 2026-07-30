@@ -1,16 +1,16 @@
 # Real-Project File Localization Benchmark
 
-## Current result: 20-case expansion
+## Current result: Retrieval v3 on the 20-case suite
 
 On 2026-07-30, the deterministic runner completed all 20 frozen Issue/Fix-PR cases across
 Starlette, Typer, Textual, AnyIO, FastAPI, pytest, and Rich.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.2750 | 0.5917 | 0.8750 | 0.9250 | 0.4925 | 1,085 ms |
-| Main | 7/7 | 0.4286 | 0.6429 | 1.0000 | 1.0000 | 0.6036 | 1,053 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 0.8750 | 0.3817 | 619 ms |
-| Generalization | 9/9 | 0.2222 | 0.5370 | 0.8889 | 0.8889 | 0.4552 | 1,317 ms |
+| Overall | 20/20 | 0.3500 | 0.8583 | 0.8750 | 0.9250 | 0.5663 | 1,095 ms |
+| Main | 7/7 | 0.5714 | 1.0000 | 1.0000 | 1.0000 | 0.7190 | 1,065 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 0.8750 | 0.4105 | 625 ms |
+| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 0.8889 | 0.5167 | 1,327 ms |
 
 The expansion added 11 manually reviewed cases to the historical nine: three AnyIO, three
 FastAPI, three pytest, and two Rich cases. Every case has a frozen public Issue snapshot, linked
@@ -18,11 +18,18 @@ fix PR, reviewed production-file labels, and a pre-fix SHA. The discovery pipeli
 blocking failures automatically but never auto-accepted ground truth; the committed selection
 file records the manual acceptance notes.
 
-The expanded suite exposed harder retrieval behavior that the 9-case aggregate hid. FastAPI's
-PEP 695 and JSON-form cases first appear at ranks 8 and 10, pytest's fixture-ordering case at rank
-9, AnyIO's Trio task-name case at rank 9, and Rich's ANSI case at rank 13. One of two expected
-files in the AnyIO free-threading case and one of two Rich JSON files remain outside the Top-20
-pool. These misses motivate graph and test-to-source evidence rather than prompt-only tuning.
+Retrieval v3 adds local Python import resolution, imported-symbol call evidence, bounded call-name
+definition links, two-hop import evidence, and matching-test imports. Graph bonuses rerank only
+inside the original lexical ranks 1-10 and 11-20. This preserves Recall@10 and Recall@20 by
+construction while improving ordering: versus the committed v0.4 output, Recall@1 improved by
+0.0750, Recall@5 by 0.2666, and MRR by 0.0738.
+
+Three expected files remain outside the lexical Top-20 pool: Textual's `_compositor.py`, AnyIO's
+`_asyncio.py` in the free-threading case, and Rich's `highlighter.py`. The index can observe static
+relations involving these files, but the bounded reranker deliberately cannot inject them into
+the candidate pool. Recovering them requires candidate-generation evidence such as reverse
+references, runtime/backend dispatch, Git history, or a controlled pool expansion—not stronger
+reranking weights.
 
 The machine-readable artifacts are:
 
@@ -30,11 +37,68 @@ The machine-readable artifacts are:
 - `benchmarks/cases-v0.3.json` — preserved 9-case manifest version 2;
 - `benchmarks/expansion-v0.4-selection.json` — explicit manual selections;
 - `benchmarks/candidates-v0.4.json` — accepted candidate audit records;
-- `benchmarks/results/deterministic-v0.4-20-cases.json` — current deterministic output.
+- `benchmarks/results/deterministic-v0.4-20-cases.json` — pre-graph deterministic output;
+- `benchmarks/results/deterministic-v0.5-graph-20-cases.json` — current deterministic output;
+- `benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json` — Groq GPT-OSS Hybrid output;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json` — OpenCode
+  DeepSeek V4 Flash Hybrid output.
 
-The 20-case Hybrid run has not yet been recorded. Historical model results below remain useful for
-integration and model-size decisions, but they must not be presented as LLM results on the
-expanded dataset.
+### Retrieval v3 Hybrid result
+
+GPT-OSS 20B reranked the same fixed candidate pool:
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 20/20 | 0.4167 | 0.8583 | 0.8750 | 0.9250 | 0.6738 | 17/20 |
+| Main | 7/7 | 0.6429 | 1.0000 | 1.0000 | 1.0000 | 0.8571 | 7/7 |
+| Calibration | 4/4 | 0.0000 | 0.6250 | 0.6250 | 0.8750 | 0.2438 | 2/4 |
+| Generalization | 9/9 | 0.4259 | 0.8519 | 0.8889 | 0.8889 | 0.7222 | 8/9 |
+
+Compared with deterministic Retrieval v3, Hybrid improved Recall@1 by 0.0667 and MRR by 0.1075.
+Recall@5, Recall@10, and Recall@20 were unchanged. The aggregate gain came from the main and
+generalization tiers; calibration MRR decreased, so the result does not support a claim that LLM
+reranking improves every project or case.
+
+Seventeen cases returned valid structured output. Three cases exhausted both attempts and used
+the deterministic fallback: both Typer cases returned HTTP 400 `output_parse_failed`, while the
+AnyIO free-threading case returned HTTP 400 `tool_use_failed`. There were no 429 responses. The
+successful responses consumed 83,592 input and 2,581 output tokens and averaged 798 ms of model
+latency. Average analysis time was 11,014 ms because the three failed cases included the configured
+retry backoff; it excludes repository preparation and the 62-second inter-case quota delay.
+
+The run used `openai/gpt-oss-20b`, a 12,000-character evidence budget, a 1,600-token completion
+limit, low reasoning effort, `temperature=0.1`, `seed=1337`, at most two attempts, and a 62-second
+inter-case delay. Historical model results below remain useful for model-size decisions, but
+their nine-case metrics must not be mixed with this expanded result.
+
+### OpenCode DeepSeek V4 Flash Free result
+
+DeepSeek V4 Flash Free reranked the same frozen candidate pool through OpenCode's
+OpenAI-compatible chat-completions endpoint:
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 20/20 | 0.6417 | 0.9250 | 0.9250 | 0.9250 | 0.8458 | 20/20 |
+| Main | 7/7 | 0.7857 | 1.0000 | 1.0000 | 1.0000 | 0.8929 | 7/7 |
+| Calibration | 4/4 | 0.5000 | 0.8750 | 0.8750 | 0.8750 | 0.7083 | 4/4 |
+| Generalization | 9/9 | 0.5926 | 0.8889 | 0.8889 | 0.8889 | 0.8704 | 9/9 |
+
+Compared with deterministic Retrieval v3, DeepSeek improved Recall@1 by `0.2917`, Recall@5 by
+`0.0667`, Recall@10 by `0.0500`, and MRR by `0.2795`; Recall@20 remained bounded by the same
+candidate pool. Compared with GPT-OSS 20B, it improved Recall@1 by `0.2250` and MRR by `0.1720`.
+Unlike the GPT-OSS run, every tier improved over its deterministic baseline.
+
+All 20 cases returned locally validated JSON and evidence IDs; one case succeeded on its second
+attempt and none fell back. The run used a 16,000-character evidence budget, 4,096-token completion
+limit, 60-second timeout, `temperature=0.1`, best-effort `seed=1337`, and zero inter-case delay.
+It consumed 104,570 input and 32,981 output tokens. Successful model requests averaged `14.6 s`,
+about 18 times the GPT-OSS 20B model latency (`0.8 s`), so the quality improvement has a material
+latency and token tradeoff.
+
+The model is free for a limited period, and OpenCode states that free-period data may be used for
+model improvement. This project therefore sends only public benchmark Issue text and public source
+evidence. Repeated targeted runs produced different rankings despite the supplied seed, so the
+committed artifact is one complete run rather than a claim of deterministic model behavior.
 
 ## Historical 9-case result: Retrieval v2
 
@@ -167,9 +231,10 @@ for a strong general quality claim. The Hybrid path only reranks evidence that d
 retrieval already found and cannot recover a file outside the 20-file candidate pool. Token totals
 include successful final requests only; they do not estimate development-time failed requests.
 
-The next retrieval iteration should add import/call-graph distance and test-to-source mapping,
-then label symbols for the most reliable cases. After that change, rerun both deterministic and
-GPT-OSS 20B Hybrid variants on the same manifest version 3 before expanding toward 30-50 cases.
+The next retrieval iteration should add reverse-reference and runtime/backend-dispatch evidence,
+inspect Git history and related tests, and label symbols for the most reliable cases. Candidate
+pool expansion should be evaluated separately from reranking so Recall@20 changes remain
+attributable. After that, expand toward 30-50 cases.
 
 ## GPT-OSS 20B versus 120B
 

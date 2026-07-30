@@ -169,7 +169,7 @@ def _llm_analyze_node(
     return {
         "investigations": updated_reports,
         "_trace_metadata": {
-            "provider": "groq",
+            "provider": results[0].provider if results else analyzer.provider,
             "models": sorted({result.model for result in results}),
             "request_ids": [
                 result.request_id for result in results if result.request_id is not None
