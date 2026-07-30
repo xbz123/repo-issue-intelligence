@@ -426,8 +426,24 @@ def test_graph_reranking_promotes_bounded_two_hop_call_chain(
         "src/compositor.py",
         "def reflow_children(children):\n"
         "    return arrange_children(children)\n\n"
+        "def refresh_children(children):\n"
+        "    return children\n\n"
+        "def remove_children(children):\n"
+        "    return children\n\n"
         "def arrange_children(children):\n"
         "    return children\n",
+    )
+    write_source(
+        repository,
+        "src/height_children_refresh.py",
+        "def refresh_height(children):\n"
+        "    return refresh_children(children)\n",
+    )
+    write_source(
+        repository,
+        "src/remove_children_height.py",
+        "def update_height(children):\n"
+        "    return remove_children(children)\n",
     )
     for index in range(20):
         write_source(

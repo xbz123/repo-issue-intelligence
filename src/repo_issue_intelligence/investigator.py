@@ -941,13 +941,24 @@ def locate_candidates(
             GRAPH_BONUS_LIMIT,
             sum(bonus for bonus, _ in rerank_relations[:2]),
         )
+        displayed_relations = unique_relations[:2]
+        strong_relation = next(
+            (
+                relation
+                for relation in unique_relations
+                if relation[1].startswith(GRAPH_STRONG_EXPANSION_PREFIX)
+            ),
+            None,
+        )
+        if strong_relation and strong_relation not in displayed_relations:
+            displayed_relations = [*displayed_relations[:1], strong_relation]
         final_scores[path] += graph_bonus
         candidates[path].confidence = round(
             min(0.98, 0.2 + final_scores[path] / 30),
             2,
         )
         candidates[path].evidence.extend(
-            evidence for _, evidence in unique_relations[:2]
+            evidence for _, evidence in displayed_relations
         )
 
     base_order = sorted(
