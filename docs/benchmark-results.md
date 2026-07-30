@@ -2,7 +2,7 @@
 
 ## Current result: qualified symbol identities on 32 frozen cases
 
-On 2026-07-30, manifest v7 retained the 32 manually reviewed Issue/Fix-PR cases across 13 public
+On 2026-07-31, manifest v7 retained the 32 manually reviewed Issue/Fix-PR cases across 13 public
 Python repositories and added qualified class/function ownership to the symbol contract. Every case
 stores an immutable Issue snapshot, the fix PR, and the parent of the first PR commit. The runner
 checked out all 32 pre-fix commits, verified the reviewed production files, and indexed only
@@ -10,19 +10,19 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.5989 | 3,123 ms |
-| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,675 ms |
-| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,623 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6038 | 3,419 ms |
+| Overall | 32/32 | 0.4375 | 0.8333 | 0.8906 | 0.9688 | 0.6072 | 3,161 ms |
+| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6972 | 3,787 ms |
+| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4450 | 1,677 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9231 | 1.0000 | 0.6115 | 3,382 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 16 | 0.1875 | 0.4688 | 0.5000 | 0.5625 | 0.2816 |
+| Overall | 16 | 0.1875 | 0.4688 | 0.4688 | 0.5312 | 0.2795 |
 | Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.2500 | 0.2500 |
-| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1759 |
-| Generalization | 6 | 0.3333 | 0.5833 | 0.6667 | 0.6667 | 0.4083 |
+| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1620 |
+| Generalization | 6 | 0.3333 | 0.5833 | 0.5833 | 0.5833 | 0.4167 |
 
 Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
 exact reviewed file and symbol and retains the parent file's candidate rank. The investigator now
@@ -33,17 +33,17 @@ range, constrained by an exact owner, or scoped by a path that uniquely resolves
 file; repeated unscoped names are only semantic tie-breakers. Loose suffix paths still contribute
 to file retrieval. Qualified matching preserves case and dot boundaries. Source-content retrieval
 also matches dotted values only as complete, case-preserving tokens and excludes their component
-terms; syntactic object calls separately expose their local callee. The ASGI event
+terms; syntactic object calls in Issue text separately expose their local callee. The ASGI event
 `websocket.accept` therefore neither selects nor contributes terminal-name content evidence for
 the Python method `WebSocket.accept`.
 
-Compared with v0.11, 28 of 32 file orderings and 31 per-file symbol assignments change after
-normalizing away qualified-name representation. Typer's labeled target moves from rank 3 to 2,
-while Textual's two-file target moves from ranks 4/10 to 5/10; their Recall thresholds remain
-unchanged. The stricter evidence contract removes false-positive dotted and ambiguous-basename
-scope, but it is not a monotonic metric gain: the Rich `print_json` fix file moves from rank 1 to
-7 and the pytest fixture-ordering fix file moves from rank 4 to 5, reducing aggregate Recall@5 by
-`0.0157` and MRR by `0.0075`, while Recall@20 remains `0.9688`.
+Compared with v0.11, all 32 file orderings and all 32 per-file symbol candidate lists change after
+normalizing away qualified-name representation. Typer's option target moves from rank 4 to 3,
+while Textual's two-file target moves from ranks 4/10 to 4/18. The stricter evidence contract
+removes false-positive dotted, ambiguous-basename, and unresolved-receiver scope, but it is not a
+monotonic metric gain: the Rich `print_json` fix file moves from rank 1 to 7 and Textual's
+`_compositor.py` leaves the Top-10. Relative to v0.11, aggregate Recall@5 decreases by `0.0157`,
+Recall@10 decreases by `0.0156`, MRR increases by `0.0008`, and Recall@20 remains `0.9688`.
 The corrected selector still restores `cookie_parser` and `send_wrapper` for the Starlette session
 case and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
 `WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but
@@ -53,15 +53,19 @@ candidate pool, and several correct files are retrieved while the within-file se
 neighboring function. This is useful negative evidence: candidate generation is close to
 saturation on the current file suite, while symbol localization remains a material bottleneck.
 
-V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
-within-file call edges, and bounded two-hop propagation through uniquely resolved concrete
-functions. Call edges retain qualified caller identities, while local targets and legacy caller
-keys contribute only when they resolve to one function in the file. This prevents two methods such
-as `Cache.refresh` and `Worker.refresh` from being merged into fabricated relation evidence. The
-graph also blocks ambiguous definitions and abstract/interface layers and preserves the strong
-relation that triggers a Top-10 diversity promotion. Two complete review-fixed v0.12 runs produced
-identical candidate lists and metrics after recursively removing timestamps and elapsed-time
-fields.
+The retrieval structure still combines lexical and content evidence, history, within-file call
+edges, and bounded two-hop propagation through uniquely resolved concrete functions. The current
+call contract retains the broad local-name maps for stored-data compatibility but uses only
+qualified-caller edges collected from direct `ast.Name` calls for inference. Attribute calls such
+as `self.rebuild()`, `backend.rebuild()`, or `view.refresh_layout()` cannot resolve to a same-named
+local function or start a strong two-hop promotion without receiver resolution. This prevents both
+duplicate callers such as `Cache.refresh` / `Worker.refresh` and unrelated attribute receivers from
+creating fabricated relation evidence. The graph also blocks ambiguous definitions and
+abstract/interface layers and preserves the strong relation that triggers a Top-10 diversity
+promotion. The Textual Top-10 loss is retained as honest negative evidence: recovering it safely
+requires receiver/type or runtime-dispatch resolution, not re-enabling terminal-name matching.
+Two complete review-fixed v0.12 runs produced identical candidate lists and metrics after
+recursively removing timestamps and elapsed-time fields.
 
 Current machine-readable artifacts:
 

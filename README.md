@@ -11,7 +11,7 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Separates severity, urgency, and engineering priority.
 - Applies weighted scoring plus hard P0/P1 override rules.
 - Builds a cacheable repository map with languages, runtime files, entrypoints, imports, classes,
-  functions, qualified caller edges, tests, and detected frameworks.
+  functions, receiver-safe direct-name call edges, tests, and detected frameworks.
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
@@ -281,22 +281,26 @@ Each case uses a committed Issue snapshot and the parent of the first fix-PR com
 pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
 On manifest v7, v0.12 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8333`,
-Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.5989`. On the 16 labeled cases, Symbol Recall@1
-is `0.1875`, Recall@5 is `0.4688`, Recall@10 is `0.5000`, Recall@20 is `0.5625`, and symbol MRR is
-`0.2816`. Qualified AST identities distinguish repeated local names while the public unqualified
+Recall@10 `0.8906`, Recall@20 `0.9688`, and MRR `0.6072`. On the 16 labeled cases, Symbol Recall@1
+is `0.1875`, Recall@5 is `0.4688`, Recall@10 is `0.4688`, Recall@20 is `0.5312`, and symbol MRR is
+`0.2795`. Qualified AST identities distinguish repeated local names while the public unqualified
 `symbol` field remains compatible. Symbol selection gives exact qualified references priority over
 title semantics. Bare names receive direct priority only when unique in the final candidate range
 or constrained by an owner or a source path that resolves to one repository file; repeated
 unscoped names remain semantic tie-breakers. Fenced non-call references and traceback frames retain
 qualified identities. Source-content retrieval matches dotted values only as complete,
 case-preserving tokens and does not reuse their terminal component or component terms; a syntactic
-call still exposes its local callee separately. Compared with v0.11, stricter scope handling changes
-28 file orderings and 31 per-file symbol assignments; Recall@20 remains unchanged while Recall@5
-and MRR decrease slightly. Call relations retain qualified caller identities, and ambiguous local
-callers or targets are skipped for legacy maps and bounded two-hop propagation. Two complete
-review-fixed runs produced identical candidates and metrics after excluding timing fields. The reviewed
-`WorkerThread.__init__` target is representable but not recovered without an explicit method
-reference, which deliberately exposes the limits of the current single-best-symbol selector.
+call in Issue text still exposes its local callee separately. Repository-source call inference is
+stricter: only direct `ast.Name` calls can form local or bounded two-hop edges. Unresolved
+`self.method()`, `receiver.method()`, and `module.function()` calls are retained only in the legacy
+inspection field and cannot fabricate relation evidence. Compared with v0.11, the complete
+review-fixed contract changes all 32 file orderings and all 32 per-file symbol candidate lists;
+Recall@20 remains unchanged. Compared with the immediately preceding v0.12 artifact, it changes 24
+file orderings and 29 symbol lists, raises file MRR by `0.0083`, and lowers file Recall@10 by
+`0.0156`. Two complete runs produced identical candidates and metrics after excluding timing
+fields. The reviewed `WorkerThread.__init__` target is representable but not recovered without an
+explicit method reference, which deliberately exposes the limits of the current single-best-symbol
+selector.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only

@@ -27,9 +27,10 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
-function-level call edges keyed by qualified caller identity, classes, functions, line ranges,
-entrypoints, runtime files, tests, and framework indicators. The legacy local-name call map remains
-serialized for compatibility, while new consumers prefer the qualified map.
+classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
+Broad called-name and local-name caller maps remain serialized for compatibility. Separate
+`name_calls` and qualified-caller maps record only direct `ast.Name` calls; ranking consumers use
+these receiver-safe edges instead of treating every `ast.Attribute` terminal as a local callee.
 
 ### Investigation
 
@@ -52,16 +53,18 @@ one repository file. Loose suffix matching remains available for file retrieval,
 basename cannot scope a direct symbol reference. A dotted value is direct only when its complete,
 case-preserving qualified identity matches; source-content retrieval applies the same full-token
 boundary and does not reuse dotted component terms. Syntactic object calls separately expose their
-local callee. Repeated unscoped names and unmatched dotted terminals cannot independently select a
-symbol. Owner names can disambiguate equivalent method names but do not contribute semantic title
-terms or override a different explicitly referenced function. A callee receives additional
-evidence only when at least two distinct issue-matching functions in the same file call it. The
-caller identity is preserved in relation scoring and evidence; a local call target must resolve to
-one function in the file. Older repository maps remain readable, but ambiguous legacy callers are
-skipped rather than merged. Bounded two-hop propagation applies the same uniqueness rule to its
-first-hop caller. The investigator emits confirmed facts, confidence-scored hypotheses, missing
-evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed
-root causes.
+local callee for Issue-text matching. Repeated unscoped names and unmatched dotted terminals cannot
+independently select a symbol. Owner names can disambiguate equivalent method names but do not
+contribute semantic title terms or override a different explicitly referenced function. A callee
+receives additional evidence only when at least two distinct issue-matching functions in the same
+file directly call it by `ast.Name`. The caller identity is preserved in relation scoring and
+evidence, and the local target must resolve to one function in the file. Calls through
+`self.method()`, `receiver.method()`, or `module.function()` do not become local edges until a
+receiver-aware resolver can prove their target. Older repository maps remain readable, but maps
+without the safe qualified edge field skip call-relation inference instead of falling back to broad
+legacy names. Bounded two-hop propagation uses the same direct-call and uniqueness rules. The
+investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
+non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
@@ -176,8 +179,9 @@ the reproducible input for the corrected 20-case Groq and OpenCode comparison; v
 retained 32-case expansion and version 7 is the current qualified-symbol suite. LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
 calls, qualified class/function ownership, and a single-best-symbol selector, but not cross-file
-control-flow beyond bounded two-hop call names, runtime/backend dispatch, a cross-language graph,
-semantic test-to-source mapping, multi-symbol ranking, or a vector index.
+control-flow beyond bounded two-hop direct-name calls, receiver/type resolution, runtime/backend
+dispatch, a cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a
+vector index.
 
 ## Next workflow extensions
 

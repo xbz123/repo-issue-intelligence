@@ -11,7 +11,7 @@
   "reasoning_effort": null,
   "temperature": null,
   "seed": null,
-  "created_at": "2026-07-30T21:53:43.207090Z",
+  "created_at": "2026-07-30T22:24:58.945609Z",
   "results": [
     {
       "case_id": "starlette-streaming-denial-response",
@@ -29,8 +29,8 @@
       "candidate_files": [
         "starlette/websockets.py",
         "starlette/responses.py",
-        "starlette/middleware/base.py",
         "starlette/routing.py",
+        "starlette/middleware/base.py",
         "starlette/requests.py",
         "starlette/_exception_handler.py",
         "starlette/testclient.py",
@@ -62,14 +62,14 @@
           "rank": 2
         },
         {
-          "file": "starlette/middleware/base.py",
-          "symbol": "_StreamingResponse",
+          "file": "starlette/routing.py",
+          "symbol": "request_response",
           "qualified_symbol": null,
           "rank": 3
         },
         {
-          "file": "starlette/routing.py",
-          "symbol": "request_response",
+          "file": "starlette/middleware/base.py",
+          "symbol": "_StreamingResponse",
           "qualified_symbol": null,
           "rank": 4
         },
@@ -184,7 +184,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 985.25,
+      "analysis_elapsed_ms": 1020.327,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -376,7 +376,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1055.998,
+      "analysis_elapsed_ms": 1080.299,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -449,8 +449,8 @@
         },
         {
           "file": "tests/test_applications.py",
-          "symbol": "get",
-          "qualified_symbol": "Homepage.get",
+          "symbol": "runtime_error",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -564,7 +564,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 957.952,
+      "analysis_elapsed_ms": 989.227,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -740,7 +740,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 576.223,
+      "analysis_elapsed_ms": 606.813,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -772,24 +772,24 @@
       "candidate_files": [
         "typer/models.py",
         "typer/params.py",
-        "typer/main.py",
         "typer/core.py",
         "typer/_click/utils.py",
+        "typer/main.py",
         "typer/_click/termui.py",
         "typer/_click/shell_completion.py",
-        "typer/rich_utils.py",
         "typer/_click/parser.py",
-        "typer/_click/_termui_impl.py",
+        "typer/rich_utils.py",
         "typer/_click/core.py",
-        "typer/_click/decorators.py",
         "typer/_click/types.py",
         "typer/_typing.py",
+        "typer/_click/decorators.py",
         "docs_src/options/help/tutorial001_an_py310.py",
         "docs_src/options/help/tutorial002_an_py310.py",
         "docs_src/one_file_per_command/app_py310/main.py",
         "docs_src/first_steps/tutorial006_py310.py",
         "typer/_click/exceptions.py",
-        "typer/_types.py"
+        "typer/_types.py",
+        "typer/utils.py"
       ],
       "candidate_symbols": [
         {
@@ -799,21 +799,21 @@
           "rank": 1
         },
         {
-          "file": "typer/main.py",
-          "symbol": "command",
-          "qualified_symbol": "Typer.command",
-          "rank": 3
-        },
-        {
           "file": "typer/core.py",
           "symbol": "value_from_envvar",
           "qualified_symbol": "TyperOption.value_from_envvar",
-          "rank": 4
+          "rank": 3
         },
         {
           "file": "typer/_click/utils.py",
           "symbol": "get_app_dir",
           "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "typer/main.py",
+          "symbol": "command",
+          "qualified_symbol": "Typer.command",
           "rank": 5
         },
         {
@@ -829,75 +829,75 @@
           "rank": 7
         },
         {
-          "file": "typer/rich_utils.py",
-          "symbol": "_make_rich_text",
+          "file": "typer/_click/parser.py",
+          "symbol": "_Option",
           "qualified_symbol": null,
           "rank": 8
         },
         {
-          "file": "typer/_click/parser.py",
-          "symbol": "_Option",
+          "file": "typer/rich_utils.py",
+          "symbol": "_make_rich_text",
           "qualified_symbol": null,
           "rank": 9
         },
         {
-          "file": "typer/_click/_termui_impl.py",
-          "symbol": "generator",
-          "qualified_symbol": "ProgressBar.generator",
-          "rank": 10
-        },
-        {
           "file": "typer/_click/core.py",
-          "symbol": "get_params",
-          "qualified_symbol": "Command.get_params",
-          "rank": 11
-        },
-        {
-          "file": "typer/_click/decorators.py",
-          "symbol": "option",
+          "symbol": "augment_usage_errors",
           "qualified_symbol": null,
-          "rank": 12
+          "rank": 10
         },
         {
           "file": "typer/_click/types.py",
           "symbol": "split_envvar_value",
           "qualified_symbol": "ParamType.split_envvar_value",
-          "rank": 13
+          "rank": 11
         },
         {
           "file": "typer/_typing.py",
           "symbol": "all_literal_values",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 12
+        },
+        {
+          "file": "typer/_click/decorators.py",
+          "symbol": "option",
+          "qualified_symbol": null,
+          "rank": 13
         },
         {
           "file": "docs_src/options/help/tutorial001_an_py310.py",
           "symbol": "main",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "docs_src/options/help/tutorial002_an_py310.py",
           "symbol": "main",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "docs_src/first_steps/tutorial006_py310.py",
           "symbol": "main",
           "qualified_symbol": null,
-          "rank": 18
+          "rank": 17
         },
         {
           "file": "typer/_click/exceptions.py",
           "symbol": "UsageError",
           "qualified_symbol": null,
-          "rank": 19
+          "rank": 18
         },
         {
           "file": "typer/_types.py",
           "symbol": "get_missing_message",
           "qualified_symbol": "TyperChoice.get_missing_message",
+          "rank": 19
+        },
+        {
+          "file": "typer/utils.py",
+          "symbol": "_param_type_to_user_string",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -915,13 +915,13 @@
       "file_recall_at_10": 1.0,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "reciprocal_rank": 0.25,
+      "reciprocal_rank": 0.3333,
       "symbol_recall_at_1": 0.0,
       "symbol_recall_at_5": 1.0,
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
-      "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 1111.448,
+      "symbol_reciprocal_rank": 0.3333,
+      "analysis_elapsed_ms": 1141.92,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -952,9 +952,9 @@
       ],
       "candidate_files": [
         "tests/test_completion/colon_example.py",
+        "tests/test_completion/path_example.py",
         "typer/rich_utils.py",
         "typer/main.py",
-        "tests/test_completion/path_example.py",
         "docs_src/options/help/tutorial001_an.py",
         "docs_src/options/help/tutorial002_an.py",
         "docs_src/options/help/tutorial001.py",
@@ -983,13 +983,13 @@
           "file": "typer/rich_utils.py",
           "symbol": "_make_rich_text",
           "qualified_symbol": null,
-          "rank": 2
+          "rank": 3
         },
         {
           "file": "typer/main.py",
           "symbol": "command",
           "qualified_symbol": "Typer.command",
-          "rank": 3
+          "rank": 4
         },
         {
           "file": "docs_src/options/help/tutorial001_an.py",
@@ -1102,13 +1102,13 @@
       "file_recall_at_10": 1.0,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "reciprocal_rank": 0.5,
+      "reciprocal_rank": 0.3333,
       "symbol_recall_at_1": 0.0,
       "symbol_recall_at_5": 1.0,
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
-      "symbol_reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 761.586,
+      "symbol_reciprocal_rank": 0.3333,
+      "analysis_elapsed_ms": 852.645,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1151,33 +1151,33 @@
         "src/textual/dom.py",
         "src/textual/css/_style_properties.py",
         "src/textual/widgets/_log.py",
-        "src/textual/geometry.py",
         "src/textual/document/_document.py",
-        "src/textual/message_pump.py"
+        "src/textual/widgets/_selection_list.py",
+        "src/textual/worker.py"
       ],
       "candidate_symbols": [
         {
           "file": "src/textual/widget.py",
-          "symbol": "scroll_to",
-          "qualified_symbol": "Widget.scroll_to",
+          "symbol": "get_common_ancestor",
+          "qualified_symbol": "Widget.get_common_ancestor",
           "rank": 1
         },
         {
           "file": "src/textual/widgets/_select.py",
-          "symbol": "_setup_variables_for_options",
-          "qualified_symbol": "Select._setup_variables_for_options",
+          "symbol": "_find_search_match",
+          "qualified_symbol": "SelectOverlay._find_search_match",
           "rank": 2
         },
         {
           "file": "src/textual/app.py",
-          "symbol": "refresh",
-          "qualified_symbol": "App.refresh",
+          "symbol": "clear_selection",
+          "qualified_symbol": "App.clear_selection",
           "rank": 3
         },
         {
           "file": "src/textual/screen.py",
-          "symbol": "_stop_auto_scroll",
-          "qualified_symbol": "Screen._stop_auto_scroll",
+          "symbol": "find_widget",
+          "qualified_symbol": "Screen.find_widget",
           "rank": 4
         },
         {
@@ -1188,8 +1188,8 @@
         },
         {
           "file": "src/textual/content.py",
-          "symbol": "append",
-          "qualified_symbol": "Content.append",
+          "symbol": "_wrap_and_format",
+          "qualified_symbol": "Content._wrap_and_format",
           "rank": 6
         },
         {
@@ -1200,8 +1200,8 @@
         },
         {
           "file": "src/textual/widgets/_text_area.py",
-          "symbol": "move_cursor",
-          "qualified_symbol": "TextArea.move_cursor",
+          "symbol": "find_matching_bracket",
+          "qualified_symbol": "TextArea.find_matching_bracket",
           "rank": 8
         },
         {
@@ -1218,8 +1218,8 @@
         },
         {
           "file": "src/textual/pilot.py",
-          "symbol": "_post_mouse_events",
-          "qualified_symbol": "Pilot._post_mouse_events",
+          "symbol": "mouse_down",
+          "qualified_symbol": "Pilot.mouse_down",
           "rank": 11
         },
         {
@@ -1242,8 +1242,8 @@
         },
         {
           "file": "src/textual/dom.py",
-          "symbol": "_get_dom_base",
-          "qualified_symbol": "DOMNode._get_dom_base",
+          "symbol": "selection_style",
+          "qualified_symbol": "DOMNode.selection_style",
           "rank": 15
         },
         {
@@ -1254,26 +1254,26 @@
         },
         {
           "file": "src/textual/widgets/_log.py",
-          "symbol": "refresh_lines",
-          "qualified_symbol": "Log.refresh_lines",
+          "symbol": "get_selection",
+          "qualified_symbol": "Log.get_selection",
           "rank": 17
-        },
-        {
-          "file": "src/textual/geometry.py",
-          "symbol": "selection_bounds",
-          "qualified_symbol": "Shape.selection_bounds",
-          "rank": 18
         },
         {
           "file": "src/textual/document/_document.py",
           "symbol": "get_text_range",
           "qualified_symbol": "Document.get_text_range",
+          "rank": 18
+        },
+        {
+          "file": "src/textual/widgets/_selection_list.py",
+          "symbol": "get_option_at_index",
+          "qualified_symbol": "SelectionList.get_option_at_index",
           "rank": 19
         },
         {
-          "file": "src/textual/message_pump.py",
-          "symbol": "app",
-          "qualified_symbol": "MessagePump.app",
+          "file": "src/textual/worker.py",
+          "symbol": "get_current_worker",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -1300,7 +1300,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2991.018,
+      "analysis_elapsed_ms": 3116.422,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1338,23 +1338,23 @@
         "src/textual/compose.py",
         "src/textual/app.py",
         "src/textual/screen.py",
-        "src/textual/getters.py",
         "src/textual/widget.py",
+        "src/textual/getters.py",
         "src/textual/widgets/_select.py",
-        "src/textual/lazy.py",
-        "src/textual/widgets/_text_area.py",
         "src/textual/widgets/_progress_bar.py",
-        "src/textual/_compositor.py",
+        "src/textual/widgets/_text_area.py",
         "src/textual/widgets/_static.py",
-        "src/textual/geometry.py",
-        "src/textual/message_pump.py",
+        "src/textual/lazy.py",
         "src/textual/css/query.py",
-        "src/textual/widgets/_selection_list.py",
         "src/textual/dom.py",
+        "src/textual/widgets/_selection_list.py",
         "src/textual/widgets/_input.py",
         "src/textual/widgets/_footer.py",
         "src/textual/widgets/_radio_set.py",
-        "src/textual/widgets/_tabs.py"
+        "src/textual/widgets/_tabs.py",
+        "src/textual/_compositor.py",
+        "src/textual/layouts/vertical.py",
+        "src/textual/layouts/stream.py"
       ],
       "candidate_symbols": [
         {
@@ -1371,20 +1371,20 @@
         },
         {
           "file": "src/textual/screen.py",
-          "symbol": "set_focus",
-          "qualified_symbol": "Screen.set_focus",
+          "symbol": "scroll_to_center",
+          "qualified_symbol": "Screen.set_focus.scroll_to_center",
           "rank": 3
-        },
-        {
-          "file": "src/textual/getters.py",
-          "symbol": "app",
-          "qualified_symbol": null,
-          "rank": 4
         },
         {
           "file": "src/textual/widget.py",
           "symbol": "remove_children",
           "qualified_symbol": "Widget.remove_children",
+          "rank": 4
+        },
+        {
+          "file": "src/textual/getters.py",
+          "symbol": "app",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -1394,87 +1394,87 @@
           "rank": 6
         },
         {
-          "file": "src/textual/lazy.py",
+          "file": "src/textual/widgets/_progress_bar.py",
           "symbol": "__init__",
-          "qualified_symbol": "Lazy.__init__",
+          "qualified_symbol": "ProgressBar.__init__",
           "rank": 7
         },
         {
           "file": "src/textual/widgets/_text_area.py",
-          "symbol": "move_cursor",
-          "qualified_symbol": "TextArea.move_cursor",
+          "symbol": "_rewrap_and_refresh_virtual_size",
+          "qualified_symbol": "TextArea._rewrap_and_refresh_virtual_size",
           "rank": 8
-        },
-        {
-          "file": "src/textual/widgets/_progress_bar.py",
-          "symbol": "__init__",
-          "qualified_symbol": "ProgressBar.__init__",
-          "rank": 9
-        },
-        {
-          "file": "src/textual/_compositor.py",
-          "symbol": "_arrange_root",
-          "qualified_symbol": "Compositor._arrange_root",
-          "rank": 10
         },
         {
           "file": "src/textual/widgets/_static.py",
           "symbol": "visual",
           "qualified_symbol": "Static.visual",
-          "rank": 11
+          "rank": 9
         },
         {
-          "file": "src/textual/geometry.py",
-          "symbol": "clamp",
-          "qualified_symbol": "Offset.clamp",
-          "rank": 12
-        },
-        {
-          "file": "src/textual/message_pump.py",
-          "symbol": "post_message",
-          "qualified_symbol": "MessagePump.post_message",
-          "rank": 13
+          "file": "src/textual/lazy.py",
+          "symbol": "__init__",
+          "qualified_symbol": "Lazy.__init__",
+          "rank": 10
         },
         {
           "file": "src/textual/css/query.py",
           "symbol": "refresh",
           "qualified_symbol": "DOMQuery.refresh",
-          "rank": 14
-        },
-        {
-          "file": "src/textual/widgets/_selection_list.py",
-          "symbol": "_apply_to_all",
-          "qualified_symbol": "SelectionList._apply_to_all",
-          "rank": 15
+          "rank": 11
         },
         {
           "file": "src/textual/dom.py",
-          "symbol": "_get_dom_base",
-          "qualified_symbol": "DOMNode._get_dom_base",
-          "rank": 16
+          "symbol": "check_identifiers",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "src/textual/widgets/_selection_list.py",
+          "symbol": "SelectionToggled",
+          "qualified_symbol": "SelectionList.SelectionToggled",
+          "rank": 13
         },
         {
           "file": "src/textual/widgets/_input.py",
-          "symbol": "delete_selection",
-          "qualified_symbol": "Input.delete_selection",
-          "rank": 17
+          "symbol": "get_content_height",
+          "qualified_symbol": "Input.get_content_height",
+          "rank": 14
         },
         {
           "file": "src/textual/widgets/_footer.py",
           "symbol": "__init__",
           "qualified_symbol": "Footer.__init__",
-          "rank": 18
+          "rank": 15
         },
         {
           "file": "src/textual/widgets/_radio_set.py",
           "symbol": "__init__",
           "qualified_symbol": "RadioSet.__init__",
-          "rank": 19
+          "rank": 16
         },
         {
           "file": "src/textual/widgets/_tabs.py",
-          "symbol": "_auto_tab_id",
-          "qualified_symbol": "Tabs._auto_tab_id",
+          "symbol": "do_remove",
+          "qualified_symbol": "Tabs.remove_tab.do_remove",
+          "rank": 17
+        },
+        {
+          "file": "src/textual/_compositor.py",
+          "symbol": "__contains__",
+          "qualified_symbol": "Compositor.__contains__",
+          "rank": 18
+        },
+        {
+          "file": "src/textual/layouts/vertical.py",
+          "symbol": "VerticalLayout",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "src/textual/layouts/stream.py",
+          "symbol": "get_content_height",
+          "qualified_symbol": "StreamLayout.get_content_height",
           "rank": 20
         }
       ],
@@ -1482,7 +1482,6 @@
         "src/textual/widget.py"
       ],
       "matched_files_at_10": [
-        "src/textual/_compositor.py",
         "src/textual/widget.py"
       ],
       "matched_files_at_20": [
@@ -1491,16 +1490,16 @@
       ],
       "file_recall_at_1": 0.0,
       "file_recall_at_5": 0.5,
-      "file_recall_at_10": 1.0,
+      "file_recall_at_10": 0.5,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "reciprocal_rank": 0.2,
+      "reciprocal_rank": 0.25,
       "symbol_recall_at_1": 0.0,
       "symbol_recall_at_5": 0.5,
-      "symbol_recall_at_10": 1.0,
-      "symbol_recall_at_20": 1.0,
-      "symbol_reciprocal_rank": 0.2,
-      "analysis_elapsed_ms": 3868.558,
+      "symbol_recall_at_10": 0.5,
+      "symbol_recall_at_20": 0.5,
+      "symbol_reciprocal_rank": 0.25,
+      "analysis_elapsed_ms": 3984.072,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1541,18 +1540,18 @@
         "src/textual/events.py",
         "src/textual/dom.py",
         "src/textual/drivers/linux_inline_driver.py",
-        "src/textual/drivers/web_driver.py",
-        "src/textual/widgets/_text_area.py",
         "src/textual/_doc.py",
+        "src/textual/widgets/_text_area.py",
+        "docs/examples/app/event01.py",
         "src/textual/screen.py",
-        "src/textual/messages.py",
-        "src/textual/_event_broker.py"
+        "src/textual/_event_broker.py",
+        "src/textual/binding.py"
       ],
       "candidate_symbols": [
         {
           "file": "src/textual/app.py",
-          "symbol": "_context",
-          "qualified_symbol": "App._context",
+          "symbol": "_set_pointer_shape",
+          "qualified_symbol": "App._set_pointer_shape",
           "rank": 1
         },
         {
@@ -1563,14 +1562,14 @@
         },
         {
           "file": "src/textual/pilot.py",
-          "symbol": "_post_mouse_events",
-          "qualified_symbol": "Pilot._post_mouse_events",
+          "symbol": "click",
+          "qualified_symbol": "Pilot.click",
           "rank": 3
         },
         {
           "file": "src/textual/_xterm_parser.py",
-          "symbol": "debug_log",
-          "qualified_symbol": "XTermParser.debug_log",
+          "symbol": "on_token",
+          "qualified_symbol": "XTermParser.parse.on_token",
           "rank": 4
         },
         {
@@ -1628,9 +1627,9 @@
           "rank": 14
         },
         {
-          "file": "src/textual/drivers/web_driver.py",
-          "symbol": "_request_terminal_sync_mode_support",
-          "qualified_symbol": "WebDriver._request_terminal_sync_mode_support",
+          "file": "src/textual/_doc.py",
+          "symbol": "take_svg_screenshot",
+          "qualified_symbol": null,
           "rank": 15
         },
         {
@@ -1640,8 +1639,8 @@
           "rank": 16
         },
         {
-          "file": "src/textual/_doc.py",
-          "symbol": "take_svg_screenshot",
+          "file": "docs/examples/app/event01.py",
+          "symbol": "EventApp",
           "qualified_symbol": null,
           "rank": 17
         },
@@ -1652,15 +1651,15 @@
           "rank": 18
         },
         {
-          "file": "src/textual/messages.py",
-          "symbol": "__init__",
-          "qualified_symbol": "InBandWindowResize.__init__",
-          "rank": 19
-        },
-        {
           "file": "src/textual/_event_broker.py",
           "symbol": "HandlerArguments",
           "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "src/textual/binding.py",
+          "symbol": "bind",
+          "qualified_symbol": "BindingsMap.bind",
           "rank": 20
         }
       ],
@@ -1689,7 +1688,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2451.714,
+      "analysis_elapsed_ms": 2557.895,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1720,8 +1719,8 @@
         "src/anyio/from_thread.py",
         "src/anyio/to_thread.py",
         "src/anyio/_core/_eventloop.py",
-        "src/anyio/to_process.py",
         "src/anyio/_backends/_trio.py",
+        "src/anyio/to_process.py",
         "tests/test_sockets.py",
         "src/anyio/functools.py",
         "src/anyio/_core/_subprocesses.py",
@@ -1729,8 +1728,8 @@
         "src/anyio/_core/_exceptions.py",
         "src/anyio/abc/_tasks.py",
         "src/anyio/_core/_tasks.py",
-        "src/anyio/to_interpreter.py",
         "src/anyio/_core/_signals.py",
+        "src/anyio/to_interpreter.py",
         "src/anyio/streams/memory.py",
         "src/anyio/_core/_asyncio_selector_thread.py",
         "src/anyio/streams/tls.py"
@@ -1773,15 +1772,15 @@
           "rank": 6
         },
         {
-          "file": "src/anyio/to_process.py",
-          "symbol": "current_default_process_limiter",
-          "qualified_symbol": null,
-          "rank": 7
-        },
-        {
           "file": "src/anyio/_backends/_trio.py",
           "symbol": "is_set",
           "qualified_symbol": "Event.is_set",
+          "rank": 7
+        },
+        {
+          "file": "src/anyio/to_process.py",
+          "symbol": "current_default_process_limiter",
+          "qualified_symbol": null,
           "rank": 8
         },
         {
@@ -1827,14 +1826,14 @@
           "rank": 15
         },
         {
-          "file": "src/anyio/to_interpreter.py",
-          "symbol": "current_default_interpreter_limiter",
+          "file": "src/anyio/_core/_signals.py",
+          "symbol": "open_signal_receiver",
           "qualified_symbol": null,
           "rank": 16
         },
         {
-          "file": "src/anyio/_core/_signals.py",
-          "symbol": "open_signal_receiver",
+          "file": "src/anyio/to_interpreter.py",
+          "symbol": "current_default_interpreter_limiter",
           "qualified_symbol": null,
           "rank": 17
         },
@@ -1852,8 +1851,8 @@
         },
         {
           "file": "src/anyio/streams/tls.py",
-          "symbol": "_call_sslobject_method",
-          "qualified_symbol": "TLSStream._call_sslobject_method",
+          "symbol": "TLSListener",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -1877,7 +1876,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1397.98,
+      "analysis_elapsed_ms": 1437.611,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1924,10 +1923,10 @@
         "tests/streams/test_tls.py",
         "tests/test_eventloop.py",
         "tests/test_to_process.py",
-        "src/anyio/to_process.py",
+        "tests/test_functools.py",
         "src/anyio/_backends/_asyncio.py",
-        "src/anyio/abc/_eventloop.py",
-        "src/anyio/_backends/_trio.py"
+        "src/anyio/_backends/_trio.py",
+        "src/anyio/streams/tls.py"
       ],
       "candidate_symbols": [
         {
@@ -1992,8 +1991,8 @@
         },
         {
           "file": "tests/test_taskgroups.py",
-          "symbol": "fail",
-          "qualified_symbol": "test_nested_task_group_filtering.fail",
+          "symbol": "test_already_closed",
+          "qualified_symbol": null,
           "rank": 11
         },
         {
@@ -2010,8 +2009,8 @@
         },
         {
           "file": "tests/streams/test_tls.py",
-          "symbol": "connect",
-          "qualified_symbol": "test_tls_connectable.MemoryConnectable.connect",
+          "symbol": "test_send_receive",
+          "qualified_symbol": "TestTLSStream.test_send_receive",
           "rank": 14
         },
         {
@@ -2027,27 +2026,27 @@
           "rank": 16
         },
         {
-          "file": "src/anyio/to_process.py",
-          "symbol": "run_sync",
-          "qualified_symbol": null,
+          "file": "tests/test_functools.py",
+          "symbol": "test_wrap_sync_callable",
+          "qualified_symbol": "TestCache.test_wrap_sync_callable",
           "rank": 17
         },
         {
           "file": "src/anyio/_backends/_asyncio.py",
-          "symbol": "cancel",
-          "qualified_symbol": "CancelScope.cancel",
+          "symbol": "find_root_task",
+          "qualified_symbol": null,
           "rank": 18
-        },
-        {
-          "file": "src/anyio/abc/_eventloop.py",
-          "symbol": "create_test_runner",
-          "qualified_symbol": "AsyncBackend.create_test_runner",
-          "rank": 19
         },
         {
           "file": "src/anyio/_backends/_trio.py",
           "symbol": "run_test",
           "qualified_symbol": "TestRunner.run_test",
+          "rank": 19
+        },
+        {
+          "file": "src/anyio/streams/tls.py",
+          "symbol": "wrap",
+          "qualified_symbol": "TLSStream.wrap",
           "rank": 20
         }
       ],
@@ -2072,7 +2071,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 2663.207,
+      "analysis_elapsed_ms": 2740.932,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2254,7 +2253,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1124.253,
+      "analysis_elapsed_ms": 1164.63,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2286,9 +2285,9 @@
         "fastapi/dependencies/utils.py",
         "fastapi/security/api_key.py",
         "fastapi/encoders.py",
-        "fastapi/routing.py",
         "fastapi/security/http.py",
         "fastapi/applications.py",
+        "fastapi/routing.py",
         "fastapi/background.py",
         "fastapi/_compat.py",
         "fastapi/utils.py",
@@ -2344,21 +2343,21 @@
           "rank": 7
         },
         {
-          "file": "fastapi/routing.py",
-          "symbol": "api_route",
-          "qualified_symbol": "APIRouter.api_route",
-          "rank": 8
-        },
-        {
           "file": "fastapi/security/http.py",
           "symbol": "HTTPBasic",
           "qualified_symbol": null,
-          "rank": 9
+          "rank": 8
         },
         {
           "file": "fastapi/applications.py",
           "symbol": "get",
           "qualified_symbol": "FastAPI.get",
+          "rank": 9
+        },
+        {
+          "file": "fastapi/routing.py",
+          "symbol": "APIRouter",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -2430,7 +2429,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2254.588,
+      "analysis_elapsed_ms": 2310.283,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2456,11 +2455,11 @@
       "expected_symbols": [],
       "candidate_files": [
         "fastapi/security/oauth2.py",
-        "fastapi/routing.py",
-        "fastapi/applications.py",
         "fastapi/dependencies/utils.py",
         "fastapi/datastructures.py",
+        "fastapi/routing.py",
         "fastapi/encoders.py",
+        "fastapi/applications.py",
         "fastapi/openapi/docs.py",
         "fastapi/background.py",
         "fastapi/security/http.py",
@@ -2484,33 +2483,33 @@
           "rank": 1
         },
         {
-          "file": "fastapi/routing.py",
-          "symbol": "api_route",
-          "qualified_symbol": "APIRouter.api_route",
-          "rank": 2
-        },
-        {
-          "file": "fastapi/applications.py",
-          "symbol": "post",
-          "qualified_symbol": "FastAPI.post",
-          "rank": 3
-        },
-        {
           "file": "fastapi/dependencies/utils.py",
           "symbol": "get_validation_alias",
           "qualified_symbol": null,
-          "rank": 4
+          "rank": 2
         },
         {
           "file": "fastapi/datastructures.py",
           "symbol": "__get_pydantic_json_schema__",
           "qualified_symbol": "UploadFile.__get_pydantic_json_schema__",
-          "rank": 5
+          "rank": 3
+        },
+        {
+          "file": "fastapi/routing.py",
+          "symbol": "websocket",
+          "qualified_symbol": "APIRouter.websocket",
+          "rank": 4
         },
         {
           "file": "fastapi/encoders.py",
           "symbol": "decimal_encoder",
           "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "fastapi/applications.py",
+          "symbol": "post",
+          "qualified_symbol": "FastAPI.post",
           "rank": 6
         },
         {
@@ -2612,13 +2611,13 @@
       "file_recall_at_10": 1.0,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "reciprocal_rank": 0.25,
+      "reciprocal_rank": 0.5,
       "symbol_recall_at_1": null,
       "symbol_recall_at_5": null,
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2408.824,
+      "analysis_elapsed_ms": 2488.183,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2652,7 +2651,6 @@
         "fastapi/background.py",
         "fastapi/responses.py",
         "fastapi/openapi/models.py",
-        "fastapi/exceptions.py",
         "tests/test_dump_json_fast_path.py",
         "fastapi/openapi/docs.py",
         "fastapi/encoders.py",
@@ -2661,6 +2659,7 @@
         "fastapi/_compat/v2.py",
         "tests/test_router_include_context.py",
         "tests/test_response_model_as_return_annotation.py",
+        "fastapi/exceptions.py",
         "fastapi/dependencies/models.py",
         "fastapi/_compat/__init__.py"
       ],
@@ -2720,56 +2719,56 @@
           "rank": 9
         },
         {
-          "file": "fastapi/exceptions.py",
-          "symbol": "FastAPIError",
-          "qualified_symbol": null,
-          "rank": 10
-        },
-        {
           "file": "tests/test_dump_json_fast_path.py",
           "symbol": "test_default_response_class_skips_json_dumps",
           "qualified_symbol": null,
-          "rank": 11
+          "rank": 10
         },
         {
           "file": "fastapi/openapi/docs.py",
           "symbol": "get_redoc_html",
           "qualified_symbol": null,
-          "rank": 12
+          "rank": 11
         },
         {
           "file": "fastapi/encoders.py",
           "symbol": "decimal_encoder",
           "qualified_symbol": null,
-          "rank": 13
+          "rank": 12
         },
         {
           "file": "fastapi/datastructures.py",
           "symbol": "__init__",
           "qualified_symbol": "DefaultPlaceholder.__init__",
-          "rank": 14
+          "rank": 13
         },
         {
           "file": "fastapi/utils.py",
           "symbol": "get_value_or_default",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "fastapi/_compat/v2.py",
           "symbol": "get_model_fields",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "tests/test_router_include_context.py",
-          "symbol": "url_path_for",
-          "qualified_symbol": "UnknownRoute.url_path_for",
-          "rank": 17
+          "symbol": "test_router_and_include_prefix_path_params_reach_endpoint_and_openapi",
+          "qualified_symbol": null,
+          "rank": 16
         },
         {
           "file": "tests/test_response_model_as_return_annotation.py",
           "symbol": "response_model_no_annotation_return_dict_with_extra_data",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "fastapi/exceptions.py",
+          "symbol": "FastAPIError",
           "qualified_symbol": null,
           "rank": 18
         },
@@ -2800,7 +2799,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 4037.036,
+      "analysis_elapsed_ms": 4197.521,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2827,24 +2826,24 @@
       "candidate_files": [
         "_pytest/python.py",
         "_pytest/config.py",
-        "testing/python/metafunc.py",
         "_pytest/monkeypatch.py",
-        "_pytest/hookspec.py",
+        "testing/python/metafunc.py",
         "_pytest/vendored_packages/pluggy.py",
-        "testing/python/collect.py",
         "_pytest/assertion/rewrite.py",
+        "_pytest/hookspec.py",
         "_pytest/pytester.py",
-        "_pytest/mark.py",
+        "testing/python/collect.py",
         "_pytest/tmpdir.py",
-        "_pytest/_code/source.py",
-        "_pytest/junitxml.py",
-        "_pytest/runner.py",
         "testing/python/fixture.py",
+        "_pytest/runner.py",
         "_pytest/cacheprovider.py",
         "testing/test_terminal.py",
         "testing/test_recwarn.py",
         "_pytest/assertion/util.py",
-        "_pytest/main.py"
+        "testing/test_runner.py",
+        "_pytest/main.py",
+        "_pytest/mark.py",
+        "_pytest/_argcomplete.py"
       ],
       "candidate_symbols": [
         {
@@ -2860,111 +2859,111 @@
           "rank": 2
         },
         {
-          "file": "testing/python/metafunc.py",
-          "symbol": "Metafunc",
-          "qualified_symbol": "TestMetafunc.Metafunc",
-          "rank": 3
-        },
-        {
           "file": "_pytest/monkeypatch.py",
           "symbol": "derive_importpath",
           "qualified_symbol": null,
-          "rank": 4
+          "rank": 3
         },
         {
-          "file": "_pytest/hookspec.py",
-          "symbol": "pytest_enter_pdb",
-          "qualified_symbol": null,
-          "rank": 5
+          "file": "testing/python/metafunc.py",
+          "symbol": "test_parametrize_scope_overrides",
+          "qualified_symbol": "TestMetafuncFunctional.test_parametrize_scope_overrides",
+          "rank": 4
         },
         {
           "file": "_pytest/vendored_packages/pluggy.py",
           "symbol": "add_hookcall_monitoring",
           "qualified_symbol": "PluginManager.add_hookcall_monitoring",
-          "rank": 6
-        },
-        {
-          "file": "testing/python/collect.py",
-          "symbol": "test_unorderable_types",
-          "qualified_symbol": null,
-          "rank": 7
+          "rank": 5
         },
         {
           "file": "_pytest/assertion/rewrite.py",
           "symbol": "AssertionRewriter",
           "qualified_symbol": null,
-          "rank": 8
+          "rank": 6
+        },
+        {
+          "file": "_pytest/hookspec.py",
+          "symbol": "pytest_enter_pdb",
+          "qualified_symbol": null,
+          "rank": 7
         },
         {
           "file": "_pytest/pytester.py",
-          "symbol": "getcalls",
-          "qualified_symbol": "HookRecorder.getcalls",
-          "rank": 9
+          "symbol": "Testdir",
+          "qualified_symbol": null,
+          "rank": 8
         },
         {
-          "file": "_pytest/mark.py",
-          "symbol": "__getattr__",
-          "qualified_symbol": "MarkGenerator.__getattr__",
-          "rank": 10
+          "file": "testing/python/collect.py",
+          "symbol": "test_unorderable_types",
+          "qualified_symbol": null,
+          "rank": 9
         },
         {
           "file": "_pytest/tmpdir.py",
           "symbol": "pytest_configure",
           "qualified_symbol": null,
-          "rank": 11
-        },
-        {
-          "file": "_pytest/_code/source.py",
-          "symbol": "Source",
-          "qualified_symbol": null,
-          "rank": 12
-        },
-        {
-          "file": "_pytest/junitxml.py",
-          "symbol": "pytest_runtest_logreport",
-          "qualified_symbol": "LogXML.pytest_runtest_logreport",
-          "rank": 13
-        },
-        {
-          "file": "_pytest/runner.py",
-          "symbol": "skip",
-          "qualified_symbol": null,
-          "rank": 14
+          "rank": 10
         },
         {
           "file": "testing/python/fixture.py",
           "symbol": "test_receives_funcargs_scope_mismatch",
           "qualified_symbol": "TestFixtureUsages.test_receives_funcargs_scope_mismatch",
-          "rank": 15
+          "rank": 11
+        },
+        {
+          "file": "_pytest/runner.py",
+          "symbol": "skip",
+          "qualified_symbol": null,
+          "rank": 12
         },
         {
           "file": "_pytest/cacheprovider.py",
-          "symbol": "_getvaluepath",
-          "qualified_symbol": "Cache._getvaluepath",
-          "rank": 16
+          "symbol": "set",
+          "qualified_symbol": "Cache.set",
+          "rank": 13
         },
         {
           "file": "testing/test_terminal.py",
           "symbol": "pytest_generate_tests",
           "qualified_symbol": null,
-          "rank": 17
+          "rank": 14
         },
         {
           "file": "testing/test_recwarn.py",
           "symbol": "test_deprecated_function_already_called",
           "qualified_symbol": "TestDeprecatedCall.test_deprecated_function_already_called",
-          "rank": 18
+          "rank": 15
         },
         {
           "file": "_pytest/assertion/util.py",
           "symbol": "format_explanation",
           "qualified_symbol": null,
-          "rank": 19
+          "rank": 16
+        },
+        {
+          "file": "testing/test_runner.py",
+          "symbol": "test_skip_at_module_scope",
+          "qualified_symbol": "TestSessionReports.test_skip_at_module_scope",
+          "rank": 17
         },
         {
           "file": "_pytest/main.py",
           "symbol": "__getattr__",
           "qualified_symbol": "FSHookProxy.__getattr__",
+          "rank": 18
+        },
+        {
+          "file": "_pytest/mark.py",
+          "symbol": "__getattr__",
+          "qualified_symbol": "MarkGenerator.__getattr__",
+          "rank": 19
+        },
+        {
+          "file": "_pytest/_argcomplete.py",
+          "symbol": "__call__",
+          "qualified_symbol": "FastFilesCompleter.__call__",
           "rank": 20
         }
       ],
@@ -2988,7 +2987,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1463.615,
+      "analysis_elapsed_ms": 1530.774,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3016,29 +3015,29 @@
         "src/_pytest/raises.py",
         "src/_pytest/approx.py",
         "src/_pytest/config/__init__.py",
-        "src/_pytest/assertion/rewrite.py",
         "src/_pytest/fixtures.py",
-        "src/_pytest/hookspec.py",
+        "src/_pytest/assertion/rewrite.py",
         "testing/test_conftest.py",
+        "src/_pytest/hookspec.py",
         "testing/conftest.py",
         "src/_pytest/config/argparsing.py",
-        "src/_pytest/mark/structures.py",
         "src/_pytest/python.py",
-        "src/_pytest/junitxml.py",
-        "src/_pytest/_py/path.py",
         "src/_pytest/pathlib.py",
         "src/_pytest/_code/code.py",
-        "src/_pytest/nodes.py",
         "src/_pytest/cacheprovider.py",
         "testing/example_scripts/fixtures/fill_fixtures/test_extend_fixture_conftest_conftest/conftest.py",
         "testing/example_scripts/fixtures/fill_fixtures/test_extend_fixture_conftest_conftest/pkg/conftest.py",
-        "testing/example_scripts/fixtures/fill_fixtures/test_extend_fixture_conftest_module/conftest.py"
+        "testing/example_scripts/fixtures/fill_fixtures/test_extend_fixture_conftest_module/conftest.py",
+        "src/_pytest/nodes.py",
+        "testing/python/fixtures.py",
+        "testing/python/raises.py",
+        "src/pytest/__init__.py"
       ],
       "candidate_symbols": [
         {
           "file": "src/_pytest/raises.py",
-          "symbol": "_check_check",
-          "qualified_symbol": "AbstractRaises._check_check",
+          "symbol": "raises",
+          "qualified_symbol": null,
           "rank": 1
         },
         {
@@ -3054,26 +3053,26 @@
           "rank": 3
         },
         {
-          "file": "src/_pytest/assertion/rewrite.py",
-          "symbol": "traverse_node",
+          "file": "src/_pytest/fixtures.py",
+          "symbol": "fixture",
           "qualified_symbol": null,
           "rank": 4
         },
         {
-          "file": "src/_pytest/fixtures.py",
-          "symbol": "_register_fixture",
-          "qualified_symbol": "FixtureManager._register_fixture",
-          "rank": 5
-        },
-        {
-          "file": "src/_pytest/hookspec.py",
-          "symbol": "pytest_collection_modifyitems",
+          "file": "src/_pytest/assertion/rewrite.py",
+          "symbol": "traverse_node",
           "qualified_symbol": null,
-          "rank": 6
+          "rank": 5
         },
         {
           "file": "testing/test_conftest.py",
           "symbol": "conftest_setinitial",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "src/_pytest/hookspec.py",
+          "symbol": "pytest_collection_modifyitems",
           "qualified_symbol": null,
           "rank": 7
         },
@@ -3085,57 +3084,51 @@
         },
         {
           "file": "src/_pytest/config/argparsing.py",
-          "symbol": "_addoption_inner",
-          "qualified_symbol": "OptionGroup._addoption_inner",
+          "symbol": "addini",
+          "qualified_symbol": "Parser.addini",
           "rank": 9
-        },
-        {
-          "file": "src/_pytest/mark/structures.py",
-          "symbol": "get_unpacked_marks",
-          "qualified_symbol": null,
-          "rank": 10
         },
         {
           "file": "src/_pytest/python.py",
           "symbol": "parametrize",
           "qualified_symbol": "Metafunc.parametrize",
-          "rank": 11
-        },
-        {
-          "file": "src/_pytest/junitxml.py",
-          "symbol": "_warn_incompatibility_with_xunit2",
-          "qualified_symbol": null,
-          "rank": 12
-        },
-        {
-          "file": "src/_pytest/_py/path.py",
-          "symbol": "check",
-          "qualified_symbol": "LocalPath.check",
-          "rank": 13
+          "rank": 10
         },
         {
           "file": "src/_pytest/pathlib.py",
           "symbol": "spec_matches_module_path",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 11
         },
         {
           "file": "src/_pytest/_code/code.py",
           "symbol": "type",
           "qualified_symbol": "ExceptionInfo.type",
-          "rank": 15
-        },
-        {
-          "file": "src/_pytest/nodes.py",
-          "symbol": "iter_parents",
-          "qualified_symbol": "Node.iter_parents",
-          "rank": 16
+          "rank": 12
         },
         {
           "file": "src/_pytest/cacheprovider.py",
           "symbol": "set",
           "qualified_symbol": "Cache.set",
+          "rank": 13
+        },
+        {
+          "file": "src/_pytest/nodes.py",
+          "symbol": "from_parent",
+          "qualified_symbol": "Node.from_parent",
           "rank": 17
+        },
+        {
+          "file": "testing/python/fixtures.py",
+          "symbol": "test_getfixturevalue_teardown_new_fixture_deprecated",
+          "qualified_symbol": "TestRequestBasic.test_getfixturevalue_teardown_new_fixture_deprecated",
+          "rank": 18
+        },
+        {
+          "file": "testing/python/raises.py",
+          "symbol": "wrap_escape",
+          "qualified_symbol": null,
+          "rank": 19
         }
       ],
       "matched_files_at_5": [
@@ -3152,13 +3145,13 @@
       "file_recall_at_10": 1.0,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "reciprocal_rank": 0.2,
+      "reciprocal_rank": 0.25,
       "symbol_recall_at_1": null,
       "symbol_recall_at_5": null,
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 3226.516,
+      "analysis_elapsed_ms": 3407.281,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3186,8 +3179,8 @@
         "src/_pytest/fixtures.py",
         "src/_pytest/doctest.py",
         "src/_pytest/pathlib.py",
-        "src/_pytest/hookspec.py",
         "src/_pytest/config/__init__.py",
+        "src/_pytest/hookspec.py",
         "src/_pytest/mark/__init__.py",
         "src/_pytest/_py/path.py",
         "src/_pytest/python.py",
@@ -3196,10 +3189,10 @@
         "src/_pytest/main.py",
         "src/pytest/__init__.py",
         "src/_pytest/config/findpaths.py",
-        "src/_pytest/scope.py",
         "testing/test_doctest.py",
-        "src/_pytest/assertion/rewrite.py",
-        "src/_pytest/terminal.py",
+        "src/_pytest/scope.py",
+        "src/_pytest/unittest.py",
+        "src/_pytest/logging.py",
         "src/_pytest/deprecated.py",
         "src/_pytest/warning_types.py",
         "src/_pytest/compat.py"
@@ -3207,8 +3200,8 @@
       "candidate_symbols": [
         {
           "file": "src/_pytest/fixtures.py",
-          "symbol": "_register_fixture",
-          "qualified_symbol": "FixtureManager._register_fixture",
+          "symbol": "fixture",
+          "qualified_symbol": null,
           "rank": 1
         },
         {
@@ -3224,15 +3217,15 @@
           "rank": 3
         },
         {
-          "file": "src/_pytest/hookspec.py",
-          "symbol": "pytest_load_initial_conftests",
-          "qualified_symbol": null,
+          "file": "src/_pytest/config/__init__.py",
+          "symbol": "getoption",
+          "qualified_symbol": "Config.getoption",
           "rank": 4
         },
         {
-          "file": "src/_pytest/config/__init__.py",
-          "symbol": "getini",
-          "qualified_symbol": "Config.getini",
+          "file": "src/_pytest/hookspec.py",
+          "symbol": "pytest_load_initial_conftests",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -3243,8 +3236,8 @@
         },
         {
           "file": "src/_pytest/_py/path.py",
-          "symbol": "dirpath",
-          "qualified_symbol": "LocalPath.dirpath",
+          "symbol": "pyimport",
+          "qualified_symbol": "LocalPath.pyimport",
           "rank": 7
         },
         {
@@ -3255,8 +3248,8 @@
         },
         {
           "file": "testing/test_pathlib.py",
-          "symbol": "create_installed_doctests_and_tests_dir",
-          "qualified_symbol": "TestImportLibMode.create_installed_doctests_and_tests_dir",
+          "symbol": "test_no_meta_path_found",
+          "qualified_symbol": "TestImportPath.test_no_meta_path_found",
           "rank": 9
         },
         {
@@ -3278,27 +3271,27 @@
           "rank": 13
         },
         {
-          "file": "src/_pytest/scope.py",
-          "symbol": "from_user",
-          "qualified_symbol": "Scope.from_user",
-          "rank": 14
-        },
-        {
           "file": "testing/test_doctest.py",
           "symbol": "test_collect_module_two_doctest_no_modulelevel",
           "qualified_symbol": "TestDoctests.test_collect_module_two_doctest_no_modulelevel",
+          "rank": 14
+        },
+        {
+          "file": "src/_pytest/scope.py",
+          "symbol": "from_user",
+          "qualified_symbol": "Scope.from_user",
           "rank": 15
         },
         {
-          "file": "src/_pytest/assertion/rewrite.py",
-          "symbol": "is_rewrite_disabled",
-          "qualified_symbol": "AssertionRewriter.is_rewrite_disabled",
+          "file": "src/_pytest/unittest.py",
+          "symbol": "setup",
+          "qualified_symbol": "TestCaseFunction.setup",
           "rank": 16
         },
         {
-          "file": "src/_pytest/terminal.py",
-          "symbol": "no_header",
-          "qualified_symbol": "TerminalReporter.no_header",
+          "file": "src/_pytest/logging.py",
+          "symbol": "pytest_addoption",
+          "qualified_symbol": null,
           "rank": 17
         },
         {
@@ -3334,7 +3327,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 4261.695,
+      "analysis_elapsed_ms": 4537.138,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3369,17 +3362,17 @@
         "rich/console.py",
         "rich/traceback.py",
         "rich/columns.py",
-        "rich/containers.py",
         "rich/live.py",
-        "rich/palette.py",
         "rich/json.py",
         "rich/style.py",
         "rich/segment.py",
         "rich/color.py",
         "rich/__init__.py",
-        "rich/box.py",
         "rich/align.py",
-        "rich/highlighter.py"
+        "rich/progress.py",
+        "rich/highlighter.py",
+        "rich/protocol.py",
+        "rich/repr.py"
       ],
       "candidate_symbols": [
         {
@@ -3390,8 +3383,8 @@
         },
         {
           "file": "rich/syntax.py",
-          "symbol": "_get_base_style",
-          "qualified_symbol": "Syntax._get_base_style",
+          "symbol": "from_path",
+          "qualified_symbol": "Syntax.from_path",
           "rank": 2
         },
         {
@@ -3408,8 +3401,8 @@
         },
         {
           "file": "rich/text.py",
-          "symbol": "join",
-          "qualified_symbol": "Text.join",
+          "symbol": "append",
+          "qualified_symbol": "Text.append",
           "rank": 5
         },
         {
@@ -3437,69 +3430,69 @@
           "rank": 9
         },
         {
-          "file": "rich/containers.py",
-          "symbol": "Lines",
-          "qualified_symbol": null,
-          "rank": 10
-        },
-        {
           "file": "rich/live.py",
           "symbol": "Live",
           "qualified_symbol": null,
-          "rank": 11
-        },
-        {
-          "file": "rich/palette.py",
-          "symbol": "ColorBox",
-          "qualified_symbol": null,
-          "rank": 12
+          "rank": 10
         },
         {
           "file": "rich/json.py",
           "symbol": "from_data",
           "qualified_symbol": "JSON.from_data",
-          "rank": 13
+          "rank": 11
         },
         {
           "file": "rich/style.py",
           "symbol": "parse",
           "qualified_symbol": "Style.parse",
-          "rank": 14
+          "rank": 12
         },
         {
           "file": "rich/segment.py",
           "symbol": "adjust_line_length",
           "qualified_symbol": "Segment.adjust_line_length",
-          "rank": 15
+          "rank": 13
         },
         {
           "file": "rich/color.py",
           "symbol": "ColorSystem",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 14
         },
         {
           "file": "rich/__init__.py",
           "symbol": "get_console",
           "qualified_symbol": null,
-          "rank": 17
-        },
-        {
-          "file": "rich/box.py",
-          "symbol": "substitute",
-          "qualified_symbol": "Box.substitute",
-          "rank": 18
+          "rank": 15
         },
         {
           "file": "rich/align.py",
           "symbol": "Align",
           "qualified_symbol": null,
-          "rank": 19
+          "rank": 16
+        },
+        {
+          "file": "rich/progress.py",
+          "symbol": "Progress",
+          "qualified_symbol": null,
+          "rank": 17
         },
         {
           "file": "rich/highlighter.py",
           "symbol": "highlight",
           "qualified_symbol": "Highlighter.highlight",
+          "rank": 18
+        },
+        {
+          "file": "rich/protocol.py",
+          "symbol": "is_renderable",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "rich/repr.py",
+          "symbol": "auto",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -3522,7 +3515,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1197.095,
+      "analysis_elapsed_ms": 1267.675,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3560,8 +3553,8 @@
         "rich/traceback.py",
         "rich/panel.py",
         "rich/live.py",
-        "rich/progress.py",
         "rich/__init__.py",
+        "rich/progress.py",
         "rich/columns.py",
         "rich/_windows.py",
         "rich/scope.py",
@@ -3594,8 +3587,8 @@
         },
         {
           "file": "rich/syntax.py",
-          "symbol": "_get_base_style",
-          "qualified_symbol": "Syntax._get_base_style",
+          "symbol": "from_path",
+          "qualified_symbol": "Syntax.from_path",
           "rank": 4
         },
         {
@@ -3623,15 +3616,15 @@
           "rank": 8
         },
         {
-          "file": "rich/progress.py",
-          "symbol": "add_task",
-          "qualified_symbol": "Progress.add_task",
-          "rank": 9
-        },
-        {
           "file": "rich/__init__.py",
           "symbol": "get_console",
           "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "rich/progress.py",
+          "symbol": "remove_task",
+          "qualified_symbol": "Progress.remove_task",
           "rank": 10
         },
         {
@@ -3711,7 +3704,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.0556,
-      "analysis_elapsed_ms": 1859.277,
+      "analysis_elapsed_ms": 1923.258,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3771,8 +3764,8 @@
         },
         {
           "file": "src/click/core.py",
-          "symbol": "get_params",
-          "qualified_symbol": "Command.get_params",
+          "symbol": "augment_usage_errors",
+          "qualified_symbol": null,
           "rank": 2
         },
         {
@@ -3892,7 +3885,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 2898.214,
+      "analysis_elapsed_ms": 2932.145,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3946,8 +3939,8 @@
       "candidate_symbols": [
         {
           "file": "src/click/core.py",
-          "symbol": "_default_map_has",
-          "qualified_symbol": "Context._default_map_has",
+          "symbol": "augment_usage_errors",
+          "qualified_symbol": null,
           "rank": 1
         },
         {
@@ -4018,8 +4011,8 @@
         },
         {
           "file": "src/click/types.py",
-          "symbol": "_normalized_mapping",
-          "qualified_symbol": "Choice._normalized_mapping",
+          "symbol": "resolve_lazy_flag",
+          "qualified_symbol": "File.resolve_lazy_flag",
           "rank": 13
         },
         {
@@ -4030,8 +4023,8 @@
         },
         {
           "file": "tests/test_defaults.py",
-          "symbol": "lookup_default",
-          "qualified_symbol": "test_lookup_default_override_respected.CustomContext.lookup_default",
+          "symbol": "test_lookup_default_callable_in_default_map",
+          "qualified_symbol": null,
           "rank": 16
         },
         {
@@ -4042,8 +4035,8 @@
         },
         {
           "file": "tests/test_termui.py",
-          "symbol": "write",
-          "qualified_symbol": "test_echo_via_pager_streams_each_write.RecordingStream.write",
+          "symbol": "test_get_pager_file_missing_pager_keeps_borrowed_stream_open",
+          "qualified_symbol": null,
           "rank": 18
         },
         {
@@ -4079,7 +4072,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 2838.19,
+      "analysis_elapsed_ms": 2874.641,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4123,9 +4116,9 @@
         "src/click/_compat.py",
         "examples/naval/naval.py",
         "src/click/__init__.py",
-        "examples/complex/complex/cli.py",
         "examples/repo/repo.py",
         "tests/test_arguments.py",
+        "tests/test_commands.py",
         "src/click/globals.py",
         "src/click/_textwrap.py",
         "src/click/_winconsole.py"
@@ -4210,21 +4203,21 @@
           "rank": 13
         },
         {
-          "file": "examples/complex/complex/cli.py",
+          "file": "examples/repo/repo.py",
           "symbol": "cli",
           "qualified_symbol": null,
           "rank": 15
         },
         {
-          "file": "examples/repo/repo.py",
-          "symbol": "cli",
+          "file": "tests/test_arguments.py",
+          "symbol": "test_nargs_envvar_only_if_values_empty",
           "qualified_symbol": null,
           "rank": 16
         },
         {
-          "file": "tests/test_arguments.py",
-          "symbol": "test_nargs_envvar_only_if_values_empty",
-          "qualified_symbol": null,
+          "file": "tests/test_commands.py",
+          "symbol": "cli",
+          "qualified_symbol": "test_other_command_invoke.cli",
           "rank": 17
         },
         {
@@ -4266,7 +4259,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 698.647,
+      "analysis_elapsed_ms": 746.274,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4298,24 +4291,24 @@
       "candidate_files": [
         "pydantic/type_adapter.py",
         "pydantic/fields.py",
-        "pydantic/v1/main.py",
         "pydantic/_internal/_generate_schema.py",
         "pydantic/main.py",
+        "pydantic/v1/main.py",
         "pydantic/_internal/_typing_extra.py",
         "pydantic/json_schema.py",
         "tests/test_main.py",
         "pydantic/functional_validators.py",
-        "pydantic/errors.py",
         "docs/plugins/main.py",
-        "pydantic/_internal/_core_metadata.py",
         "pydantic/_internal/_generics.py",
         "pydantic/dataclasses.py",
         "pydantic/v1/schema.py",
         "pydantic/v1/validators.py",
         "pydantic/config.py",
-        "pydantic/_internal/_model_construction.py",
         "pydantic/_internal/_fields.py",
-        "pydantic/root_model.py"
+        "pydantic/plugin/__init__.py",
+        "pydantic/root_model.py",
+        "pydantic/_internal/_core_utils.py",
+        "pydantic/v1/typing.py"
       ],
       "candidate_symbols": [
         {
@@ -4326,26 +4319,26 @@
         },
         {
           "file": "pydantic/fields.py",
-          "symbol": "_extract_metadata",
-          "qualified_symbol": "FieldInfo._extract_metadata",
+          "symbol": "Field",
+          "qualified_symbol": null,
           "rank": 2
         },
         {
-          "file": "pydantic/v1/main.py",
-          "symbol": "_init_private_attributes",
-          "qualified_symbol": "BaseModel._init_private_attributes",
-          "rank": 3
-        },
-        {
           "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
-          "rank": 4
+          "symbol": "_add_custom_serialization_from_json_encoders",
+          "qualified_symbol": null,
+          "rank": 3
         },
         {
           "file": "pydantic/main.py",
           "symbol": "create_model",
           "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "pydantic/v1/main.py",
+          "symbol": "json",
+          "qualified_symbol": "BaseModel.json",
           "rank": 5
         },
         {
@@ -4356,8 +4349,8 @@
         },
         {
           "file": "pydantic/json_schema.py",
-          "symbol": "generate_inner",
-          "qualified_symbol": "GenerateJsonSchema.generate_inner",
+          "symbol": "_sort_json_schema",
+          "qualified_symbol": null,
           "rank": 7
         },
         {
@@ -4373,69 +4366,69 @@
           "rank": 9
         },
         {
-          "file": "pydantic/errors.py",
-          "symbol": "from_name_error",
-          "qualified_symbol": "PydanticUndefinedAnnotation.from_name_error",
-          "rank": 10
-        },
-        {
           "file": "docs/plugins/main.py",
           "symbol": "on_pre_build",
           "qualified_symbol": null,
-          "rank": 11
-        },
-        {
-          "file": "pydantic/_internal/_core_metadata.py",
-          "symbol": "CoreMetadataHandler",
-          "qualified_symbol": null,
-          "rank": 12
+          "rank": 10
         },
         {
           "file": "pydantic/_internal/_generics.py",
           "symbol": "get_args",
           "qualified_symbol": null,
-          "rank": 13
+          "rank": 11
         },
         {
           "file": "pydantic/dataclasses.py",
           "symbol": "dataclass",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 12
         },
         {
           "file": "pydantic/v1/schema.py",
           "symbol": "get_flat_models_from_model",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 13
         },
         {
           "file": "pydantic/v1/validators.py",
           "symbol": "callable_validator",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 14
         },
         {
           "file": "pydantic/config.py",
           "symbol": "with_config",
           "qualified_symbol": null,
-          "rank": 17
-        },
-        {
-          "file": "pydantic/_internal/_model_construction.py",
-          "symbol": "complete_model_class",
-          "qualified_symbol": null,
-          "rank": 18
+          "rank": 15
         },
         {
           "file": "pydantic/_internal/_fields.py",
           "symbol": "_update_fields_from_docstrings",
           "qualified_symbol": null,
-          "rank": 19
+          "rank": 16
+        },
+        {
+          "file": "pydantic/plugin/__init__.py",
+          "symbol": "new_schema_validator",
+          "qualified_symbol": "PydanticPluginProtocol.new_schema_validator",
+          "rank": 17
         },
         {
           "file": "pydantic/root_model.py",
           "symbol": "model_dump",
           "qualified_symbol": "RootModel.model_dump",
+          "rank": 18
+        },
+        {
+          "file": "pydantic/_internal/_core_utils.py",
+          "symbol": "get_type_ref",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "pydantic/v1/typing.py",
+          "symbol": "get_args",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -4459,7 +4452,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 5164.13,
+      "analysis_elapsed_ms": 5312.807,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4498,17 +4491,17 @@
         "pydantic/_internal/_typing_extra.py",
         "pydantic/_internal/_generics.py",
         "pydantic/types.py",
-        "pydantic/_internal/_generate_schema.py",
+        "pydantic/v1/errors.py",
         "tests/test_main.py",
-        "pydantic/_internal/_mock_val_ser.py",
-        "pydantic/_internal/_utils.py",
         "pydantic/json_schema.py",
         "pydantic/v1/schema.py",
         "pydantic/dataclasses.py",
         "pydantic/_internal/_core_metadata.py",
         "pydantic/_internal/_dataclasses.py",
         "tests/test_generics.py",
-        "pydantic/root_model.py"
+        "tests/test_edge_cases.py",
+        "pydantic/_internal/_generate_schema.py",
+        "pydantic/_internal/_model_construction.py"
       ],
       "candidate_symbols": [
         {
@@ -4519,14 +4512,14 @@
         },
         {
           "file": "pydantic/fields.py",
-          "symbol": "_construct",
-          "qualified_symbol": "FieldInfo._construct",
+          "symbol": "apply_typevars_map",
+          "qualified_symbol": "FieldInfo.apply_typevars_map",
           "rank": 2
         },
         {
           "file": "pydantic/v1/fields.py",
-          "symbol": "_validate",
-          "qualified_symbol": "FieldInfo._validate",
+          "symbol": "prepare_discriminated_union_sub_fields",
+          "qualified_symbol": "ModelField.prepare_discriminated_union_sub_fields",
           "rank": 3
         },
         {
@@ -4566,9 +4559,9 @@
           "rank": 9
         },
         {
-          "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
+          "file": "pydantic/v1/errors.py",
+          "symbol": "JsonError",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -4578,57 +4571,57 @@
           "rank": 11
         },
         {
-          "file": "pydantic/_internal/_mock_val_ser.py",
-          "symbol": "set_model_mocks",
+          "file": "pydantic/json_schema.py",
+          "symbol": "_deduplicate_schemas",
           "qualified_symbol": null,
           "rank": 12
-        },
-        {
-          "file": "pydantic/_internal/_utils.py",
-          "symbol": "is_true",
-          "qualified_symbol": "ValueItems.is_true",
-          "rank": 13
-        },
-        {
-          "file": "pydantic/json_schema.py",
-          "symbol": "generate_inner",
-          "qualified_symbol": "GenerateJsonSchema.generate_inner",
-          "rank": 14
         },
         {
           "file": "pydantic/v1/schema.py",
           "symbol": "_apply_modify_schema",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 13
         },
         {
           "file": "pydantic/dataclasses.py",
           "symbol": "rebuild_dataclass",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 14
         },
         {
           "file": "pydantic/_internal/_core_metadata.py",
           "symbol": "CoreMetadata",
           "qualified_symbol": null,
-          "rank": 17
+          "rank": 15
         },
         {
           "file": "pydantic/_internal/_dataclasses.py",
           "symbol": "complete_dataclass",
           "qualified_symbol": null,
-          "rank": 18
+          "rank": 16
         },
         {
           "file": "tests/test_generics.py",
-          "symbol": "run",
-          "qualified_symbol": "test_caches_get_cleaned_up_with_aliased_parametrized_bases.run",
+          "symbol": "test_double_typevar_substitution",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "tests/test_edge_cases.py",
+          "symbol": "test_pep585_generic_types",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "pydantic/_internal/_generate_schema.py",
+          "symbol": "_convert_to_aliases",
+          "qualified_symbol": null,
           "rank": 19
         },
         {
-          "file": "pydantic/root_model.py",
-          "symbol": "model_dump",
-          "qualified_symbol": "RootModel.model_dump",
+          "file": "pydantic/_internal/_model_construction.py",
+          "symbol": "inspect_namespace",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -4652,7 +4645,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 8806.036,
+      "analysis_elapsed_ms": 9087.578,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4689,11 +4682,10 @@
         "pydantic/_internal/_generate_schema.py",
         "pydantic/types.py",
         "pydantic/_internal/_typing_extra.py",
-        "pydantic-core/python/pydantic_core/core_schema.py",
         "pydantic/deprecated/class_validators.py",
-        "pydantic/v1/utils.py",
-        "pydantic/_internal/_model_construction.py",
+        "pydantic-core/python/pydantic_core/core_schema.py",
         "pydantic/plugin/_loader.py",
+        "pydantic/_internal/_model_construction.py",
         "pydantic/_internal/_generics.py",
         "pydantic/_internal/_core_metadata.py",
         "pydantic/dataclasses.py",
@@ -4701,7 +4693,8 @@
         "pydantic/_internal/_dataclasses.py",
         "pydantic/_internal/_fields.py",
         "pydantic/plugin/__init__.py",
-        "pydantic/main.py"
+        "pydantic/main.py",
+        "pydantic/functional_validators.py"
       ],
       "candidate_symbols": [
         {
@@ -4712,8 +4705,8 @@
         },
         {
           "file": "pydantic/json_schema.py",
-          "symbol": "generate_inner",
-          "qualified_symbol": "GenerateJsonSchema.generate_inner",
+          "symbol": "_deduplicate_schemas",
+          "qualified_symbol": null,
           "rank": 2
         },
         {
@@ -4730,8 +4723,8 @@
         },
         {
           "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
+          "symbol": "_convert_to_aliases",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -4747,21 +4740,21 @@
           "rank": 7
         },
         {
-          "file": "pydantic-core/python/pydantic_core/core_schema.py",
-          "symbol": "_dict_not_none",
+          "file": "pydantic/deprecated/class_validators.py",
+          "symbol": "validator",
           "qualified_symbol": null,
           "rank": 8
         },
         {
-          "file": "pydantic/deprecated/class_validators.py",
-          "symbol": "validator",
+          "file": "pydantic-core/python/pydantic_core/core_schema.py",
+          "symbol": "_dict_not_none",
           "qualified_symbol": null,
           "rank": 9
         },
         {
-          "file": "pydantic/v1/utils.py",
-          "symbol": "get",
-          "qualified_symbol": "GetterDict.get",
+          "file": "pydantic/plugin/_loader.py",
+          "symbol": "get_plugins",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -4771,57 +4764,57 @@
           "rank": 11
         },
         {
-          "file": "pydantic/plugin/_loader.py",
-          "symbol": "get_plugins",
-          "qualified_symbol": null,
-          "rank": 12
-        },
-        {
           "file": "pydantic/_internal/_generics.py",
           "symbol": "get_args",
           "qualified_symbol": null,
-          "rank": 13
+          "rank": 12
         },
         {
           "file": "pydantic/_internal/_core_metadata.py",
           "symbol": "CoreMetadata",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 13
         },
         {
           "file": "pydantic/dataclasses.py",
           "symbol": "dataclass",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "pydantic/v1/main.py",
-          "symbol": "_iter",
-          "qualified_symbol": "BaseModel._iter",
-          "rank": 16
+          "symbol": "dict",
+          "qualified_symbol": "BaseModel.dict",
+          "rank": 15
         },
         {
           "file": "pydantic/_internal/_dataclasses.py",
           "symbol": "complete_dataclass",
           "qualified_symbol": null,
-          "rank": 17
+          "rank": 16
         },
         {
           "file": "pydantic/_internal/_fields.py",
           "symbol": "update_field_from_config",
           "qualified_symbol": null,
-          "rank": 18
+          "rank": 17
         },
         {
           "file": "pydantic/plugin/__init__.py",
           "symbol": "new_schema_validator",
           "qualified_symbol": "PydanticPluginProtocol.new_schema_validator",
-          "rank": 19
+          "rank": 18
         },
         {
           "file": "pydantic/main.py",
           "symbol": "copy",
           "qualified_symbol": "BaseModel.copy",
+          "rank": 19
+        },
+        {
+          "file": "pydantic/functional_validators.py",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -4839,7 +4832,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 8837.275,
+      "analysis_elapsed_ms": 9023.702,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4878,23 +4871,23 @@
         "pydantic/json_schema.py",
         "pydantic/main.py",
         "pydantic/functional_validators.py",
-        "pydantic/_internal/_core_utils.py",
-        "pydantic/root_model.py",
         "pydantic/errors.py",
-        "pydantic/_internal/_utils.py",
+        "pydantic/root_model.py",
+        "pydantic/_internal/_import_utils.py",
         "pydantic/_internal/_generics.py",
         "pydantic/dataclasses.py",
         "pydantic/networks.py",
         "pydantic/_internal/_core_metadata.py",
         "pydantic/_internal/_generate_schema.py",
+        "pydantic/functional_serializers.py",
         "pydantic/v1/schema.py",
-        "pydantic/functional_serializers.py"
+        "pydantic/_internal/_model_construction.py"
       ],
       "candidate_symbols": [
         {
           "file": "pydantic/type_adapter.py",
-          "symbol": "rebuild",
-          "qualified_symbol": "TypeAdapter.rebuild",
+          "symbol": "validate_python",
+          "qualified_symbol": "TypeAdapter.validate_python",
           "rank": 1
         },
         {
@@ -4929,8 +4922,8 @@
         },
         {
           "file": "pydantic/json_schema.py",
-          "symbol": "generate_inner",
-          "qualified_symbol": "GenerateJsonSchema.generate_inner",
+          "symbol": "_deduplicate_schemas",
+          "qualified_symbol": null,
           "rank": 7
         },
         {
@@ -4946,8 +4939,8 @@
           "rank": 9
         },
         {
-          "file": "pydantic/_internal/_core_utils.py",
-          "symbol": "get_type_ref",
+          "file": "pydantic/errors.py",
+          "symbol": "PydanticUndefinedAnnotation",
           "qualified_symbol": null,
           "rank": 10
         },
@@ -4958,45 +4951,45 @@
           "rank": 11
         },
         {
-          "file": "pydantic/errors.py",
-          "symbol": "PydanticUndefinedAnnotation",
+          "file": "pydantic/_internal/_import_utils.py",
+          "symbol": "import_cached_base_model",
           "qualified_symbol": null,
           "rank": 12
-        },
-        {
-          "file": "pydantic/_internal/_utils.py",
-          "symbol": "is_true",
-          "qualified_symbol": "ValueItems.is_true",
-          "rank": 13
         },
         {
           "file": "pydantic/_internal/_generics.py",
           "symbol": "get_args",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 13
         },
         {
           "file": "pydantic/dataclasses.py",
           "symbol": "dataclass",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "pydantic/networks.py",
           "symbol": "import_email_validator",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "pydantic/_internal/_core_metadata.py",
           "symbol": "CoreMetadata",
           "qualified_symbol": null,
-          "rank": 17
+          "rank": 16
         },
         {
           "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
+          "symbol": "_convert_to_aliases",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "pydantic/functional_serializers.py",
+          "symbol": "field_serializer",
+          "qualified_symbol": null,
           "rank": 18
         },
         {
@@ -5006,9 +4999,9 @@
           "rank": 19
         },
         {
-          "file": "pydantic/functional_serializers.py",
-          "symbol": "field_serializer",
-          "qualified_symbol": null,
+          "file": "pydantic/_internal/_model_construction.py",
+          "symbol": "__new__",
+          "qualified_symbol": "ModelMetaclass.__new__",
           "rank": 20
         }
       ],
@@ -5030,7 +5023,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 8595.644,
+      "analysis_elapsed_ms": 8876.572,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5062,8 +5055,8 @@
       "candidate_files": [
         "aiohttp/web_response.py",
         "aiohttp/client.py",
-        "aiohttp/web_protocol.py",
         "tests/test_web_response.py",
+        "aiohttp/web_protocol.py",
         "tests/test_client_response.py",
         "aiohttp/web_fileresponse.py",
         "tests/test_cookie_helpers.py",
@@ -5074,9 +5067,9 @@
         "aiohttp/client_reqrep.py",
         "aiohttp/web.py",
         "aiohttp/web_request.py",
-        "aiohttp/web_ws.py",
-        "aiohttp/web_urldispatcher.py",
         "tests/test_web_request.py",
+        "aiohttp/web_urldispatcher.py",
+        "tests/test_web_log.py",
         "aiohttp/http_parser.py",
         "aiohttp/helpers.py",
         "aiohttp/streams.py"
@@ -5095,15 +5088,15 @@
           "rank": 2
         },
         {
-          "file": "aiohttp/web_protocol.py",
-          "symbol": "set_parser",
-          "qualified_symbol": "RequestHandler.set_parser",
-          "rank": 3
-        },
-        {
           "file": "tests/test_web_response.py",
           "symbol": "make_request",
           "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "aiohttp/web_protocol.py",
+          "symbol": "set_parser",
+          "qualified_symbol": "RequestHandler.set_parser",
           "rank": 4
         },
         {
@@ -5132,8 +5125,8 @@
         },
         {
           "file": "tests/test_web_functional.py",
-          "symbol": "close",
-          "qualified_symbol": "test_request_tracing.FakeResolver.close",
+          "symbol": "delay_received",
+          "qualified_symbol": "test_keepalive_race_condition.delay_received",
           "rank": 9
         },
         {
@@ -5150,8 +5143,8 @@
         },
         {
           "file": "aiohttp/client_reqrep.py",
-          "symbol": "close",
-          "qualified_symbol": "ClientResponse.close",
+          "symbol": "_write_bytes",
+          "qualified_symbol": "ClientRequest._write_bytes",
           "rank": 12
         },
         {
@@ -5161,9 +5154,9 @@
           "rank": 14
         },
         {
-          "file": "aiohttp/web_ws.py",
-          "symbol": "_set_closed",
-          "qualified_symbol": "WebSocketResponse._set_closed",
+          "file": "tests/test_web_request.py",
+          "symbol": "test_request_cookie__set_item",
+          "qualified_symbol": null,
           "rank": 15
         },
         {
@@ -5173,8 +5166,8 @@
           "rank": 16
         },
         {
-          "file": "tests/test_web_request.py",
-          "symbol": "test_request_cookie__set_item",
+          "file": "tests/test_web_log.py",
+          "symbol": "test_access_logger_dst_timezone",
           "qualified_symbol": null,
           "rank": 17
         },
@@ -5186,8 +5179,8 @@
         },
         {
           "file": "aiohttp/helpers.py",
-          "symbol": "get",
-          "qualified_symbol": "ChainMapProxy.get",
+          "symbol": "parse_http_date",
+          "qualified_symbol": null,
           "rank": 19
         },
         {
@@ -5217,7 +5210,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 6712.308,
+      "analysis_elapsed_ms": 6830.29,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5260,10 +5253,10 @@
         "aiohttp/streams.py",
         "aiohttp/client_reqrep.py",
         "aiohttp/web.py",
-        "aiohttp/web_ws.py",
         "aiohttp/web_fileresponse.py",
         "aiohttp/web_urldispatcher.py",
         "aiohttp/test_utils.py",
+        "aiohttp/web_ws.py",
         "aiohttp/client_proto.py",
         "aiohttp/web_exceptions.py",
         "aiohttp/http.py"
@@ -5283,20 +5276,20 @@
         },
         {
           "file": "aiohttp/web_protocol.py",
-          "symbol": "log_exception",
-          "qualified_symbol": "RequestHandler.log_exception",
+          "symbol": "RequestHandler",
+          "qualified_symbol": null,
           "rank": 3
         },
         {
           "file": "aiohttp/helpers.py",
-          "symbol": "get",
-          "qualified_symbol": "ChainMapProxy.get",
+          "symbol": "parse_mimetype",
+          "qualified_symbol": null,
           "rank": 4
         },
         {
           "file": "aiohttp/multipart.py",
-          "symbol": "read",
-          "qualified_symbol": "BodyPartReader.read",
+          "symbol": "get_charset",
+          "qualified_symbol": "BodyPartReader.get_charset",
           "rank": 5
         },
         {
@@ -5319,8 +5312,8 @@
         },
         {
           "file": "tests/test_client_functional.py",
-          "symbol": "request",
-          "qualified_symbol": "test_timeout_with_full_buffer.request",
+          "symbol": "create_server_for_url_and_handler",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
@@ -5337,8 +5330,8 @@
         },
         {
           "file": "aiohttp/client_reqrep.py",
-          "symbol": "close",
-          "qualified_symbol": "ClientResponse.close",
+          "symbol": "update_body",
+          "qualified_symbol": "ClientRequest.update_body",
           "rank": 12
         },
         {
@@ -5348,27 +5341,27 @@
           "rank": 13
         },
         {
-          "file": "aiohttp/web_ws.py",
-          "symbol": "send_json_bytes",
-          "qualified_symbol": "WebSocketResponse.send_json_bytes",
-          "rank": 14
-        },
-        {
           "file": "aiohttp/web_fileresponse.py",
           "symbol": "_precondition_failed",
           "qualified_symbol": "FileResponse._precondition_failed",
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "aiohttp/web_urldispatcher.py",
           "symbol": "_default_expect_handler",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "aiohttp/test_utils.py",
           "symbol": "make_mocked_request",
           "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "aiohttp/web_ws.py",
+          "symbol": "send_json_bytes",
+          "qualified_symbol": "WebSocketResponse.send_json_bytes",
           "rank": 17
         },
         {
@@ -5404,7 +5397,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 5511.905,
+      "analysis_elapsed_ms": 5734.866,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5580,7 +5573,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 425.322,
+      "analysis_elapsed_ms": 449.13,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5615,9 +5608,9 @@
         "tests/test_serving.py",
         "src/werkzeug/middleware/shared_data.py",
         "src/werkzeug/debug/__init__.py",
-        "src/werkzeug/sansio/response.py",
         "src/werkzeug/http.py",
         "src/werkzeug/formparser.py",
+        "src/werkzeug/sansio/response.py",
         "src/werkzeug/routing/map.py",
         "src/werkzeug/middleware/proxy_fix.py",
         "src/werkzeug/exceptions.py",
@@ -5663,27 +5656,27 @@
           "rank": 5
         },
         {
-          "file": "src/werkzeug/sansio/response.py",
-          "symbol": "retry_after",
-          "qualified_symbol": "Response.retry_after",
-          "rank": 6
-        },
-        {
           "file": "src/werkzeug/http.py",
           "symbol": "parse_list_header",
           "qualified_symbol": null,
-          "rank": 7
+          "rank": 6
         },
         {
           "file": "src/werkzeug/formparser.py",
           "symbol": "parse_form_data",
           "qualified_symbol": null,
+          "rank": 7
+        },
+        {
+          "file": "src/werkzeug/sansio/response.py",
+          "symbol": "retry_after",
+          "qualified_symbol": "Response.retry_after",
           "rank": 8
         },
         {
           "file": "src/werkzeug/routing/map.py",
-          "symbol": "update",
-          "qualified_symbol": "Map.update",
+          "symbol": "is_endpoint_expecting",
+          "qualified_symbol": "Map.is_endpoint_expecting",
           "rank": 9
         },
         {
@@ -5706,20 +5699,20 @@
         },
         {
           "file": "src/werkzeug/wrappers/response.py",
-          "symbol": "iter_encoded",
-          "qualified_symbol": "Response.iter_encoded",
+          "symbol": "from_app",
+          "qualified_symbol": "Response.from_app",
           "rank": 13
         },
         {
           "file": "src/werkzeug/wrappers/request.py",
-          "symbol": "_load_form_data",
-          "qualified_symbol": "Request._load_form_data",
+          "symbol": "get_data",
+          "qualified_symbol": "Request.get_data",
           "rank": 14
         },
         {
           "file": "src/werkzeug/sansio/request.py",
-          "symbol": "_parse_content_type",
-          "qualified_symbol": "Request._parse_content_type",
+          "symbol": "access_route",
+          "qualified_symbol": "Request.access_route",
           "rank": 15
         },
         {
@@ -5773,7 +5766,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 3368.548,
+      "analysis_elapsed_ms": 3389.322,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5857,8 +5850,8 @@
         },
         {
           "file": "src/trio/_ssl.py",
-          "symbol": "ensure",
-          "qualified_symbol": "_Once.ensure",
+          "symbol": "SSLStream",
+          "qualified_symbol": null,
           "rank": 6
         },
         {
@@ -5881,8 +5874,8 @@
         },
         {
           "file": "src/trio/_dtls.py",
-          "symbol": "_ensure_receive_loop",
-          "qualified_symbol": "DTLSEndpoint._ensure_receive_loop",
+          "symbol": "set_ssl_context_options",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -5935,8 +5928,8 @@
         },
         {
           "file": "src/trio/_core/_io_windows.py",
-          "symbol": "_afd_poll",
-          "qualified_symbol": "WindowsIOManager._afd_poll",
+          "symbol": "wait_readable",
+          "qualified_symbol": "WindowsIOManager.wait_readable",
           "rank": 19
         },
         {
@@ -5966,7 +5959,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 5410.031,
+      "analysis_elapsed_ms": 3538.931,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5984,11 +5977,11 @@
     "failed": 0,
     "file_recall_at_1": 0.4375,
     "file_recall_at_5": 0.8333,
-    "file_recall_at_10": 0.9062,
+    "file_recall_at_10": 0.8906,
     "file_recall_at_20": 0.9688,
     "candidate_pool_recall": 0.9688,
-    "mean_reciprocal_rank": 0.5989,
-    "average_analysis_elapsed_ms": 3122.503,
+    "mean_reciprocal_rank": 0.6072,
+    "average_analysis_elapsed_ms": 3160.974,
     "llm_success_rate": null,
     "llm_cases": 0,
     "llm_successes": 0,
@@ -5999,9 +5992,9 @@
     "symbol_cases": 16,
     "symbol_recall_at_1": 0.1875,
     "symbol_recall_at_5": 0.4688,
-    "symbol_recall_at_10": 0.5,
-    "symbol_recall_at_20": 0.5625,
-    "mean_symbol_reciprocal_rank": 0.2816
+    "symbol_recall_at_10": 0.4688,
+    "symbol_recall_at_20": 0.5312,
+    "mean_symbol_reciprocal_rank": 0.2795
   },
   "by_tier": {
     "main": {
@@ -6013,8 +6006,8 @@
       "file_recall_at_10": 0.9167,
       "file_recall_at_20": 0.9167,
       "candidate_pool_recall": 0.9167,
-      "mean_reciprocal_rank": 0.6764,
-      "average_analysis_elapsed_ms": 3675.356,
+      "mean_reciprocal_rank": 0.6972,
+      "average_analysis_elapsed_ms": 3786.87,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6038,8 +6031,8 @@
       "file_recall_at_10": 0.7857,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "mean_reciprocal_rank": 0.4569,
-      "average_analysis_elapsed_ms": 1623.494,
+      "mean_reciprocal_rank": 0.445,
+      "average_analysis_elapsed_ms": 1676.937,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6052,7 +6045,7 @@
       "symbol_recall_at_5": 0.5,
       "symbol_recall_at_10": 0.5,
       "symbol_recall_at_20": 0.6667,
-      "mean_symbol_reciprocal_rank": 0.1759
+      "mean_symbol_reciprocal_rank": 0.162
     },
     "generalization": {
       "cases": 13,
@@ -6060,11 +6053,11 @@
       "failed": 0,
       "file_recall_at_1": 0.4231,
       "file_recall_at_5": 0.8974,
-      "file_recall_at_10": 0.9615,
+      "file_recall_at_10": 0.9231,
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
-      "mean_reciprocal_rank": 0.6038,
-      "average_analysis_elapsed_ms": 3419.334,
+      "mean_reciprocal_rank": 0.6115,
+      "average_analysis_elapsed_ms": 3382.32,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6075,9 +6068,9 @@
       "symbol_cases": 6,
       "symbol_recall_at_1": 0.3333,
       "symbol_recall_at_5": 0.5833,
-      "symbol_recall_at_10": 0.6667,
-      "symbol_recall_at_20": 0.6667,
-      "mean_symbol_reciprocal_rank": 0.4083
+      "symbol_recall_at_10": 0.5833,
+      "symbol_recall_at_20": 0.5833,
+      "mean_symbol_reciprocal_rank": 0.4167
     }
   }
 }

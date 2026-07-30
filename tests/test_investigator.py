@@ -272,6 +272,7 @@ def test_repository_map_records_local_imports_and_called_symbols(
         "src/package/parser.py": ["parse_request"]
     }
     assert "parse_request" in api.calls
+    assert api.name_calls == ["parse_request"]
     assert api.symbol_calls == {"handle_request": ["parse_request"]}
     assert api.qualified_symbol_calls == {
         "handle_request": ["parse_request"]
@@ -399,6 +400,48 @@ def test_method_call_relation_evidence_uses_qualified_callers(
         "Issue-matching symbols call rebuild: "
         "Cache.retry_failed_request, Worker.refresh_failed_request"
         in candidates[0].evidence
+    )
+
+
+def test_attribute_calls_do_not_resolve_to_same_named_local_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "class Cache:\n"
+        "    def retry_failed_request(self):\n"
+        "        return self.rebuild()\n\n"
+        "class Worker:\n"
+        "    def refresh_failed_request(self):\n"
+        "        return backend.rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert source.calls == ["rebuild"]
+    assert source.name_calls == []
+    assert source.qualified_symbol_calls == {}
+
+    candidates = locate_candidates(
+        issue(
+            "Retry failed request",
+            "Both retry paths fail before rebuilding state.",
+        ),
+        repository_map,
+    )
+
+    assert candidates[0].symbol != "rebuild"
+    assert not any(
+        "Issue-matching symbols call rebuild" in evidence
+        for evidence in candidates[0].evidence
     )
 
 
@@ -911,7 +954,9 @@ def test_locate_candidates_maps_matching_test_to_source(tmp_path: Path) -> None:
     assert "Matching test imports this source file: tests/test_widget.py" in widget.evidence
 
 
-def test_locate_candidates_propagates_called_symbol_evidence(tmp_path: Path) -> None:
+def test_locate_candidates_skips_unresolved_attribute_call_evidence(
+    tmp_path: Path,
+) -> None:
     repository = tmp_path / "repository"
     write_source(
         repository,
@@ -939,7 +984,7 @@ def test_locate_candidates_propagates_called_symbol_evidence(tmp_path: Path) -> 
     assert (
         "Related source calls run_async_from_thread, defined here: "
         "src/package/portal.py"
-    ) in backend.evidence
+    ) not in backend.evidence
 
 
 def test_graph_reranking_expands_strong_relations_into_the_candidate_pool(
@@ -1068,6 +1113,45 @@ def test_graph_reranking_skips_ambiguous_first_hop_callers(
         "class Worker:\n"
         "    def refresh_layout(self):\n"
         "        return None\n",
+    )
+    write_source(
+        repository,
+        "src/rebuild.py",
+        "def rebuild_layout():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Refresh layout fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(
+        not any(
+            evidence.startswith("Two-hop source call chain via ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_graph_reranking_skips_unresolved_attribute_first_hop(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update(view):\n"
+        "    return view.refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "class Cache:\n"
+        "    def refresh_layout(self):\n"
+        "        return rebuild_layout()\n",
     )
     write_source(
         repository,

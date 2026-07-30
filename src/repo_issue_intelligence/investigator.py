@@ -522,8 +522,7 @@ def _symbol_identity(symbol: SymbolRecord) -> str:
 
 def _related_symbol_callers(
     matches: list[SymbolMatch],
-    symbol_calls: dict[str, list[str]],
-    qualified_symbol_calls: dict[str, list[str]] | None = None,
+    qualified_symbol_calls: dict[str, list[str]],
 ) -> dict[str, tuple[str, ...]]:
     functions_by_identity = {
         _symbol_identity(match.symbol): match
@@ -534,15 +533,11 @@ def _related_symbol_callers(
     for match in functions_by_identity.values():
         functions_by_name.setdefault(match.symbol.name, []).append(match)
 
-    call_edges = qualified_symbol_calls or symbol_calls
     callers_by_target: dict[str, set[str]] = {}
-    for caller_key, called_names in call_edges.items():
+    for caller_key, called_names in qualified_symbol_calls.items():
         caller = functions_by_identity.get(caller_key)
         if caller is None:
-            local_callers = functions_by_name.get(caller_key, [])
-            if len(local_callers) != 1:
-                continue
-            caller = local_callers[0]
+            continue
         if len(caller.local_overlap) < 2:
             continue
         caller_identity = _symbol_identity(caller.symbol)
@@ -917,12 +912,10 @@ def _calls_for_local_symbol(file: FileRecord, symbol_name: str) -> list[str]:
     ]
     if len(matching_symbols) != 1:
         return []
-    if file.qualified_symbol_calls:
-        return file.qualified_symbol_calls.get(
-            _symbol_identity(matching_symbols[0]),
-            [],
-        )
-    return file.symbol_calls.get(symbol_name, [])
+    return file.qualified_symbol_calls.get(
+        _symbol_identity(matching_symbols[0]),
+        [],
+    )
 
 
 def _graph_relations(
@@ -975,7 +968,7 @@ def _graph_relations(
                 continue
             called_imports = set(
                 seed.local_import_symbols.get(imported_path, [])
-            ).intersection(seed.calls)
+            ).intersection(seed.name_calls)
             referenced_imports = set(
                 seed.local_import_symbols.get(imported_path, [])
             ).intersection(seed.references)
@@ -1025,7 +1018,7 @@ def _graph_relations(
                     continue
                 called_second_hop_imports = set(
                     imported.local_import_symbols.get(second_hop_path, [])
-                ).intersection(imported.calls)
+                ).intersection(imported.name_calls)
                 referenced_second_hop_imports = set(
                     imported.local_import_symbols.get(second_hop_path, [])
                 ).intersection(imported.references)
@@ -1057,7 +1050,7 @@ def _graph_relations(
         if seed.test_file:
             continue
         strong_first_hops: list[tuple[str, str]] = []
-        for called_symbol in seed.calls:
+        for called_symbol in seed.name_calls:
             if len(called_symbol) < GRAPH_DYNAMIC_CALL_MIN_LENGTH:
                 continue
             targets = symbol_definitions.get(called_symbol, set()) - {seed_path}
@@ -1170,7 +1163,6 @@ def locate_candidates(
         ]
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
-            file.symbol_calls,
             file.qualified_symbol_calls,
         )
         score_match: SymbolMatch | None = None
@@ -1433,7 +1425,6 @@ def locate_candidates(
         ]
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
-            file.symbol_calls,
             file.qualified_symbol_calls,
         )
         selected_match = _select_symbol(

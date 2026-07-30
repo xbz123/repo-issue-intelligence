@@ -54,12 +54,16 @@ FRAMEWORK_IMPORTS = {
 
 
 class _FunctionCallCollector(ast.NodeVisitor):
+    """Collect legacy terminal names and receiver-free direct calls separately."""
+
     def __init__(self) -> None:
         self.calls: set[str] = set()
+        self.name_calls: set[str] = set()
 
     def visit_Call(self, node: ast.Call) -> None:
         if isinstance(node.func, ast.Name):
             self.calls.add(node.func.id)
+            self.name_calls.add(node.func.id)
         elif isinstance(node.func, ast.Attribute):
             self.calls.add(node.func.attr)
         self.generic_visit(node)
@@ -90,6 +94,7 @@ def _python_metadata(
     list[SymbolRecord],
     list[str],
     list[str],
+    list[str],
     dict[str, list[str]],
     dict[str, list[str]],
     list[str],
@@ -97,10 +102,11 @@ def _python_metadata(
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError, OSError):
-        return [], [], [], {}, {}, []
+        return [], [], [], [], {}, {}, []
     symbols: list[SymbolRecord] = []
     imports: list[str] = []
     calls: list[str] = []
+    name_calls: list[str] = []
     symbol_calls: dict[str, set[str]] = {}
     qualified_symbol_calls: dict[str, set[str]] = {}
     references: list[str] = []
@@ -127,7 +133,7 @@ def _python_metadata(
                 collector.visit(statement)
             symbol_calls.setdefault(node.name, set()).update(collector.calls)
             qualified_symbol_calls.setdefault(qualified_name, set()).update(
-                collector.calls
+                collector.name_calls
             )
         elif isinstance(node, ast.ClassDef):
             symbols.append(
@@ -156,6 +162,7 @@ def _python_metadata(
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
                 calls.append(node.func.id)
+                name_calls.append(node.func.id)
             elif isinstance(node.func, ast.Attribute):
                 calls.append(node.func.attr)
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
@@ -166,6 +173,7 @@ def _python_metadata(
         sorted(symbols, key=lambda item: item.line),
         sorted(set(imports)),
         sorted(set(calls)),
+        sorted(set(name_calls)),
         {
             symbol: sorted(called)
             for symbol, called in sorted(symbol_calls.items())
@@ -300,15 +308,17 @@ def build_repository_map(
             symbols,
             imports,
             calls,
+            name_calls,
             symbol_calls,
             qualified_symbol_calls,
             references,
-        ) = ([], [], [], {}, {}, [])
+        ) = ([], [], [], [], {}, {}, [])
         if language == "Python":
             (
                 symbols,
                 imports,
                 calls,
+                name_calls,
                 symbol_calls,
                 qualified_symbol_calls,
                 references,
@@ -324,6 +334,7 @@ def build_repository_map(
                 symbols=symbols,
                 imports=imports,
                 calls=calls,
+                name_calls=name_calls,
                 symbol_calls=symbol_calls,
                 qualified_symbol_calls=qualified_symbol_calls,
                 references=references,

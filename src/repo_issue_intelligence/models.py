@@ -115,6 +115,7 @@ class FileRecord(BaseModel):
     local_imports: list[str] = Field(default_factory=list)
     local_import_symbols: dict[str, list[str]] = Field(default_factory=dict)
     calls: list[str] = Field(default_factory=list)
+    name_calls: list[str] = Field(default_factory=list)
     symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)

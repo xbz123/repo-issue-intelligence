@@ -18,19 +18,22 @@ repository, commit, or file ground truth:
 - two complete review-fixed deterministic runs with identical candidate and metric output after
   removing timing fields.
 
-The stricter review-fixed selector and content matcher change 28 of 32 file orderings relative to
-v0.11 while preserving File Recall@20 `0.9688`. Aggregate Symbol Recall@1 is `0.1875`, Recall@5
-`0.4688`, Recall@10 `0.5000`, Recall@20 `0.5625`, and MRR `0.2816`. The qualified contract can
-represent Trio's reviewed
+The complete review-fixed selector, content matcher, and call-edge contract change all 32 file
+orderings relative to v0.11 while preserving File Recall@20 `0.9688`. Aggregate Symbol Recall@1 is
+`0.1875`, Recall@5 `0.4688`, Recall@10 `0.4688`, Recall@20 `0.5312`, and MRR `0.2795`. The
+qualified contract can represent Trio's reviewed
 `WorkerThread.__init__` method, but the issue does not explicitly reference `__init__`; the
 review-fixed selector therefore keeps it as a miss instead of allowing an owner-name match to
-override stronger local method evidence. Across all 32 cases, 31 per-file symbol assignments
-change after normalizing away qualified-name representation. This includes preventing
+override stronger local method evidence. Across all 32 cases, all 32 per-file symbol candidate
+lists change after normalizing away qualified-name representation. This includes preventing
 `websocket.accept` from degrading to either the Python method `WebSocket.accept` or terminal-name
 source-content evidence, rejecting ambiguous basename scope, and preventing an unscoped `__call__`
 reference from selecting unrelated implementations across Starlette's candidate files. Qualified
 caller edges also prevent repeated methods in one file from sharing calls or creating fabricated
-relation evidence; ambiguous legacy and two-hop callers are skipped.
+relation evidence. Inference now consumes only direct `ast.Name` calls, so unresolved
+`self.method()` and `receiver.method()` calls cannot be reassigned to a same-named local function
+or start a strong two-hop promotion. Broad legacy call fields remain readable but do not drive
+ranking.
 
 ## v0.11 expansion outcome
 
