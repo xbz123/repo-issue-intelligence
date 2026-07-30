@@ -1,5 +1,11 @@
 # Benchmark Expansion
 
+> **Integrity correction (2026-07-30):** The v0.4 expansion selected valid Issue/Fix-PR pairs and
+> reviewed production files, but the original pre-fix derivation was wrong for most cases.
+> Manifest v5 and `candidates-v0.7.json` use the parent of the first PR commit. Historical v0.4
+> manifests and results are retained for provenance and must not be used as current quality
+> evidence.
+
 ## v0.4 outcome
 
 The v0.4 expansion increased the frozen file-localization benchmark from 9 to 20 cases and from
@@ -19,9 +25,9 @@ The v0.4 expansion increased the frozen file-localization benchmark from 9 to 20
 | Calibration | Rich | [#2027](https://github.com/Textualize/rich/issues/2027) / [#2038](https://github.com/Textualize/rich/pull/2038) | `rich/console.py`, `rich/highlighter.py` |
 | Calibration | Rich | [#3577](https://github.com/Textualize/rich/issues/3577) / [#4076](https://github.com/Textualize/rich/pull/4076) | `rich/ansi.py` |
 
-The current manifest has 7 main, 4 calibration, and 9 generalization cases. The deterministic
-runner completed 20/20 cases with Recall@1 0.2750, Recall@5 0.5917, Recall@10 0.8750, Recall@20
-0.9250, and MRR 0.4925.
+The corrected current manifest has 7 main, 4 calibration, and 9 generalization cases. The
+deterministic runner completed 20/20 cases with Recall@1 0.3000, Recall@5 0.8583, Recall@10
+0.8750, Recall@20 1.0000, and MRR 0.5396.
 
 ## Acceptance boundary
 
@@ -34,7 +40,8 @@ Generated discovery output is not benchmark ground truth. The pipeline enforces 
 A candidate must have:
 
 - a public closed Issue and same-repository merged fix PR;
-- a frozen Issue snapshot and pre-fix commit SHA;
+- a frozen Issue snapshot and ordered fix-PR commit history;
+- a pre-fix SHA equal to the parent of the first PR commit and outside the PR commit set;
 - at least one production source file that exists at the pre-fix commit;
 - no more than five expected production files;
 - manual confirmation that the PR fixes the selected Issue;
@@ -66,13 +73,13 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.4-20-cases.json
+  --output benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
-catalog, manual selection, frozen manifest, and evaluated results are committed. Because the
-accepted catalog is itself a valid curation input, the frozen manifest can be rebuilt without
-depending on future GitHub search ordering.
+catalog, manual selection, frozen manifest, and evaluated results are committed. The v0.4 curation
+command above reproduces only the historical expansion flow; current audits must use the corrected
+ordered-commit checks and `candidates-v0.7.json`.
 
 ## Candidate projects for the next wave
 

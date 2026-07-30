@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from repo_issue_intelligence.investigator import (
+    _identifier_variants,
     extract_issue_signals,
     investigate,
     locate_candidates,
@@ -50,6 +51,14 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
     )
     assert {"send_denial_response", "RuntimeError"} <= signals.identifiers
     assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.primary_identifiers
+
+
+def test_identifier_variants_preserve_source_term_order() -> None:
+    variants = _identifier_variants("is_alt_screen")
+
+    assert "alt_screen" in variants
+    assert "altscreen" in variants
+    assert "screen_alt" not in variants
 
 
 def test_locate_candidates_prioritizes_exact_issue_path(tmp_path: Path) -> None:
@@ -123,7 +132,85 @@ def test_locate_candidates_prefers_compound_title_identifier(
     candidates = locate_candidates(record, build_repository_map(repository))
 
     assert candidates[0].file == "typer/core.py"
-    assert "Issue title strongly matches symbol TyperOption" in candidates[0].evidence
+    assert candidates[0].symbol == "resolve_envvar_value"
+
+
+def test_locate_candidates_reranks_functions_within_selected_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "typer/core.py",
+        "class TyperOption:\n"
+        "    pass\n\n"
+        "def value_from_envvar(value):\n"
+        "    return value\n\n"
+        "def _typer_format_options(options):\n"
+        "    return options\n",
+    )
+    write_source(
+        repository,
+        "typer/main.py",
+        "class Typer:\n    pass\n",
+    )
+    record = issue(
+        "envvar not working for `typer.Options`",
+        "The envvar value is ignored by typer.Option.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "typer/core.py"
+    assert candidates[0].symbol == "value_from_envvar"
+
+
+def test_locate_candidates_normalizes_morphology_for_symbol_reranking(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "typer/rich_utils.py",
+        "def _make_rich_text(text):\n"
+        '    \"\"\"Return styled text.\"\"\"\n'
+        "    return text\n\n"
+        "def _get_parameter_help(text):\n"
+        '    \"\"\"Build help text for a parameter.\"\"\"\n'
+        "    return text\n",
+    )
+    record = issue(
+        "Help width is miscalculated for stylized text",
+        "The option help frame is misaligned.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_make_rich_text"
+
+
+def test_locate_candidates_preserves_plural_line_semantics(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "rich/ansi.py",
+        "def decode(lines):\n"
+        '    \"\"\"Decode an iterable of ANSI lines.\"\"\"\n'
+        "    return lines\n\n"
+        "def decode_line(line):\n"
+        '    \"\"\"Decode one ANSI line.\"\"\"\n'
+        "    return line\n",
+    )
+    record = issue(
+        "Trailing line break removed by `Text.from_ansi`",
+        "ANSI text loses its final newline.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "decode"
 
 
 def test_repository_map_records_local_imports_and_called_symbols(
@@ -151,7 +238,42 @@ def test_repository_map_records_local_imports_and_called_symbols(
         "src/package/parser.py": ["parse_request"]
     }
     assert "parse_request" in api.calls
+    assert api.symbol_calls == {"handle_request": ["parse_request"]}
     assert "parse_request" in api.references
+
+
+def test_locate_candidates_propagates_within_file_call_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/compositor.py",
+        "def reflow(children):\n"
+        '    \"\"\"Reflow children widgets after removal.\"\"\"\n'
+        "    return _arrange_root(children)\n\n"
+        "def reflow_visible(children):\n"
+        '    \"\"\"Reflow visible children widgets after removal.\"\"\"\n'
+        "    return _arrange_root(children)\n\n"
+        "def _arrange_root(children):\n"
+        '    \"\"\"Arrange the root layout.\"\"\"\n'
+        "    return children\n\n"
+        "def __contains__(widget):\n"
+        '    \"\"\"Check the previous refresh.\"\"\"\n'
+        "    return False\n",
+    )
+    record = issue(
+        "Height not refreshed after removing children",
+        "The child widgets are removed but the container keeps its old height.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_arrange_root"
+    assert (
+        "Issue-matching symbols call _arrange_root: reflow, reflow_visible"
+        in candidates[0].evidence
+    )
 
 
 def test_locate_candidates_propagates_local_import_evidence(tmp_path: Path) -> None:

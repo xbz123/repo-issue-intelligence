@@ -13,6 +13,7 @@ from .models import (
     IssueRecord,
     RepositoryMap,
     ReproductionPlan,
+    SymbolRecord,
 )
 
 GENERIC_TERMS = {
@@ -108,20 +109,33 @@ class IssueSignals:
     paths: frozenset[str]
 
 
-def _terms(value: str) -> set[str]:
+@dataclass(frozen=True)
+class SymbolMatch:
+    symbol: SymbolRecord
+    overlap: frozenset[str]
+    primary_identifier_match: bool
+    exact_identifier_match: bool
+    semantic_terms: frozenset[str]
+
+
+def _ordered_terms(value: str) -> list[str]:
     value = value.replace("\\", "/")
     value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", value)
     value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
-    return {
+    return [
         term
         for term in re.findall(r"[a-z][a-z0-9]{1,}", value.lower())
         if term not in GENERIC_TERMS
-    }
+    ]
+
+
+def _terms(value: str) -> set[str]:
+    return set(_ordered_terms(value))
 
 
 def _identifier_variants(value: str) -> set[str]:
     lowered = value.lower().strip("`'\"()[]{}:,")
-    parts = _terms(value)
+    parts = _ordered_terms(value)
     variants = {lowered}
     if "." in lowered:
         variants.add(lowered.rsplit(".", maxsplit=1)[-1])
@@ -169,6 +183,158 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         paths=frozenset(paths),
     )
+
+
+def _semantic_term(term: str) -> str:
+    if len(term) > 5 and term.endswith("ized"):
+        term = term[:-4]
+    elif len(term) > 5 and term.endswith("ing"):
+        term = term[:-3]
+    elif len(term) > 4 and term.endswith("ed"):
+        term = term[:-2]
+    elif len(term) > 5 and term.endswith(
+        ("ches", "ses", "shes", "xes", "zes")
+    ):
+        term = term[:-2]
+    elif len(term) > 3 and term.endswith("s"):
+        term = term[:-1]
+    if len(term) > 4 and term.endswith("e"):
+        term = term[:-1]
+    return term
+
+
+def _semantic_terms(terms: frozenset[str] | set[str]) -> set[str]:
+    return {_semantic_term(term) for term in terms}
+
+
+def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
+    terms = _terms(symbol.name) | _terms(symbol.docstring or "")
+    symbol_variants = _identifier_variants(symbol.name)
+    symbol_compact_variants = _compact_identifier_variants(symbol.name)
+    return SymbolMatch(
+        symbol=symbol,
+        overlap=frozenset(signals.terms & terms),
+        primary_identifier_match=any(
+            symbol_compact_variants & _compact_identifier_variants(identifier)
+            for identifier in signals.primary_identifiers
+        ),
+        exact_identifier_match=any(
+            symbol_variants & _identifier_variants(identifier)
+            for identifier in signals.identifiers
+        ),
+        semantic_terms=frozenset(_semantic_terms(terms)),
+    )
+
+
+def _select_symbol(
+    matches: list[SymbolMatch],
+    signals: IssueSignals,
+    related_callers: dict[str, tuple[str, ...]],
+) -> SymbolMatch | None:
+    if not matches:
+        return None
+
+    functions = [match for match in matches if match.symbol.kind == "function"]
+    directly_referenced = [
+        match
+        for match in functions
+        if match.exact_identifier_match and len(match.overlap) >= 2
+    ]
+    if directly_referenced:
+        return max(
+            directly_referenced,
+            key=lambda match: (
+                len(match.overlap),
+                match.primary_identifier_match,
+                -match.symbol.line,
+            ),
+        )
+
+    primary_terms = _semantic_terms(signals.primary_terms)
+    component_terms = _semantic_terms(
+        {
+            term
+            for identifier in signals.primary_identifiers
+            for term in _terms(identifier)
+        }
+    )
+    specific_primary_terms = primary_terms - component_terms
+    if specific_primary_terms:
+        primary_terms = specific_primary_terms
+    term_frequency = Counter(
+        term
+        for match in functions
+        for term in match.semantic_terms
+    )
+    matches_by_name = {
+        match.symbol.name: match
+        for match in functions
+    }
+    relation_scores = {
+        called_name: sum(
+            min(len(matches_by_name[caller].overlap), 4)
+            for caller in callers
+        )
+        for called_name, callers in related_callers.items()
+    }
+
+    def semantic_score(
+        match: SymbolMatch,
+    ) -> tuple[int, float, float, bool, int, int]:
+        overlap = primary_terms & match.semantic_terms
+        rarity = [1 / term_frequency[term] for term in overlap]
+        return (
+            relation_scores.get(match.symbol.name, 0),
+            max(rarity, default=0),
+            sum(rarity),
+            not match.symbol.name.startswith("_"),
+            -match.symbol.line,
+            len(match.overlap),
+        )
+
+    if functions and max(semantic_score(match)[:2] for match in functions) > (0, 0):
+        return max(functions, key=semantic_score)
+
+    fallback = max(
+        matches,
+        key=lambda match: (
+            match.primary_identifier_match,
+            match.exact_identifier_match,
+            len(match.overlap),
+            -match.symbol.line,
+        ),
+    )
+    if not (
+        fallback.primary_identifier_match
+        or fallback.exact_identifier_match
+        or fallback.overlap
+    ):
+        return None
+    return fallback
+
+
+def _related_symbol_callers(
+    matches: list[SymbolMatch],
+    symbol_calls: dict[str, list[str]],
+) -> dict[str, tuple[str, ...]]:
+    functions = {
+        match.symbol.name: match
+        for match in matches
+        if match.symbol.kind == "function"
+    }
+    callers_by_target: dict[str, set[str]] = {}
+    for caller_name, called_names in symbol_calls.items():
+        caller = functions.get(caller_name)
+        if caller is None or len(caller.overlap) < 2:
+            continue
+        for called_name in set(called_names) & functions.keys():
+            if called_name != caller_name:
+                callers_by_target.setdefault(called_name, set()).add(caller_name)
+    return {
+        called_name: tuple(sorted(callers))
+        for called_name, callers in callers_by_target.items()
+        if len(callers) >= 2
+    }
 
 
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
@@ -305,13 +471,13 @@ def _history_relations(
 def _blame_relations(
     root: Path,
     seed_paths: list[str],
-    candidates: dict[str, CandidateLocation],
+    candidate_lines: dict[str, str | None],
     eligible_paths: set[str],
     auxiliary_files: dict[str, bool],
 ) -> dict[str, list[tuple[float, str]]]:
     relations: dict[str, list[tuple[float, str]]] = {}
     for seed_path in seed_paths[:BLAME_SEED_LIMIT]:
-        location = candidates[seed_path].lines
+        location = candidate_lines[seed_path]
         if location is None:
             continue
         start_value, _, end_value = location.partition("-")
@@ -548,6 +714,7 @@ def locate_candidates(
     base_scores: dict[str, float] = {}
     auxiliary_files: dict[str, bool] = {}
     candidates: dict[str, CandidateLocation] = {}
+    blame_lines: dict[str, str | None] = {}
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(
@@ -567,32 +734,43 @@ def locate_candidates(
                 for variant in _compact_identifier_variants(identifier)
             )
         }
-        best_symbol = None
-        best_overlap: set[str] = set()
-        primary_symbol_match = False
-        exact_symbol = False
-        for symbol in file.symbols:
-            terms = _terms(symbol.name) | _terms(symbol.docstring or "")
-            overlap = keywords & terms
-            symbol_variants = _identifier_variants(symbol.name)
-            symbol_compact_variants = _compact_identifier_variants(symbol.name)
-            symbol_primary_match = any(
-                symbol_compact_variants
-                & _compact_identifier_variants(identifier)
-                for identifier in signals.primary_identifiers
-            )
-            symbol_exact = any(
-                symbol_variants & _identifier_variants(identifier)
-                for identifier in signals.identifiers
-            )
-            if (symbol_primary_match, symbol_exact, len(overlap)) > (
-                primary_symbol_match,
-                exact_symbol,
-                len(best_overlap),
+        symbol_matches = [_match_symbol(symbol, signals) for symbol in file.symbols]
+        related_symbol_callers = _related_symbol_callers(
+            symbol_matches,
+            file.symbol_calls,
+        )
+        score_match: SymbolMatch | None = None
+        for match in symbol_matches:
+            if (
+                match.primary_identifier_match,
+                match.exact_identifier_match,
+                len(match.overlap),
+            ) > (
+                score_match.primary_identifier_match if score_match else False,
+                score_match.exact_identifier_match if score_match else False,
+                len(score_match.overlap) if score_match else 0,
             ):
-                best_symbol, best_overlap = symbol, overlap
-                primary_symbol_match = symbol_primary_match
-                exact_symbol = symbol_exact
+                score_match = match
+        blame_match = _select_symbol(symbol_matches, signals, {})
+        selected_match = _select_symbol(
+            symbol_matches,
+            signals,
+            related_symbol_callers,
+        )
+        primary_symbol_match = (
+            score_match.primary_identifier_match if score_match else False
+        )
+        exact_symbol = score_match.exact_identifier_match if score_match else False
+        best_overlap = set(score_match.overlap) if score_match else set()
+        blame_symbol = blame_match.symbol if blame_match else None
+        selected_symbol = selected_match.symbol if selected_match else None
+        selected_overlap = set(selected_match.overlap) if selected_match else set()
+        selected_primary_match = (
+            selected_match.primary_identifier_match if selected_match else False
+        )
+        selected_exact = (
+            selected_match.exact_identifier_match if selected_match else False
+        )
         content_identifiers, content_overlap, content_line = _source_content(
             root,
             file.path,
@@ -622,13 +800,26 @@ def locate_candidates(
             )
         if path_overlap:
             evidence.append(f"Path matches issue terms: {', '.join(sorted(path_overlap))}")
-        if best_symbol and best_overlap:
-            evidence.append(f"Symbol {best_symbol.name} matches: {', '.join(sorted(best_overlap))}")
-        if best_symbol and exact_symbol:
-            evidence.append(f"Issue references symbol {best_symbol.name}")
-        if best_symbol and primary_symbol_match:
+        if selected_symbol and selected_overlap:
             evidence.append(
-                f"Issue title strongly matches symbol {best_symbol.name}"
+                f"Symbol {selected_symbol.name} matches: "
+                + ", ".join(sorted(selected_overlap))
+            )
+        if selected_symbol and selected_exact:
+            evidence.append(f"Issue references symbol {selected_symbol.name}")
+        if selected_symbol and selected_primary_match:
+            evidence.append(
+                f"Issue title strongly matches symbol {selected_symbol.name}"
+            )
+        related_callers = (
+            related_symbol_callers.get(selected_symbol.name, ())
+            if selected_symbol
+            else ()
+        )
+        if selected_symbol and related_callers:
+            evidence.append(
+                "Issue-matching symbols call "
+                f"{selected_symbol.name}: {', '.join(related_callers)}"
             )
         if import_overlap:
             evidence.append(f"Imports match component terms: {', '.join(sorted(import_overlap))}")
@@ -644,11 +835,21 @@ def locate_candidates(
             )
         base_scores[file.path] = raw_score
         auxiliary_files[file.path] = auxiliary_file
+        blame_lines[file.path] = (
+            f"{blame_symbol.line}-{blame_symbol.end_line or blame_symbol.line}"
+            if blame_symbol
+            else f"{content_line}-{content_line}"
+            if content_line
+            else None
+        )
         candidates[file.path] = CandidateLocation(
             file=file.path,
-            symbol=best_symbol.name if best_symbol else None,
-            lines=f"{best_symbol.line}-{best_symbol.end_line or best_symbol.line}"
-            if best_symbol
+            symbol=selected_symbol.name if selected_symbol else None,
+            lines=(
+                f"{selected_symbol.line}-"
+                f"{selected_symbol.end_line or selected_symbol.line}"
+            )
+            if selected_symbol
             else f"{content_line}-{content_line}"
             if content_line
             else None,
@@ -673,7 +874,7 @@ def locate_candidates(
     blame_relations = _blame_relations(
         root,
         _graph_seed_paths(base_scores, auxiliary_files),
-        candidates,
+        blame_lines,
         set(base_scores),
         auxiliary_files,
     )

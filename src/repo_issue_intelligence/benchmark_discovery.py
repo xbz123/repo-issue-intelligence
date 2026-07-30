@@ -253,6 +253,14 @@ def _derive_pre_fix_sha(
     merge_commit: dict | None,
     pull_commits: Sequence[dict],
 ) -> tuple[str | None, str | None, str]:
+    if pull_commits:
+        first_commit_parents = pull_commits[0].get("parents") or []
+        if first_commit_parents and first_commit_parents[0].get("sha"):
+            return (
+                str(first_commit_parents[0]["sha"]),
+                "first_pull_commit_parent",
+                "Derived from the parent of the first PR commit.",
+            )
     if merge_commit is None:
         return None, None, "The merge commit could not be loaded."
     parents = merge_commit.get("parents") or []
@@ -265,23 +273,27 @@ def _derive_pre_fix_sha(
     if not first_parent:
         return None, None, "The merge commit first parent is missing."
     if len(parents) >= 2:
-        return first_parent, "merge_first_parent", "Derived from a merge commit first parent."
+        base_sha = str(((pull_request.get("base") or {}).get("sha")) or "")
+        parent_shas = {str(parent.get("sha") or "") for parent in parents}
+        if base_sha and base_sha in parent_shas:
+            return (
+                base_sha,
+                "merge_base_parent",
+                "Derived from the PR base SHA found among merge parents.",
+            )
+        return (
+            None,
+            None,
+            "The merge commit parent order is ambiguous without PR commit history.",
+        )
     if commit_count == 1:
         return first_parent, "single_commit_parent", "Derived from a single-commit fix."
     if merge_sha and head_sha and merge_sha != head_sha:
         return first_parent, "squash_commit_parent", "Derived from a squash commit parent."
-    if pull_commits:
-        first_commit_parents = pull_commits[0].get("parents") or []
-        if first_commit_parents and first_commit_parents[0].get("sha"):
-            return (
-                str(first_commit_parents[0]["sha"]),
-                "first_pull_commit_parent",
-                "Derived from the first PR commit; verify a multi-commit rebase manually.",
-            )
     return (
-        first_parent,
-        "ambiguous_single_parent",
-        "A multi-commit, single-parent merge requires manual pre-fix SHA verification.",
+        None,
+        None,
+        "A multi-commit pull request requires its ordered commit history.",
     )
 
 
@@ -324,6 +336,11 @@ def audit_candidate(
         merge_commit,
         pull_commits,
     )
+    pull_commit_shas = {
+        str(commit.get("sha") or "")
+        for commit in pull_commits
+        if commit.get("sha")
+    }
     base_repository = str(
         (((pull_request.get("base") or {}).get("repo") or {}).get("full_name")) or ""
     )
@@ -357,6 +374,21 @@ def audit_candidate(
             passed=pre_fix_sha is not None,
             blocking=True,
             detail=pre_fix_detail,
+        ),
+        CandidateAuditCheck(
+            code="pull_commit_history",
+            passed=bool(pull_commits),
+            blocking=True,
+            detail=f"{len(pull_commits)} ordered PR commit(s) loaded",
+        ),
+        CandidateAuditCheck(
+            code="pre_fix_outside_pull_commits",
+            passed=pre_fix_sha is not None and pre_fix_sha not in pull_commit_shas,
+            blocking=True,
+            detail=(
+                "The pre-fix SHA must be the parent of the first PR commit, "
+                "not a commit inside the fix PR."
+            ),
         ),
         CandidateAuditCheck(
             code="production_source_files",
@@ -409,8 +441,6 @@ def audit_candidate(
         for check in checks
         if not check.passed and not check.blocking
     ]
-    if pre_fix_source in {"first_pull_commit_parent", "ambiguous_single_parent"}:
-        notes.append(pre_fix_detail)
     return BenchmarkCandidate(
         id=(
             f"{repository.replace('/', '-').lower()}-issue-{issue.number}"
@@ -467,8 +497,7 @@ def inspect_candidate(
         merge_commit_sha = pull_request.get("merge_commit_sha")
         if merge_commit_sha:
             merge_commit = client.fetch_commit(repository, str(merge_commit_sha))
-        if int(pull_request.get("commits") or 0) > 1:
-            pull_commits = client.fetch_pull_request_commits(repository, pull_number)
+        pull_commits = client.fetch_pull_request_commits(repository, pull_number)
     return audit_candidate(
         repository,
         issue,
@@ -551,12 +580,10 @@ def discover_candidates(
                     if merge_commit_sha
                     else None
                 )
-                pull_commits: list[dict] = []
-                if int(pull_request.get("commits") or 0) > 1:
-                    pull_commits = client.fetch_pull_request_commits(
-                        repository,
-                        pull_number,
-                    )
+                pull_commits = client.fetch_pull_request_commits(
+                    repository,
+                    pull_number,
+                )
                 candidate = audit_candidate(
                     repository,
                     issue,

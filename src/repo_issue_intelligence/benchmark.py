@@ -59,6 +59,15 @@ class EvidenceReranker(Protocol):
     ) -> LLMAnalysisResult: ...
 
 
+class BenchmarkSymbolTarget(BaseModel):
+    file: str
+    symbol: str
+
+
+class BenchmarkSymbolCandidate(BenchmarkSymbolTarget):
+    rank: int = Field(ge=1)
+
+
 class BenchmarkCase(BaseModel):
     id: str
     tier: BenchmarkTier
@@ -69,6 +78,7 @@ class BenchmarkCase(BaseModel):
     fix_pr_number: int = Field(ge=1)
     pre_fix_sha: str
     expected_files: list[str] = Field(min_length=1)
+    expected_symbols: list[BenchmarkSymbolTarget] = Field(default_factory=list)
 
     def model_post_init(self, __context: object) -> None:
         if REPOSITORY_PATTERN.fullmatch(self.repository) is None:
@@ -77,6 +87,24 @@ class BenchmarkCase(BaseModel):
             raise ValueError("pre_fix_sha must be a 40-character lowercase Git SHA")
         if len(set(self.expected_files)) != len(self.expected_files):
             raise ValueError("expected_files must not contain duplicates")
+        symbol_keys = {
+            (target.file, target.symbol) for target in self.expected_symbols
+        }
+        if len(symbol_keys) != len(self.expected_symbols):
+            raise ValueError("expected_symbols must not contain duplicates")
+        symbol_files = [target.file for target in self.expected_symbols]
+        if len(symbol_files) != len(set(symbol_files)):
+            raise ValueError(
+                "expected_symbols currently supports one target per file"
+            )
+        unknown_symbol_files = {
+            target.file for target in self.expected_symbols
+        } - set(self.expected_files)
+        if unknown_symbol_files:
+            raise ValueError(
+                "expected symbol files must also appear in expected_files: "
+                + ", ".join(sorted(unknown_symbol_files))
+            )
         if self.issue_snapshot.number != self.issue_number:
             raise ValueError("issue_snapshot number must match issue_number")
         if self.issue_snapshot.updated_at != self.issue_updated_at:
@@ -104,7 +132,9 @@ class BenchmarkCaseResult(BaseModel):
     pre_fix_sha: str
     issue_updated_at: datetime
     expected_files: list[str]
+    expected_symbols: list[BenchmarkSymbolTarget] = Field(default_factory=list)
     candidate_files: list[str] = Field(default_factory=list)
+    candidate_symbols: list[BenchmarkSymbolCandidate] = Field(default_factory=list)
     matched_files_at_5: list[str] = Field(default_factory=list)
     matched_files_at_10: list[str] = Field(default_factory=list)
     matched_files_at_20: list[str] = Field(default_factory=list)
@@ -114,6 +144,11 @@ class BenchmarkCaseResult(BaseModel):
     file_recall_at_20: float = 0
     candidate_pool_recall: float = 0
     reciprocal_rank: float = 0
+    symbol_recall_at_1: float | None = None
+    symbol_recall_at_5: float | None = None
+    symbol_recall_at_10: float | None = None
+    symbol_recall_at_20: float | None = None
+    symbol_reciprocal_rank: float | None = None
     analysis_elapsed_ms: float = 0
     llm_attempts: int = 0
     llm_fallback_used: bool = False
@@ -144,6 +179,12 @@ class BenchmarkAggregate(BaseModel):
     average_llm_elapsed_ms: float | None = None
     llm_input_tokens: int = 0
     llm_output_tokens: int = 0
+    symbol_cases: int = 0
+    symbol_recall_at_1: float | None = None
+    symbol_recall_at_5: float | None = None
+    symbol_recall_at_10: float | None = None
+    symbol_recall_at_20: float | None = None
+    mean_symbol_reciprocal_rank: float | None = None
 
 
 class BenchmarkRun(BaseModel):
@@ -202,7 +243,10 @@ def prepare_repository(case: BenchmarkCase, workspace: Path) -> Path:
         if _run_git(["status", "--porcelain"], cwd=target):
             raise ValueError(f"Benchmark workspace has uncommitted changes: {target}")
 
-    _run_git(["fetch", "--depth=100", "origin", case.pre_fix_sha], cwd=target)
+    try:
+        _run_git(["cat-file", "-e", f"{case.pre_fix_sha}^{{commit}}"], cwd=target)
+    except RuntimeError:
+        _run_git(["fetch", "--depth=100", "origin", case.pre_fix_sha], cwd=target)
     _run_git(["checkout", "--detach", case.pre_fix_sha], cwd=target)
     checked_out_sha = _run_git(["rev-parse", "HEAD"], cwd=target)
     if checked_out_sha != case.pre_fix_sha:
@@ -307,6 +351,7 @@ def evaluate_case(
         issue,
         build_repository_map(repository_root, included_files=included_files),
     )
+    candidate_locations = {candidate.file: candidate for candidate in report.candidates}
     candidate_files = _unique_files([candidate.file for candidate in report.candidates])
     llm_result = None
     llm_attempts = 0
@@ -340,6 +385,40 @@ def evaluate_case(
         (index for index, path in enumerate(candidate_files, start=1) if path in expected),
         None,
     )
+    candidate_symbols = [
+        BenchmarkSymbolCandidate(
+            file=file,
+            symbol=candidate_locations[file].symbol,
+            rank=rank,
+        )
+        for rank, file in enumerate(candidate_files, start=1)
+        if file in candidate_locations and candidate_locations[file].symbol
+    ]
+    expected_symbol_keys = {
+        (target.file, target.symbol) for target in case.expected_symbols
+    }
+    symbol_ranks = {
+        (candidate.file, candidate.symbol): candidate.rank
+        for candidate in candidate_symbols
+    }
+    first_symbol_rank = min(
+        (
+            symbol_ranks[key]
+            for key in expected_symbol_keys
+            if key in symbol_ranks
+        ),
+        default=None,
+    )
+
+    def symbol_recall_at(limit: int) -> float | None:
+        if not expected_symbol_keys:
+            return None
+        matched = sum(
+            symbol_ranks.get(key, limit + 1) <= limit
+            for key in expected_symbol_keys
+        )
+        return round(matched / len(expected_symbol_keys), 4)
+
     return BenchmarkCaseResult(
         case_id=case.id,
         tier=case.tier,
@@ -350,7 +429,9 @@ def evaluate_case(
         pre_fix_sha=case.pre_fix_sha,
         issue_updated_at=issue.updated_at,
         expected_files=case.expected_files,
+        expected_symbols=case.expected_symbols,
         candidate_files=candidate_files,
+        candidate_symbols=candidate_symbols,
         matched_files_at_5=matched_at_5,
         matched_files_at_10=matched_at_10,
         matched_files_at_20=matched_at_20,
@@ -360,6 +441,17 @@ def evaluate_case(
         file_recall_at_20=round(len(matched_at_20) / len(expected), 4),
         candidate_pool_recall=round(len(expected.intersection(candidate_files)) / len(expected), 4),
         reciprocal_rank=round(1 / first_rank, 4) if first_rank else 0,
+        symbol_recall_at_1=symbol_recall_at(1),
+        symbol_recall_at_5=symbol_recall_at(5),
+        symbol_recall_at_10=symbol_recall_at(10),
+        symbol_recall_at_20=symbol_recall_at(20),
+        symbol_reciprocal_rank=(
+            round(1 / first_symbol_rank, 4)
+            if first_symbol_rank is not None
+            else 0
+            if expected_symbol_keys
+            else None
+        ),
         analysis_elapsed_ms=round((perf_counter() - started) * 1000, 3),
         llm_attempts=llm_attempts,
         llm_fallback_used=fallback_used,
@@ -376,6 +468,7 @@ def evaluate_case(
 
 def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
     completed = [result for result in results if result.execution_succeeded]
+    symbol_results = [result for result in completed if result.expected_symbols]
     llm_results = [result for result in completed if result.llm_attempts]
     successful_llm_results = [
         result for result in llm_results if not result.llm_fallback_used
@@ -426,6 +519,57 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         else None,
         llm_input_tokens=sum(result.llm_input_tokens for result in completed),
         llm_output_tokens=sum(result.llm_output_tokens for result in completed),
+        symbol_cases=len(symbol_results),
+        symbol_recall_at_1=round(
+            fmean(
+                result.symbol_recall_at_1
+                for result in symbol_results
+                if result.symbol_recall_at_1 is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
+        symbol_recall_at_5=round(
+            fmean(
+                result.symbol_recall_at_5
+                for result in symbol_results
+                if result.symbol_recall_at_5 is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
+        symbol_recall_at_10=round(
+            fmean(
+                result.symbol_recall_at_10
+                for result in symbol_results
+                if result.symbol_recall_at_10 is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
+        symbol_recall_at_20=round(
+            fmean(
+                result.symbol_recall_at_20
+                for result in symbol_results
+                if result.symbol_recall_at_20 is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
+        mean_symbol_reciprocal_rank=round(
+            fmean(
+                result.symbol_reciprocal_rank
+                for result in symbol_results
+                if result.symbol_reciprocal_rank is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
     )
 
 
@@ -477,6 +621,7 @@ def run_benchmark(
                 pre_fix_sha=case.pre_fix_sha,
                 issue_updated_at=case.issue_updated_at,
                 expected_files=case.expected_files,
+                expected_symbols=case.expected_symbols,
                 error=f"{type(error).__name__}: {error}",
                 execution_succeeded=False,
             )
