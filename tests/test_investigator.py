@@ -405,6 +405,196 @@ def test_graph_reranking_expands_strong_relations_into_the_candidate_pool(
     assert any(candidate.file == "src/target.py" for candidate in candidates)
 
 
+def test_graph_reranking_promotes_bounded_two_hop_call_chain(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_height():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "def refresh_layout():\n"
+        "    return reflow_children()\n",
+    )
+    write_source(
+        repository,
+        "src/compositor.py",
+        "def reflow_children(children):\n"
+        "    return arrange_children(children)\n\n"
+        "def refresh_children(children):\n"
+        "    return children\n\n"
+        "def remove_children(children):\n"
+        "    return children\n\n"
+        "def arrange_children(children):\n"
+        "    return children\n",
+    )
+    write_source(
+        repository,
+        "src/height_children_refresh.py",
+        "def refresh_height(children):\n"
+        "    return refresh_children(children)\n",
+    )
+    write_source(
+        repository,
+        "src/remove_children_height.py",
+        "def update_height(children):\n"
+        "    return remove_children(children)\n",
+    )
+    for index in range(20):
+        write_source(
+            repository,
+            f"src/height_refresh_{index}.py",
+            "def refresh_height():\n    return None\n",
+        )
+    record = issue(
+        "Height not refreshed after removing children",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+    compositor_rank = next(
+        index
+        for index, candidate in enumerate(candidates, start=1)
+        if candidate.file == "src/compositor.py"
+    )
+    compositor = candidates[compositor_rank - 1]
+
+    assert compositor_rank <= 10
+    assert (
+        "Two-hop source call chain via refresh_layout reaches "
+        "reflow_children, defined here: src/screen.py"
+    ) in compositor.evidence
+
+
+def test_graph_reranking_does_not_propagate_through_abstract_layer(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/backend.py",
+        "def start_task():\n"
+        "    return start_soon()\n",
+    )
+    write_source(
+        repository,
+        "src/_abc.py",
+        "def start_soon():\n"
+        "    return create_task()\n",
+    )
+    write_source(
+        repository,
+        "src/asyncio_backend.py",
+        "def create_task():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Task start fails on Trio",
+        "The traceback points to src/backend.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(
+        not any(
+            evidence.startswith("Two-hop source call chain via ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_graph_reranking_does_not_resolve_local_callee_to_unrelated_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_height():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "def refresh_layout():\n"
+        "    return arrange_children()\n\n"
+        "def arrange_children():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "src/unrelated.py",
+        "def arrange_children():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Height refresh fails after removing children",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    unrelated = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/unrelated.py"
+    )
+
+    assert all(
+        not evidence.startswith("Two-hop source call chain via ")
+        for evidence in unrelated.evidence
+    )
+
+
+def test_graph_reranking_does_not_propagate_through_auxiliary_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_layout():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "docs/refresh.py",
+        "def refresh_layout():\n"
+        "    return reflow_content()\n",
+    )
+    write_source(
+        repository,
+        "src/compositor.py",
+        "def reflow_content():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Layout refresh fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    compositor = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/compositor.py"
+    )
+
+    assert all(
+        not evidence.startswith("Two-hop source call chain via ")
+        for evidence in compositor.evidence
+    )
+
+
 def test_locate_candidates_uses_non_call_import_references(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     write_source(

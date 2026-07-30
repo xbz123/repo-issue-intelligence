@@ -1,6 +1,6 @@
 # Real-Project File Localization Benchmark
 
-## Current result: call-aware symbol selection on corrected pre-fix inputs
+## Current result: bounded cross-file call propagation on corrected pre-fix inputs
 
 On 2026-07-30, an integrity audit compared every manifest SHA with the ordered commits of its
 linked fix PR. Eighteen of the previous 20 SHAs were commits inside the fix PR rather than true
@@ -8,24 +8,23 @@ pre-fix commits. Manifest v5 corrects every case to the parent of the first PR c
 discovery path now always loads the ordered PR history and blocks any proposed pre-fix SHA found
 inside the PR commit set.
 
-The v0.9 deterministic runner successfully checked out all 20 corrected commits, verified every
-expected file, and preserved the v0.8 Recall values with a `0.0002` MRR change after making
-compound-identifier variants deterministic:
+The v0.10 deterministic runner successfully checked out all 20 corrected commits, verified every
+expected file, and improved Recall@10 without changing Recall@1, Recall@5, Recall@20, or MRR:
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.3000 | 0.8583 | 0.8750 | 1.0000 | 0.5394 | 1,527 ms |
-| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,348 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4097 | 930 ms |
-| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 1.0000 | 0.5222 | 1,932 ms |
+| Overall | 20/20 | 0.3000 | 0.8583 | 0.9000 | 1.0000 | 0.5394 | 1,456 ms |
+| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,310 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4097 | 832 ms |
+| Generalization | 9/9 | 0.2778 | 0.8519 | 0.9444 | 1.0000 | 0.5222 | 1,846 ms |
 
 Five cases also contain six manually reviewed function targets from real fix diffs:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 5 | 0.0000 | 0.7000 | 0.7000 | 1.0000 | 0.2278 |
+| Overall | 5 | 0.0000 | 0.7000 | 0.8000 | 1.0000 | 0.2278 |
 | Calibration | 3 | 0.0000 | 0.6667 | 0.6667 | 1.0000 | 0.2130 |
-| Generalization | 2 | 0.0000 | 0.7500 | 0.7500 | 1.0000 | 0.2500 |
+| Generalization | 2 | 0.0000 | 0.7500 | 1.0000 | 1.0000 | 0.2500 |
 
 The initial labels are deliberately narrow and come from reviewed production hunks:
 
@@ -49,13 +48,19 @@ with the original lexical order retained as a fallback. This recovered Typer's
 V0.9 adds bounded function-level call edges to the Python repository map. A callee receives
 within-file evidence only when at least two distinct issue-matching callers agree, which recovers
 Textual's `_arrange_root` without regressing Typer or Rich. All six reviewed targets now occur
-within Top-20. `_arrange_root` still inherits its parent file's rank 18, so cross-file call
-propagation and broader symbol labels are the next quality targets.
+within Top-20.
+
+V0.10 follows a uniquely resolved, title-matching call into one concrete function and then follows
+that function's own bounded call names for one additional hop. It does not propagate through
+`abc`, protocol, or interface layers, and it rejects ambiguous symbol definitions. A single
+Top-10 diversity slot is available to the strongest such expansion. This moved Textual's
+`_compositor.py::_arrange_root` from rank 18 to rank 10, raising both File and Symbol Recall@10,
+while the other 19 per-case metrics remained unchanged.
 
 V0.9 also preserves the source order of compound identifier terms before generating variants.
 The previous set-based join could turn `is_alt_screen` into either `alt_screen` or `screen_alt`
-under different Python hash seeds. Two complete post-fix runs produced identical per-case
-candidate files, candidate symbols, Recall, and MRR.
+under different Python hash seeds. Two complete v0.10 runs produced identical per-case candidate
+files, candidate symbols, Recall, and MRR.
 
 Current machine-readable artifacts:
 
@@ -65,7 +70,8 @@ Current machine-readable artifacts:
 - `benchmarks/results/deterministic-v0.7-clean-pre-fix-20-cases.json` — corrected file-only run;
 - `benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json` — symbol baseline;
 - `benchmarks/results/deterministic-v0.8-hierarchical-symbols-20-cases.json` — lexical symbol rerank;
-- `benchmarks/results/deterministic-v0.9-call-aware-symbols-20-cases.json` — current run.
+- `benchmarks/results/deterministic-v0.9-call-aware-symbols-20-cases.json` — within-file call baseline;
+- `benchmarks/results/deterministic-v0.10-cross-file-call-propagation-20-cases.json` — current run.
 
 All result files generated from manifest versions 2 and 3 remain committed for provenance but are
 superseded as localization-quality evidence. Their provider latency, structured-output validity,
@@ -318,7 +324,8 @@ necessary before further candidate-generation claims. Token totals include succe
 requests only; they do not estimate development-time failed requests.
 
 The next retrieval iteration should expand independently reviewed symbol labels, add semantic
-test-to-source mapping and cross-file or cross-language relations, then grow toward 30-50 cases.
+test-to-source mapping, qualified-symbol/runtime dispatch, and cross-language relations, then grow
+toward 30-50 cases.
 Candidate-pool changes should continue to be evaluated separately from model reranking.
 
 ## GPT-OSS 20B versus 120B

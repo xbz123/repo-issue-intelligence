@@ -132,7 +132,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.9-call-aware-symbols-20-cases.json
+  --output benchmarks/results/deterministic-v0.10-cross-file-call-propagation-20-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=12000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases.json \
@@ -275,12 +275,13 @@ The current frozen benchmark contains 20 closed issues with linked fix PRs acros
 Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
 pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
-On corrected manifest v5, v0.9 completed every case and achieved File Recall@1 `0.3000`,
-Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5394`. The within-file
-selector improved the five labeled cases from Symbol Recall@5/10 `0.3000` to `0.7000`; the
-function-call consistency pass raised Symbol Recall@20 to `1.0000`, covering all six reviewed
-targets, with symbol MRR `0.2278`. Symbol Recall@1 remains `0.0000` because no labeled parent file
-currently ranks first. Two complete v0.9 runs produced identical candidate and metric outputs.
+On corrected manifest v5, v0.10 completed every case and achieved File Recall@1 `0.3000`,
+Recall@5 `0.8583`, Recall@10 `0.9000`, Recall@20 `1.0000`, and MRR `0.5394`. Bounded cross-file
+call propagation moved Textual's `_compositor.py::_arrange_root` from rank 18 to rank 10 without
+changing Recall@1, Recall@5, Recall@20, or MRR. On the five labeled cases, Symbol Recall@5 is
+`0.7000`, Recall@10 is `0.8000`, Recall@20 is `1.0000`, and symbol MRR is `0.2278`.
+Symbol Recall@1 remains `0.0000` because no labeled parent file currently ranks first. Two complete
+v0.10 runs produced identical candidate and metric outputs.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only

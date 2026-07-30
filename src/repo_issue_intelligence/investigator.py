@@ -94,6 +94,10 @@ GRAPH_BONUS_LIMIT = 10.0
 GRAPH_RERANK_BAND_SIZE = 10
 GRAPH_EXPANSION_MIN_BONUS = 5.0
 GRAPH_EXPANSION_SLOTS = 3
+GRAPH_STRONG_EXPANSION_SLOTS = 1
+GRAPH_DYNAMIC_CALL_MIN_LENGTH = 8
+GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
+GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
 HISTORY_COMMIT_LIMIT = 50
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
@@ -562,6 +566,8 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
         return min(bonus, 8.0)
     if evidence.startswith("Two-hop source relation calls imported symbols"):
         return min(bonus, 5.0)
+    if evidence.startswith(GRAPH_STRONG_EXPANSION_PREFIX):
+        return min(bonus, 8.0)
     if evidence.startswith("Related source calls ") and ", defined here:" in evidence:
         return min(bonus, 2.0)
     return bonus
@@ -592,6 +598,15 @@ def _graph_relations(
             and len(primary) >= 5
             and (related in primary or primary in related)
             for related in related_terms
+            for primary in signals.primary_terms
+        )
+
+    def matches_specific_primary_issue(value: str) -> bool:
+        return any(
+            len(related) >= 5
+            and len(primary) >= 5
+            and (related in primary or primary in related)
+            for related in _terms(value)
             for primary in signals.primary_terms
         )
 
@@ -689,8 +704,9 @@ def _graph_relations(
 
         if seed.test_file:
             continue
+        strong_first_hops: list[tuple[str, str]] = []
         for called_symbol in seed.calls:
-            if len(called_symbol) < 8:
+            if len(called_symbol) < GRAPH_DYNAMIC_CALL_MIN_LENGTH:
                 continue
             targets = symbol_definitions.get(called_symbol, set()) - {seed_path}
             if not targets or len(targets) > 4:
@@ -701,6 +717,46 @@ def _graph_relations(
                     target,
                     bonus,
                     f"Related source calls {called_symbol}, defined here: {seed_path}",
+                )
+            if len(targets) == 1 and matches_specific_primary_issue(called_symbol):
+                target = next(iter(targets))
+                target_parts = {
+                    Path(part).stem.lstrip("_").lower()
+                    for part in Path(target).parts
+                }
+                if (
+                    not auxiliary_files.get(target, True)
+                    and not target_parts.intersection(
+                        {
+                            "abc",
+                            "interface",
+                            "interfaces",
+                            "protocol",
+                            "protocols",
+                        }
+                    )
+                ):
+                    strong_first_hops.append((called_symbol, target))
+
+        for first_hop_symbol, first_hop_path in sorted(strong_first_hops):
+            first_hop = files_by_path[first_hop_path]
+            second_hop_calls = first_hop.symbol_calls.get(first_hop_symbol, [])
+            for called_symbol in second_hop_calls:
+                if len(called_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
+                    continue
+                targets = symbol_definitions.get(called_symbol, set())
+                if targets.intersection({seed_path, first_hop_path}):
+                    continue
+                if len(targets) != 1:
+                    continue
+                target = next(iter(targets))
+                if auxiliary_files.get(target, True):
+                    continue
+                add_relation(
+                    target,
+                    9.0 if matches_primary_issue(called_symbol) else 8.0,
+                    f"{GRAPH_STRONG_EXPANSION_PREFIX}{first_hop_symbol} reaches "
+                    f"{called_symbol}, defined here: {first_hop_path}",
                 )
     return relations
 
@@ -896,13 +952,24 @@ def locate_candidates(
             GRAPH_BONUS_LIMIT,
             sum(bonus for bonus, _ in rerank_relations[:2]),
         )
+        displayed_relations = unique_relations[:2]
+        strong_relation = next(
+            (
+                relation
+                for relation in unique_relations
+                if relation[1].startswith(GRAPH_STRONG_EXPANSION_PREFIX)
+            ),
+            None,
+        )
+        if strong_relation and strong_relation not in displayed_relations:
+            displayed_relations = [*displayed_relations[:1], strong_relation]
         final_scores[path] += graph_bonus
         candidates[path].confidence = round(
             min(0.98, 0.2 + final_scores[path] / 30),
             2,
         )
         candidates[path].evidence.extend(
-            evidence for _, evidence in unique_relations[:2]
+            evidence for _, evidence in displayed_relations
         )
 
     base_order = sorted(
@@ -927,29 +994,62 @@ def locate_candidates(
                 ),
             )
         )
+    expansion_candidates = (
+        path
+        for path, relations in graph_relations.items()
+        if path not in base_shortlist
+        and sum(
+            bonus
+            for bonus, _ in sorted(
+                set(relations),
+                key=lambda relation: (-relation[0], relation[1]),
+            )[:2]
+        )
+        >= GRAPH_EXPANSION_MIN_BONUS
+    )
+
+    def strong_expansion(path: str) -> bool:
+        return any(
+            evidence.startswith(GRAPH_STRONG_EXPANSION_PREFIX)
+            for _, evidence in graph_relations[path]
+        )
+
     expansion_paths = sorted(
-        (
-            path
-            for path, relations in graph_relations.items()
-            if path not in base_shortlist
-            and sum(
-                bonus
-                for bonus, _ in sorted(
-                    set(relations),
-                    key=lambda relation: (-relation[0], relation[1]),
-                )[:2]
-            )
-            >= GRAPH_EXPANSION_MIN_BONUS
-        ),
+        expansion_candidates,
         key=lambda path: (
+            not strong_expansion(path),
             -max(bonus for bonus, _ in graph_relations[path]),
             -final_scores[path],
             auxiliary_files[path],
             path,
         ),
     )[: min(GRAPH_EXPANSION_SLOTS, limit)]
-    retained_base = reranked_base[: max(0, limit - len(expansion_paths))]
-    reranked_paths = [*retained_base, *expansion_paths]
+    promoted_expansions = [
+        path for path in expansion_paths if strong_expansion(path)
+    ]
+    tail_expansions = [
+        path for path in expansion_paths if not strong_expansion(path)
+    ]
+    first_band_size = min(GRAPH_RERANK_BAND_SIZE, limit)
+    reserved_promotions = promoted_expansions[
+        : min(GRAPH_STRONG_EXPANSION_SLOTS, first_band_size)
+    ]
+    deferred_promotions = promoted_expansions[len(reserved_promotions):]
+    retained_first_band_size = first_band_size - len(reserved_promotions)
+    promoted_first_band = [
+        *reranked_base[:retained_first_band_size],
+        *reserved_promotions,
+    ]
+    deferred_paths = [
+        *reranked_base[retained_first_band_size:first_band_size],
+        *deferred_promotions,
+    ]
+    retained_base = [
+        *promoted_first_band,
+        *deferred_paths,
+        *reranked_base[first_band_size:],
+    ][: max(0, limit - len(tail_expansions))]
+    reranked_paths = [*retained_base, *tail_expansions]
     for path in reranked_paths:
         candidates[path].evidence.extend(
             evidence for _, evidence in blame_relations.get(path, [])[:1]

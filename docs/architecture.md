@@ -36,15 +36,17 @@ framework indicators.
 bounded content matching define the base pool. Static imports, loaded references, dynamic
 call-name/backend definitions, two-hop relations, matching-test imports, and bounded prior Git
 co-changes add graph evidence. Legacy graph weights still rerank inside fixed Top-10 bands; up to
-three strong expansion candidates may replace only ranks 18-20. Git evidence uses at most 50
-prior commits from 100 fetched ancestors, blames at most five lines for each of two seed
-candidates, and ignores broad commits. File scoring and symbol selection are separate: file scores
-retain the lexical/graph/history contract, while functions inside each file are selected using
-direct identifier references and normalized title-term rarity, with the original lexical match as
-a fallback. A callee receives additional evidence only when at least two distinct issue-matching
-functions in the same file call it. The investigator emits confirmed facts,
-confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate
-locations are not presented as confirmed root causes.
+three strong expansion candidates may enter the Top-20. One Top-10 diversity slot is reserved for
+a two-hop call candidate only when the first called symbol has a unique concrete definition and
+matches a specific title term. Propagation stops at abstract/protocol layers and ambiguous symbol
+definitions. Git evidence uses at most 50 prior commits from 100 fetched ancestors, blames at most
+five lines for each of two seed candidates, and ignores broad commits. File scoring and symbol
+selection are separate: file scores retain the lexical/graph/history contract, while functions
+inside each file are selected using direct identifier references and normalized title-term rarity,
+with the original lexical match as a fallback. A callee receives additional evidence only when at
+least two distinct issue-matching functions in the same file call it. The investigator emits
+confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction
+plan. Candidate locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
@@ -155,14 +157,14 @@ enough for a broad quality claim. Manifest versions 2 and 3 are retained only as
 historical artifacts because their pre-fix audit was incorrect. LLM hypotheses are not confirmed
 root causes. Retrieval has bounded Python static/history relations, function-level calls, and a
 single-best-function selector, but not class ownership or qualified symbol names, cross-file
-control-flow propagation, a cross-language graph, semantic test-to-source mapping, multi-symbol
-ranking, or a vector index.
+control-flow beyond bounded two-hop call names, runtime/backend dispatch, a cross-language graph,
+semantic test-to-source mapping, multi-symbol ranking, or a vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> add cross-file control-flow propagation and multi-symbol ranking
+  -> add qualified-symbol/runtime dispatch and multi-symbol ranking
   -> add semantic test-to-source mapping
   -> add cross-language graph evidence
   -> expand high-confidence symbol labels and the suite to 30-50 cases
