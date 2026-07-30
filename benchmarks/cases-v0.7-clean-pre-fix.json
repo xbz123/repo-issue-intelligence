@@ -1,6 +1,6 @@
 {
   "name": "python-real-issue-file-localization",
-  "version": 5,
+  "version": 4,
   "cases": [
     {
       "id": "starlette-streaming-denial-response",
@@ -23,8 +23,7 @@
       "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
       "expected_files": [
         "starlette/responses.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "starlette-session-cookie-refresh",
@@ -50,8 +49,7 @@
       "expected_files": [
         "starlette/middleware/sessions.py",
         "starlette/requests.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "starlette-base-middleware-no-response",
@@ -74,8 +72,7 @@
       "pre_fix_sha": "c78c9aac17a4d68e0647252310044502f1b7da71",
       "expected_files": [
         "starlette/middleware/base.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "starlette-http2-cookie-headers",
@@ -100,8 +97,7 @@
       "pre_fix_sha": "f617177ab955f7e79e0d863a7c28adb6200b4acc",
       "expected_files": [
         "starlette/requests.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "typer-option-envvar",
@@ -126,12 +122,6 @@
       "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
       "expected_files": [
         "typer/core.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "typer/core.py",
-          "symbol": "value_from_envvar"
-        }
       ]
     },
     {
@@ -157,12 +147,6 @@
       "pre_fix_sha": "dc07284d09f284c13cad0bec2f5ee5bebceeb31d",
       "expected_files": [
         "typer/rich_utils.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "typer/rich_utils.py",
-          "symbol": "_make_rich_text"
-        }
       ]
     },
     {
@@ -187,8 +171,7 @@
       "expected_files": [
         "src/textual/screen.py",
         "src/textual/widget.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "textual-remove-children-reflow",
@@ -212,16 +195,6 @@
       "expected_files": [
         "src/textual/_compositor.py",
         "src/textual/widget.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "src/textual/_compositor.py",
-          "symbol": "_arrange_root"
-        },
-        {
-          "file": "src/textual/widget.py",
-          "symbol": "remove_children"
-        }
       ]
     },
     {
@@ -249,8 +222,7 @@
         "src/textual/_keyboard_protocol.py",
         "src/textual/_xterm_parser.py",
         "src/textual/drivers/linux_driver.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "anyio-runvar-memory-leak",
@@ -275,8 +247,7 @@
       "pre_fix_sha": "85b8b6eb2e213c0fc7cbc1c29f71e3d487393bab",
       "expected_files": [
         "src/anyio/_backends/_asyncio.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "anyio-freethreading-runvar",
@@ -302,12 +273,6 @@
       "expected_files": [
         "src/anyio/_backends/_asyncio.py",
         "src/anyio/from_thread.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "src/anyio/from_thread.py",
-          "symbol": "start_blocking_portal"
-        }
       ]
     },
     {
@@ -333,8 +298,7 @@
       "pre_fix_sha": "2ba69a649011e4608ab9485a0dcfe72b6f956ecc",
       "expected_files": [
         "src/anyio/_backends/_trio.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "fastapi-pep695-annotated-dependency",
@@ -359,8 +323,7 @@
       "pre_fix_sha": "ed48cc457f36ea1f999bdf68668966935cd9e47f",
       "expected_files": [
         "fastapi/dependencies/utils.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "fastapi-pydantic-json-form",
@@ -385,8 +348,7 @@
       "pre_fix_sha": "f2687dc1bb01f4cb62eee90e656b61c38c2aaf6a",
       "expected_files": [
         "fastapi/dependencies/utils.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "fastapi-sse-include-router",
@@ -409,8 +371,7 @@
       "pre_fix_sha": "a82e5f2fac102a8b12c0795da80b2cb1d2a8b016",
       "expected_files": [
         "fastapi/routing.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "pytest-metafunc-scope-override",
@@ -436,8 +397,7 @@
       "pre_fix_sha": "a2b04d02c2ef3e99805361bd63b7aa3e6d4f0fe1",
       "expected_files": [
         "_pytest/python.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "pytest-parametrize-fixture-ordering",
@@ -463,8 +423,7 @@
       "pre_fix_sha": "e7355d70771b5f34f78d7012f73bdc8eb79574d6",
       "expected_files": [
         "src/_pytest/fixtures.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "pytest-rootdir-doctest-namespace",
@@ -487,8 +446,7 @@
       "pre_fix_sha": "efc013416e45d9162dc00dca9e4a83e1ef1c4089",
       "expected_files": [
         "src/_pytest/fixtures.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "rich-print-json-no-indent",
@@ -514,8 +472,7 @@
       "expected_files": [
         "rich/console.py",
         "rich/highlighter.py"
-      ],
-      "expected_symbols": []
+      ]
     },
     {
       "id": "rich-ansi-trailing-newline",
@@ -540,12 +497,6 @@
       "pre_fix_sha": "9cb198944f8184df92217efc8b20d3fffa4b4fa0",
       "expected_files": [
         "rich/ansi.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "rich/ansi.py",
-          "symbol": "decode"
-        }
       ]
     }
   ]

@@ -87,16 +87,18 @@ credential failover is not enabled; operators must select the intended credentia
 The OpenCode credential is also stored as `SecretStr` and selected explicitly with
 `--provider opencode`.
 
-Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` fetches
-100 ancestors and checks out each frozen pre-fix SHA, loads the complete Issue snapshot from the
-manifest rather than the live GitHub API, verifies that the labeled fix files exist, and indexes
-only paths returned by `git ls-files`. It runs deterministic retrieval and optionally asks the selected provider only to
-rerank the bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this
-benchmark contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
-normalizes paths and identifiers, rejects dotted-name/URL false path matches, gives explicit
-stack-trace/source-path references the strongest signal, searches bounded source content,
-downranks tests and documentation, retains 20 candidates, and applies bounded graph/history
-evidence. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
+Localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks out each
+frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
+Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
+files exist, and indexes only paths returned by `git ls-files`. It runs deterministic retrieval
+and optionally asks the selected provider only to rerank bounded evidence IDs. Root-cause
+hypotheses are intentionally excluded from this benchmark contract so their schema reliability
+does not contaminate localization metrics. Retrieval normalizes paths and identifiers, rejects
+dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
+signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
+and applies bounded graph/history evidence. Per-candidate evidence caps preserve candidate breadth
+before LLM reranking. Optional symbol labels are aggregated only across labeled cases; exact
+file-plus-symbol matches retain the candidate file rank.
 
 ### Benchmark candidate pipeline
 
@@ -105,7 +107,9 @@ evidence. Per-candidate evidence caps preserve candidate breadth before LLM rera
 ```text
 GitHub closed linked Issues
   -> discover linked fix PRs
-  -> derive pre-fix SHA
+  -> load ordered PR commits
+  -> derive pre-fix SHA from the first PR commit's parent
+  -> reject SHAs inside the fix PR
   -> classify changed production files
   -> blocking and advisory audit checks
   -> needs_review / rejected catalog
@@ -113,11 +117,12 @@ GitHub closed linked Issues
   -> accepted catalog + next frozen manifest version
 ```
 
-Blocking checks require a same-repository merged PR, an Issue that predates the fix, a derivable
-pre-fix SHA, and a bounded non-empty set of existing production source files. Advisory checks flag
-weak Issue descriptions, missing bug/diagnostic signals, ambiguous multi-commit history, and
-missing textual closing references. Automation never changes a candidate to `accepted`; only the
-explicit curation step can do that, and duplicate Issues, fix PRs, and case IDs are rejected.
+Blocking checks require a same-repository merged PR, an Issue that predates the fix, ordered PR
+commit history, a pre-fix SHA outside the PR commit set, and a bounded non-empty set of existing
+production source files. Advisory checks flag weak Issue descriptions, missing bug/diagnostic
+signals, and missing textual closing references. Automation never changes a candidate to
+`accepted`; only the explicit curation step can do that, and duplicate Issues, fix PRs, and case
+IDs are rejected.
 
 `agent_store.py` persists three SQLite records:
 
@@ -138,19 +143,22 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current benchmark contains 20 cases across seven repositories, which is useful for error
-analysis but not statistically strong enough for a broad quality claim. The historical nine-case
-manifest remains frozen for comparisons. LLM hypotheses are not confirmed root causes. Retrieval
-has bounded Python static/history relations, not a control-flow-aware call graph, cross-language
-graph, semantic test-to-source mapping, or vector index.
+The current benchmark contains 20 cases across seven repositories and six manually reviewed
+symbol targets across five cases. This is useful for error analysis but not statistically strong
+enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
+historical artifacts because their pre-fix audit was incorrect. LLM hypotheses are not confirmed
+root causes. Retrieval has bounded Python static/history relations, not hierarchical class-aware
+symbol ranking, a control-flow-aware call graph, cross-language graph, semantic test-to-source
+mapping, or vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
+  -> add hierarchical file-to-symbol ranking
   -> add semantic test-to-source mapping
   -> add control-flow-aware and cross-language graph evidence
-  -> add symbol labels and expand to 30-50 cases
+  -> expand high-confidence symbol labels and the suite to 30-50 cases
 ```
 
 The human review node remains mandatory before any future execution step.

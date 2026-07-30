@@ -52,8 +52,20 @@ def pull_request(number: int = 43) -> dict:
         "merge_commit_sha": MERGE_SHA,
         "commits": 1,
         "head": {"sha": "c" * 40},
-        "base": {"repo": {"full_name": "example/project"}},
+        "base": {
+            "sha": PRE_FIX_SHA,
+            "repo": {"full_name": "example/project"},
+        },
     }
+
+
+def pull_commits() -> list[dict]:
+    return [
+        {
+            "sha": "c" * 40,
+            "parents": [{"sha": PRE_FIX_SHA}],
+        }
+    ]
 
 
 def test_linked_pull_request_numbers_keep_only_same_repository() -> None:
@@ -119,17 +131,67 @@ def test_audit_candidate_derives_pre_fix_sha_and_requires_review() -> None:
         pull_request(),
         [{"filename": "src/validator.py", "status": "modified", "changes": 4}],
         {"sha": MERGE_SHA, "parents": [{"sha": PRE_FIX_SHA}]},
-        [],
+        pull_commits(),
         max_source_files=5,
         suggested_tier=BenchmarkTier.MAIN,
     )
 
     assert candidate.status is CandidateStatus.NEEDS_REVIEW
     assert candidate.pre_fix_sha == PRE_FIX_SHA
-    assert candidate.pre_fix_sha_source == "single_commit_parent"
+    assert candidate.pre_fix_sha_source == "first_pull_commit_parent"
     assert candidate.expected_files == ["src/validator.py"]
     assert candidate.suggested_tier is BenchmarkTier.MAIN
     assert all(check.passed for check in candidate.audit_checks if check.blocking)
+
+
+def test_audit_candidate_uses_first_pull_commit_parent_when_merge_parents_reverse() -> None:
+    request = pull_request()
+    request["commits"] = 2
+    request["head"] = {"sha": "d" * 40}
+    commits = [
+        {"sha": "c" * 40, "parents": [{"sha": PRE_FIX_SHA}]},
+        {"sha": "d" * 40, "parents": [{"sha": "c" * 40}]},
+    ]
+
+    candidate = audit_candidate(
+        "example/project",
+        issue(),
+        request,
+        [{"filename": "src/validator.py", "status": "modified", "changes": 4}],
+        {
+            "sha": MERGE_SHA,
+            "parents": [
+                {"sha": "d" * 40},
+                {"sha": PRE_FIX_SHA},
+            ],
+        },
+        commits,
+        max_source_files=5,
+    )
+
+    assert candidate.status is CandidateStatus.NEEDS_REVIEW
+    assert candidate.pre_fix_sha == PRE_FIX_SHA
+    assert candidate.pre_fix_sha_source == "first_pull_commit_parent"
+
+
+def test_audit_candidate_rejects_pre_fix_commit_inside_pull_request() -> None:
+    leaked_sha = "c" * 40
+    candidate = audit_candidate(
+        "example/project",
+        issue(),
+        pull_request(),
+        [{"filename": "src/validator.py", "status": "modified", "changes": 4}],
+        {"sha": MERGE_SHA, "parents": [{"sha": PRE_FIX_SHA}]},
+        [{"sha": leaked_sha, "parents": [{"sha": leaked_sha}]}],
+        max_source_files=5,
+    )
+
+    assert candidate.status is CandidateStatus.REJECTED
+    assert candidate.pre_fix_sha == leaked_sha
+    assert any(
+        check.code == "pre_fix_outside_pull_commits" and not check.passed
+        for check in candidate.audit_checks
+    )
 
 
 def test_audit_candidate_rejects_test_only_pull_request() -> None:
@@ -139,7 +201,7 @@ def test_audit_candidate_rejects_test_only_pull_request() -> None:
         pull_request(),
         [{"filename": "tests/test_validator.py", "status": "modified", "changes": 4}],
         {"sha": MERGE_SHA, "parents": [{"sha": PRE_FIX_SHA}]},
-        [],
+        pull_commits(),
         max_source_files=5,
     )
 
@@ -185,7 +247,7 @@ class FakeDiscoveryClient:
         return [{"filename": "src/validator.py", "status": "modified", "changes": 4}]
 
     def fetch_pull_request_commits(self, repository, pull_number):
-        raise AssertionError("Single-commit PR should not fetch all commits")
+        return pull_commits()
 
     def fetch_commit(self, repository, commit_sha):
         return {"sha": commit_sha, "parents": [{"sha": PRE_FIX_SHA}]}
@@ -230,7 +292,7 @@ def test_curate_expansion_accepts_only_explicit_manual_selection(tmp_path: Path)
         pull_request(),
         [{"filename": "src/validator.py", "status": "modified", "changes": 4}],
         {"sha": MERGE_SHA, "parents": [{"sha": PRE_FIX_SHA}]},
-        [],
+        pull_commits(),
         max_source_files=5,
         suggested_tier=BenchmarkTier.GENERALIZATION,
     )

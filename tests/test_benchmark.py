@@ -5,11 +5,13 @@ from pathlib import Path
 from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
+    BenchmarkSymbolTarget,
     BenchmarkTier,
     BenchmarkVariant,
     _aggregate,
     evaluate_case,
     load_manifest,
+    prepare_repository,
     run_benchmark,
     tracked_repository_files,
 )
@@ -131,7 +133,7 @@ class ReverseEvidenceAnalyzer:
 def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     manifest = load_manifest(Path("benchmarks/cases.json"))
 
-    assert manifest.version == 3
+    assert manifest.version == 5
     assert len(manifest.cases) == 20
     assert sum(case.tier is BenchmarkTier.MAIN for case in manifest.cases) == 7
     assert sum(case.tier is BenchmarkTier.CALIBRATION for case in manifest.cases) == 4
@@ -141,10 +143,15 @@ def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     assert all(case.issue_snapshot.updated_at == case.issue_updated_at for case in manifest.cases)
     assert all(case.issue_snapshot.title for case in manifest.cases)
     assert all(case.issue_snapshot.body for case in manifest.cases)
+    assert sum(bool(case.expected_symbols) for case in manifest.cases) == 5
+    assert sum(len(case.expected_symbols) for case in manifest.cases) == 6
 
     historical = load_manifest(Path("benchmarks/cases-v0.3.json"))
     assert historical.version == 2
     assert len(historical.cases) == 9
+    clean_file_manifest = load_manifest(Path("benchmarks/cases-v0.7-clean-pre-fix.json"))
+    assert clean_file_manifest.version == 4
+    assert all(not case.expected_symbols for case in clean_file_manifest.cases)
 
 
 def test_evaluate_case_measures_deterministic_file_recall(tmp_path: Path) -> None:
@@ -162,6 +169,72 @@ def test_evaluate_case_measures_deterministic_file_recall(tmp_path: Path) -> Non
     assert result.file_recall_at_20 == 1
     assert result.candidate_pool_recall == 1
     assert result.reciprocal_rank > 0
+
+
+def test_evaluate_case_measures_optional_symbol_recall(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at).model_copy(
+        update={
+            "expected_symbols": [
+                BenchmarkSymbolTarget(
+                    file="src/token_service.py",
+                    symbol="validate_token",
+                )
+            ]
+        }
+    )
+
+    result = evaluate_case(
+        case,
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    aggregate = _aggregate([result])
+
+    assert any(
+        candidate.file == "src/token_service.py"
+        and candidate.symbol == "validate_token"
+        for candidate in result.candidate_symbols
+    )
+    assert result.symbol_recall_at_5 == 1
+    assert result.symbol_reciprocal_rank is not None
+    assert aggregate.symbol_cases == 1
+    assert aggregate.symbol_recall_at_5 == 1
+
+
+def test_benchmark_case_rejects_symbol_outside_expected_files() -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    payload = benchmark_case(updated_at).model_dump()
+    payload["expected_symbols"] = [
+        BenchmarkSymbolTarget(
+            file="src/other.py",
+            symbol="other",
+        )
+    ]
+
+    try:
+        BenchmarkCase(**payload)
+    except ValueError as error:
+        assert "expected symbol files must also appear in expected_files" in str(error)
+    else:
+        raise AssertionError("Expected symbol ground truth outside expected_files to fail")
+
+
+def test_benchmark_case_rejects_multiple_symbols_for_one_file() -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    payload = benchmark_case(updated_at).model_dump()
+    payload["expected_symbols"] = [
+        {"file": "src/token_service.py", "symbol": "validate_token"},
+        {"file": "src/token_service.py", "symbol": "refresh_token"},
+    ]
+
+    try:
+        BenchmarkCase(**payload)
+    except ValueError as error:
+        assert "one target per file" in str(error)
+    else:
+        raise AssertionError("Expected multiple symbol targets for one file to fail")
 
 
 def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None:
@@ -262,6 +335,8 @@ def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) ->
     assert aggregate.failed == 0
     assert aggregate.file_recall_at_5 == 0
     assert aggregate.mean_reciprocal_rank == 0
+    assert aggregate.symbol_cases == 0
+    assert aggregate.symbol_recall_at_5 is None
 
 
 def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> None:
@@ -284,6 +359,35 @@ def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> N
 
     assert included_files == [".gitignore", "src/target.py"]
     assert [record.path for record in repository_map.files] == ["src/target.py"]
+
+
+def test_prepare_repository_skips_fetch_when_commit_exists(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    workspace = tmp_path / "workspace"
+    repository = workspace / "example--project"
+    (repository / ".git").mkdir(parents=True)
+    expected_file = repository / case.expected_files[0]
+    expected_file.parent.mkdir(parents=True)
+    expected_file.write_text("def validate_token():\n    return None\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run_git(arguments, cwd=None):
+        calls.append(arguments)
+        if arguments[:3] == ["remote", "get-url", "origin"]:
+            return "https://github.com/example/project.git"
+        if arguments[:2] == ["rev-parse", "HEAD"]:
+            return case.pre_fix_sha
+        return ""
+
+    monkeypatch.setattr("repo_issue_intelligence.benchmark._run_git", fake_run_git)
+
+    assert prepare_repository(case, workspace) == repository
+    assert ["cat-file", "-e", f"{case.pre_fix_sha}^{{commit}}"] in calls
+    assert not any(arguments[0] == "fetch" for arguments in calls)
 
 
 class UnknownEvidenceAnalyzer(ReverseEvidenceAnalyzer):

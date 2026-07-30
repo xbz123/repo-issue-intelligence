@@ -1,53 +1,62 @@
 # Real-Project File Localization Benchmark
 
-## Current result: Retrieval v4 on the 20-case suite
+## Current result: corrected pre-fix and symbol benchmark
 
-On 2026-07-30, the deterministic runner completed all 20 frozen Issue/Fix-PR cases across
-Starlette, Typer, Textual, AnyIO, FastAPI, pytest, and Rich.
+On 2026-07-30, an integrity audit compared every manifest SHA with the ordered commits of its
+linked fix PR. Eighteen of the previous 20 SHAs were commits inside the fix PR rather than true
+pre-fix commits. Manifest v5 corrects every case to the parent of the first PR commit. The
+discovery path now always loads the ordered PR history and blocks any proposed pre-fix SHA found
+inside the PR commit set.
+
+The deterministic runner successfully checked out all 20 corrected commits, verified every
+expected file, and produced:
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.3500 | 0.8583 | 0.8750 | 1.0000 | 0.5663 | 2,405 ms |
-| Main | 7/7 | 0.5714 | 1.0000 | 1.0000 | 1.0000 | 0.7190 | 1,495 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4105 | 2,343 ms |
-| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 1.0000 | 0.5167 | 3,141 ms |
+| Overall | 20/20 | 0.3000 | 0.8583 | 0.8750 | 1.0000 | 0.5396 | 1,358 ms |
+| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,213 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4105 | 790 ms |
+| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 1.0000 | 0.5222 | 1,722 ms |
 
-The expansion added 11 manually reviewed cases to the historical nine: three AnyIO, three
-FastAPI, three pytest, and two Rich cases. Every case has a frozen public Issue snapshot, linked
-fix PR, reviewed production-file labels, and a pre-fix SHA. The discovery pipeline rejected
-blocking failures automatically but never auto-accepted ground truth; the committed selection
-file records the manual acceptance notes.
+Five cases also contain six manually reviewed function targets from real fix diffs:
 
-Retrieval v4 keeps Retrieval v3's Top-10-band ordering and adds AST load references, title-aware
-dynamic-call/backend links, bounded prior-history co-change evidence, and three controlled
-candidate-expansion slots. The original reranked Top-17 is retained; expansion evidence can only
-occupy ranks 18-20. Git evidence uses at most 50 prior commits from 100 fetched ancestors, blames
-at most five lines for each of two seed candidates, ignores broad commits, and never reads a
-future fix commit.
+| Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol MRR |
+|---|---:|---:|---:|---:|---:|
+| Overall | 5 | 0.0000 | 0.3000 | 0.3000 | 0.1118 |
+| Calibration | 3 | 0.0000 | 0.0000 | 0.0000 | 0.0196 |
+| Generalization | 2 | 0.0000 | 0.7500 | 0.7500 | 0.2500 |
 
-This recovered the three prior misses: Textual's `_compositor.py`, AnyIO's `_asyncio.py`, and
-Rich's `highlighter.py`. Recall@20 increased from `0.9250` to `1.0000`, while Recall@1,
-Recall@5, Recall@10, and MRR stayed exactly equal to Retrieval v3. The result shows that all
-reviewed fix files in this 20-case suite are now present in the candidate pool; it does not imply
-root-cause accuracy or generalize to arbitrary repositories.
+The initial labels are deliberately narrow and come from reviewed production hunks:
 
-The machine-readable artifacts are:
+- Typer `typer/core.py::value_from_envvar`;
+- Typer `typer/rich_utils.py::_make_rich_text`;
+- Textual `src/textual/_compositor.py::_arrange_root` and
+  `src/textual/widget.py::remove_children`;
+- AnyIO `src/anyio/from_thread.py::start_blocking_portal`;
+- Rich `rich/ansi.py::decode`.
 
-- `benchmarks/cases.json` — current manifest version 3;
-- `benchmarks/cases-v0.3.json` — preserved 9-case manifest version 2;
-- `benchmarks/expansion-v0.4-selection.json` — explicit manual selections;
-- `benchmarks/candidates-v0.4.json` — accepted candidate audit records;
-- `benchmarks/results/deterministic-v0.4-20-cases.json` — pre-graph deterministic output;
-- `benchmarks/results/deterministic-v0.5-graph-20-cases.json` — Retrieval v3 output;
-- `benchmarks/results/deterministic-v0.6-history-20-cases.json` — current Retrieval v4 output;
-- `benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json` — Groq GPT-OSS Hybrid output;
-- `benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json` — OpenCode
-  DeepSeek Retrieval v3 output;
-- `benchmarks/results/hybrid-deepseek-v4-flash-v0.6-history-20-cases.json` — current
-  DeepSeek Retrieval v4 output;
-- `benchmarks/results/model-evaluation-v0.6.json` — repeated-run and free-model summary.
+Symbol aggregates exclude the 15 unlabeled cases instead of treating them as misses. A symbol
+match requires the exact reviewed file and symbol and retains the parent file's candidate rank.
+The current contract allows one reviewed symbol per expected file because the investigator emits
+one best symbol for each candidate file.
+The large file/symbol gap shows that the current system often reaches the correct file but selects
+only its best lexical class or function, so hierarchical file-to-symbol retrieval is the next
+quality target.
 
-### Retrieval v4 DeepSeek Hybrid result
+Current machine-readable artifacts:
+
+- `benchmarks/cases.json` — current manifest version 5;
+- `benchmarks/cases-v0.7-clean-pre-fix.json` — corrected file-only manifest version 4;
+- `benchmarks/candidates-v0.7.json` — corrected expansion audit records;
+- `benchmarks/results/deterministic-v0.7-clean-pre-fix-20-cases.json` — corrected file-only run;
+- `benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json` — current run.
+
+All result files generated from manifest versions 2 and 3 remain committed for provenance but are
+superseded as localization-quality evidence. Their provider latency, structured-output validity,
+and fallback behavior still document integration behavior; their Recall and MRR values must not
+be compared with manifest v5.
+
+### Superseded Retrieval v4 DeepSeek Hybrid result
 
 DeepSeek V4 Flash Free reranked the Retrieval v4 candidate pool through OpenCode's
 OpenAI-compatible chat-completions endpoint:

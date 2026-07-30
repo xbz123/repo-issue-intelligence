@@ -132,7 +132,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.5-graph-20-cases.json
+  --output benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=12000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases.json \
@@ -156,10 +156,11 @@ uv run rii benchmark benchmarks/cases.json \
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget. Manifest version 3 embeds
-20 complete Issue snapshots across seven repositories, and repository indexing is restricted to
-`git ls-files`; live Issue edits and ignored artifacts in reused workspaces therefore cannot
-change benchmark inputs.
+model sees a broad candidate set under the same total character budget. Manifest version 5 embeds
+20 complete Issue snapshots across seven repositories, corrected pre-fix SHAs, and six manually
+reviewed symbol targets across five cases. Repository indexing is restricted to `git ls-files`;
+live Issue edits and ignored artifacts in reused workspaces therefore cannot change benchmark
+inputs. A cached commit is reused without a network request.
 
 Discover and curate additional Issue/Fix-PR cases:
 
@@ -174,18 +175,17 @@ uv run rii benchmark-audit pytest-dev/pytest 634 1766 \
   --tier generalization \
   --output benchmarks/candidates/pytest-634-pr-1766.json
 
-uv run rii benchmark-curate \
-  benchmarks/cases-v0.3.json \
-  benchmarks/expansion-v0.4-selection.json \
-  benchmarks/candidates-v0.4.json \
-  --catalog-output benchmarks/candidates/rebuilt-v0.4.json \
-  --manifest-output benchmarks/candidates/rebuilt-cases-v0.4.json
+uv run rii benchmark-audit agronholm/anyio 1220 1224 \
+  --tier generalization \
+  --output benchmarks/candidates/anyio-1220-pr-1224.json
 ```
 
 Discovery only produces `needs_review` or `rejected` candidates. A case enters a frozen manifest
 only through a committed manual selection file with review notes; generated raw catalogs under
-`benchmarks/candidates/` are intentionally ignored. The committed accepted catalog can be loaded
-again to reproduce the manifest without relying on a later, mutable GitHub search result.
+`benchmarks/candidates/` are intentionally ignored. Discovery loads the ordered PR commit history,
+uses the parent of the first PR commit as pre-fix SHA, and rejects a proposed pre-fix SHA that
+appears inside the fix PR. The historical v0.4 catalog is retained for provenance;
+`benchmarks/candidates-v0.7.json` contains the corrected expansion audit records.
 
 ## Analyze a real GitHub repository
 
@@ -272,30 +272,21 @@ The current frozen benchmark contains 20 closed issues with linked fix PRs acros
 - Calibration: Typer (2) and Rich (2).
 - Generalization: Textual (3), AnyIO (3), and pytest (3).
 
-Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
-eligible for candidate retrieval.
+Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
+pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
-On the 20-case manifest, Retrieval v4 completed every case and achieved File Recall@1 `0.3500`,
-Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5663`. AST load
-references, dynamic backend/call links, bounded prior-history co-change evidence, and three
-controlled expansion slots recovered all labeled fix files without changing the prior Top-10
-metrics. The wider suite deliberately includes harder lexical and multi-file cases; its metrics
-must not be compared as if it were the same dataset as the historical 9-case run.
+On corrected manifest v5, Retrieval v4 completed every case and achieved File Recall@1 `0.3000`,
+Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5396`. On the five cases
+with manually reviewed symbol targets, Symbol Recall@1 was `0.0000`, Recall@5/10 was `0.3000`,
+and symbol MRR was `0.1118`. The gap between file and symbol metrics is now the primary retrieval
+limitation.
 
-On the preserved 9-case manifest, Retrieval v2 achieved deterministic Recall@5 `0.7593` and MRR
-`0.5083`; GPT-OSS 20B reranking achieved Recall@5 `0.8148` and MRR `0.8333`.
-
-On the current 20-case manifest, GPT-OSS 20B Hybrid reranking achieved Recall@1 `0.4167`,
-Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR `0.6738`. Seventeen of 20
-cases returned valid model output; three exhausted two attempts and used deterministic fallback.
-This improved aggregate Recall@1 and MRR over deterministic Retrieval v3, but calibration-tier
-MRR decreased, so no per-project universal improvement is claimed.
-
-DeepSeek V4 Flash Free over Retrieval v4 achieved Recall@1 `0.5917`, Recall@5 `0.9833`,
-Recall@10/20 `1.0000`, and MRR `0.8500`. All 20 cases returned valid output on the first attempt
-with no fallback; average model latency was `16.5 s`. Three earlier complete runs measured
-Retrieval v3 stability at MRR `0.8408 ± 0.0287`, so the project reports model variance rather than
-selecting only the best run.
+An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
+PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only
+as superseded historical artifacts, not as valid pre-fix comparisons. The corrected manifest has
+not yet received a new LLM reranking run. Earlier provider latency, structured-output, and fallback
+observations remain implementation evidence, but their localization metrics must not be compared
+with manifest v5.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.
@@ -303,11 +294,9 @@ pool across the expanded suite. It still does not establish root-cause accuracy.
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.
 
-On the historical 9-case suite, a fixed-seed comparison found identical localization metrics for
-GPT-OSS 20B and 120B. The 120B run was 16.31% slower and used 48.38% more output tokens, so 20B
-remains the default reranker. On a separate three-case full-schema smoke test, 120B succeeded on
-the first attempt in 3/3 cases versus 2/3 for 20B; this sample is too small to establish a
-production routing rule.
+Historical fixed-seed GPT-OSS 20B/120B and free-model screens are retained to document provider
+integration behavior. Because they used superseded benchmark inputs, they do not establish a
+current localization-quality or production-routing conclusion.
 
 ## Safety and scope
 

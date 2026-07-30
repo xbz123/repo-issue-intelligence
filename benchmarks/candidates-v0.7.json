@@ -1,263 +1,14 @@
 {
-  "name": "python-real-issue-file-localization",
-  "version": 5,
-  "cases": [
+  "name": "v0.7-pre-fix-corrected-expansion",
+  "version": 2,
+  "curated_at": "2026-07-30T00:00:00Z",
+  "base_manifest_name": "starlette-typer-textual-real-issues",
+  "base_manifest_version": 2,
+  "candidates": [
     {
-      "id": "starlette-streaming-denial-response",
-      "tier": "main",
-      "repository": "encode/starlette",
-      "issue_number": 3048,
-      "issue_updated_at": "2026-03-15T11:59:17Z",
-      "issue_snapshot": {
-        "number": 3048,
-        "title": "Can not use `send_denial_response` with `StreamingResponse`",
-        "body": "\n### Discussed in https://github.com/Kludex/starlette/discussions/2566\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **WSH032** April  6, 2024</sup>\n## Describe the bug\r\n\r\nIf we use `FileResponse` or `StreamingResponse` when sending the Websocket Denial Response, a `RuntimeError` will occur.\r\n\r\n## To Reproduce\r\n\r\n```py\r\nfrom fastapi import FastAPI, WebSocket\r\nfrom fastapi.responses import StreamingResponse\r\nfrom uvicorn import run\r\n\r\napp = FastAPI()\r\n\r\n\r\n@app.websocket(\"/\")\r\nasync def _(ws: WebSocket):\r\n    async def foo():\r\n        yield \"hello\"\r\n        yield \"world\"\r\n\r\n    resp = StreamingResponse(content=foo())\r\n    await ws.send_denial_response(resp)\r\n\r\n\r\nrun(app)\r\n```\r\n\r\nSteps to reproduce the behavior:\r\n1. Launch the server\r\n2. Try to establish the websocket connection\r\n3. You will see following error\r\n\r\n```console\r\n  |   File \"e:\\GitHub\\fastapi-proxy\\Untitled-8.py\", line 16, in _\r\n  |     await ws.send_denial_response(resp)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 209, in send_denial_response        \r\n  |     await response(self.scope, self.receive, self.send)\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 258, in __call__\r\n  |     async with anyio.create_task_group() as task_group:\r\n  |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 678, in __aexit__\r\n  |     raise BaseExceptionGroup(\r\n  | exceptiongroup.ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\r\n  +-+---------------- 1 ----------------\r\n    | Traceback (most recent call last):\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 261, in wrap\r\n    |     await func()\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\responses.py\", line 243, in stream_response\r\n    |     await send(\r\n    |   File \"E:\\GitHub\\fastapi-proxy\\.venv\\lib\\site-packages\\starlette\\websockets.py\", line 75, in send\r\n    |     raise RuntimeError(\r\n    | RuntimeError: Expected ASGI message \"websocket.accept\",\"websocket.close\" or \"websocket.http.response.start\",but got 'http.response.start'\r\n    +------------------------------------\r\n```\r\n\r\n## Expected behavior\r\n\r\n`FileResponse` and `StreamingResponse` override the `__call__` method, but they do not add the `\"websocket.\"` prefix like the parent class `Response` does.\r\n\r\nhttps://github.com/encode/starlette/blob/4e453ce91940cc7c995e6c728e3fdf341c039056/starlette/responses.py#L151-L154\r\n\r\nIf this is expected behavior, I didn't see any relevant information in the documentation, and at least the type checker didn't raise any errors\r\n\r\n## Configuration\r\n```\r\nstarlette == 0.37.2\r\n```\r\n</div>",
-        "labels": [],
-        "comments_count": 1,
-        "created_at": "2025-10-29T08:14:32Z",
-        "updated_at": "2026-03-15T11:59:17Z",
-        "html_url": "https://github.com/Kludex/starlette/issues/3048",
-        "author": "Kludex"
-      },
-      "fix_pr_number": 3189,
-      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
-      "expected_files": [
-        "starlette/responses.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "starlette-session-cookie-refresh",
-      "tier": "main",
-      "repository": "encode/starlette",
-      "issue_number": 2019,
-      "issue_updated_at": "2026-03-01T20:30:20Z",
-      "issue_snapshot": {
-        "number": 2019,
-        "title": "SessionMiddleware sends a new set-cookie for every request, with unintended results",
-        "body": "### Discussed in https://github.com/encode/starlette/discussions/2018\r\n\r\n<div type='discussions-op-text'>\r\n\r\n<sup>Originally posted by **sm-Fifteen** January 27, 2023</sup>\r\nThe way SessionMiddleware currently works is that it encodes session data in a signed base64 object with timestamp, in a format not entirely dissimilar to (but incompatible with) JWT. Because of the way it works, being run right before the headers for an HTTP response are sent, and because it doesn't perform many checks besides whether or not there is session data to encode, it will try to update the session cookie whenever a route is called. This is somewhat wasteful, as session data is not usually updated on every request, but it leads to interesting issues as well.\r\n\r\nI have a FastAPI application where login is handeled via a session cookie with a separate login process. Several routes are unlocked based on whether or not the cookie is present and based on the user authorizations recorded in said session cookie. When the frontend fetches API data, if the user is logged in, every response contains a new `Set-Cookie` header, which *Firefox ignores, but Chrome acknowledges*. None of the API routes alter session data, so the cookie value is always the same, save for the timestamp and signature at the end. This actually runs into [an interesting Chrome issue](https://bugs.chromium.org/p/chromium/issues/detail?id=696204#c107) where responses to fetch requests that arrive after the page has been navigated away from still alter the session cookie, even if if the new page changed the session data on load. This means I have this strange, Chrome-exclusive, race-condition-y bug that matches lepture/authlib#334, where the session state data setup by the Oauth flow before redirecting to the third party login form may get clobbered if some `/api/slow_route` query was pending when the user clicked the login button.\r\n\r\nIt's unclear if it's actually a chrome bug or unintended behavior from everything working as intended. If Starlette wasn't updating cookies for every request, and the ``Set-Cookie`` was actually important here, it's difficult to argue whether or not Chrome should have ignored it.\r\n\r\nSee here the Starlette test case from the Chromium bug report, which doesn't use SessionMiddleware, but shows the Chrome behavior in action.\r\n\r\n```py\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse\r\nfrom starlette.routing import Route\r\nimport uvicorn\r\nimport datetime\r\nfrom asyncio import sleep\r\n\r\nhtml_content = \"\"\"\r\n    <!DOCTYPE html>\r\n    <html>\r\n        <head>\r\n            <meta http-equiv=\"refresh\" content=\"2;url=/set_cookie_and_redirect\" />\r\n            <script>fetch(\"/set_cookie_on_fetch\")</script>\r\n        </head>\r\n        <body>\r\n            Calling slow route via fetch() before changing page.\r\n        </body>\r\n    </html>\r\n\"\"\"\r\n\r\n\r\nasync def homepage(request):\r\n    return HTMLResponse(html_content)\r\n\r\nasync def set_cookie_on_fetch(request):\r\n    res = JSONResponse({'hello':'world'})\r\n    await sleep(5)\r\n    res.set_cookie(\"my_cookie\", \"a__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def set_cookie_and_redirect(request):\r\n    res = RedirectResponse(\"/final\")\r\n    res.set_cookie(\"my_cookie\", \"b__\" + datetime.datetime.now().isoformat())\r\n    return res\r\n\r\nasync def final(request):\r\n    cookie_val = request.cookies.get('my_cookie')\r\n    cookie_is_b = cookie_val.partition(\"__\")[0] == 'b'\r\n\r\n    if (cookie_is_b):\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", all is well. Try refreshing the page.\", 200)\r\n    else:\r\n        res = PlainTextResponse(\"Cookie value is \\\"\" + cookie_val + \"\\\", it shouldn't be.\", 400)\r\n    return res\r\n\r\nroutes = [\r\n    Route('/', homepage),\r\n    Route('/set_cookie_on_fetch', set_cookie_on_fetch),\r\n    Route('/set_cookie_and_redirect', set_cookie_and_redirect),\r\n    Route('/final', final),\r\n]\r\n\r\napp = Starlette(debug=True, routes=routes)\r\nuvicorn.run(app, host=\"0.0.0.0\", port=8000)\r\n```</div>\n\n<!-- POLAR PLEDGE BADGE START -->\n> [!IMPORTANT]\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\n> - We receive the funding once the issue is completed & confirmed by you.\n> - Thank you in advance for helping prioritize & fund our backlog.\n\n<a href=\"https://polar.sh/encode/starlette/issues/2019\">\n<picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg?darkmode=1\">\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2019/pledge.svg\">\n</picture>\n</a>\n<!-- POLAR PLEDGE BADGE END -->\n",
-        "labels": [
-          "need confirmation"
-        ],
-        "comments_count": 13,
-        "created_at": "2023-01-27T19:49:14Z",
-        "updated_at": "2026-03-01T20:30:20Z",
-        "html_url": "https://github.com/Kludex/starlette/issues/2019",
-        "author": "Kludex"
-      },
-      "fix_pr_number": 3166,
-      "pre_fix_sha": "fd53a8f20bb1560190868359fa39cf07fb776f42",
-      "expected_files": [
-        "starlette/middleware/sessions.py",
-        "starlette/requests.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "starlette-base-middleware-no-response",
-      "tier": "main",
-      "repository": "encode/starlette",
-      "issue_number": 2516,
-      "issue_updated_at": "2025-07-30T06:54:49Z",
-      "issue_snapshot": {
-        "number": 2516,
-        "title": "`RuntimeError(\"No response returned\")` in `BaseHTTPMiddleware`",
-        "body": "Previously, a \"No response returned\"-error has been discussed in this discussion: https://github.com/encode/starlette/discussions/1527, and was supposedly fixed in this PR: https://github.com/encode/starlette/pull/1715\r\n\r\nHowever, the bug is still present. It's a race condition, so quite tough to reproduce, but the following reproducer works.\r\n\r\nReproducer\r\n--\r\n\r\nUse anyio 4.2.0 It does happen also with anyio 3.0.0, but it happens much more regularly on 4.2.\r\n\r\nFirst, apply the following patch to the Starlette codebase, so that we have a breakpoint in case it happens:\r\n```diff\r\n--- a/starlette/middleware/base.py\r\n+++ b/starlette/middleware/base.py\r\n@@ -134,7 +134,8 @@ class BaseHTTPMiddleware:\r\n             async def send_no_error(message: Message) -> None:\r\n                 try:\r\n@@ -163,6 +164,7 @@ class BaseHTTPMiddleware:\r\n             except anyio.EndOfStream:\r\n                 if app_exc is not None:\r\n                     raise app_exc\r\n+                breakpoint()\r\n                 raise RuntimeError(\"No response returned.\")\r\n\r\n             assert message[\"type\"] == \"http.response.start\"\r\n```\r\n\r\nThen run this code:\r\n\r\n```python\r\nimport asyncio\r\nfrom hypercorn.asyncio import serve\r\nfrom hypercorn.config import Config\r\n\r\nfrom starlette.applications import Starlette\r\nfrom starlette.responses import JSONResponse\r\nfrom starlette.routing import Route\r\nfrom starlette.middleware.base import BaseHTTPMiddleware\r\nfrom starlette.requests import Request\r\nfrom starlette.responses import Response\r\nfrom starlette.middleware.base import RequestResponseEndpoint\r\nfrom starlette.middleware import Middleware\r\n\r\n\r\nclass DummyMiddleware(BaseHTTPMiddleware):\r\n    async def dispatch(\r\n        self, request: Request, call_next: RequestResponseEndpoint\r\n    ) -> Response:\r\n        return await call_next(request)\r\n\r\n\r\nasync def homepage(request):\r\n    return JSONResponse({})\r\n\r\n\r\napp = Starlette(\r\n    routes=[\r\n        Route(\"/\", homepage),\r\n    ],\r\n    middleware=[Middleware(DummyMiddleware) for i in range(100)],  # Yes, 100x the same middleware.\r\n)\r\n\r\nconfig = Config.from_mapping({})\r\nconfig.bind = [\"127.0.0.1:8000\"]\r\nasyncio.run(serve(app, config))\r\n```\r\n\r\nOpen either Firefox or Chrome, navigate to http://localhost:8000 and hold down command-r (refresh) to repeatedly have the browser refresh the page. After a couple of seconds, we'll enter the breakpoint.\r\n\r\n(Feel free to turn this issue into a discussion if that's more appropriate. I'm also looking for a fix but have a hard time understanding `BaseHTTPMiddleware`.)\r\n\r\nedit: I updated the above snippet and added the missing imports.\r\n\r\nThis PR contains a possible fix: https://github.com/encode/starlette/pull/2519\r\n\r\n<!-- POLAR PLEDGE BADGE START -->\r\n> [!IMPORTANT]\r\n> - We're using [Polar.sh](https://polar.sh/encode) so you can upvote and help fund this issue.\r\n> - We receive the funding once the issue is completed & confirmed by you.\r\n> - Thank you in advance for helping prioritize & fund our backlog.\r\n\r\n<a href=\"https://polar.sh/encode/starlette/issues/2516\">\r\n<picture>\r\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://polar.sh/api/github/encode/starlette/issues/2516/pledge.svg?darkmode=1\">\r\n  <img alt=\"Fund with Polar\" src=\"https://polar.sh/api/github/encode/starlette/issues/2516/pledge.svg\">\r\n</picture>\r\n</a>\r\n<!-- POLAR PLEDGE BADGE END -->\r\n",
-        "labels": [],
-        "comments_count": 17,
-        "created_at": "2024-02-16T11:26:28Z",
-        "updated_at": "2025-07-30T06:54:49Z",
-        "html_url": "https://github.com/Kludex/starlette/issues/2516",
-        "author": "jonathanslenders"
-      },
-      "fix_pr_number": 2620,
-      "pre_fix_sha": "c78c9aac17a4d68e0647252310044502f1b7da71",
-      "expected_files": [
-        "starlette/middleware/base.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "starlette-http2-cookie-headers",
-      "tier": "main",
-      "repository": "encode/starlette",
-      "issue_number": 2977,
-      "issue_updated_at": "2025-09-20T21:43:27Z",
-      "issue_snapshot": {
-        "number": 2977,
-        "title": "Request Header cookie parsing doesn't follow RFC 7540 spec",
-        "body": "Only the first cookie in a header gets parsed. but multiple \"cookie\" headers may be sent and the server should concatenate them per [RFC 7540](https://datatracker.ietf.org/doc/html/rfc7540)\n\n```\n...\n   If there are multiple Cookie header fields after\n   decompression, these MUST be concatenated into a single octet string\n   using the two-octet delimiter of 0x3B, 0x20 (the ASCII string \"; \")\n   before being passed into a non-HTTP/2 context, such as an HTTP/1.1\n   connection, or a generic HTTP server application.\n\n   Therefore, the following two lists of Cookie header fields are\n   semantically equivalent.\n\n     cookie: a=b; c=d; e=f\n\n     cookie: a=b\n     cookie: c=d\n     cookie: e=f\n```\n\nThe issue lies here\nhttps://github.com/encode/starlette/blob/6ee94f2cac955eeae68d2898a8dec8cf17b48736/starlette/requests.py#L143\n\n---\n\n- [ ] Initially raised as discussion #2916 \n",
-        "labels": [
-          "bug"
-        ],
-        "comments_count": 2,
-        "created_at": "2025-08-05T18:50:15Z",
-        "updated_at": "2025-09-20T21:43:27Z",
-        "html_url": "https://github.com/Kludex/starlette/issues/2977",
-        "author": "brian316"
-      },
-      "fix_pr_number": 3029,
-      "pre_fix_sha": "f617177ab955f7e79e0d863a7c28adb6200b4acc",
-      "expected_files": [
-        "starlette/requests.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "typer-option-envvar",
-      "tier": "calibration",
-      "repository": "fastapi/typer",
-      "issue_number": 1787,
-      "issue_updated_at": "2026-05-26T17:51:15Z",
-      "issue_snapshot": {
-        "number": 1787,
-        "title": "bug: envvar not working for `typer.Options` with `typer==0.26.0`",
-        "body": "Confirmed that this is a regression, we're working on this.\n\n### Discussed in https://github.com/fastapi/typer/discussions/1786\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **wpk-nist-gov** May 26, 2026</sup>\n### First Check\n\n- [X] I added a very descriptive title here.\n- [X] I used the GitHub search to find a similar question and didn't find it.\n- [X] I searched the documentation, with the integrated search.\n- [X] I already searched in Google \"How to X\" and didn't find any information.\n- [X] I already read and followed all the tutorials in the docs and didn't find an answer.\n\n### Example Code\n\n```python\nfrom typing import Annotated\n\nimport typer\n\napp = typer.Typer()\n\n\n@app.command(\"arg\")\ndef from_argument(user: Annotated[str, typer.Argument(envvar=\"ME\")]):\n    print(f\"Hello {user}\")\n\n\n@app.command(\"opt\")\ndef from_option(user: Annotated[str, typer.Option(envvar=\"ME\")]):\n    print(f\"Hello {user}\")\n\n\nif __name__ == \"__main__\":\n    app()\n```\n\n\n### Description\n\nThe `envvar` option is not respected for `typer.Option`.  It is respected for `typer.Argument`.  For the above code snippert, with `typer==0.26.0`, I get\n\n```bash\n❯ python tmp.py arg foo\nHello foo\n❯ ME=bar python tmp.py arg\nHello bar\n❯ python tmp.py opt --user foo\nHello foo\n❯ ME=bar python tmp.py opt\nUsage: tmp.py opt [OPTIONS]\n....\n```\n\nWith `typer<0.26.0`, the last one works as expected printing `Hello bar`. \n\n\n\n### Operating System\n\nmacOS\n\n### Operating System Details\n\n_No response_\n\n### Project Version\n\n0.26.0\n\n### Python Version\n\n3.14\n\n### Additional Context\n\n_No response_</div>",
-        "labels": [
-          "bug"
-        ],
-        "comments_count": 1,
-        "created_at": "2026-05-26T17:11:30Z",
-        "updated_at": "2026-05-26T17:51:15Z",
-        "html_url": "https://github.com/fastapi/typer/issues/1787",
-        "author": "svlandeg"
-      },
-      "fix_pr_number": 1788,
-      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
-      "expected_files": [
-        "typer/core.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "typer/core.py",
-          "symbol": "value_from_envvar"
-        }
-      ]
-    },
-    {
-      "id": "typer-rich-help-width",
-      "tier": "calibration",
-      "repository": "fastapi/typer",
-      "issue_number": 1159,
-      "issue_updated_at": "2026-02-10T16:52:53Z",
-      "issue_snapshot": {
-        "number": 1159,
-        "title": "[BUG] help line length miscalculated when using stylized text",
-        "body": "\n### Discussed in https://github.com/fastapi/typer/discussions/1101\n\n<div type='discussions-op-text'>\n\n<sup>Originally posted by **zmeir** December 23, 2024</sup>\n### First Check\n\n- [X] I added a very descriptive title here.\n- [X] I used the GitHub search to find a similar question and didn't find it.\n- [X] I searched the Typer documentation, with the integrated search.\n- [X] I already searched in Google \"How to X in Typer\" and didn't find any information.\n- [X] I already read and followed all the tutorials in the docs and didn't find an answer.\n- [X] I already checked if it is not related to Typer but to [Click](https://github.com/pallets/click).\n\n### Commit to Help\n\n- [X] I commit to help with one of those options 👆\n\n### Example Code\n\n```python\nfrom typing import Annotated\r\n\r\nimport typer\r\n\r\n\r\napp = typer.Typer()\r\n\r\n\r\n@app.command()\r\ndef example(\r\n    a: Annotated[str, typer.Option(help=\"This is A\")],\r\n    b: Annotated[str, typer.Option(help=f\"This is {typer.style('B', underline=True)}\")],\r\n):\r\n    pass\r\n\r\n\r\nif __name__ == \"__main__\":\r\n    app()\n```\n\n\n### Description\n\nWhen using `typer.style` in the help text of a command option, the rightmost `|` in the \"frame\" of the Options output is misaligned. This seems to be due to a miscalculation of the help line length, caused by the invisible style characters.\r\n\r\nUsing the example script - run `python example.py --help` and you should get this output:\r\n![image](https://github.com/user-attachments/assets/ed8dd11b-f32f-45da-8e7a-6542535b0a97)\r\n(highlighted the misaligned part)\n\n### Operating System\n\nmacOS\n\n### Operating System Details\n\nmacOS version: 13.7.1 (22H221)\n\n### Typer Version\n\n0.15.1\n\n### Python Version\n\n3.10.13\n\n### Additional Context\n\n_No response_</div>",
-        "labels": [
-          "bug"
-        ],
-        "comments_count": 6,
-        "created_at": "2025-02-20T06:50:34Z",
-        "updated_at": "2026-02-10T16:52:53Z",
-        "html_url": "https://github.com/fastapi/typer/issues/1159",
-        "author": "zmeir"
-      },
-      "fix_pr_number": 1356,
-      "pre_fix_sha": "dc07284d09f284c13cad0bec2f5ee5bebceeb31d",
-      "expected_files": [
-        "typer/rich_utils.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "typer/rich_utils.py",
-          "symbol": "_make_rich_text"
-        }
-      ]
-    },
-    {
-      "id": "textual-selection-common-ancestor",
-      "tier": "generalization",
-      "repository": "Textualize/textual",
-      "issue_number": 6452,
-      "issue_updated_at": "2026-03-29T03:56:10Z",
-      "issue_snapshot": {
-        "number": 6452,
-        "title": "Selection crash with 'ValueError: No common ancestor found'",
-        "body": "This might seem like a contrived example, but it honestly happened my first time trying out the new auto-scrolling on select feature.\n\nI ran the textual demo and started trying to select the text on the home page. The notification toast ends up getting selected as well, which actually prevents the auto-scrolling.\n\n![Screenshot](https://github.com/user-attachments/assets/e2136394-f061-4959-ba38-5f25c5a2eedc)\n\nAfter the waiting for the notification to timeout and moving the mouse to try to auto-scroll the selection, the app crashes with `ValueError: No common ancestor found`.\n\nPerhaps the notifications just shouldn't be included in the selection, but presumably this could be a problem with any widget that could be removed from the DOM?",
-        "labels": [],
-        "comments_count": 3,
-        "created_at": "2026-03-28T12:42:11Z",
-        "updated_at": "2026-03-29T03:56:10Z",
-        "html_url": "https://github.com/Textualize/textual/issues/6452",
-        "author": "TomJGooding"
-      },
-      "fix_pr_number": 6455,
-      "pre_fix_sha": "e84eacc1899f940ea068c4ae5c7eca2dd4a489db",
-      "expected_files": [
-        "src/textual/screen.py",
-        "src/textual/widget.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "textual-remove-children-reflow",
-      "tier": "generalization",
-      "repository": "Textualize/textual",
-      "issue_number": 6205,
-      "issue_updated_at": "2025-11-03T17:35:46Z",
-      "issue_snapshot": {
-        "number": 6205,
-        "title": "Height not refreshed after remove_childre",
-        "body": "Have you checked closed issues? Yes\n\nHave you checked against the most recent version of Textual? Yes\n\n## The bug\n\nHere as an example to reproduce.\n\n```python\nfrom textual.app import App, ComposeResult\nfrom textual.containers import VerticalGroup\nfrom textual.widgets import Static\nfrom textual.binding import Binding\n\n\nclass ExampleApp(App):\n    BINDINGS = [Binding(\"c\", \"clear\", priority=True)]\n\n    def compose(self) -> ComposeResult:\n        yield Static(\"Hello\")\n        with VerticalGroup():\n            for i in range(10):\n                yield Static(str(i))\n        yield Static(\"World\")\n\n    async def action_clear(self) -> None:\n        vs = self.query_one(VerticalGroup)\n        await vs.remove_children()\n\n\nif __name__ == \"__main__\":\n    app = ExampleApp()\n    app.run()\n```\n\nAfter pressing \"c\" the children of VerticalGroup are removed but it is not being shrunk. The issue seems to first appear in textual==6.3.0",
-        "labels": [],
-        "comments_count": 2,
-        "created_at": "2025-10-31T21:37:41Z",
-        "updated_at": "2025-11-03T17:35:46Z",
-        "html_url": "https://github.com/Textualize/textual/issues/6205",
-        "author": "lyovushka"
-      },
-      "fix_pr_number": 6206,
-      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
-      "expected_files": [
-        "src/textual/_compositor.py",
-        "src/textual/widget.py"
-      ],
-      "expected_symbols": [
-        {
-          "file": "src/textual/_compositor.py",
-          "symbol": "_arrange_root"
-        },
-        {
-          "file": "src/textual/widget.py",
-          "symbol": "remove_children"
-        }
-      ]
-    },
-    {
-      "id": "textual-kitty-keyboard-protocol",
-      "tier": "generalization",
-      "repository": "Textualize/textual",
-      "issue_number": 6417,
-      "issue_updated_at": "2026-05-16T07:54:48Z",
-      "issue_snapshot": {
-        "number": 6417,
-        "title": "Support more of the Kitty keyboard protocol",
-        "body": "In particular, support key release event so an app could detect long-presses.",
-        "labels": [
-          "Mistral"
-        ],
-        "comments_count": 3,
-        "created_at": "2026-03-13T02:01:44Z",
-        "updated_at": "2026-05-16T07:54:48Z",
-        "html_url": "https://github.com/Textualize/textual/issues/6417",
-        "author": "willmcgugan"
-      },
-      "fix_pr_number": 6542,
-      "pre_fix_sha": "f1929043fc5a9346a7a13649c1c2bc6ac4199a3b",
-      "expected_files": [
-        "src/textual/_keyboard_protocol.py",
-        "src/textual/_xterm_parser.py",
-        "src/textual/drivers/linux_driver.py"
-      ],
-      "expected_symbols": []
-    },
-    {
-      "id": "anyio-runvar-memory-leak",
-      "tier": "generalization",
+      "id": "agronholm-anyio-issue-1203-pr-1211",
       "repository": "agronholm/anyio",
-      "issue_number": 1203,
-      "issue_updated_at": "2026-07-24T20:55:38Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 1203,
         "title": "_run_vars memory leak",
@@ -272,18 +23,132 @@
         "author": "art-dsit"
       },
       "fix_pr_number": 1211,
+      "fix_pr_title": "Break ref-cycle between loop and root_task via RunVar",
+      "fix_pr_url": "https://github.com/agronholm/anyio/pull/1211",
+      "fix_pr_merged_at": "2026-07-24T20:55:37Z",
+      "merge_commit_sha": "545bd4a056b6f9e3491a87601427ccf3dca50e45",
       "pre_fix_sha": "85b8b6eb2e213c0fc7cbc1c29f71e3d487393bab",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/anyio/_backends/_asyncio.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "docs/versionhistory.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/anyio/_backends/_asyncio.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 11,
+          "changes": 24,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_to_thread.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 28,
+          "deletions": 1,
+          "changes": 29,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: agronholm/anyio"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-24T20:55:37Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-07T13:00:39+00:00, pr_merged_at=2026-07-24T20:55:37+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2749 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1211 closes Issue #1203.",
+        "The reviewed diff modifies one existing AnyIO asyncio backend source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "anyio-freethreading-runvar",
-      "tier": "generalization",
+      "id": "agronholm-anyio-issue-1220-pr-1224",
       "repository": "agronholm/anyio",
-      "issue_number": 1220,
-      "issue_updated_at": "2026-07-19T20:30:02Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 1220,
         "title": "Test failures with Python 3.14 freethreading",
@@ -298,24 +163,163 @@
         "author": "mgorny"
       },
       "fix_pr_number": 1224,
+      "fix_pr_title": "support free-threaded python3.14",
+      "fix_pr_url": "https://github.com/agronholm/anyio/pull/1224",
+      "fix_pr_merged_at": "2026-07-19T20:30:01Z",
+      "merge_commit_sha": "9f456ceaf01b6b0ff41a50e9b91008fadf3e4721",
       "pre_fix_sha": "c384f99687c64c59ed8a11c3a0f11a2d57daff71",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/anyio/_backends/_asyncio.py",
         "src/anyio/from_thread.py"
       ],
-      "expected_symbols": [
+      "changed_files": [
         {
-          "file": "src/anyio/from_thread.py",
-          "symbol": "start_blocking_portal"
+          "path": ".github/workflows/test.yml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/versionhistory.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/anyio/_backends/_asyncio.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 1,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/anyio/from_thread.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 1,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_to_thread.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
         }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: agronholm/anyio"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-19T20:30:01Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-13T14:57:39+00:00, pr_merged_at=2026-07-19T20:30:01+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "20889 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1224 closes Issue #1220.",
+        "The reviewed diff modifies two existing AnyIO production source files.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
       ]
     },
     {
-      "id": "anyio-trio-taskhandle-name",
-      "tier": "generalization",
+      "id": "agronholm-anyio-issue-1231-pr-1232",
       "repository": "agronholm/anyio",
-      "issue_number": 1231,
-      "issue_updated_at": "2026-07-23T06:49:38Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 1231,
         "title": "Default `TaskHandle.name` doesn't match the task name for `TaskGroup.start` on Trio",
@@ -330,18 +334,132 @@
         "author": "gschaffner"
       },
       "fix_pr_number": 1232,
+      "fix_pr_title": "Fix `TaskHandle.name` for `TaskGroup.start` on Trio",
+      "fix_pr_url": "https://github.com/agronholm/anyio/pull/1232",
+      "fix_pr_merged_at": "2026-07-23T06:49:37Z",
+      "merge_commit_sha": "b1f6e40220a8c079d36e6bc661e3a9e08db75d57",
       "pre_fix_sha": "2ba69a649011e4608ab9485a0dcfe72b6f956ecc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/anyio/_backends/_trio.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "docs/versionhistory.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/anyio/_backends/_trio.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_taskgroups.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 61,
+          "deletions": 31,
+          "changes": 92,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: agronholm/anyio"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-23T06:49:37Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-18T05:31:14+00:00, pr_merged_at=2026-07-23T06:49:37+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1404 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #1232 closes Issue #1231.",
+        "The reviewed diff modifies one existing Trio backend source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "fastapi-pep695-annotated-dependency",
-      "tier": "main",
+      "id": "fastapi-fastapi-issue-10719-pr-13920",
       "repository": "fastapi/fastapi",
-      "issue_number": 10719,
-      "issue_updated_at": "2026-02-05T18:34:39Z",
+      "suggested_tier": "main",
       "issue_snapshot": {
         "number": 10719,
         "title": "`Annotated` dependencies are interpreted incorrectly when using `PEP 695`-style type alias.",
@@ -356,18 +474,142 @@
         "author": "Kludex"
       },
       "fix_pr_number": 13920,
+      "fix_pr_title": "✨ Add support for PEP695 `TypeAliasType`",
+      "fix_pr_url": "https://github.com/fastapi/fastapi/pull/13920",
+      "fix_pr_merged_at": "2026-02-05T18:34:34Z",
+      "merge_commit_sha": "97145588f5442aa7c3830173813d5d1a2c893521",
       "pre_fix_sha": "ed48cc457f36ea1f999bdf68668966935cd9e47f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "fastapi/dependencies/utils.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "fastapi/dependencies/utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "tests/test_dependency_pep695.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 0,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "uv.lock",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: fastapi/fastapi"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-02-05T18:34:34Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-11-26T09:17:29+00:00, pr_merged_at=2026-02-05T18:34:34+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2727 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=question"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #13920 closes Issue #10719.",
+        "The reviewed diff modifies FastAPI dependency analysis source code.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "fastapi-pydantic-json-form",
-      "tier": "main",
+      "id": "fastapi-fastapi-issue-10997-pr-14616",
       "repository": "fastapi/fastapi",
-      "issue_number": 10997,
-      "issue_updated_at": "2026-02-05T18:39:41Z",
+      "suggested_tier": "main",
       "issue_snapshot": {
         "number": 10997,
         "title": "Using pydantic Json Type as Form data type doesn't work",
@@ -382,18 +624,122 @@
         "author": "Kludex"
       },
       "fix_pr_number": 14616,
+      "fix_pr_title": "🐛 Fix using `Json[list[str]]` type (issue #10997)",
+      "fix_pr_url": "https://github.com/fastapi/fastapi/pull/14616",
+      "fix_pr_merged_at": "2026-02-05T18:41:43Z",
+      "merge_commit_sha": "c5fd75a321496b1f8212744bde217ec8ea956154",
       "pre_fix_sha": "f2687dc1bb01f4cb62eee90e656b61c38c2aaf6a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "fastapi/dependencies/utils.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "fastapi/dependencies/utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 2,
+          "changes": 12,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_json_type.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 63,
+          "deletions": 0,
+          "changes": 63,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: fastapi/fastapi"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-02-05T18:41:43Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-01-21T11:57:20+00:00, pr_merged_at=2026-02-05T18:41:43+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2369 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=question"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14616 closes Issue #10997.",
+        "The reviewed diff modifies one existing FastAPI dependency source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "fastapi-sse-include-router",
-      "tier": "main",
+      "id": "fastapi-fastapi-issue-15401-pr-15077",
       "repository": "fastapi/fastapi",
-      "issue_number": 15401,
-      "issue_updated_at": "2026-05-18T13:16:17Z",
+      "suggested_tier": "main",
       "issue_snapshot": {
         "number": 15401,
         "title": "SSE `stream_item_type` not propagated through `APIRouter` + `include_router`",
@@ -406,18 +752,132 @@
         "author": "tikal"
       },
       "fix_pr_number": 15077,
+      "fix_pr_title": "🐛 Fix stream item type lost when using `include_router()`",
+      "fix_pr_url": "https://github.com/fastapi/fastapi/pull/15077",
+      "fix_pr_merged_at": "2026-07-28T10:22:09Z",
+      "merge_commit_sha": "ad03e117c0010a563067740c97cb7ab011cb5174",
       "pre_fix_sha": "a82e5f2fac102a8b12c0795da80b2cb1d2a8b016",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "fastapi/routing.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "fastapi/routing.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_sse.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 141,
+          "deletions": 1,
+          "changes": 142,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_stream_bare_type.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 33,
+          "deletions": 1,
+          "changes": 34,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: fastapi/fastapi"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-28T10:22:09Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-04-21T23:35:56+00:00, pr_merged_at=2026-07-28T10:22:09+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4713 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #15077 closes Issue #15401.",
+        "The reviewed diff modifies one existing FastAPI routing source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "pytest-metafunc-scope-override",
-      "tier": "generalization",
+      "id": "pytest-dev-pytest-issue-634-pr-1766",
       "repository": "pytest-dev/pytest",
-      "issue_number": 634,
-      "issue_updated_at": "2016-07-25T21:29:50Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 634,
         "title": "metafunc.parametrize overwrites scope",
@@ -433,18 +893,132 @@
         "author": "pytestbot"
       },
       "fix_pr_number": 1766,
+      "fix_pr_title": "Fixed scope override inside metafunc.parametrize. Fixes #634",
+      "fix_pr_url": "https://github.com/pytest-dev/pytest/pull/1766",
+      "fix_pr_merged_at": "2016-07-25T21:29:50Z",
+      "merge_commit_sha": "d72afe7e08033c5e6268ec77f68e894fb1b6bab1",
       "pre_fix_sha": "a2b04d02c2ef3e99805361bd63b7aa3e6d4f0fe1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "_pytest/python.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "CHANGELOG.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "_pytest/python.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 2,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/python/metafunc.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 37,
+          "deletions": 0,
+          "changes": 37,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pytest"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2016-07-25T21:29:50Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2014-11-27T22:45:21+00:00, pr_merged_at=2016-07-25T21:29:50+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1843 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=type: bug, topic: parametrize"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1766 explicitly says Fixes #634 and its body describes the same scope defect.",
+        "The reviewed diff modifies one existing pytest parametrization source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "pytest-parametrize-fixture-ordering",
-      "tier": "generalization",
+      "id": "pytest-dev-pytest-issue-3862-pr-14746",
       "repository": "pytest-dev/pytest",
-      "issue_number": 3862,
-      "issue_updated_at": "2026-07-27T18:02:45Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 3862,
         "title": "The order of test is not maintained if test case uses parameterise and pytest_generate_tests.",
@@ -460,18 +1034,158 @@
         "author": "PShiw"
       },
       "fix_pr_number": 14746,
+      "fix_pr_title": "Reduce fixture setups/teardowns: reorder parametrized tests by param value, not index",
+      "fix_pr_url": "https://github.com/pytest-dev/pytest/pull/14746",
+      "fix_pr_merged_at": "2026-07-27T18:02:43Z",
+      "merge_commit_sha": "d02c36266339ec7fab376db2e77d4e55ea165384",
       "pre_fix_sha": "e7355d70771b5f34f78d7012f73bdc8eb79574d6",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/_pytest/fixtures.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "changelog/8914.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/_pytest/fixtures.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 64,
+          "deletions": 4,
+          "changes": 68,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/example_scripts/issue_519.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/python/fixtures.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 200,
+          "deletions": 0,
+          "changes": 200,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/python/metafunc.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 3,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pytest"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-27T18:02:43Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2018-08-23T08:58:27+00:00, pr_merged_at=2026-07-27T18:02:43+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4218 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=type: bug, topic: parametrize"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        },
+        {
+          "code": "unique_fix_pr",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR #14746 already has another reviewable Issue; select only one case during manual audit."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14746 closes Issue #3862.",
+        "Only the existing src/_pytest/fixtures.py production change is used as ground truth.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "pytest-rootdir-doctest-namespace",
-      "tier": "generalization",
+      "id": "pytest-dev-pytest-issue-14683-pr-14694",
       "repository": "pytest-dev/pytest",
-      "issue_number": 14683,
-      "issue_updated_at": "2026-07-24T13:32:50Z",
+      "suggested_tier": "generalization",
       "issue_snapshot": {
         "number": 14683,
         "title": "Variables injected in doctest_namespace no longer loaded in Pytest 9.1.x",
@@ -484,18 +1198,142 @@
         "author": "Zeitsperre"
       },
       "fix_pr_number": 14694,
+      "fix_pr_title": "Fix rootdir conftest fixtures not visible to items collected outside the rootdir",
+      "fix_pr_url": "https://github.com/pytest-dev/pytest/pull/14694",
+      "fix_pr_merged_at": "2026-07-24T13:32:49Z",
+      "merge_commit_sha": "ef052d0bc481af97afb3fbd2aae24d8abce08604",
       "pre_fix_sha": "efc013416e45d9162dc00dca9e4a83e1ef1c4089",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/_pytest/fixtures.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "changelog/14683.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/_pytest/fixtures.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 5,
+          "changes": 36,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/test_conftest.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 48,
+          "deletions": 0,
+          "changes": 48,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_doctest.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 53,
+          "deletions": 0,
+          "changes": 53,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pytest"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-24T13:32:49Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-06T15:53:16+00:00, pr_merged_at=2026-07-24T13:32:49+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "8633 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #14694 closes Issue #14683.",
+        "Only the existing src/_pytest/fixtures.py production change is used as ground truth.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "rich-print-json-no-indent",
-      "tier": "calibration",
+      "id": "textualize-rich-issue-2027-pr-2038",
       "repository": "Textualize/rich",
-      "issue_number": 2027,
-      "issue_updated_at": "2026-07-04T13:51:30Z",
+      "suggested_tier": "calibration",
       "issue_snapshot": {
         "number": 2027,
         "title": "[BUG] `rich.print_json()` produces incorrect syntax highlighting with `indent=None`",
@@ -510,19 +1348,153 @@
         "author": "ghost"
       },
       "fix_pr_number": 2038,
+      "fix_pr_title": "Fix highlighting issue when printing JSON that isn't indented",
+      "fix_pr_url": "https://github.com/Textualize/rich/pull/2038",
+      "fix_pr_merged_at": "2022-03-08T16:30:45Z",
+      "merge_commit_sha": "27c2ba68bd726d0a84d324be92a4381ab54b46d3",
       "pre_fix_sha": "8e649fea51859e426b2f6300e0a9c88c9c4b6415",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rich/console.py",
         "rich/highlighter.py"
       ],
-      "expected_symbols": []
+      "changed_files": [
+        {
+          "path": "CHANGELOG.md",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "rich/console.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "rich/highlighter.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 30,
+          "deletions": 3,
+          "changes": 33,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_console.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 1,
+          "changes": 11,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_highlighter.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 54,
+          "deletions": 2,
+          "changes": 56,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: Textualize/rich"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-03-08T16:30:45Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-03-06T14:10:50+00:00, pr_merged_at=2022-03-08T16:30:45+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "5460 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #2038 closes Issue #2027.",
+        "The reviewed diff modifies existing console and highlighter source files.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
+      ]
     },
     {
-      "id": "rich-ansi-trailing-newline",
-      "tier": "calibration",
+      "id": "textualize-rich-issue-3577-pr-4076",
       "repository": "Textualize/rich",
-      "issue_number": 3577,
-      "issue_updated_at": "2026-04-12T11:48:41Z",
+      "suggested_tier": "calibration",
       "issue_snapshot": {
         "number": 3577,
         "title": "[BUG] Trailing line break removed by Text.from_ansi().",
@@ -537,15 +1509,136 @@
         "author": "kmvanbrunt"
       },
       "fix_pr_number": 4076,
+      "fix_pr_title": "preserve newlines",
+      "fix_pr_url": "https://github.com/Textualize/rich/pull/4076",
+      "fix_pr_merged_at": "2026-04-12T03:59:42Z",
+      "merge_commit_sha": "58ac15120fe254886c10d6253667733c83604cb4",
       "pre_fix_sha": "9cb198944f8184df92217efc8b20d3fffa4b4fa0",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rich/ansi.py"
       ],
-      "expected_symbols": [
+      "changed_files": [
         {
-          "file": "rich/ansi.py",
-          "symbol": "decode"
+          "path": "CHANGELOG.md",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "docs/source/console.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 3,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "rich/ansi.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 3,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_ansi.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 23,
+          "deletions": 3,
+          "changes": 26,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
         }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: Textualize/rich"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-04-12T03:59:42Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-11-29T01:19:34+00:00, pr_merged_at=2026-04-12T03:59:42+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "Ordered PR commit history re-audited on 2026-07-30."
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA is outside the fix PR commit set."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 5"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "5966 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Needs triage"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "GitHub closingIssuesReferences confirms PR #4076 closes Issue #3577.",
+        "The reviewed diff modifies one existing ANSI parsing source file.",
+        "Pre-fix SHA re-audited as the parent of the first PR commit on 2026-07-30."
       ]
     }
   ]
