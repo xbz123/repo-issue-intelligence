@@ -36,10 +36,10 @@ bounded content matching define the base pool. Static imports, loaded references
 call-name/backend definitions, two-hop relations, matching-test imports, and bounded prior Git
 co-changes add graph evidence. Legacy graph weights still rerank inside fixed Top-10 bands; up to
 three strong expansion candidates may replace only ranks 18-20. Git evidence uses at most 50
-prior commits from 100 fetched ancestors, blames only the first two located seed lines, and ignores
-broad commits. The investigator emits confirmed facts, confidence-scored hypotheses, missing
-evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed
-root causes.
+prior commits from 100 fetched ancestors, blames at most five lines for each of two seed
+candidates, and ignores broad commits. The investigator emits confirmed facts,
+confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate
+locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
