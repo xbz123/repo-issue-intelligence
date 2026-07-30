@@ -250,8 +250,13 @@ suite deliberately includes harder lexical and multi-file cases; its metrics mus
 as if it were the same dataset as the historical 9-case run.
 
 On the preserved 9-case manifest, Retrieval v2 achieved deterministic Recall@5 `0.7593` and MRR
-`0.5083`; GPT-OSS 20B reranking achieved Recall@5 `0.8148` and MRR `0.8333`. The 20-case Hybrid
-run has not yet been recorded, so no LLM improvement is claimed for the expanded dataset.
+`0.5083`; GPT-OSS 20B reranking achieved Recall@5 `0.8148` and MRR `0.8333`.
+
+On the current 20-case manifest, GPT-OSS 20B Hybrid reranking achieved Recall@1 `0.4167`,
+Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR `0.6738`. Seventeen of 20
+cases returned valid model output; three exhausted two attempts and used deterministic fallback.
+This improved aggregate Recall@1 and MRR over deterministic Retrieval v3, but calibration-tier
+MRR decreased, so no per-project universal improvement is claimed.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.

@@ -71,5 +71,10 @@ localization benchmark is reported separately in `docs/benchmark-results.md`.
 
 The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison and a separate
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
-conclusions must not mix datasets or the localization and schema-reliability endpoints. A 20-case
-Hybrid result must be recorded before claiming LLM gains on manifest version 3.
+conclusions must not mix datasets or the localization and schema-reliability endpoints.
+
+On the current 20-case manifest version 3, GPT-OSS 20B Hybrid reranking completed all cases with
+17 valid model responses and three deterministic fallbacks. It improved Recall@1 from `0.3500`
+to `0.4167` and MRR from `0.5663` to `0.6738`; Recall@5, Recall@10, and Recall@20 were unchanged.
+The calibration tier regressed, so the supported claim is an aggregate ordering improvement, not
+universal improvement across projects.

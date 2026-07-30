@@ -38,11 +38,36 @@ The machine-readable artifacts are:
 - `benchmarks/expansion-v0.4-selection.json` — explicit manual selections;
 - `benchmarks/candidates-v0.4.json` — accepted candidate audit records;
 - `benchmarks/results/deterministic-v0.4-20-cases.json` — pre-graph deterministic output;
-- `benchmarks/results/deterministic-v0.5-graph-20-cases.json` — current deterministic output.
+- `benchmarks/results/deterministic-v0.5-graph-20-cases.json` — current deterministic output;
+- `benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json` — current Hybrid output.
 
-The 20-case Hybrid run has not yet been recorded. Historical model results below remain useful for
-integration and model-size decisions, but they must not be presented as LLM results on the
-expanded dataset.
+### Retrieval v3 Hybrid result
+
+GPT-OSS 20B reranked the same fixed candidate pool:
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 20/20 | 0.4167 | 0.8583 | 0.8750 | 0.9250 | 0.6738 | 17/20 |
+| Main | 7/7 | 0.6429 | 1.0000 | 1.0000 | 1.0000 | 0.8571 | 7/7 |
+| Calibration | 4/4 | 0.0000 | 0.6250 | 0.6250 | 0.8750 | 0.2438 | 2/4 |
+| Generalization | 9/9 | 0.4259 | 0.8519 | 0.8889 | 0.8889 | 0.7222 | 8/9 |
+
+Compared with deterministic Retrieval v3, Hybrid improved Recall@1 by 0.0667 and MRR by 0.1075.
+Recall@5, Recall@10, and Recall@20 were unchanged. The aggregate gain came from the main and
+generalization tiers; calibration MRR decreased, so the result does not support a claim that LLM
+reranking improves every project or case.
+
+Seventeen cases returned valid structured output. Three cases exhausted both attempts and used
+the deterministic fallback: both Typer cases returned HTTP 400 `output_parse_failed`, while the
+AnyIO free-threading case returned HTTP 400 `tool_use_failed`. There were no 429 responses. The
+successful responses consumed 83,592 input and 2,581 output tokens and averaged 798 ms of model
+latency. Average analysis time was 11,014 ms because the three failed cases included the configured
+retry backoff; it excludes repository preparation and the 62-second inter-case quota delay.
+
+The run used `openai/gpt-oss-20b`, a 12,000-character evidence budget, a 1,600-token completion
+limit, low reasoning effort, `temperature=0.1`, `seed=1337`, at most two attempts, and a 62-second
+inter-case delay. Historical model results below remain useful for model-size decisions, but
+their nine-case metrics must not be mixed with this expanded result.
 
 ## Historical 9-case result: Retrieval v2
 

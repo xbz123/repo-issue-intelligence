@@ -73,6 +73,8 @@ provide a deterministic fallback when the model omits the free-form contradictio
 model requests more evidence, at least one hypothesis must name the missing artifact.
 GPT-OSS uses low reasoning effort and a bounded completion budget by default.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
+Settings may load a primary and fallback Groq credential as `SecretStr` values, but automatic
+credential failover is not enabled; operators must select the intended credential explicitly.
 
 Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
 out each frozen pre-fix SHA, loads the complete Issue snapshot from the manifest rather than the
