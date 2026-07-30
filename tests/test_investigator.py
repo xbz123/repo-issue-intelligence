@@ -462,6 +462,55 @@ def test_duplicate_local_symbol_reference_is_scoped_to_its_path(
     assert candidates["beta.py"].symbol is None
 
 
+def test_ambiguous_basename_does_not_scope_bare_symbol_reference(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/base.py",
+        "def send():\n"
+        "    return None\n\n"
+        "def source_handler():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "tests/base.py",
+        "def send():\n"
+        "    return None\n\n"
+        "def test_handler():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Handler transport failure",
+        "The `send` function fails in `base.py`.",
+    )
+
+    candidates = {
+        candidate.file: candidate
+        for candidate in locate_candidates(record, build_repository_map(repository))
+    }
+
+    assert candidates["src/base.py"].symbol != "send"
+    assert candidates["tests/base.py"].symbol != "send"
+
+    scoped_record = issue(
+        "Handler transport failure",
+        "The `send` function fails in `src/base.py`.",
+    )
+    scoped_candidates = {
+        candidate.file: candidate
+        for candidate in locate_candidates(
+            scoped_record,
+            build_repository_map(repository),
+        )
+    }
+
+    assert scoped_candidates["src/base.py"].symbol == "send"
+    assert scoped_candidates["tests/base.py"].symbol != "send"
+
+
 def test_bare_symbol_can_be_unique_in_final_candidate_range(
     tmp_path: Path,
 ) -> None:
@@ -576,6 +625,44 @@ def test_protocol_event_does_not_match_python_qualified_symbol(
         "Issue references symbol WebSocket.accept" in evidence
         for evidence in candidates[0].evidence
     )
+
+
+def test_protocol_event_does_not_fall_back_to_local_method(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "starlette/websockets.py",
+        "class WebSocket:\n"
+        "    async def accept(self):\n"
+        "        return None\n\n"
+        "    async def close(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "ASGI handshake failure",
+        "Expected message `websocket.accept`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(candidate.symbol != "accept" for candidate in candidates)
+    assert not any(
+        "Issue references symbol WebSocket.accept" in evidence
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+    title_candidates = locate_candidates(
+        issue(
+            "ASGI `websocket.accept` handshake failure",
+            "The protocol event is rejected.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert all(candidate.symbol != "accept" for candidate in title_candidates)
 
 
 def test_exact_python_qualified_reference_matches_with_case_and_boundaries(

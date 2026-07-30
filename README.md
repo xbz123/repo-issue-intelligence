@@ -279,19 +279,21 @@ The current frozen benchmark contains 32 closed issues with linked fix PRs acros
 Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
 pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
-On manifest v7, v0.12 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8490`,
-Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. On the 16 labeled cases, Symbol Recall@1
+On manifest v7, v0.12 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8333`,
+Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6005`. On the 16 labeled cases, Symbol Recall@1
 is `0.1875`, Recall@5 is `0.4688`, Recall@10 is `0.5000`, Recall@20 is `0.5625`, and symbol MRR is
-`0.2743`. Qualified AST identities distinguish repeated local names while the public unqualified
+`0.2816`. Qualified AST identities distinguish repeated local names while the public unqualified
 `symbol` field remains compatible. Symbol selection gives exact qualified references priority over
 title semantics. Bare names receive direct priority only when unique in the final candidate range
-or constrained by an owner or source path; repeated unscoped names remain semantic tie-breakers.
-Fenced non-call references and traceback frames retain qualified identities. The 15 previously
-labeled cases retain their exact metrics, all 32 file rankings are unchanged, and two complete
-review-fixed runs produced identical candidates and metrics after excluding timing fields. The
-reviewed `WorkerThread.__init__` target is representable but not recovered without an explicit
-method reference, which deliberately exposes the limits of the current single-best-symbol
-selector.
+or constrained by an owner or a source path that resolves to one repository file; repeated
+unscoped names remain semantic tie-breakers. Fenced non-call references and traceback frames retain
+qualified identities. Dotted runtime values do not degrade to their last component unless the text
+contains a syntactic call whose local callee is extracted separately. Compared with v0.11, stricter
+scope handling changes 21 file orderings and 27 per-file symbol assignments; Recall@20 remains
+unchanged while Recall@5 and MRR decrease slightly. Two complete review-fixed runs produced
+identical candidates and metrics after excluding timing fields. The reviewed
+`WorkerThread.__init__` target is representable but not recovered without an explicit method
+reference, which deliberately exposes the limits of the current single-best-symbol selector.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only

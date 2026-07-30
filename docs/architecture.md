@@ -46,11 +46,15 @@ inside each file are selected using source-scoped direct identifier references a
 title-term rarity, with the original lexical match as a fallback. Direct references come from
 inline code, fenced examples, tracebacks, and title identifiers; non-call qualified identities are
 retained with their original case and dot boundaries. Bare names are direct only when unique in the
-final candidate range or constrained by an exact owner or referenced path. Repeated unscoped names
-remain semantic tie-breakers and cannot independently select a symbol. Owner names can disambiguate
-equivalent method names but do not contribute semantic title terms or override a different
-explicitly referenced function. A callee receives additional evidence only when at least two
-distinct issue-matching functions in the same file call it. The investigator emits
+final candidate range, constrained by an exact owner, or scoped by a path that resolves to exactly
+one repository file. Loose suffix matching remains available for file retrieval, but an ambiguous
+basename cannot scope a direct symbol reference. A dotted value is direct only when its complete,
+case-preserving qualified identity matches; syntactic object calls separately expose their local
+callee. Repeated unscoped names and unmatched dotted terminals cannot independently select a
+symbol. Owner names can disambiguate equivalent method names but do not contribute semantic title
+terms or override a different explicitly referenced function. A callee receives additional
+evidence only when at least two distinct issue-matching functions in the same file call it. The
+investigator emits
 confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction
 plan. Candidate locations are not presented as confirmed root causes.
 

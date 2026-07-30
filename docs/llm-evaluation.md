@@ -87,15 +87,17 @@ three-case full-schema stability smoke test, both on the historical nine-case su
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
 The current manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4375`,
-Recall@5 `0.8490`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. Across the 15
-symbol-labeled cases and 16 reviewed targets from v0.11, every per-case metric remains unchanged.
+Recall@5 `0.8333`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6005`. Across the 15
+symbol-labeled cases and 16 reviewed targets from v0.11, Typer's symbol reciprocal rank improves
+from `0.3333` to `0.5000`, Textual's decreases from `0.2500` to `0.2000`, and all other per-case
+symbol metrics remain unchanged.
 After adding the reviewed `WorkerThread.__init__` target, the 16 labeled cases and 17 targets reach
 Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.4688`, Symbol Recall@10 `0.5000`, Symbol Recall@20
-`0.5625`, and symbol MRR `0.2743`. The qualified identity is representable, but the review-fixed
-selector does not infer `__init__` from an owner-only mention. All 32 file rankings are unchanged;
-a full audit found symbol-list changes in 28 cases, including the corrected Starlette protocol-event
-and session-cookie selections. Two complete review-fixed v0.12 runs produced identical candidates
-and metrics after excluding timing fields.
+`0.5625`, and symbol MRR `0.2816`. The qualified identity is representable, but the review-fixed
+selector does not infer `__init__` from an owner-only mention. A full audit found 21 changed file
+orderings and 27 changed per-file symbol assignments relative to v0.11, including the corrected
+Starlette protocol-event and session-cookie selections. Two complete review-fixed v0.12 runs
+produced identical candidates and metrics after excluding timing fields.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 

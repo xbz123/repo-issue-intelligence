@@ -10,41 +10,45 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 3,443 ms |
-| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 4,126 ms |
-| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 1,853 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,670 ms |
+| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.6005 | 3,134 ms |
+| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,609 ms |
+| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,822 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,402 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 16 | 0.1875 | 0.4688 | 0.5000 | 0.5625 | 0.2743 |
+| Overall | 16 | 0.1875 | 0.4688 | 0.5000 | 0.5625 | 0.2816 |
 | Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.2500 | 0.2500 |
-| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1482 |
-| Generalization | 6 | 0.3333 | 0.5833 | 0.6667 | 0.6667 | 0.4167 |
+| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1759 |
+| Generalization | 6 | 0.3333 | 0.5833 | 0.6667 | 0.6667 | 0.4083 |
 
 Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
 exact reviewed file and symbol and retains the parent file's candidate rank. The investigator now
 stores both the backward-compatible local name and a qualified identity. Exact qualified
 identifiers from inline code, fenced examples, and tracebacks rank before title semantics.
 Bare local identifiers receive the same priority only when they are unique in the final candidate
-range or are constrained by an exact owner or referenced source path; repeated unscoped names are
-only semantic tie-breakers. Qualified matching preserves case and dot boundaries, so the ASGI
-event `websocket.accept` no longer selects the Python method `WebSocket.accept`.
+range, constrained by an exact owner, or scoped by a path that uniquely resolves to one repository
+file; repeated unscoped names are only semantic tie-breakers. Loose suffix paths still contribute
+to file retrieval. Qualified matching preserves case and dot boundaries, and an unmatched dotted
+runtime value cannot fall back to its last component, so the ASGI event `websocket.accept` no
+longer selects or claims a direct reference to the Python method `WebSocket.accept`.
 
-The 15 previously labeled v0.11 cases retain their exact per-case symbol metrics, and all 32 file
-rankings are unchanged. A case-by-case comparison found symbol-list changes in 25 of 32 cases:
-the corrected selector restores `cookie_parser` and `send_wrapper` for the Starlette session case
-and selects `WebSocket.send_denial_response` for the denial-response case. In that case the bare
-`__call__` reference now selects only the path/owner-scoped `Response.__call__`, rather than every
-candidate file's unrelated implementation. Trio's reviewed `WorkerThread.__init__` target remains
-a miss because the issue identifies the owning classes but not that method; allowing the owner to
-choose across different method names would recreate the reviewed false-positive mechanism. One
-Pydantic production file remains absent from the Top-20 candidate pool, and several correct files
-are retrieved while the within-file selector chooses a neighboring function. This is useful
-negative evidence: candidate generation is close to saturation on the current file suite, while
-symbol localization remains a material bottleneck.
+Compared with v0.11, 21 of 32 file orderings and 27 per-file symbol assignments change after
+normalizing away qualified-name representation. Typer's labeled target moves from rank 3 to 2,
+while Textual's two-file target moves from ranks 4/10 to 5/10; their Recall thresholds remain
+unchanged. The stricter evidence contract removes false-positive dotted and ambiguous-basename
+scope, but it is not a monotonic metric gain: the Rich `print_json` fix file moves from rank 1 to
+7, reducing aggregate Recall@5 by `0.0157` and MRR by `0.0059`, while Recall@20 remains `0.9688`.
+The corrected selector still restores `cookie_parser` and `send_wrapper` for the Starlette session
+case and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
+`WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but
+not that method; allowing the owner to choose across different method names would recreate the
+reviewed false-positive mechanism. One Pydantic production file remains absent from the Top-20
+candidate pool, and several correct files are retrieved while the within-file selector chooses a
+neighboring function. This is useful negative evidence: candidate generation is close to
+saturation on the current file suite, while symbol localization remains a material bottleneck.
 
 V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
 within-file call edges, and bounded two-hop propagation through uniquely resolved concrete

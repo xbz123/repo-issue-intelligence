@@ -137,6 +137,7 @@ class SymbolMatch:
     exact_identifier_match: bool
     explicit_identifier_match: bool
     unscoped_explicit_identifier_match: bool
+    unscoped_dotted_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
     semantic_terms: frozenset[str]
@@ -231,6 +232,7 @@ def _extract_identifiers(text: str) -> set[str]:
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
+    explicit_identifiers = _extract_explicit_identifiers(text)
     paths = {
         match.group(0).replace("\\", "/").strip("'\"()[]{}:,")
         for match in PATH_REFERENCE_PATTERN.finditer(text)
@@ -240,7 +242,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
-        explicit_identifiers=frozenset(_extract_explicit_identifiers(text)),
+        explicit_identifiers=frozenset(explicit_identifiers),
         paths=frozenset(paths),
     )
 
@@ -289,6 +291,19 @@ def _match_symbol(
     source_scoped_identifiers = (
         signals.explicit_identifiers | signals.primary_identifiers
     )
+    local_identifiers = {
+        identifier
+        for identifier in signals.identifiers | signals.explicit_identifiers
+        if "." not in identifier
+    }
+    local_identifier_match = any(
+        symbol_variants & _identifier_variants(identifier)
+        for identifier in local_identifiers
+    )
+    qualified_identifier_match = identity != symbol.name and any(
+        _matches_qualified_identity(identity, identifier)
+        for identifier in source_scoped_identifiers
+    )
     bare_explicit_match = any(
         "." not in identifier and identifier == symbol.name
         for identifier in signals.explicit_identifiers
@@ -320,33 +335,45 @@ def _match_symbol(
         or exact_owner_match
         or class_owner_match
     )
+    unscoped_dotted_identifier_match = (
+        not qualified_identifier_match
+        and not local_identifier_match
+        and any(
+            "." in identifier
+            and (
+                identifier.rsplit(".", maxsplit=1)[-1].casefold()
+                == symbol.name.casefold()
+            )
+            for identifier in signals.identifiers | signals.explicit_identifiers
+        )
+    )
+    overlap = signals.terms & terms
+    local_overlap = signals.terms & local_terms
+    if unscoped_dotted_identifier_match:
+        symbol_name_terms = _terms(symbol.name)
+        overlap -= symbol_name_terms
+        local_overlap -= symbol_name_terms
     return SymbolMatch(
         symbol=symbol,
-        overlap=frozenset(signals.terms & terms),
-        local_overlap=frozenset(signals.terms & local_terms),
+        overlap=frozenset(overlap),
+        local_overlap=frozenset(local_overlap),
         primary_identifier_match=any(
             symbol_compact_variants & _compact_identifier_variants(identifier)
             for identifier in signals.primary_identifiers
         ),
-        exact_identifier_match=any(
-            symbol_variants & _identifier_variants(identifier)
-            for identifier in signals.identifiers
-        ),
+        exact_identifier_match=local_identifier_match,
         explicit_identifier_match=scoped_bare_explicit_match,
         unscoped_explicit_identifier_match=(
             bare_explicit_match and not scoped_bare_explicit_match
         ),
+        unscoped_dotted_identifier_match=unscoped_dotted_identifier_match,
         qualified_component_match=identity != symbol.name
         and any(
             owner_compact_variants
             & _compact_identifier_variants(identifier)
             for identifier in source_scoped_identifiers
         ),
-        qualified_identifier_match=identity != symbol.name
-        and any(
-            _matches_qualified_identity(identity, identifier)
-            for identifier in source_scoped_identifiers
-        ),
+        qualified_identifier_match=qualified_identifier_match,
         semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
@@ -411,6 +438,8 @@ def _select_symbol(
         match: SymbolMatch,
     ) -> tuple[int, float, float, bool, bool, bool, int, int]:
         overlap = primary_terms & match.semantic_terms
+        if match.unscoped_dotted_identifier_match:
+            overlap -= _semantic_terms(_terms(match.symbol.name))
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
             relation_scores.get(match.symbol.name, 0),
@@ -436,10 +465,16 @@ def _select_symbol(
             match.primary_identifier_match,
             match.qualified_identifier_match,
             match.exact_identifier_match
-            and not match.unscoped_explicit_identifier_match,
+            and not (
+                match.unscoped_explicit_identifier_match
+                or match.unscoped_dotted_identifier_match
+            ),
             (
                 len(match.local_overlap)
-                if not match.unscoped_explicit_identifier_match
+                if not (
+                    match.unscoped_explicit_identifier_match
+                    or match.unscoped_dotted_identifier_match
+                )
                 else 0
             ),
             match.qualified_component_match,
@@ -450,11 +485,17 @@ def _select_symbol(
         fallback.primary_identifier_match
         or (
             fallback.exact_identifier_match
-            and not fallback.unscoped_explicit_identifier_match
+            and not (
+                fallback.unscoped_explicit_identifier_match
+                or fallback.unscoped_dotted_identifier_match
+            )
         )
         or (
             fallback.overlap
-            and not fallback.unscoped_explicit_identifier_match
+            and not (
+                fallback.unscoped_explicit_identifier_match
+                or fallback.unscoped_dotted_identifier_match
+            )
         )
     ):
         return None
@@ -521,12 +562,63 @@ def _symbol_evidence(
 
 
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
-    normalized = file_path.lower().replace("\\", "/").lstrip("./")
+    normalized = _normalize_path_reference(file_path)
     return any(
-        reference.lower().replace("\\", "/").rstrip("/").endswith(normalized)
-        or normalized.endswith(reference.lower().replace("\\", "/").lstrip("./"))
+        _normalize_path_reference(reference).endswith(normalized)
+        or normalized.endswith(_normalize_path_reference(reference))
         for reference in references
     )
+
+
+def _normalize_path_reference(value: str) -> str:
+    return value.lower().replace("\\", "/").rstrip("/").lstrip("./")
+
+
+def _symbol_scoped_paths(
+    file_paths: list[str],
+    references: frozenset[str],
+) -> frozenset[str]:
+    normalized_paths = {
+        path: _normalize_path_reference(path)
+        for path in file_paths
+    }
+    scoped_paths: set[str] = set()
+    for reference in references:
+        normalized_reference = _normalize_path_reference(reference)
+        relative_matches = {
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_reference == normalized_path
+        }
+        if len(relative_matches) == 1:
+            scoped_paths.update(relative_matches)
+            continue
+        absolute_matches = [
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_reference.endswith(f"/{normalized_path}")
+        ]
+        if absolute_matches:
+            longest_length = max(
+                len(normalized_paths[path])
+                for path in absolute_matches
+            )
+            longest_matches = {
+                path
+                for path in absolute_matches
+                if len(normalized_paths[path]) == longest_length
+            }
+            if len(longest_matches) == 1:
+                scoped_paths.update(longest_matches)
+            continue
+        suffix_matches = {
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_path.endswith(f"/{normalized_reference}")
+        }
+        if len(suffix_matches) == 1:
+            scoped_paths.update(suffix_matches)
+    return frozenset(scoped_paths)
 
 
 def _source_content(
@@ -960,6 +1052,10 @@ def locate_candidates(
     unique_symbol_names = frozenset(
         name for name, count in symbol_name_counts.items() if count == 1
     )
+    symbol_scoped_paths = _symbol_scoped_paths(
+        [file.path for file in repository_map.files],
+        signals.paths,
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(
@@ -984,7 +1080,7 @@ def locate_candidates(
                 symbol,
                 signals,
                 unique_symbol_names,
-                exact_path,
+                file.path in symbol_scoped_paths,
             )
             for symbol in file.symbols
         ]
@@ -1246,7 +1342,7 @@ def locate_candidates(
                 symbol,
                 signals,
                 candidate_unique_symbol_names,
-                _path_is_referenced(path, signals.paths),
+                path in symbol_scoped_paths,
             )
             for symbol in file.symbols
         ]
