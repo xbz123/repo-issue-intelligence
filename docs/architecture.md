@@ -26,17 +26,20 @@ The current MVP ends at a human review gate. It does not execute generated comma
 ### Repository indexing
 
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
-locally resolved Python import targets, imported symbols, called names, classes, functions, line
-ranges, entrypoints, runtime files, tests, and framework indicators.
+locally resolved Python import targets, imported symbols, called names, loaded symbol references,
+classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
 
 ### Investigation
 
 `investigator.py` ranks candidate files and symbols using explicit evidence signals. Lexical and
-bounded content matching define the candidate pool. Static local-import, imported-symbol call,
-call-name definition, two-hop import, and matching-test import relations then rerank within fixed
-Top-10 bands. This lets graph evidence improve ordering without changing the lexical Top-10 or
-Top-20 membership. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and
-a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
+bounded content matching define the base pool. Static imports, loaded references, dynamic
+call-name/backend definitions, two-hop relations, matching-test imports, and bounded prior Git
+co-changes add graph evidence. Legacy graph weights still rerank inside fixed Top-10 bands; up to
+three strong expansion candidates may replace only ranks 18-20. Git evidence uses at most 50
+prior commits from 100 fetched ancestors, blames at most five lines for each of two seed
+candidates, and ignores broad commits. The investigator emits confirmed facts,
+confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate
+locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
@@ -84,16 +87,16 @@ credential failover is not enabled; operators must select the intended credentia
 The OpenCode credential is also stored as `SecretStr` and selected explicitly with
 `--provider opencode`.
 
-Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
-out each frozen pre-fix SHA, loads the complete Issue snapshot from the manifest rather than the
-live GitHub API, verifies that the labeled fix files exist, and indexes only paths returned by
-`git ls-files`. It runs deterministic retrieval and optionally asks the selected provider only to
+Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` fetches
+100 ancestors and checks out each frozen pre-fix SHA, loads the complete Issue snapshot from the
+manifest rather than the live GitHub API, verifies that the labeled fix files exist, and indexes
+only paths returned by `git ls-files`. It runs deterministic retrieval and optionally asks the selected provider only to
 rerank the bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this
 benchmark contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
-normalizes paths and identifiers, gives explicit stack-trace/source-path references the strongest
-signal, searches bounded source content, downranks tests and documentation, retains 20
-candidates, and applies bounded static graph evidence inside fixed rank bands. Per-candidate
-evidence caps preserve candidate breadth before LLM reranking.
+normalizes paths and identifiers, rejects dotted-name/URL false path matches, gives explicit
+stack-trace/source-path references the strongest signal, searches bounded source content,
+downranks tests and documentation, retains 20 candidates, and applies bounded graph/history
+evidence. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
 
 ### Benchmark candidate pipeline
 
@@ -138,15 +141,15 @@ not include background workers, automatic snapshot resume, or generated-command 
 The current benchmark contains 20 cases across seven repositories, which is useful for error
 analysis but not statistically strong enough for a broad quality claim. The historical nine-case
 manifest remains frozen for comparisons. LLM hypotheses are not confirmed root causes. Retrieval
-has bounded Python static relations, not a control-flow-aware call graph, cross-language graph,
-semantic test-to-source mapping, or vector index.
+has bounded Python static/history relations, not a control-flow-aware call graph, cross-language
+graph, semantic test-to-source mapping, or vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> inspect Git history and related tests
-  -> add reverse references and control-flow-aware graph evidence
+  -> add semantic test-to-source mapping
+  -> add control-flow-aware and cross-language graph evidence
   -> add symbol labels and expand to 30-50 cases
 ```
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import subprocess
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -78,7 +80,7 @@ GENERIC_TERMS = {
 SOURCE_SUFFIXES = "py|js|jsx|ts|tsx|java|go|rs|c|cc|cpp"
 PATH_REFERENCE_PATTERN = re.compile(
     rf"(?<![A-Za-z0-9_.-])(?:[A-Za-z]:)?[A-Za-z0-9_.~:/\\-]*"
-    rf"[A-Za-z0-9_.-]+\.(?:{SOURCE_SUFFIXES})",
+    rf"[A-Za-z0-9_.-]+\.(?:{SOURCE_SUFFIXES})(?![A-Za-z0-9_])",
     re.IGNORECASE,
 )
 CODE_SPAN_PATTERN = re.compile(r"`([^`\n]{1,120})`")
@@ -89,11 +91,18 @@ GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
 GRAPH_BONUS_LIMIT = 10.0
 GRAPH_RERANK_BAND_SIZE = 10
+GRAPH_EXPANSION_MIN_BONUS = 5.0
+GRAPH_EXPANSION_SLOTS = 3
+HISTORY_COMMIT_LIMIT = 50
+HISTORY_FILE_LIMIT = 50
+BLAME_SEED_LIMIT = 2
+BLAME_FILE_LIMIT = 20
 
 
 @dataclass(frozen=True)
 class IssueSignals:
     terms: frozenset[str]
+    primary_terms: frozenset[str]
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
     paths: frozenset[str]
@@ -155,6 +164,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     }
     return IssueSignals(
         terms=frozenset(_terms(text)),
+        primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         paths=frozenset(paths),
@@ -212,20 +222,11 @@ def _source_content(
     return identifier_hits, content_overlap, first_line
 
 
-def _graph_relations(
-    repository_map: RepositoryMap,
+def _graph_seed_paths(
     base_scores: dict[str, float],
     auxiliary_files: dict[str, bool],
-) -> dict[str, list[tuple[float, str]]]:
-    files_by_path = {file.path: file for file in repository_map.files}
-    symbol_definitions: dict[str, set[str]] = {}
-    for file in repository_map.files:
-        if file.test_file:
-            continue
-        for symbol in file.symbols:
-            symbol_definitions.setdefault(symbol.name, set()).add(file.path)
-
-    seed_paths = sorted(
+) -> list[str]:
+    return sorted(
         (
             path
             for path, score in base_scores.items()
@@ -238,7 +239,195 @@ def _graph_relations(
         ),
     )[:GRAPH_SEED_LIMIT]
 
+
+def _history_relations(
+    root: Path,
+    seed_paths: list[str],
+    eligible_paths: set[str],
+    auxiliary_files: dict[str, bool],
+) -> dict[str, list[tuple[float, str]]]:
+    if not seed_paths or not (root / ".git").exists():
+        return {}
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "log",
+                "-n",
+                str(HISTORY_COMMIT_LIMIT),
+                "--full-diff",
+                "--format=%x1e%H",
+                "--name-only",
+                "HEAD",
+                "--",
+                *seed_paths,
+            ],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    if completed.returncode:
+        return {}
+
+    counts: Counter[str] = Counter()
+    latest_commit: dict[str, str] = {}
+    seed_set = set(seed_paths)
+    for record in completed.stdout.split("\x1e"):
+        lines = [line for line in record.splitlines() if line]
+        if len(lines) < 2:
+            continue
+        commit, *changed_files = lines
+        changed = set(changed_files)
+        if len(changed) > HISTORY_FILE_LIMIT:
+            continue
+        for path in changed.intersection(eligible_paths) - seed_set:
+            if auxiliary_files[path]:
+                continue
+            counts[path] += 1
+            latest_commit.setdefault(path, commit)
+
+    return {
+        path: [
+            (
+                min(12.0, 5.0 + count),
+                f"Changed with lexical seed files in {count} prior commits "
+                f"(latest {latest_commit[path][:7]})",
+            )
+        ]
+        for path, count in counts.items()
+    }
+
+
+def _blame_relations(
+    root: Path,
+    seed_paths: list[str],
+    candidates: dict[str, CandidateLocation],
+    eligible_paths: set[str],
+    auxiliary_files: dict[str, bool],
+) -> dict[str, list[tuple[float, str]]]:
     relations: dict[str, list[tuple[float, str]]] = {}
+    for seed_path in seed_paths[:BLAME_SEED_LIMIT]:
+        location = candidates[seed_path].lines
+        if location is None:
+            continue
+        start_value, _, end_value = location.partition("-")
+        if not start_value.isdigit():
+            continue
+        start_line = int(start_value)
+        end_line = int(end_value) if end_value.isdigit() else start_line
+        end_line = min(end_line, start_line + 4)
+        try:
+            blame = subprocess.run(
+                [
+                    "git",
+                    "blame",
+                    "--porcelain",
+                    "-L",
+                    f"{start_line},{end_line}",
+                    "HEAD",
+                    "--",
+                    seed_path,
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if blame.returncode:
+            continue
+        commits = {
+            line.partition(" ")[0]
+            for line in blame.stdout.splitlines()
+            if re.match(r"^[0-9a-f]{40} \d+ \d+", line)
+            and set(line.partition(" ")[0]) != {"0"}
+        }
+        for commit in commits:
+            try:
+                changed = subprocess.run(
+                    [
+                        "git",
+                        "show",
+                        "--format=",
+                        "--name-only",
+                        "--diff-filter=AM",
+                        commit,
+                    ],
+                    cwd=root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if changed.returncode:
+                continue
+            changed_paths = {
+                path for path in changed.stdout.splitlines() if path
+            }
+            if len(changed_paths) > BLAME_FILE_LIMIT:
+                continue
+            for path in changed_paths.intersection(eligible_paths) - {seed_path}:
+                if auxiliary_files[path]:
+                    continue
+                relations.setdefault(path, []).append(
+                    (
+                        10.0,
+                        f"Blame-selected seed line changed with this file in "
+                        f"prior commit {commit[:7]}",
+                    )
+                )
+    return relations
+
+
+def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
+    if evidence.startswith("Changed with lexical seed files"):
+        return 0
+    if "references imported symbols" in evidence:
+        return 0
+    if evidence.startswith("Related source calls imported symbols"):
+        return min(bonus, 8.0)
+    if evidence.startswith("Two-hop source relation calls imported symbols"):
+        return min(bonus, 5.0)
+    if evidence.startswith("Related source calls ") and ", defined here:" in evidence:
+        return min(bonus, 2.0)
+    return bonus
+
+
+def _graph_relations(
+    repository_map: RepositoryMap,
+    base_scores: dict[str, float],
+    auxiliary_files: dict[str, bool],
+    signals: IssueSignals,
+) -> dict[str, list[tuple[float, str]]]:
+    files_by_path = {file.path: file for file in repository_map.files}
+    symbol_definitions: dict[str, set[str]] = {}
+    for file in repository_map.files:
+        if file.test_file:
+            continue
+        for symbol in file.symbols:
+            symbol_definitions.setdefault(symbol.name, set()).add(file.path)
+
+    seed_paths = _graph_seed_paths(base_scores, auxiliary_files)
+
+    relations: dict[str, list[tuple[float, str]]] = {}
+
+    def matches_primary_issue(value: str) -> bool:
+        related_terms = _terms(value)
+        return bool(related_terms & signals.primary_terms) or any(
+            len(related) >= 5
+            and len(primary) >= 5
+            and (related in primary or primary in related)
+            for related in related_terms
+            for primary in signals.primary_terms
+        )
 
     def add_relation(target: str, bonus: float, evidence: str) -> None:
         if target not in base_scores:
@@ -254,6 +443,9 @@ def _graph_relations(
             called_imports = set(
                 seed.local_import_symbols.get(imported_path, [])
             ).intersection(seed.calls)
+            referenced_imports = set(
+                seed.local_import_symbols.get(imported_path, [])
+            ).intersection(seed.references)
             if seed.test_file:
                 add_relation(
                     imported_path,
@@ -261,11 +453,31 @@ def _graph_relations(
                     f"Matching test imports this source file: {seed_path}",
                 )
             elif called_imports:
+                bonus = (
+                    9.0
+                    if any(matches_primary_issue(symbol) for symbol in called_imports)
+                    else 8.0
+                )
                 add_relation(
                     imported_path,
-                    8.0,
+                    bonus,
                     "Related source calls imported symbols defined here: "
                     + ", ".join(sorted(called_imports)),
+                )
+            elif referenced_imports:
+                bonus = (
+                    8.0
+                    if any(
+                        matches_primary_issue(symbol)
+                        for symbol in referenced_imports
+                    )
+                    else 6.0
+                )
+                add_relation(
+                    imported_path,
+                    bonus,
+                    "Related source references imported symbols defined here: "
+                    + ", ".join(sorted(referenced_imports)),
                 )
             else:
                 add_relation(
@@ -281,27 +493,47 @@ def _graph_relations(
                 called_second_hop_imports = set(
                     imported.local_import_symbols.get(second_hop_path, [])
                 ).intersection(imported.calls)
+                referenced_second_hop_imports = set(
+                    imported.local_import_symbols.get(second_hop_path, [])
+                ).intersection(imported.references)
                 if called_second_hop_imports:
+                    bonus = (
+                        9.0
+                        if any(
+                            matches_primary_issue(symbol)
+                            for symbol in called_second_hop_imports
+                        )
+                        else 5.0
+                    )
                     add_relation(
                         second_hop_path,
-                        5.0,
+                        bonus,
                         "Two-hop source relation calls imported symbols defined "
                         "here: "
                         + ", ".join(sorted(called_second_hop_imports)),
+                    )
+                elif referenced_second_hop_imports:
+                    add_relation(
+                        second_hop_path,
+                        4.0,
+                        "Two-hop source relation references imported symbols "
+                        "defined here: "
+                        + ", ".join(sorted(referenced_second_hop_imports)),
                     )
 
         if seed.test_file:
             continue
         for called_symbol in seed.calls:
-            if len(called_symbol) < 8 or "_" not in called_symbol:
+            if len(called_symbol) < 8:
                 continue
             targets = symbol_definitions.get(called_symbol, set()) - {seed_path}
             if not targets or len(targets) > 4:
                 continue
             for target in targets:
+                bonus = 9.0 if matches_primary_issue(called_symbol) else 2.0
                 add_relation(
                     target,
-                    2.0,
+                    bonus,
                     f"Related source calls {called_symbol}, defined here: {seed_path}",
                 )
     return relations
@@ -428,6 +660,22 @@ def locate_candidates(
         repository_map,
         base_scores,
         auxiliary_files,
+        signals,
+    )
+    history_relations = _history_relations(
+        root,
+        _graph_seed_paths(base_scores, auxiliary_files),
+        set(base_scores),
+        auxiliary_files,
+    )
+    for path, relations in history_relations.items():
+        graph_relations.setdefault(path, []).extend(relations)
+    blame_relations = _blame_relations(
+        root,
+        _graph_seed_paths(base_scores, auxiliary_files),
+        candidates,
+        set(base_scores),
+        auxiliary_files,
     )
     final_scores = dict(base_scores)
     for path, relations in graph_relations.items():
@@ -435,9 +683,17 @@ def locate_candidates(
             set(relations),
             key=lambda relation: (-relation[0], relation[1]),
         )
+        rerank_relations = sorted(
+            (
+                (_rerank_relation_bonus(bonus, evidence), evidence)
+                for bonus, evidence in unique_relations
+                if _rerank_relation_bonus(bonus, evidence) > 0
+            ),
+            key=lambda relation: (-relation[0], relation[1]),
+        )
         graph_bonus = min(
             GRAPH_BONUS_LIMIT,
-            sum(bonus for bonus, _ in unique_relations[:2]),
+            sum(bonus for bonus, _ in rerank_relations[:2]),
         )
         final_scores[path] += graph_bonus
         candidates[path].confidence = round(
@@ -456,10 +712,11 @@ def locate_candidates(
             path,
         ),
     )
-    reranked_paths: list[str] = []
-    for start in range(0, min(limit, len(base_order)), GRAPH_RERANK_BAND_SIZE):
-        band = base_order[start : min(start + GRAPH_RERANK_BAND_SIZE, limit)]
-        reranked_paths.extend(
+    base_shortlist = base_order[:limit]
+    reranked_base: list[str] = []
+    for start in range(0, len(base_shortlist), GRAPH_RERANK_BAND_SIZE):
+        band = base_shortlist[start : start + GRAPH_RERANK_BAND_SIZE]
+        reranked_base.extend(
             sorted(
                 band,
                 key=lambda path: (
@@ -468,6 +725,33 @@ def locate_candidates(
                     path,
                 ),
             )
+        )
+    expansion_paths = sorted(
+        (
+            path
+            for path, relations in graph_relations.items()
+            if path not in base_shortlist
+            and sum(
+                bonus
+                for bonus, _ in sorted(
+                    set(relations),
+                    key=lambda relation: (-relation[0], relation[1]),
+                )[:2]
+            )
+            >= GRAPH_EXPANSION_MIN_BONUS
+        ),
+        key=lambda path: (
+            -max(bonus for bonus, _ in graph_relations[path]),
+            -final_scores[path],
+            auxiliary_files[path],
+            path,
+        ),
+    )[: min(GRAPH_EXPANSION_SLOTS, limit)]
+    retained_base = reranked_base[: max(0, limit - len(expansion_paths))]
+    reranked_paths = [*retained_base, *expansion_paths]
+    for path in reranked_paths:
+        candidates[path].evidence.extend(
+            evidence for _, evidence in blame_relations.get(path, [])[:1]
         )
     return [
         candidates[path]

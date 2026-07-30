@@ -202,7 +202,7 @@ def prepare_repository(case: BenchmarkCase, workspace: Path) -> Path:
         if _run_git(["status", "--porcelain"], cwd=target):
             raise ValueError(f"Benchmark workspace has uncommitted changes: {target}")
 
-    _run_git(["fetch", "--depth=1", "origin", case.pre_fix_sha], cwd=target)
+    _run_git(["fetch", "--depth=100", "origin", case.pre_fix_sha], cwd=target)
     _run_git(["checkout", "--detach", case.pre_fix_sha], cwd=target)
     checked_out_sha = _run_git(["rev-parse", "HEAD"], cwd=target)
     if checked_out_sha != case.pre_fix_sha:

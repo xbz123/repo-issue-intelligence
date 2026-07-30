@@ -1,3 +1,4 @@
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -37,7 +38,16 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
     signals = extract_issue_signals(record)
 
     assert any(path.endswith("starlette/responses.py") for path in signals.paths)
+    assert "rich.console.C" not in extract_issue_signals(
+        issue(
+            "Console output",
+            "See rich.console.Console and https://example.com/image.png.",
+        )
+    ).paths
     assert {"streaming", "response", "base", "http", "middleware"} <= signals.terms
+    assert {"streaming", "response", "base", "http", "middleware"} <= (
+        signals.primary_terms
+    )
     assert {"send_denial_response", "RuntimeError"} <= signals.identifiers
     assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.primary_identifiers
 
@@ -141,6 +151,7 @@ def test_repository_map_records_local_imports_and_called_symbols(
         "src/package/parser.py": ["parse_request"]
     }
     assert "parse_request" in api.calls
+    assert "parse_request" in api.references
 
 
 def test_locate_candidates_propagates_local_import_evidence(tmp_path: Path) -> None:
@@ -235,7 +246,7 @@ def test_locate_candidates_propagates_called_symbol_evidence(tmp_path: Path) -> 
     ) in backend.evidence
 
 
-def test_graph_reranking_does_not_expand_the_lexical_candidate_pool(
+def test_graph_reranking_expands_strong_relations_into_the_candidate_pool(
     tmp_path: Path,
 ) -> None:
     repository = tmp_path / "repository"
@@ -269,7 +280,110 @@ def test_graph_reranking_does_not_expand_the_lexical_candidate_pool(
     )
 
     assert len(candidates) == 20
-    assert all(candidate.file != "src/target.py" for candidate in candidates)
+    assert any(candidate.file == "src/target.py" for candidate in candidates)
+
+
+def test_locate_candidates_uses_non_call_import_references(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .result import ResultType\n\n"
+        "def handle_failure(value):\n"
+        "    return isinstance(value, ResultType)\n",
+    )
+    write_source(
+        repository,
+        "src/package/result.py",
+        "class ResultType:\n    pass\n",
+    )
+    record = issue(
+        "Handle failure",
+        "The traceback points to src/package/api.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    result = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/result.py"
+    )
+
+    assert (
+        "Related source references imported symbols defined here: ResultType"
+        in result.evidence
+    )
+
+
+def test_locate_candidates_uses_only_prior_git_cochanges(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def handle_regression():\n    return None\n",
+    )
+    write_source(
+        repository,
+        "src/target.py",
+        "def historical_regression():\n    return None\n",
+    )
+    for index in range(20):
+        write_source(
+            repository,
+            f"src/shared_regression_{index}.py",
+            "def shared_regression():\n    return None\n",
+        )
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-qm", "initial"],
+        check=True,
+    )
+    for revision in range(3):
+        write_source(
+            repository,
+            "src/seed.py",
+            f"def handle_regression():\n    return {revision}\n",
+        )
+        write_source(
+            repository,
+            "src/target.py",
+            f"def historical_regression():\n    return {revision}\n",
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "add", "src/seed.py", "src/target.py"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "commit", "-qm", f"revision {revision}"],
+            check=True,
+        )
+
+    candidates = locate_candidates(
+        issue("Shared regression", "The traceback points to src/seed.py."),
+        build_repository_map(repository),
+        limit=20,
+    )
+    target = next(
+        candidate for candidate in candidates if candidate.file == "src/target.py"
+    )
+
+    assert any(
+        "Changed with lexical seed files in" in evidence
+        for evidence in target.evidence
+    )
+    assert any(
+        "Blame-selected seed line changed with this file" in evidence
+        for evidence in target.evidence
+    )
 
 
 def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> None:

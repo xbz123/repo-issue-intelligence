@@ -275,12 +275,12 @@ The current frozen benchmark contains 20 closed issues with linked fix PRs acros
 Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
 eligible for candidate retrieval.
 
-On the 20-case manifest, the graph-reranked deterministic path completed every case and achieved
-File Recall@1 `0.3500`, Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR
-`0.5663`. Static Python import, imported-symbol call, call-name, and test-import evidence reranks
-within fixed Top-10 bands, so the lexical Top-10 and Top-20 member sets remain unchanged. The wider
-suite deliberately includes harder lexical and multi-file cases; its metrics must not be compared
-as if it were the same dataset as the historical 9-case run.
+On the 20-case manifest, Retrieval v4 completed every case and achieved File Recall@1 `0.3500`,
+Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5663`. AST load
+references, dynamic backend/call links, bounded prior-history co-change evidence, and three
+controlled expansion slots recovered all labeled fix files without changing the prior Top-10
+metrics. The wider suite deliberately includes harder lexical and multi-file cases; its metrics
+must not be compared as if it were the same dataset as the historical 9-case run.
 
 On the preserved 9-case manifest, Retrieval v2 achieved deterministic Recall@5 `0.7593` and MRR
 `0.5083`; GPT-OSS 20B reranking achieved Recall@5 `0.8148` and MRR `0.8333`.
@@ -291,10 +291,11 @@ cases returned valid model output; three exhausted two attempts and used determi
 This improved aggregate Recall@1 and MRR over deterministic Retrieval v3, but calibration-tier
 MRR decreased, so no per-project universal improvement is claimed.
 
-DeepSeek V4 Flash Free achieved Recall@1 `0.6417`, Recall@5 `0.9250`, Recall@10 `0.9250`,
-Recall@20 `0.9250`, and MRR `0.8458`. All 20 cases returned valid output with no fallback.
-Average model latency was `14.6 s`, versus `0.8 s` for successful GPT-OSS 20B responses, so the
-quality gain carries a substantial latency and token cost even while the OpenCode model is free.
+DeepSeek V4 Flash Free over Retrieval v4 achieved Recall@1 `0.5917`, Recall@5 `0.9833`,
+Recall@10/20 `1.0000`, and MRR `0.8500`. All 20 cases returned valid output on the first attempt
+with no fallback; average model latency was `16.5 s`. Three earlier complete runs measured
+Retrieval v3 stability at MRR `0.8408 ± 0.0287`, so the project reports model variance rather than
+selecting only the best run.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.
