@@ -720,9 +720,21 @@ def _graph_relations(
                 )
             if len(targets) == 1 and matches_specific_primary_issue(called_symbol):
                 target = next(iter(targets))
-                target_parts = set(Path(target).parts)
-                if not target_parts.intersection(
-                    {"abc", "interface", "interfaces", "protocol", "protocols"}
+                target_parts = {
+                    Path(part).stem.lstrip("_").lower()
+                    for part in Path(target).parts
+                }
+                if (
+                    not auxiliary_files.get(target, True)
+                    and not target_parts.intersection(
+                        {
+                            "abc",
+                            "interface",
+                            "interfaces",
+                            "protocol",
+                            "protocols",
+                        }
+                    )
                 ):
                     strong_first_hops.append((called_symbol, target))
 
@@ -732,10 +744,9 @@ def _graph_relations(
             for called_symbol in second_hop_calls:
                 if len(called_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
                     continue
-                targets = symbol_definitions.get(called_symbol, set()) - {
-                    seed_path,
-                    first_hop_path,
-                }
+                targets = symbol_definitions.get(called_symbol, set())
+                if targets.intersection({seed_path, first_hop_path}):
+                    continue
                 if len(targets) != 1:
                     continue
                 target = next(iter(targets))

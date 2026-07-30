@@ -13,10 +13,10 @@ expected file, and improved Recall@10 without changing Recall@1, Recall@5, Recal
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.3000 | 0.8583 | 0.9000 | 1.0000 | 0.5394 | 1,451 ms |
-| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,300 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4097 | 868 ms |
-| Generalization | 9/9 | 0.2778 | 0.8519 | 0.9444 | 1.0000 | 0.5222 | 1,827 ms |
+| Overall | 20/20 | 0.3000 | 0.8583 | 0.9000 | 1.0000 | 0.5394 | 1,456 ms |
+| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,310 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4097 | 832 ms |
+| Generalization | 9/9 | 0.2778 | 0.8519 | 0.9444 | 1.0000 | 0.5222 | 1,846 ms |
 
 Five cases also contain six manually reviewed function targets from real fix diffs:
 

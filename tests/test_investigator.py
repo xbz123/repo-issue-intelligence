@@ -487,7 +487,7 @@ def test_graph_reranking_does_not_propagate_through_abstract_layer(
     )
     write_source(
         repository,
-        "src/abc/tasks.py",
+        "src/_abc.py",
         "def start_soon():\n"
         "    return create_task()\n",
     )
@@ -510,6 +510,88 @@ def test_graph_reranking_does_not_propagate_through_abstract_layer(
             for evidence in candidate.evidence
         )
         for candidate in candidates
+    )
+
+
+def test_graph_reranking_does_not_resolve_local_callee_to_unrelated_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_height():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "def refresh_layout():\n"
+        "    return arrange_children()\n\n"
+        "def arrange_children():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "src/unrelated.py",
+        "def arrange_children():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Height refresh fails after removing children",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    unrelated = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/unrelated.py"
+    )
+
+    assert all(
+        not evidence.startswith("Two-hop source call chain via ")
+        for evidence in unrelated.evidence
+    )
+
+
+def test_graph_reranking_does_not_propagate_through_auxiliary_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_layout():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "docs/refresh.py",
+        "def refresh_layout():\n"
+        "    return reflow_content()\n",
+    )
+    write_source(
+        repository,
+        "src/compositor.py",
+        "def reflow_content():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Layout refresh fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    compositor = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/compositor.py"
+    )
+
+    assert all(
+        not evidence.startswith("Two-hop source call chain via ")
+        for evidence in compositor.evidence
     )
 
 
