@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from repo_issue_intelligence.investigator import (
+    _identifier_variants,
     extract_issue_signals,
     investigate,
     locate_candidates,
@@ -50,6 +51,14 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
     )
     assert {"send_denial_response", "RuntimeError"} <= signals.identifiers
     assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.primary_identifiers
+
+
+def test_identifier_variants_preserve_source_term_order() -> None:
+    variants = _identifier_variants("is_alt_screen")
+
+    assert "alt_screen" in variants
+    assert "altscreen" in variants
+    assert "screen_alt" not in variants
 
 
 def test_locate_candidates_prioritizes_exact_issue_path(tmp_path: Path) -> None:
@@ -229,7 +238,42 @@ def test_repository_map_records_local_imports_and_called_symbols(
         "src/package/parser.py": ["parse_request"]
     }
     assert "parse_request" in api.calls
+    assert api.symbol_calls == {"handle_request": ["parse_request"]}
     assert "parse_request" in api.references
+
+
+def test_locate_candidates_propagates_within_file_call_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/compositor.py",
+        "def reflow(children):\n"
+        '    \"\"\"Reflow children widgets after removal.\"\"\"\n'
+        "    return _arrange_root(children)\n\n"
+        "def reflow_visible(children):\n"
+        '    \"\"\"Reflow visible children widgets after removal.\"\"\"\n'
+        "    return _arrange_root(children)\n\n"
+        "def _arrange_root(children):\n"
+        '    \"\"\"Arrange the root layout.\"\"\"\n'
+        "    return children\n\n"
+        "def __contains__(widget):\n"
+        '    \"\"\"Check the previous refresh.\"\"\"\n'
+        "    return False\n",
+    )
+    record = issue(
+        "Height not refreshed after removing children",
+        "The child widgets are removed but the container keeps its old height.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_arrange_root"
+    assert (
+        "Issue-matching symbols call _arrange_root: reflow, reflow_visible"
+        in candidates[0].evidence
+    )
 
 
 def test_locate_candidates_propagates_local_import_evidence(tmp_path: Path) -> None:

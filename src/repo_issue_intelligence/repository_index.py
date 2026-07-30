@@ -53,16 +53,41 @@ FRAMEWORK_IMPORTS = {
 }
 
 
+class _FunctionCallCollector(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.calls: set[str] = set()
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if isinstance(node.func, ast.Name):
+            self.calls.add(node.func.id)
+        elif isinstance(node.func, ast.Attribute):
+            self.calls.add(node.func.attr)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        return
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        return
+
+
 def _python_metadata(
     path: Path,
-) -> tuple[list[SymbolRecord], list[str], list[str], list[str]]:
+) -> tuple[
+    list[SymbolRecord],
+    list[str],
+    list[str],
+    dict[str, list[str]],
+    list[str],
+]:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError, OSError):
-        return [], [], [], []
+        return [], [], [], {}, []
     symbols: list[SymbolRecord] = []
     imports: list[str] = []
     calls: list[str] = []
+    symbol_calls: dict[str, set[str]] = {}
     references: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -75,6 +100,10 @@ def _python_metadata(
                     docstring=ast.get_docstring(node),
                 )
             )
+            collector = _FunctionCallCollector()
+            for statement in node.body:
+                collector.visit(statement)
+            symbol_calls.setdefault(node.name, set()).update(collector.calls)
         elif isinstance(node, ast.ClassDef):
             symbols.append(
                 SymbolRecord(
@@ -111,6 +140,11 @@ def _python_metadata(
         sorted(symbols, key=lambda item: item.line),
         sorted(set(imports)),
         sorted(set(calls)),
+        {
+            symbol: sorted(called)
+            for symbol, called in sorted(symbol_calls.items())
+            if called
+        },
         sorted(set(references)),
     )
 
@@ -231,9 +265,9 @@ def build_repository_map(
         if not language:
             continue
         languages[language] += 1
-        symbols, imports, calls, references = ([], [], [], [])
+        symbols, imports, calls, symbol_calls, references = ([], [], [], {}, [])
         if language == "Python":
-            symbols, imports, calls, references = _python_metadata(path)
+            symbols, imports, calls, symbol_calls, references = _python_metadata(path)
             for imported in imports:
                 framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
                 if framework:
@@ -245,6 +279,7 @@ def build_repository_map(
                 symbols=symbols,
                 imports=imports,
                 calls=calls,
+                symbol_calls=symbol_calls,
                 references=references,
                 test_file="test" in filename.lower() or "tests" in relative.parts,
             )

@@ -147,6 +147,7 @@ class BenchmarkCaseResult(BaseModel):
     symbol_recall_at_1: float | None = None
     symbol_recall_at_5: float | None = None
     symbol_recall_at_10: float | None = None
+    symbol_recall_at_20: float | None = None
     symbol_reciprocal_rank: float | None = None
     analysis_elapsed_ms: float = 0
     llm_attempts: int = 0
@@ -182,6 +183,7 @@ class BenchmarkAggregate(BaseModel):
     symbol_recall_at_1: float | None = None
     symbol_recall_at_5: float | None = None
     symbol_recall_at_10: float | None = None
+    symbol_recall_at_20: float | None = None
     mean_symbol_reciprocal_rank: float | None = None
 
 
@@ -442,6 +444,7 @@ def evaluate_case(
         symbol_recall_at_1=symbol_recall_at(1),
         symbol_recall_at_5=symbol_recall_at(5),
         symbol_recall_at_10=symbol_recall_at(10),
+        symbol_recall_at_20=symbol_recall_at(20),
         symbol_reciprocal_rank=(
             round(1 / first_symbol_rank, 4)
             if first_symbol_rank is not None
@@ -542,6 +545,16 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
                 result.symbol_recall_at_10
                 for result in symbol_results
                 if result.symbol_recall_at_10 is not None
+            ),
+            4,
+        )
+        if symbol_results
+        else None,
+        symbol_recall_at_20=round(
+            fmean(
+                result.symbol_recall_at_20
+                for result in symbol_results
+                if result.symbol_recall_at_20 is not None
             ),
             4,
         )

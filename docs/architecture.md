@@ -27,7 +27,8 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
-classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
+function-level call edges, classes, functions, line ranges, entrypoints, runtime files, tests, and
+framework indicators.
 
 ### Investigation
 
@@ -40,7 +41,8 @@ prior commits from 100 fetched ancestors, blames at most five lines for each of 
 candidates, and ignores broad commits. File scoring and symbol selection are separate: file scores
 retain the lexical/graph/history contract, while functions inside each file are selected using
 direct identifier references and normalized title-term rarity, with the original lexical match as
-a fallback. The investigator emits confirmed facts,
+a fallback. A callee receives additional evidence only when at least two distinct issue-matching
+functions in the same file call it. The investigator emits confirmed facts,
 confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate
 locations are not presented as confirmed root causes.
 
@@ -99,9 +101,10 @@ hypotheses are intentionally excluded from this benchmark contract so their sche
 does not contaminate localization metrics. Retrieval normalizes paths and identifiers, rejects
 dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
-and applies bounded graph/history evidence. Per-candidate evidence caps preserve candidate breadth
-before LLM reranking. Optional symbol labels are aggregated only across labeled cases; exact
-file-plus-symbol matches retain the candidate file rank.
+and applies bounded graph/history evidence. Compound identifier variants preserve source term
+order rather than depending on set iteration. Per-candidate evidence caps preserve candidate
+breadth before LLM reranking. Optional symbol labels are aggregated only across labeled cases;
+exact file-plus-symbol matches retain the candidate file rank.
 
 ### Benchmark candidate pipeline
 
@@ -150,17 +153,18 @@ The current benchmark contains 20 cases across seven repositories and six manual
 symbol targets across five cases. This is useful for error analysis but not statistically strong
 enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. LLM hypotheses are not confirmed
-root causes. Retrieval has bounded Python static/history relations and a single-best-function
-selector, but not class ownership or qualified symbol names, a control-flow-aware call graph,
-cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a vector index.
+root causes. Retrieval has bounded Python static/history relations, function-level calls, and a
+single-best-function selector, but not class ownership or qualified symbol names, cross-file
+control-flow propagation, a cross-language graph, semantic test-to-source mapping, multi-symbol
+ranking, or a vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> add control-flow-aware symbol evidence and multi-symbol ranking
+  -> add cross-file control-flow propagation and multi-symbol ranking
   -> add semantic test-to-source mapping
-  -> add control-flow-aware and cross-language graph evidence
+  -> add cross-language graph evidence
   -> expand high-confidence symbol labels and the suite to 30-50 cases
 ```
 

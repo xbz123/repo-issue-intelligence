@@ -334,6 +334,15 @@ def benchmark(
         f"Recall@20={run.overall.file_recall_at_20:.4f}, "
         f"MRR={run.overall.mean_reciprocal_rank:.4f}"
     )
+    if run.overall.symbol_cases:
+        console.print(
+            f"Symbol benchmark: {run.overall.symbol_cases} labeled cases; "
+            f"Recall@1={run.overall.symbol_recall_at_1:.4f}, "
+            f"Recall@5={run.overall.symbol_recall_at_5:.4f}, "
+            f"Recall@10={run.overall.symbol_recall_at_10:.4f}, "
+            f"Recall@20={run.overall.symbol_recall_at_20:.4f}, "
+            f"MRR={run.overall.mean_symbol_reciprocal_rank:.4f}"
+        )
     console.print(f"Saved benchmark results to {output}")
     if run.overall.failed:
         raise typer.Exit(code=1)

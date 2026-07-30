@@ -198,9 +198,11 @@ def test_evaluate_case_measures_optional_symbol_recall(tmp_path: Path) -> None:
         for candidate in result.candidate_symbols
     )
     assert result.symbol_recall_at_5 == 1
+    assert result.symbol_recall_at_20 == 1
     assert result.symbol_reciprocal_rank is not None
     assert aggregate.symbol_cases == 1
     assert aggregate.symbol_recall_at_5 == 1
+    assert aggregate.symbol_recall_at_20 == 1
 
 
 def test_benchmark_case_rejects_symbol_outside_expected_files() -> None:
@@ -337,6 +339,7 @@ def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) ->
     assert aggregate.mean_reciprocal_rank == 0
     assert aggregate.symbol_cases == 0
     assert aggregate.symbol_recall_at_5 is None
+    assert aggregate.symbol_recall_at_20 is None
 
 
 def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> None:

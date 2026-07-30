@@ -41,7 +41,7 @@ not derived correctly.
 - Reproduction-completeness accuracy.
 - Duplicate precision, recall, and F1.
 - File Recall@1, @5, @10, and @20 plus file MRR.
-- Symbol Recall@1, @5, and @10 plus symbol MRR on labeled cases only.
+- Symbol Recall@1, @5, @10, and @20 plus symbol MRR on labeled cases only.
 - Invalid structured-response rate.
 - Unknown evidence-reference rate.
 - Input and output tokens per issue.
@@ -83,11 +83,11 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The corrected manifest v5 deterministic baseline completed 20/20 cases with File Recall@1
-`0.3000`, Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5396`.
-The v0.8 within-file selector preserved those file metrics. On the five symbol-labeled cases it
-improved Symbol Recall@5/10 from `0.3000` to `0.7000` and symbol MRR from `0.1118` to `0.2284`;
-Symbol Recall@1 remained `0.0000`.
+The corrected manifest v5 v0.9 baseline completed 20/20 cases with File Recall@1 `0.3000`,
+Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5394`. On the five
+symbol-labeled cases, Symbol Recall@5/10 improved from `0.3000` to `0.7000`, Symbol Recall@20
+reached `1.0000` across all six reviewed targets, and symbol MRR reached `0.2278`. Symbol Recall@1
+remained `0.0000`. Two complete v0.9 runs produced identical candidate and metric outputs.
 
 No LLM reranking result is yet valid for manifest v5. An integrity audit found that 18 of the
 previous 20 pre-fix SHAs were commits inside their fix PRs. Earlier GPT-OSS, DeepSeek, and
