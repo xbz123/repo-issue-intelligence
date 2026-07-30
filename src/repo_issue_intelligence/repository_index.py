@@ -53,14 +53,17 @@ FRAMEWORK_IMPORTS = {
 }
 
 
-def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str], list[str]]:
+def _python_metadata(
+    path: Path,
+) -> tuple[list[SymbolRecord], list[str], list[str], list[str]]:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (SyntaxError, UnicodeDecodeError, OSError):
-        return [], [], []
+        return [], [], [], []
     symbols: list[SymbolRecord] = []
     imports: list[str] = []
     calls: list[str] = []
+    references: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             symbols.append(
@@ -100,10 +103,15 @@ def _python_metadata(path: Path) -> tuple[list[SymbolRecord], list[str], list[st
                 calls.append(node.func.id)
             elif isinstance(node.func, ast.Attribute):
                 calls.append(node.func.attr)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            references.append(node.id)
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+            references.append(node.attr)
     return (
         sorted(symbols, key=lambda item: item.line),
         sorted(set(imports)),
         sorted(set(calls)),
+        sorted(set(references)),
     )
 
 
@@ -223,9 +231,9 @@ def build_repository_map(
         if not language:
             continue
         languages[language] += 1
-        symbols, imports, calls = ([], [], [])
+        symbols, imports, calls, references = ([], [], [], [])
         if language == "Python":
-            symbols, imports, calls = _python_metadata(path)
+            symbols, imports, calls, references = _python_metadata(path)
             for imported in imports:
                 framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
                 if framework:
@@ -237,6 +245,7 @@ def build_repository_map(
                 symbols=symbols,
                 imports=imports,
                 calls=calls,
+                references=references,
                 test_file="test" in filename.lower() or "tests" in relative.parts,
             )
         )

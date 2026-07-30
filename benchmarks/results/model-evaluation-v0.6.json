@@ -1,0 +1,97 @@
+{
+  "created_at": "2026-07-30",
+  "protocol": {
+    "manifest": "benchmarks/cases.json",
+    "cases": 20,
+    "temperature": 0.1,
+    "seed": 1337,
+    "seed_is_best_effort": true
+  },
+  "deepseek_retrieval_v3_stability": {
+    "runs": 3,
+    "case_runs": 60,
+    "valid_model_responses": 59,
+    "fallbacks": 1,
+    "metrics": {
+      "file_recall_at_1": {"mean": 0.6250, "sample_stddev": 0.0289},
+      "file_recall_at_5": {"mean": 0.9139, "sample_stddev": 0.0096},
+      "file_recall_at_10": {"mean": 0.9250, "sample_stddev": 0.0000},
+      "file_recall_at_20": {"mean": 0.9250, "sample_stddev": 0.0000},
+      "mean_reciprocal_rank": {"mean": 0.8408, "sample_stddev": 0.0287},
+      "average_llm_elapsed_ms": {
+        "mean": 16332.9017,
+        "sample_stddev": 1531.1422
+      }
+    },
+    "artifacts": [
+      "benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json",
+      "benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases-run2.json",
+      "benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases-run3.json"
+    ]
+  },
+  "five_case_screen": {
+    "case_ids": [
+      "typer-option-envvar",
+      "typer-rich-help-width",
+      "textual-remove-children-reflow",
+      "anyio-freethreading-runvar",
+      "rich-ansi-trailing-newline"
+    ],
+    "models": {
+      "deepseek-v4-flash-free": {
+        "file_recall_at_1": 0.5000,
+        "file_recall_at_5": 0.8000,
+        "mean_reciprocal_rank": 0.8000,
+        "valid_model_responses": 5,
+        "fallbacks": 0,
+        "average_llm_elapsed_ms": 12392.421
+      },
+      "nemotron-3-ultra-free": {
+        "file_recall_at_1": 0.5000,
+        "file_recall_at_5": 0.8000,
+        "mean_reciprocal_rank": 0.8000,
+        "valid_model_responses": 5,
+        "fallbacks": 0,
+        "average_llm_elapsed_ms": 26545.850
+      },
+      "north-mini-code-free": {
+        "file_recall_at_1": 0.3000,
+        "file_recall_at_5": 0.8000,
+        "mean_reciprocal_rank": 0.6167,
+        "valid_model_responses": 3,
+        "fallbacks": 2,
+        "average_llm_elapsed_ms": 40322.376
+      },
+      "ling-3.0-flash-free": {
+        "quality_metrics": null,
+        "valid_model_responses": 0,
+        "fallbacks": 5,
+        "failed_attempts": 10,
+        "error": "upstream HTTP 400 invalid_request_error"
+      }
+    }
+  },
+  "retrieval_v4": {
+    "deterministic_artifact": "benchmarks/results/deterministic-v0.6-history-20-cases.json",
+    "hybrid_artifact": "benchmarks/results/hybrid-deepseek-v4-flash-v0.6-history-20-cases.json",
+    "deterministic": {
+      "file_recall_at_1": 0.3500,
+      "file_recall_at_5": 0.8583,
+      "file_recall_at_10": 0.8750,
+      "file_recall_at_20": 1.0000,
+      "mean_reciprocal_rank": 0.5663
+    },
+    "deepseek_hybrid": {
+      "file_recall_at_1": 0.5917,
+      "file_recall_at_5": 0.9833,
+      "file_recall_at_10": 1.0000,
+      "file_recall_at_20": 1.0000,
+      "mean_reciprocal_rank": 0.8500,
+      "valid_model_responses": 20,
+      "fallbacks": 0,
+      "average_llm_elapsed_ms": 16477.335,
+      "llm_input_tokens": 103713,
+      "llm_output_tokens": 38254
+    }
+  }
+}

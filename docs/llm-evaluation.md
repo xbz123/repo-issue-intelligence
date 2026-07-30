@@ -89,31 +89,30 @@ to `0.4167` and MRR from `0.5663` to `0.6738`; Recall@5, Recall@10, and Recall@2
 The calibration tier regressed, so the supported claim is an aggregate ordering improvement, not
 universal improvement across projects.
 
-On 2026-07-30, OpenCode DeepSeek V4 Flash Free reranked the same 20 cases through the
-OpenAI-compatible chat-completions endpoint. With a 4,096-token output budget, 60-second timeout,
-zero inter-case delay, `temperature=0.1`, and best-effort `seed=1337`, it returned valid output for
-20/20 cases with no fallback. It achieved Recall@1 `0.6417`, Recall@5 `0.9250`, Recall@10
-`0.9250`, Recall@20 `0.9250`, and MRR `0.8458`. Average model latency was `14.6 s`, and one case
-needed a second attempt. The run consumed 104,570 input and 32,981 output tokens.
+On 2026-07-30, three complete DeepSeek Retrieval v3 runs established best-effort seed stability:
+mean Recall@1 was `0.6250 ± 0.0289`, Recall@5 `0.9139 ± 0.0096`, Recall@10/20 `0.9250 ±
+0.0000`, and MRR `0.8408 ± 0.0287` (sample standard deviation). Fifty-nine of 60 case-runs
+returned valid model output; one used deterministic fallback.
 
-The fixed seed is best effort: repeated targeted runs produced different rankings. The committed
-artifact is one complete, non-selective run, not a claim of zero model variance. A repeated-seed
-evaluation is still required before treating the observed quality gap as stable.
+After Retrieval v4 raised deterministic Recall@20 to `1.0000`, a new DeepSeek run achieved
+Recall@1 `0.5917`, Recall@5 `0.9833`, Recall@10/20 `1.0000`, and MRR `0.8500`. All 20
+responses validated on their first attempt with no fallback. This run consumed 103,713 input and
+38,254 output tokens and averaged `16.5 s` model latency.
 
 ## Free-model selection
 
 The initial shortlist is deliberately small:
 
-- `deepseek-v4-flash-free` is the current primary quality candidate because it has a complete
-  20-case result and resolved all three cases where GPT-OSS 20B previously returned invalid
-  structured output.
-- `north-mini-code-free` is the next coding-specialized challenger for file-localization quality.
-- `nemotron-3-ultra-free` is the next general-reasoning challenger for complex call-chain cases.
-- `ling-3.0-flash-free` or `mimo-v2.5-free` may be used as latency-oriented baselines.
+- `deepseek-v4-flash-free` remains the default: 5/5 valid screening responses, MRR `0.8000`,
+  and `12.4 s` average latency on the screening subset.
+- `nemotron-3-ultra-free` matched DeepSeek's screening metrics but averaged `26.5 s`, so it does
+  not justify a full run yet.
+- `north-mini-code-free` returned only 3/5 valid responses and averaged `40.3 s` when successful.
+- `ling-3.0-flash-free` returned upstream HTTP 400 for all ten attempts. Its fallback metrics are
+  not model measurements.
 - `big-pickle` is not a primary benchmark model because its opaque identity weakens
   reproducibility and interview explainability.
 
-These are test priorities, not unmeasured quality claims. Run a frozen 3–5 case screening set
-before spending a full benchmark on another provider model. Free-model data must remain limited
-to public Issue and repository content because OpenCode documents that free-period data may be
-used for model improvement.
+The screen used five frozen high-discrimination cases and the same rerank contract. Free-model
+data remains limited to public Issue and repository content because OpenCode documents that
+free-period data may be used for model improvement.
