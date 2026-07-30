@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .models import (
     CandidateLocation,
+    FileRecord,
     Hypothesis,
     InvestigationReport,
     IssueRecord,
@@ -435,16 +436,16 @@ def _select_symbol(
         for match in functions
         for term in match.semantic_terms
     )
-    matches_by_name = {
-        match.symbol.name: match
+    matches_by_identity = {
+        _symbol_identity(match.symbol): match
         for match in functions
     }
     relation_scores = {
-        called_name: sum(
-            min(len(matches_by_name[caller].local_overlap), 4)
+        called_identity: sum(
+            min(len(matches_by_identity[caller].local_overlap), 4)
             for caller in callers
         )
-        for called_name, callers in related_callers.items()
+        for called_identity, callers in related_callers.items()
     }
 
     def semantic_score(
@@ -455,7 +456,7 @@ def _select_symbol(
             overlap -= _semantic_terms(_terms(match.symbol.name))
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
-            relation_scores.get(match.symbol.name, 0),
+            relation_scores.get(_symbol_identity(match.symbol), 0),
             max(rarity, default=0),
             sum(rarity),
             match.unscoped_explicit_identifier_match,
@@ -515,26 +516,48 @@ def _select_symbol(
     return fallback
 
 
+def _symbol_identity(symbol: SymbolRecord) -> str:
+    return symbol.qualified_name or symbol.name
+
+
 def _related_symbol_callers(
     matches: list[SymbolMatch],
     symbol_calls: dict[str, list[str]],
+    qualified_symbol_calls: dict[str, list[str]] | None = None,
 ) -> dict[str, tuple[str, ...]]:
-    functions = {
-        match.symbol.name: match
+    functions_by_identity = {
+        _symbol_identity(match.symbol): match
         for match in matches
         if match.symbol.kind == "function"
     }
+    functions_by_name: dict[str, list[SymbolMatch]] = {}
+    for match in functions_by_identity.values():
+        functions_by_name.setdefault(match.symbol.name, []).append(match)
+
+    call_edges = qualified_symbol_calls or symbol_calls
     callers_by_target: dict[str, set[str]] = {}
-    for caller_name, called_names in symbol_calls.items():
-        caller = functions.get(caller_name)
-        if caller is None or len(caller.local_overlap) < 2:
+    for caller_key, called_names in call_edges.items():
+        caller = functions_by_identity.get(caller_key)
+        if caller is None:
+            local_callers = functions_by_name.get(caller_key, [])
+            if len(local_callers) != 1:
+                continue
+            caller = local_callers[0]
+        if len(caller.local_overlap) < 2:
             continue
-        for called_name in set(called_names) & functions.keys():
-            if called_name != caller_name:
-                callers_by_target.setdefault(called_name, set()).add(caller_name)
+        caller_identity = _symbol_identity(caller.symbol)
+        for called_name in set(called_names):
+            targets = functions_by_name.get(called_name, [])
+            if len(targets) != 1:
+                continue
+            target_identity = _symbol_identity(targets[0].symbol)
+            if target_identity != caller_identity:
+                callers_by_target.setdefault(target_identity, set()).add(
+                    caller_identity
+                )
     return {
-        called_name: tuple(sorted(callers))
-        for called_name, callers in callers_by_target.items()
+        called_identity: tuple(sorted(callers))
+        for called_identity, callers in callers_by_target.items()
         if len(callers) >= 2
     }
 
@@ -565,7 +588,7 @@ def _symbol_evidence(
         evidence.append(
             f"Issue references owning symbol {label.rsplit('.', 1)[0]}"
         )
-    callers = related_callers.get(symbol.name, ())
+    callers = related_callers.get(_symbol_identity(symbol), ())
     if callers:
         evidence.append(
             "Issue-matching symbols call "
@@ -886,6 +909,22 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
     return bonus
 
 
+def _calls_for_local_symbol(file: FileRecord, symbol_name: str) -> list[str]:
+    matching_symbols = [
+        symbol
+        for symbol in file.symbols
+        if symbol.kind == "function" and symbol.name == symbol_name
+    ]
+    if len(matching_symbols) != 1:
+        return []
+    if file.qualified_symbol_calls:
+        return file.qualified_symbol_calls.get(
+            _symbol_identity(matching_symbols[0]),
+            [],
+        )
+    return file.symbol_calls.get(symbol_name, [])
+
+
 def _graph_relations(
     repository_map: RepositoryMap,
     base_scores: dict[str, float],
@@ -1053,7 +1092,10 @@ def _graph_relations(
 
         for first_hop_symbol, first_hop_path in sorted(strong_first_hops):
             first_hop = files_by_path[first_hop_path]
-            second_hop_calls = first_hop.symbol_calls.get(first_hop_symbol, [])
+            second_hop_calls = _calls_for_local_symbol(
+                first_hop,
+                first_hop_symbol,
+            )
             for called_symbol in second_hop_calls:
                 if len(called_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
                     continue
@@ -1129,6 +1171,7 @@ def locate_candidates(
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
             file.symbol_calls,
+            file.qualified_symbol_calls,
         )
         score_match: SymbolMatch | None = None
         for match in symbol_matches:
@@ -1391,6 +1434,7 @@ def locate_candidates(
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
             file.symbol_calls,
+            file.qualified_symbol_calls,
         )
         selected_match = _select_symbol(
             symbol_matches,

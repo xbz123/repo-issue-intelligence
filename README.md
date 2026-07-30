@@ -10,7 +10,8 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Detects likely duplicate issue pairs using title similarity and token overlap.
 - Separates severity, urgency, and engineering priority.
 - Applies weighted scoring plus hard P0/P1 override rules.
-- Builds a cacheable repository map with languages, runtime files, entrypoints, imports, classes, functions, tests, and detected frameworks.
+- Builds a cacheable repository map with languages, runtime files, entrypoints, imports, classes,
+  functions, qualified caller edges, tests, and detected frameworks.
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
@@ -290,9 +291,10 @@ unscoped names remain semantic tie-breakers. Fenced non-call references and trac
 qualified identities. Source-content retrieval matches dotted values only as complete,
 case-preserving tokens and does not reuse their terminal component or component terms; a syntactic
 call still exposes its local callee separately. Compared with v0.11, stricter scope handling changes
-28 file orderings and 29 per-file symbol assignments; Recall@20 remains unchanged while Recall@5
-and MRR decrease slightly. Two complete review-fixed runs produced
-identical candidates and metrics after excluding timing fields. The reviewed
+28 file orderings and 31 per-file symbol assignments; Recall@20 remains unchanged while Recall@5
+and MRR decrease slightly. Call relations retain qualified caller identities, and ambiguous local
+callers or targets are skipped for legacy maps and bounded two-hop propagation. Two complete
+review-fixed runs produced identical candidates and metrics after excluding timing fields. The reviewed
 `WorkerThread.__init__` target is representable but not recovered without an explicit method
 reference, which deliberately exposes the limits of the current single-best-symbol selector.
 

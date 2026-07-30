@@ -27,8 +27,9 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
-function-level call edges, classes, functions, line ranges, entrypoints, runtime files, tests, and
-framework indicators.
+function-level call edges keyed by qualified caller identity, classes, functions, line ranges,
+entrypoints, runtime files, tests, and framework indicators. The legacy local-name call map remains
+serialized for compatibility, while new consumers prefer the qualified map.
 
 ### Investigation
 
@@ -55,9 +56,12 @@ local callee. Repeated unscoped names and unmatched dotted terminals cannot inde
 symbol. Owner names can disambiguate equivalent method names but do not contribute semantic title
 terms or override a different explicitly referenced function. A callee receives additional
 evidence only when at least two distinct issue-matching functions in the same file call it. The
-investigator emits
-confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction
-plan. Candidate locations are not presented as confirmed root causes.
+caller identity is preserved in relation scoring and evidence; a local call target must resolve to
+one function in the file. Older repository maps remain readable, but ambiguous legacy callers are
+skipped rather than merged. Bounded two-hop propagation applies the same uniqueness rule to its
+first-hop caller. The investigator emits confirmed facts, confidence-scored hypotheses, missing
+evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed
+root causes.
 
 ### Agent runtime
 

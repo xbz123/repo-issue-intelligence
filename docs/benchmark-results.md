@@ -10,10 +10,10 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.5989 | 3,264 ms |
-| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,790 ms |
-| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,666 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6038 | 3,640 ms |
+| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.5989 | 3,123 ms |
+| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,675 ms |
+| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,623 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6038 | 3,419 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
@@ -37,7 +37,7 @@ terms; syntactic object calls separately expose their local callee. The ASGI eve
 `websocket.accept` therefore neither selects nor contributes terminal-name content evidence for
 the Python method `WebSocket.accept`.
 
-Compared with v0.11, 28 of 32 file orderings and 29 per-file symbol assignments change after
+Compared with v0.11, 28 of 32 file orderings and 31 per-file symbol assignments change after
 normalizing away qualified-name representation. Typer's labeled target moves from rank 3 to 2,
 while Textual's two-file target moves from ranks 4/10 to 5/10; their Recall thresholds remain
 unchanged. The stricter evidence contract removes false-positive dotted and ambiguous-basename
@@ -55,10 +55,13 @@ saturation on the current file suite, while symbol localization remains a materi
 
 V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
 within-file call edges, and bounded two-hop propagation through uniquely resolved concrete
-functions. It blocks ambiguous definitions and abstract/interface layers, and preserves the
-strong relation that triggers a Top-10 diversity promotion. Two complete review-fixed v0.12 runs
-produced identical candidate lists and metrics after recursively removing timestamps and
-elapsed-time fields.
+functions. Call edges retain qualified caller identities, while local targets and legacy caller
+keys contribute only when they resolve to one function in the file. This prevents two methods such
+as `Cache.refresh` and `Worker.refresh` from being merged into fabricated relation evidence. The
+graph also blocks ambiguous definitions and abstract/interface layers and preserves the strong
+relation that triggers a Top-10 diversity promotion. Two complete review-fixed v0.12 runs produced
+identical candidate lists and metrics after recursively removing timestamps and elapsed-time
+fields.
 
 Current machine-readable artifacts:
 

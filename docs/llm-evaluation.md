@@ -96,10 +96,11 @@ Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.4688`, Symbol Recall@10 `0.5000`, S
 `0.5625`, and symbol MRR `0.2816`. The qualified identity is representable, but the review-fixed
 selector does not infer `__init__` from an owner-only mention. Source-content retrieval now treats
 dotted tokens as complete, case-preserving identities and excludes their component terms unless a
-syntactic call separately exposes the local callee. A full audit found 28 changed file orderings
-and 29 changed per-file symbol assignments relative to v0.11, including the corrected Starlette
-protocol-event and session-cookie selections. Two complete review-fixed v0.12 runs produced
-identical candidates and metrics after excluding timing fields.
+syntactic call separately exposes the local callee. Function-level call relations retain qualified
+caller identities and skip ambiguous local targets or legacy caller keys. A full audit found 28
+changed file orderings and 31 changed per-file symbol assignments relative to v0.11, including the
+corrected Starlette protocol-event and session-cookie selections. Two complete review-fixed v0.12
+runs produced identical candidates and metrics after excluding timing fields.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 

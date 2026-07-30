@@ -273,6 +273,9 @@ def test_repository_map_records_local_imports_and_called_symbols(
     }
     assert "parse_request" in api.calls
     assert api.symbol_calls == {"handle_request": ["parse_request"]}
+    assert api.qualified_symbol_calls == {
+        "handle_request": ["parse_request"]
+    }
     assert "parse_request" in api.references
 
 
@@ -301,6 +304,102 @@ def test_repository_map_records_qualified_method_names(tmp_path: Path) -> None:
         for symbol in source.symbols
         if symbol.name == "__init__"
     } == {"Unrelated.__init__", "WorkerThread.__init__"}
+
+
+def test_duplicate_method_call_edges_do_not_leak_into_symbol_selection(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Cache:\n"
+        "    def refresh(self):\n"
+        "        return rebuild()\n\n"
+        "class Worker:\n"
+        "    def refresh(self):\n"
+        '        """Retry failed request."""\n'
+        "        return None\n\n"
+        "def retry_failed_request():\n"
+        '    """Retry failed request."""\n'
+        "    return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/worker.py"
+    )
+
+    assert source.qualified_symbol_calls == {
+        "Cache.refresh": ["rebuild"],
+        "retry_failed_request": ["rebuild"],
+    }
+
+    candidates = locate_candidates(
+        issue(
+            "Worker retry failed request",
+            "The worker refresh path does not retry the failed request.",
+        ),
+        repository_map,
+    )
+
+    assert candidates[0].qualified_symbol == "Worker.refresh"
+    assert not any(
+        "Issue-matching symbols call rebuild" in evidence
+        for evidence in candidates[0].evidence
+    )
+
+    legacy_repository_map = repository_map.model_copy(deep=True)
+    legacy_repository_map.files[0].qualified_symbol_calls = {}
+    legacy_candidates = locate_candidates(
+        issue(
+            "Worker retry failed request",
+            "The worker refresh path does not retry the failed request.",
+        ),
+        legacy_repository_map,
+    )
+
+    assert legacy_candidates[0].qualified_symbol == "Worker.refresh"
+    assert not any(
+        "Issue-matching symbols call rebuild" in evidence
+        for evidence in legacy_candidates[0].evidence
+    )
+
+
+def test_method_call_relation_evidence_uses_qualified_callers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "class Cache:\n"
+        "    def retry_failed_request(self):\n"
+        "        return rebuild()\n\n"
+        "class Worker:\n"
+        "    def refresh_failed_request(self):\n"
+        "        return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Retry failed request",
+            "Both retry paths fail before rebuilding state.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert candidates[0].symbol == "rebuild"
+    assert (
+        "Issue-matching symbols call rebuild: "
+        "Cache.retry_failed_request, Worker.refresh_failed_request"
+        in candidates[0].evidence
+    )
 
 
 def test_locate_candidates_uses_class_context_to_disambiguate_methods(
@@ -948,6 +1047,48 @@ def test_graph_reranking_promotes_bounded_two_hop_call_chain(
         "Two-hop source call chain via refresh_layout reaches "
         "reflow_children, defined here: src/screen.py"
     ) in compositor.evidence
+
+
+def test_graph_reranking_skips_ambiguous_first_hop_callers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update_height():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "class Cache:\n"
+        "    def refresh_layout(self):\n"
+        "        return rebuild_layout()\n\n"
+        "class Worker:\n"
+        "    def refresh_layout(self):\n"
+        "        return None\n",
+    )
+    write_source(
+        repository,
+        "src/rebuild.py",
+        "def rebuild_layout():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Refresh layout fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(
+        not any(
+            evidence.startswith("Two-hop source call chain via ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
 
 
 def test_graph_reranking_does_not_propagate_through_abstract_layer(

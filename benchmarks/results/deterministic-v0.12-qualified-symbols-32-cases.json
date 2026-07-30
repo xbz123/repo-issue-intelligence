@@ -11,7 +11,7 @@
   "reasoning_effort": null,
   "temperature": null,
   "seed": null,
-  "created_at": "2026-07-30T20:11:51.049005Z",
+  "created_at": "2026-07-30T21:53:43.207090Z",
   "results": [
     {
       "case_id": "starlette-streaming-denial-response",
@@ -87,8 +87,8 @@
         },
         {
           "file": "starlette/testclient.py",
-          "symbol": "receive",
-          "qualified_symbol": "WebSocketTestSession.receive",
+          "symbol": "_run",
+          "qualified_symbol": "WebSocketTestSession._run",
           "rank": 7
         },
         {
@@ -99,8 +99,8 @@
         },
         {
           "file": "tests/middleware/test_base.py",
-          "symbol": "receive",
-          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
+          "symbol": "test_exception_can_be_caught",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
@@ -147,8 +147,8 @@
         },
         {
           "file": "tests/test_responses.py",
-          "symbol": "app",
-          "qualified_symbol": "test_text_response.app",
+          "symbol": "test_file_response_on_head_method",
+          "qualified_symbol": null,
           "rank": 17
         },
         {
@@ -184,7 +184,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1035.074,
+      "analysis_elapsed_ms": 985.25,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -270,8 +270,8 @@
         },
         {
           "file": "tests/middleware/test_base.py",
-          "symbol": "receive",
-          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
+          "symbol": "sleep_and_set",
+          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.sleep_and_set",
           "rank": 7
         },
         {
@@ -376,7 +376,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1088.857,
+      "analysis_elapsed_ms": 1055.998,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -479,8 +479,8 @@
         },
         {
           "file": "tests/middleware/test_base.py",
-          "symbol": "receive",
-          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
+          "symbol": "test_fully_evaluated_response",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -564,7 +564,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1015.845,
+      "analysis_elapsed_ms": 957.952,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -691,8 +691,8 @@
         },
         {
           "file": "tests/middleware/test_base.py",
-          "symbol": "receive",
-          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
+          "symbol": "test_read_request_stream_in_app_after_middleware_calls_stream",
+          "qualified_symbol": null,
           "rank": 15
         },
         {
@@ -740,7 +740,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 602.16,
+      "analysis_elapsed_ms": 576.223,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -921,7 +921,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 1142.489,
+      "analysis_elapsed_ms": 1111.448,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1108,7 +1108,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.5,
-      "analysis_elapsed_ms": 760.998,
+      "analysis_elapsed_ms": 761.586,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1143,7 +1143,6 @@
         "src/textual/command.py",
         "src/textual/widgets/_text_area.py",
         "src/textual/widgets/_markdown.py",
-        "src/textual/css/parse.py",
         "src/textual/layouts/stream.py",
         "src/textual/pilot.py",
         "src/textual/_auto_scroll.py",
@@ -1153,7 +1152,8 @@
         "src/textual/css/_style_properties.py",
         "src/textual/widgets/_log.py",
         "src/textual/geometry.py",
-        "src/textual/document/_document.py"
+        "src/textual/document/_document.py",
+        "src/textual/message_pump.py"
       ],
       "candidate_symbols": [
         {
@@ -1211,69 +1211,69 @@
           "rank": 9
         },
         {
-          "file": "src/textual/css/parse.py",
-          "symbol": "substitute_references",
-          "qualified_symbol": null,
-          "rank": 10
-        },
-        {
           "file": "src/textual/layouts/stream.py",
           "symbol": "StreamLayout",
           "qualified_symbol": null,
-          "rank": 11
+          "rank": 10
         },
         {
           "file": "src/textual/pilot.py",
           "symbol": "_post_mouse_events",
           "qualified_symbol": "Pilot._post_mouse_events",
-          "rank": 12
+          "rank": 11
         },
         {
           "file": "src/textual/_auto_scroll.py",
           "symbol": "get_auto_scroll_regions",
           "qualified_symbol": null,
-          "rank": 13
+          "rank": 12
         },
         {
           "file": "src/textual/css/query.py",
           "symbol": "set",
           "qualified_symbol": "DOMQuery.set",
-          "rank": 14
+          "rank": 13
         },
         {
           "file": "src/textual/css/styles.py",
           "symbol": "_get_transition",
           "qualified_symbol": "StylesBase._get_transition",
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "src/textual/dom.py",
           "symbol": "_get_dom_base",
           "qualified_symbol": "DOMNode._get_dom_base",
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "src/textual/css/_style_properties.py",
           "symbol": "__set__",
           "qualified_symbol": "ScalarProperty.__set__",
-          "rank": 17
+          "rank": 16
         },
         {
           "file": "src/textual/widgets/_log.py",
           "symbol": "refresh_lines",
           "qualified_symbol": "Log.refresh_lines",
-          "rank": 18
+          "rank": 17
         },
         {
           "file": "src/textual/geometry.py",
           "symbol": "selection_bounds",
           "qualified_symbol": "Shape.selection_bounds",
-          "rank": 19
+          "rank": 18
         },
         {
           "file": "src/textual/document/_document.py",
           "symbol": "get_text_range",
           "qualified_symbol": "Document.get_text_range",
+          "rank": 19
+        },
+        {
+          "file": "src/textual/message_pump.py",
+          "symbol": "app",
+          "qualified_symbol": "MessagePump.app",
           "rank": 20
         }
       ],
@@ -1300,7 +1300,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 3061.011,
+      "analysis_elapsed_ms": 2991.018,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1500,7 +1500,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.2,
-      "analysis_elapsed_ms": 3982.976,
+      "analysis_elapsed_ms": 3868.558,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1551,8 +1551,8 @@
       "candidate_symbols": [
         {
           "file": "src/textual/app.py",
-          "symbol": "run_app",
-          "qualified_symbol": "App.run_test.run_app",
+          "symbol": "_context",
+          "qualified_symbol": "App._context",
           "rank": 1
         },
         {
@@ -1689,7 +1689,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2552.962,
+      "analysis_elapsed_ms": 2451.714,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1877,7 +1877,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1446.351,
+      "analysis_elapsed_ms": 1397.98,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2004,8 +2004,8 @@
         },
         {
           "file": "tests/test_synchronization.py",
-          "symbol": "acquire",
-          "qualified_symbol": "TestLock.test_asyncio_deadlock.acquire",
+          "symbol": "test_contextmanager",
+          "qualified_symbol": "TestLock.test_contextmanager",
           "rank": 13
         },
         {
@@ -2072,7 +2072,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 2706.985,
+      "analysis_elapsed_ms": 2663.207,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2199,8 +2199,8 @@
         },
         {
           "file": "tests/test_synchronization.py",
-          "symbol": "acquire",
-          "qualified_symbol": "TestLock.test_asyncio_deadlock.acquire",
+          "symbol": "test_current_default_thread_limiter",
+          "qualified_symbol": "TestCapacityLimiter.test_current_default_thread_limiter",
           "rank": 14
         },
         {
@@ -2254,7 +2254,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1156.39,
+      "analysis_elapsed_ms": 1124.253,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2430,7 +2430,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2341.592,
+      "analysis_elapsed_ms": 2254.588,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2618,7 +2618,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2473.241,
+      "analysis_elapsed_ms": 2408.824,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2800,7 +2800,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 4216.127,
+      "analysis_elapsed_ms": 4037.036,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2879,8 +2879,8 @@
         },
         {
           "file": "_pytest/vendored_packages/pluggy.py",
-          "symbol": "get",
-          "qualified_symbol": "_TagTracer.get",
+          "symbol": "add_hookcall_monitoring",
+          "qualified_symbol": "PluginManager.add_hookcall_monitoring",
           "rank": 6
         },
         {
@@ -2988,7 +2988,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1505.362,
+      "analysis_elapsed_ms": 1463.615,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3037,8 +3037,8 @@
       "candidate_symbols": [
         {
           "file": "src/_pytest/raises.py",
-          "symbol": "raises",
-          "qualified_symbol": null,
+          "symbol": "_check_check",
+          "qualified_symbol": "AbstractRaises._check_check",
           "rank": 1
         },
         {
@@ -3158,7 +3158,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 5234.203,
+      "analysis_elapsed_ms": 3226.516,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3334,7 +3334,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 4382.112,
+      "analysis_elapsed_ms": 4261.695,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3522,7 +3522,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1247.644,
+      "analysis_elapsed_ms": 1197.095,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3711,7 +3711,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.0556,
-      "analysis_elapsed_ms": 1953.644,
+      "analysis_elapsed_ms": 1859.277,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3777,8 +3777,8 @@
         },
         {
           "file": "src/click/exceptions.py",
-          "symbol": "show",
-          "qualified_symbol": "ClickException.show",
+          "symbol": "_join_param_hints",
+          "qualified_symbol": null,
           "rank": 3
         },
         {
@@ -3892,7 +3892,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 2945.839,
+      "analysis_elapsed_ms": 2898.214,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4079,7 +4079,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 2870.597,
+      "analysis_elapsed_ms": 2838.19,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4266,7 +4266,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 743.938,
+      "analysis_elapsed_ms": 698.647,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4326,8 +4326,8 @@
         },
         {
           "file": "pydantic/fields.py",
-          "symbol": "merge_field_infos",
-          "qualified_symbol": "FieldInfo.merge_field_infos",
+          "symbol": "_extract_metadata",
+          "qualified_symbol": "FieldInfo._extract_metadata",
           "rank": 2
         },
         {
@@ -4459,7 +4459,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 5255.851,
+      "analysis_elapsed_ms": 5164.13,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4561,7 +4561,7 @@
         },
         {
           "file": "pydantic/types.py",
-          "symbol": "conint",
+          "symbol": "_check_annotated_type",
           "qualified_symbol": null,
           "rank": 9
         },
@@ -4579,8 +4579,8 @@
         },
         {
           "file": "pydantic/_internal/_mock_val_ser.py",
-          "symbol": "attempt_rebuild_fn",
-          "qualified_symbol": "set_type_adapter_mocks.attempt_rebuild_fn",
+          "symbol": "set_model_mocks",
+          "qualified_symbol": null,
           "rank": 12
         },
         {
@@ -4652,7 +4652,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 9212.868,
+      "analysis_elapsed_ms": 8806.036,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4736,7 +4736,7 @@
         },
         {
           "file": "pydantic/types.py",
-          "symbol": "conint",
+          "symbol": "_check_annotated_type",
           "qualified_symbol": null,
           "rank": 6
         },
@@ -4839,7 +4839,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 8970.97,
+      "analysis_elapsed_ms": 8837.275,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5030,7 +5030,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 8825.035,
+      "analysis_elapsed_ms": 8595.644,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5217,7 +5217,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 6799.157,
+      "analysis_elapsed_ms": 6712.308,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5301,14 +5301,14 @@
         },
         {
           "file": "aiohttp/connector.py",
-          "symbol": "_notify_release",
-          "qualified_symbol": "Connection._notify_release",
+          "symbol": "TCPConnector",
+          "qualified_symbol": null,
           "rank": 6
         },
         {
           "file": "aiohttp/http_parser.py",
-          "symbol": "parse_message",
-          "qualified_symbol": "HttpParser.parse_message",
+          "symbol": "set_exception",
+          "qualified_symbol": "DeflateBuffer.set_exception",
           "rank": 7
         },
         {
@@ -5404,7 +5404,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 5663.358,
+      "analysis_elapsed_ms": 5511.905,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5453,8 +5453,8 @@
       "candidate_symbols": [
         {
           "file": "httpcore/_synchronization.py",
-          "symbol": "setup",
-          "qualified_symbol": "AsyncLock.setup",
+          "symbol": "current_async_library",
+          "qualified_symbol": null,
           "rank": 1
         },
         {
@@ -5580,7 +5580,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 441.219,
+      "analysis_elapsed_ms": 425.322,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5773,7 +5773,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 3390.668,
+      "analysis_elapsed_ms": 3368.548,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5812,7 +5812,6 @@
         "src/trio/_core/_entry_queue.py",
         "src/trio/_highlevel_open_tcp_stream.py",
         "src/trio/_unix_pipes.py",
-        "src/trio/_sync.py",
         "src/trio/_dtls.py",
         "src/trio/_abc.py",
         "src/trio/testing/_memory_streams.py",
@@ -5822,7 +5821,8 @@
         "src/trio/_highlevel_ssl_helpers.py",
         "src/trio/_highlevel_serve_listeners.py",
         "src/trio/_util.py",
-        "src/trio/_core/_io_windows.py"
+        "src/trio/_core/_io_windows.py",
+        "src/trio/testing/_raises_group.py"
       ],
       "candidate_symbols": [
         {
@@ -5880,69 +5880,69 @@
           "rank": 9
         },
         {
-          "file": "src/trio/_sync.py",
-          "symbol": "set",
-          "qualified_symbol": "Event.set",
-          "rank": 10
-        },
-        {
           "file": "src/trio/_dtls.py",
           "symbol": "_ensure_receive_loop",
           "qualified_symbol": "DTLSEndpoint._ensure_receive_loop",
-          "rank": 11
+          "rank": 10
         },
         {
           "file": "src/trio/_abc.py",
           "symbol": "task_spawned",
           "qualified_symbol": "Instrument.task_spawned",
-          "rank": 12
+          "rank": 11
         },
         {
           "file": "src/trio/testing/_memory_streams.py",
           "symbol": "_make_stapled_pair",
           "qualified_symbol": null,
-          "rank": 13
+          "rank": 12
         },
         {
           "file": "src/trio/_channel.py",
           "symbol": "as_safe_channel",
           "qualified_symbol": null,
-          "rank": 14
+          "rank": 13
         },
         {
           "file": "src/trio/_signals.py",
           "symbol": "open_signal_receiver",
           "qualified_symbol": null,
-          "rank": 15
+          "rank": 14
         },
         {
           "file": "src/trio/_highlevel_open_tcp_listeners.py",
           "symbol": "open_tcp_listeners",
           "qualified_symbol": null,
-          "rank": 16
+          "rank": 15
         },
         {
           "file": "src/trio/_highlevel_ssl_helpers.py",
           "symbol": "open_ssl_over_tcp_stream",
           "qualified_symbol": null,
-          "rank": 17
+          "rank": 16
         },
         {
           "file": "src/trio/_highlevel_serve_listeners.py",
           "symbol": "serve_listeners",
           "qualified_symbol": null,
-          "rank": 18
+          "rank": 17
         },
         {
           "file": "src/trio/_util.py",
           "symbol": "raise_single_exception_from_group",
           "qualified_symbol": null,
-          "rank": 19
+          "rank": 18
         },
         {
           "file": "src/trio/_core/_io_windows.py",
           "symbol": "_afd_poll",
           "qualified_symbol": "WindowsIOManager._afd_poll",
+          "rank": 19
+        },
+        {
+          "file": "src/trio/testing/_raises_group.py",
+          "symbol": "type",
+          "qualified_symbol": "_ExceptionInfo.type",
           "rank": 20
         }
       ],
@@ -5966,7 +5966,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 5432.918,
+      "analysis_elapsed_ms": 5410.031,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5988,7 +5988,7 @@
     "file_recall_at_20": 0.9688,
     "candidate_pool_recall": 0.9688,
     "mean_reciprocal_rank": 0.5989,
-    "average_analysis_elapsed_ms": 3264.326,
+    "average_analysis_elapsed_ms": 3122.503,
     "llm_success_rate": null,
     "llm_cases": 0,
     "llm_successes": 0,
@@ -6014,7 +6014,7 @@
       "file_recall_at_20": 0.9167,
       "candidate_pool_recall": 0.9167,
       "mean_reciprocal_rank": 0.6764,
-      "average_analysis_elapsed_ms": 3789.903,
+      "average_analysis_elapsed_ms": 3675.356,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6039,7 +6039,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.4569,
-      "average_analysis_elapsed_ms": 1666.45,
+      "average_analysis_elapsed_ms": 1623.494,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6064,7 +6064,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.6038,
-      "average_analysis_elapsed_ms": 3639.573,
+      "average_analysis_elapsed_ms": 3419.334,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
