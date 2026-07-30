@@ -83,11 +83,12 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The corrected manifest v5 v0.9 baseline completed 20/20 cases with File Recall@1 `0.3000`,
-Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5394`. On the five
-symbol-labeled cases, Symbol Recall@5/10 improved from `0.3000` to `0.7000`, Symbol Recall@20
-reached `1.0000` across all six reviewed targets, and symbol MRR reached `0.2278`. Symbol Recall@1
-remained `0.0000`. Two complete v0.9 runs produced identical candidate and metric outputs.
+The corrected manifest v5 v0.10 baseline completed 20/20 cases with File Recall@1 `0.3000`,
+Recall@5 `0.8583`, Recall@10 `0.9000`, Recall@20 `1.0000`, and MRR `0.5394`. On the five
+symbol-labeled cases, Symbol Recall@5 is `0.7000`, Symbol Recall@10 is `0.8000`, Symbol Recall@20
+is `1.0000` across all six reviewed targets, and symbol MRR is `0.2278`. Symbol Recall@1 remained
+`0.0000`. Two complete v0.10 runs produced identical candidate and metric outputs after excluding
+latency timestamps.
 
 No LLM reranking result is yet valid for manifest v5. An integrity audit found that 18 of the
 previous 20 pre-fix SHAs were commits inside their fix PRs. Earlier GPT-OSS, DeepSeek, and
