@@ -37,7 +37,10 @@ call-name/backend definitions, two-hop relations, matching-test imports, and bou
 co-changes add graph evidence. Legacy graph weights still rerank inside fixed Top-10 bands; up to
 three strong expansion candidates may replace only ranks 18-20. Git evidence uses at most 50
 prior commits from 100 fetched ancestors, blames at most five lines for each of two seed
-candidates, and ignores broad commits. The investigator emits confirmed facts,
+candidates, and ignores broad commits. File scoring and symbol selection are separate: file scores
+retain the lexical/graph/history contract, while functions inside each file are selected using
+direct identifier references and normalized title-term rarity, with the original lexical match as
+a fallback. The investigator emits confirmed facts,
 confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate
 locations are not presented as confirmed root causes.
 
@@ -147,15 +150,15 @@ The current benchmark contains 20 cases across seven repositories and six manual
 symbol targets across five cases. This is useful for error analysis but not statistically strong
 enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. LLM hypotheses are not confirmed
-root causes. Retrieval has bounded Python static/history relations, not hierarchical class-aware
-symbol ranking, a control-flow-aware call graph, cross-language graph, semantic test-to-source
-mapping, or vector index.
+root causes. Retrieval has bounded Python static/history relations and a single-best-function
+selector, but not class ownership or qualified symbol names, a control-flow-aware call graph,
+cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> add hierarchical file-to-symbol ranking
+  -> add control-flow-aware symbol evidence and multi-symbol ranking
   -> add semantic test-to-source mapping
   -> add control-flow-aware and cross-language graph evidence
   -> expand high-confidence symbol labels and the suite to 30-50 cases

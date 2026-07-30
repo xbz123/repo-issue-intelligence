@@ -85,8 +85,9 @@ conclusions must not mix datasets or the localization and schema-reliability end
 
 The corrected manifest v5 deterministic baseline completed 20/20 cases with File Recall@1
 `0.3000`, Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `1.0000`, and MRR `0.5396`.
-The five symbol-labeled cases achieved Symbol Recall@1 `0.0000`, Recall@5/10 `0.3000`, and
-symbol MRR `0.1118`.
+The v0.8 within-file selector preserved those file metrics. On the five symbol-labeled cases it
+improved Symbol Recall@5/10 from `0.3000` to `0.7000` and symbol MRR from `0.1118` to `0.2284`;
+Symbol Recall@1 remained `0.0000`.
 
 No LLM reranking result is yet valid for manifest v5. An integrity audit found that 18 of the
 previous 20 pre-fix SHAs were commits inside their fix PRs. Earlier GPT-OSS, DeepSeek, and

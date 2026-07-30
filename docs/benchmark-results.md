@@ -1,6 +1,6 @@
 # Real-Project File Localization Benchmark
 
-## Current result: corrected pre-fix and symbol benchmark
+## Current result: hierarchical symbol selection on corrected pre-fix inputs
 
 On 2026-07-30, an integrity audit compared every manifest SHA with the ordered commits of its
 linked fix PR. Eighteen of the previous 20 SHAs were commits inside the fix PR rather than true
@@ -8,22 +8,22 @@ pre-fix commits. Manifest v5 corrects every case to the parent of the first PR c
 discovery path now always loads the ordered PR history and blocks any proposed pre-fix SHA found
 inside the PR commit set.
 
-The deterministic runner successfully checked out all 20 corrected commits, verified every
-expected file, and produced:
+The v0.8 deterministic runner successfully checked out all 20 corrected commits, verified every
+expected file, and produced the same file metrics as v0.7:
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.3000 | 0.8583 | 0.8750 | 1.0000 | 0.5396 | 1,358 ms |
-| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,213 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4105 | 790 ms |
-| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 1.0000 | 0.5222 | 1,722 ms |
+| Overall | 20/20 | 0.3000 | 0.8583 | 0.8750 | 1.0000 | 0.5396 | 1,355 ms |
+| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,222 ms |
+| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4105 | 805 ms |
+| Generalization | 9/9 | 0.2778 | 0.8519 | 0.8889 | 1.0000 | 0.5222 | 1,704 ms |
 
 Five cases also contain six manually reviewed function targets from real fix diffs:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|
-| Overall | 5 | 0.0000 | 0.3000 | 0.3000 | 0.1118 |
-| Calibration | 3 | 0.0000 | 0.0000 | 0.0000 | 0.0196 |
+| Overall | 5 | 0.0000 | 0.7000 | 0.7000 | 0.2284 |
+| Calibration | 3 | 0.0000 | 0.6667 | 0.6667 | 0.2140 |
 | Generalization | 2 | 0.0000 | 0.7500 | 0.7500 | 0.2500 |
 
 The initial labels are deliberately narrow and come from reviewed production hunks:
@@ -39,9 +39,13 @@ Symbol aggregates exclude the 15 unlabeled cases instead of treating them as mis
 match requires the exact reviewed file and symbol and retains the parent file's candidate rank.
 The current contract allows one reviewed symbol per expected file because the investigator emits
 one best symbol for each candidate file.
-The large file/symbol gap shows that the current system often reaches the correct file but selects
-only its best lexical class or function, so hierarchical file-to-symbol retrieval is the next
-quality target.
+The v0.8 selector separates file scoring from within-file function selection. File scores retain
+the v0.7 lexical/graph/history contract. Inside each selected file, directly referenced functions
+take precedence; otherwise normalized title terms are weighted by their rarity among functions,
+with the original lexical order retained as a fallback. This recovered Typer's
+`value_from_envvar` and `_make_rich_text` without changing any file rank. Textual's
+`_arrange_root` remains missed, so control-flow-aware symbol selection and broader symbol labels
+are still required.
 
 Current machine-readable artifacts:
 
@@ -49,7 +53,8 @@ Current machine-readable artifacts:
 - `benchmarks/cases-v0.7-clean-pre-fix.json` — corrected file-only manifest version 4;
 - `benchmarks/candidates-v0.7.json` — corrected expansion audit records;
 - `benchmarks/results/deterministic-v0.7-clean-pre-fix-20-cases.json` — corrected file-only run;
-- `benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json` — current run.
+- `benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json` — symbol baseline;
+- `benchmarks/results/deterministic-v0.8-hierarchical-symbols-20-cases.json` — current run.
 
 All result files generated from manifest versions 2 and 3 remain committed for provenance but are
 superseded as localization-quality evidence. Their provider latency, structured-output validity,

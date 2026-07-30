@@ -123,7 +123,85 @@ def test_locate_candidates_prefers_compound_title_identifier(
     candidates = locate_candidates(record, build_repository_map(repository))
 
     assert candidates[0].file == "typer/core.py"
-    assert "Issue title strongly matches symbol TyperOption" in candidates[0].evidence
+    assert candidates[0].symbol == "resolve_envvar_value"
+
+
+def test_locate_candidates_reranks_functions_within_selected_file(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "typer/core.py",
+        "class TyperOption:\n"
+        "    pass\n\n"
+        "def value_from_envvar(value):\n"
+        "    return value\n\n"
+        "def _typer_format_options(options):\n"
+        "    return options\n",
+    )
+    write_source(
+        repository,
+        "typer/main.py",
+        "class Typer:\n    pass\n",
+    )
+    record = issue(
+        "envvar not working for `typer.Options`",
+        "The envvar value is ignored by typer.Option.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "typer/core.py"
+    assert candidates[0].symbol == "value_from_envvar"
+
+
+def test_locate_candidates_normalizes_morphology_for_symbol_reranking(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "typer/rich_utils.py",
+        "def _make_rich_text(text):\n"
+        '    \"\"\"Return styled text.\"\"\"\n'
+        "    return text\n\n"
+        "def _get_parameter_help(text):\n"
+        '    \"\"\"Build help text for a parameter.\"\"\"\n'
+        "    return text\n",
+    )
+    record = issue(
+        "Help width is miscalculated for stylized text",
+        "The option help frame is misaligned.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_make_rich_text"
+
+
+def test_locate_candidates_preserves_plural_line_semantics(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "rich/ansi.py",
+        "def decode(lines):\n"
+        '    \"\"\"Decode an iterable of ANSI lines.\"\"\"\n'
+        "    return lines\n\n"
+        "def decode_line(line):\n"
+        '    \"\"\"Decode one ANSI line.\"\"\"\n'
+        "    return line\n",
+    )
+    record = issue(
+        "Trailing line break removed by `Text.from_ansi`",
+        "ANSI text loses its final newline.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "decode"
 
 
 def test_repository_map_records_local_imports_and_called_symbols(
