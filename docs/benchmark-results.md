@@ -10,10 +10,10 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 3,580 ms |
-| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 4,342 ms |
-| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 2,585 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,413 ms |
+| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 3,443 ms |
+| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 4,126 ms |
+| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 1,853 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,670 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
@@ -26,22 +26,25 @@ Sixteen cases now contain 17 symbol targets taken from reviewed production hunks
 
 Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
 exact reviewed file and symbol and retains the parent file's candidate rank. The investigator now
-stores both the backward-compatible local name and a qualified identity. Exact local or qualified
+stores both the backward-compatible local name and a qualified identity. Exact qualified
 identifiers from inline code, fenced examples, and tracebacks rank before title semantics.
-Qualified matching preserves case and dot boundaries, so the ASGI event `websocket.accept` no
-longer selects the Python method `WebSocket.accept`. Owner names are used only to disambiguate
-otherwise equivalent method names or as a final tie-break.
+Bare local identifiers receive the same priority only when they are unique in the final candidate
+range or are constrained by an exact owner or referenced source path; repeated unscoped names are
+only semantic tie-breakers. Qualified matching preserves case and dot boundaries, so the ASGI
+event `websocket.accept` no longer selects the Python method `WebSocket.accept`.
 
 The 15 previously labeled v0.11 cases retain their exact per-case symbol metrics, and all 32 file
-rankings are unchanged. A case-by-case comparison found symbol-list changes in 28 of 32 cases:
+rankings are unchanged. A case-by-case comparison found symbol-list changes in 25 of 32 cases:
 the corrected selector restores `cookie_parser` and `send_wrapper` for the Starlette session case
-and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
-`WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but
-not that method; allowing the owner to choose across different method names would recreate the
-reviewed false-positive mechanism. One Pydantic production file remains absent from the Top-20
-candidate pool, and several correct files are retrieved while the within-file selector chooses a
-neighboring function. This is useful negative evidence: candidate generation is close to saturation
-on the current file suite, while symbol localization remains a material bottleneck.
+and selects `WebSocket.send_denial_response` for the denial-response case. In that case the bare
+`__call__` reference now selects only the path/owner-scoped `Response.__call__`, rather than every
+candidate file's unrelated implementation. Trio's reviewed `WorkerThread.__init__` target remains
+a miss because the issue identifies the owning classes but not that method; allowing the owner to
+choose across different method names would recreate the reviewed false-positive mechanism. One
+Pydantic production file remains absent from the Top-20 candidate pool, and several correct files
+are retrieved while the within-file selector chooses a neighboring function. This is useful
+negative evidence: candidate generation is close to saturation on the current file suite, while
+symbol localization remains a material bottleneck.
 
 V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
 within-file call edges, and bounded two-hop propagation through uniquely resolved concrete

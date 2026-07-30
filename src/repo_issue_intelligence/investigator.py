@@ -92,6 +92,9 @@ IDENTIFIER_PATTERN = re.compile(
 CALLED_IDENTIFIER_PATTERN = re.compile(
     r"\b((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
+TRACEBACK_IDENTIFIER_PATTERN = re.compile(
+    r"\bin\s+((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\b"
+)
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
 GRAPH_BONUS_LIMIT = 10.0
@@ -106,6 +109,13 @@ HISTORY_COMMIT_LIMIT = 50
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
 BLAME_FILE_LIMIT = 20
+SYMBOL_EVIDENCE_PREFIXES = (
+    "Symbol ",
+    "Issue references symbol ",
+    "Issue title strongly matches symbol ",
+    "Issue references owning symbol ",
+    "Issue-matching symbols call ",
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +136,7 @@ class SymbolMatch:
     primary_identifier_match: bool
     exact_identifier_match: bool
     explicit_identifier_match: bool
+    unscoped_explicit_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
     semantic_terms: frozenset[str]
@@ -167,10 +178,8 @@ def _compact_identifier_variants(value: str) -> set[str]:
 
 
 def _extract_explicit_identifiers(text: str) -> set[str]:
-    code_regions = [
-        *CODE_SPAN_PATTERN.findall(text),
-        *FENCED_CODE_PATTERN.findall(text),
-    ]
+    fenced_regions = FENCED_CODE_PATTERN.findall(text)
+    code_regions = [*CODE_SPAN_PATTERN.findall(text), *fenced_regions]
     identifiers: set[str] = set()
     for region in code_regions:
         candidate = region.strip()
@@ -183,6 +192,23 @@ def _extract_explicit_identifiers(text: str) -> set[str]:
             called_identifier = match.group(1)
             identifiers.add(called_identifier)
             identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
+    for region in fenced_regions:
+        for match in IDENTIFIER_PATTERN.finditer(region):
+            identifier = match.group(0)
+            if "." not in identifier and not (
+                identifier.startswith("__") and identifier.endswith("__")
+            ):
+                continue
+            prefix = region[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            identifiers.add(identifier)
+    for match in TRACEBACK_IDENTIFIER_PATTERN.finditer(text):
+        identifier = match.group(1)
+        if "." in identifier or (
+            identifier.startswith("__") and identifier.endswith("__")
+        ):
+            identifiers.add(identifier)
     return identifiers
 
 
@@ -246,7 +272,12 @@ def _matches_qualified_identity(identity: str, identifier: str) -> bool:
     return candidate == identity or candidate.endswith(f".{identity}")
 
 
-def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
+def _match_symbol(
+    symbol: SymbolRecord,
+    signals: IssueSignals,
+    unique_symbol_names: frozenset[str],
+    path_scoped: bool,
+) -> SymbolMatch:
     identity = symbol.qualified_name or symbol.name
     local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
     terms = _terms(identity) | local_terms
@@ -257,6 +288,37 @@ def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
     owner_compact_variants = _compact_identifier_variants(owner_identity)
     source_scoped_identifiers = (
         signals.explicit_identifiers | signals.primary_identifiers
+    )
+    bare_explicit_match = any(
+        "." not in identifier and identifier == symbol.name
+        for identifier in signals.explicit_identifiers
+    )
+    exact_owner_match = bool(owner_identity) and any(
+        _matches_qualified_identity(owner_identity, identifier)
+        or _matches_qualified_identity(
+            owner_identity.rsplit(".", maxsplit=1)[-1],
+            identifier,
+        )
+        for identifier in source_scoped_identifiers
+    )
+    owner_name = owner_identity.rsplit(".", maxsplit=1)[-1]
+    class_owner_match = bool(owner_identity) and any(
+        "." not in identifier
+        and any(character.isupper() for character in identifier[1:])
+        and (
+            identifier == owner_name
+            or (
+                identifier.endswith("s")
+                and identifier[:-1] == owner_name
+            )
+        )
+        for identifier in signals.identifiers
+    )
+    scoped_bare_explicit_match = bare_explicit_match and (
+        symbol.name in unique_symbol_names
+        or path_scoped
+        or exact_owner_match
+        or class_owner_match
     )
     return SymbolMatch(
         symbol=symbol,
@@ -270,9 +332,9 @@ def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
             symbol_variants & _identifier_variants(identifier)
             for identifier in signals.identifiers
         ),
-        explicit_identifier_match=any(
-            "." not in identifier and identifier == symbol.name
-            for identifier in signals.explicit_identifiers
+        explicit_identifier_match=scoped_bare_explicit_match,
+        unscoped_explicit_identifier_match=(
+            bare_explicit_match and not scoped_bare_explicit_match
         ),
         qualified_component_match=identity != symbol.name
         and any(
@@ -347,13 +409,14 @@ def _select_symbol(
 
     def semantic_score(
         match: SymbolMatch,
-    ) -> tuple[int, float, float, bool, bool, int, int]:
+    ) -> tuple[int, float, float, bool, bool, bool, int, int]:
         overlap = primary_terms & match.semantic_terms
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
             relation_scores.get(match.symbol.name, 0),
             max(rarity, default=0),
             sum(rarity),
+            match.unscoped_explicit_identifier_match,
             not match.symbol.name.startswith("_"),
             match.qualified_component_match,
             -match.symbol.line,
@@ -372,16 +435,27 @@ def _select_symbol(
         key=lambda match: (
             match.primary_identifier_match,
             match.qualified_identifier_match,
-            match.exact_identifier_match,
-            len(match.local_overlap),
+            match.exact_identifier_match
+            and not match.unscoped_explicit_identifier_match,
+            (
+                len(match.local_overlap)
+                if not match.unscoped_explicit_identifier_match
+                else 0
+            ),
             match.qualified_component_match,
             -match.symbol.line,
         ),
     )
     if not (
         fallback.primary_identifier_match
-        or fallback.exact_identifier_match
-        or fallback.overlap
+        or (
+            fallback.exact_identifier_match
+            and not fallback.unscoped_explicit_identifier_match
+        )
+        or (
+            fallback.overlap
+            and not fallback.unscoped_explicit_identifier_match
+        )
     ):
         return None
     return fallback
@@ -409,6 +483,41 @@ def _related_symbol_callers(
         for called_name, callers in callers_by_target.items()
         if len(callers) >= 2
     }
+
+
+def _symbol_evidence(
+    match: SymbolMatch | None,
+    related_callers: dict[str, tuple[str, ...]],
+) -> list[str]:
+    if match is None:
+        return []
+
+    symbol = match.symbol
+    label = symbol.qualified_name or symbol.name
+    evidence: list[str] = []
+    if match.overlap:
+        evidence.append(
+            f"Symbol {label} matches: "
+            + ", ".join(sorted(match.overlap))
+        )
+    if match.qualified_identifier_match or (
+        match.exact_identifier_match
+        and not match.unscoped_explicit_identifier_match
+    ):
+        evidence.append(f"Issue references symbol {label}")
+    if match.primary_identifier_match:
+        evidence.append(f"Issue title strongly matches symbol {label}")
+    if match.qualified_component_match:
+        evidence.append(
+            f"Issue references owning symbol {label.rsplit('.', 1)[0]}"
+        )
+    callers = related_callers.get(symbol.name, ())
+    if callers:
+        evidence.append(
+            "Issue-matching symbols call "
+            f"{symbol.name}: {', '.join(callers)}"
+        )
+    return evidence
 
 
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
@@ -841,6 +950,16 @@ def locate_candidates(
     auxiliary_files: dict[str, bool] = {}
     candidates: dict[str, CandidateLocation] = {}
     blame_lines: dict[str, str | None] = {}
+    content_lines: dict[str, int | None] = {}
+    symbol_name_counts = Counter(
+        symbol.name
+        for file in repository_map.files
+        for symbol in file.symbols
+        if symbol.kind == "function"
+    )
+    unique_symbol_names = frozenset(
+        name for name, count in symbol_name_counts.items() if count == 1
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(
@@ -860,7 +979,15 @@ def locate_candidates(
                 for variant in _compact_identifier_variants(identifier)
             )
         }
-        symbol_matches = [_match_symbol(symbol, signals) for symbol in file.symbols]
+        symbol_matches = [
+            _match_symbol(
+                symbol,
+                signals,
+                unique_symbol_names,
+                exact_path,
+            )
+            for symbol in file.symbols
+        ]
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
             file.symbol_calls,
@@ -890,19 +1017,6 @@ def locate_candidates(
         best_overlap = set(score_match.local_overlap) if score_match else set()
         blame_symbol = blame_match.symbol if blame_match else None
         selected_symbol = selected_match.symbol if selected_match else None
-        selected_overlap = set(selected_match.overlap) if selected_match else set()
-        selected_primary_match = (
-            selected_match.primary_identifier_match if selected_match else False
-        )
-        selected_component_match = (
-            selected_match.qualified_component_match if selected_match else False
-        )
-        selected_exact = (
-            selected_match.exact_identifier_match
-            or selected_match.qualified_identifier_match
-            if selected_match
-            else False
-        )
         content_identifiers, content_overlap, content_line = _source_content(
             root,
             file.path,
@@ -923,11 +1037,6 @@ def locate_candidates(
         if raw_score <= 0:
             continue
         evidence: list[str] = []
-        selected_symbol_label = (
-            selected_symbol.qualified_name or selected_symbol.name
-            if selected_symbol
-            else None
-        )
         if exact_path:
             evidence.append("Issue references this exact source path")
         if path_identifier_hits:
@@ -937,31 +1046,7 @@ def locate_candidates(
             )
         if path_overlap:
             evidence.append(f"Path matches issue terms: {', '.join(sorted(path_overlap))}")
-        if selected_symbol_label and selected_overlap:
-            evidence.append(
-                f"Symbol {selected_symbol_label} matches: "
-                + ", ".join(sorted(selected_overlap))
-            )
-        if selected_symbol_label and selected_exact:
-            evidence.append(f"Issue references symbol {selected_symbol_label}")
-        if selected_symbol_label and selected_primary_match:
-            evidence.append(
-                f"Issue title strongly matches symbol {selected_symbol_label}"
-            )
-        if selected_symbol_label and selected_component_match:
-            evidence.append(
-                f"Issue references owning symbol {selected_symbol_label.rsplit('.', 1)[0]}"
-            )
-        related_callers = (
-            related_symbol_callers.get(selected_symbol.name, ())
-            if selected_symbol
-            else ()
-        )
-        if selected_symbol and related_callers:
-            evidence.append(
-                "Issue-matching symbols call "
-                f"{selected_symbol.name}: {', '.join(related_callers)}"
-            )
+        evidence.extend(_symbol_evidence(selected_match, related_symbol_callers))
         if import_overlap:
             evidence.append(f"Imports match component terms: {', '.join(sorted(import_overlap))}")
         if content_identifiers:
@@ -976,6 +1061,7 @@ def locate_candidates(
             )
         base_scores[file.path] = raw_score
         auxiliary_files[file.path] = auxiliary_file
+        content_lines[file.path] = content_line
         blame_lines[file.path] = (
             f"{blame_symbol.line}-{blame_symbol.end_line or blame_symbol.line}"
             if blame_symbol
@@ -1141,7 +1227,64 @@ def locate_candidates(
         *reranked_base[first_band_size:],
     ][: max(0, limit - len(tail_expansions))]
     reranked_paths = [*retained_base, *tail_expansions]
+    files_by_path = {file.path: file for file in repository_map.files}
+    candidate_symbol_name_counts = Counter(
+        symbol.name
+        for path in reranked_paths
+        for symbol in files_by_path[path].symbols
+        if symbol.kind == "function"
+    )
+    candidate_unique_symbol_names = frozenset(
+        name
+        for name, count in candidate_symbol_name_counts.items()
+        if count == 1
+    )
     for path in reranked_paths:
+        file = files_by_path[path]
+        symbol_matches = [
+            _match_symbol(
+                symbol,
+                signals,
+                candidate_unique_symbol_names,
+                _path_is_referenced(path, signals.paths),
+            )
+            for symbol in file.symbols
+        ]
+        related_symbol_callers = _related_symbol_callers(
+            symbol_matches,
+            file.symbol_calls,
+        )
+        selected_match = _select_symbol(
+            symbol_matches,
+            signals,
+            related_symbol_callers,
+        )
+        selected_symbol = selected_match.symbol if selected_match else None
+        candidate = candidates[path]
+        candidate.symbol = selected_symbol.name if selected_symbol else None
+        candidate.qualified_symbol = (
+            selected_symbol.qualified_name
+            if selected_symbol
+            and selected_symbol.qualified_name != selected_symbol.name
+            else None
+        )
+        content_line = content_lines[path]
+        candidate.lines = (
+            f"{selected_symbol.line}-"
+            f"{selected_symbol.end_line or selected_symbol.line}"
+            if selected_symbol
+            else f"{content_line}-{content_line}"
+            if content_line
+            else None
+        )
+        candidate.evidence = [
+            evidence
+            for evidence in candidate.evidence
+            if not evidence.startswith(SYMBOL_EVIDENCE_PREFIXES)
+        ]
+        candidate.evidence.extend(
+            _symbol_evidence(selected_match, related_symbol_callers)
+        )
         candidates[path].evidence.extend(
             evidence for _, evidence in blame_relations.get(path, [])[:1]
         )

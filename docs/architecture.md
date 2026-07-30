@@ -44,11 +44,13 @@ five lines for each of two seed candidates, and ignores broad commits. File scor
 selection are separate: file scores retain the lexical/graph/history contract, while functions
 inside each file are selected using source-scoped direct identifier references and normalized
 title-term rarity, with the original lexical match as a fallback. Direct references come from
-inline code, fenced examples, tracebacks, and title identifiers; qualified identities preserve
-case and dot boundaries. Owner names can disambiguate equivalent method names but do not contribute
-semantic title terms or override a different explicitly referenced function. A callee receives
-additional evidence only when at least two distinct issue-matching functions in the same file call
-it. The investigator emits
+inline code, fenced examples, tracebacks, and title identifiers; non-call qualified identities are
+retained with their original case and dot boundaries. Bare names are direct only when unique in the
+final candidate range or constrained by an exact owner or referenced path. Repeated unscoped names
+remain semantic tie-breakers and cannot independently select a symbol. Owner names can disambiguate
+equivalent method names but do not contribute semantic title terms or override a different
+explicitly referenced function. A callee receives additional evidence only when at least two
+distinct issue-matching functions in the same file call it. The investigator emits
 confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction
 plan. Candidate locations are not presented as confirmed root causes.
 

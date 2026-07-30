@@ -23,9 +23,10 @@ Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.4688`, Recall@10 `0.5000`, Re
 and MRR `0.2743`. The qualified contract can represent Trio's reviewed
 `WorkerThread.__init__` method, but the issue does not explicitly reference `__init__`; the
 review-fixed selector therefore keeps it as a miss instead of allowing an owner-name match to
-override stronger local method evidence. Across all 32 cases, 28 symbol candidate lists changed
+override stronger local method evidence. Across all 32 cases, 25 symbol candidate lists changed
 while every file list stayed fixed. This includes correcting `websocket.accept` so it no longer
-matches the Python method `WebSocket.accept`.
+matches the Python method `WebSocket.accept`, and preventing an unscoped `__call__` reference from
+selecting unrelated implementations across Starlette's candidate files.
 
 ## v0.11 expansion outcome
 

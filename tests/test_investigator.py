@@ -70,6 +70,22 @@ def test_extract_issue_signals_records_called_identifiers_from_code_blocks() -> 
     assert "accept" not in signals.explicit_identifiers
 
 
+def test_extract_issue_signals_records_non_call_qualified_identifiers() -> None:
+    record = issue(
+        "Worker callback loses context",
+        "```python\ncallback = WorkerThread.__init__\n```\n"
+        "Traceback: ... in trio.WorkerThread.__init__",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert {
+        "WorkerThread.__init__",
+        "trio.WorkerThread.__init__",
+    } <= signals.explicit_identifiers
+    assert "__init__" not in signals.explicit_identifiers
+
+
 def test_identifier_variants_preserve_source_term_order() -> None:
     variants = _identifier_variants("is_alt_screen")
 
@@ -364,6 +380,149 @@ def test_explicit_local_symbol_reference_ranks_before_owner_match(
 
     assert candidates[0].symbol == "flush"
     assert candidates[0].qualified_symbol is None
+
+
+def test_duplicate_local_symbol_reference_is_scoped_to_its_owner(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "responses.py",
+        "class Response:\n"
+        "    async def __call__(self):\n"
+        "        return None\n\n"
+        "def stream_response():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "routing.py",
+        "class BaseRoute:\n"
+        "    async def __call__(self):\n"
+        "        return None\n\n"
+        "def resolve_route():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "middleware.py",
+        "class Middleware:\n"
+        "    async def __call__(self):\n"
+        "        return None\n\n"
+        "def unrelated_helper():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Streaming response route failure",
+        "The `Response` implementation of `__call__` fails while streaming.",
+    )
+
+    candidates = {
+        candidate.file: candidate
+        for candidate in locate_candidates(record, build_repository_map(repository))
+    }
+
+    assert candidates["responses.py"].qualified_symbol == "Response.__call__"
+    assert candidates["routing.py"].symbol == "resolve_route"
+    assert candidates["middleware.py"].symbol is None
+
+
+def test_duplicate_local_symbol_reference_is_scoped_to_its_path(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "alpha.py",
+        "def send():\n"
+        "    return None\n\n"
+        "def alpha_handler():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "beta.py",
+        "def send():\n"
+        "    return None\n\n"
+        "def beta_handler():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Transport failure",
+        'The `send` function fails.\nFile "/repo/alpha.py", line 1',
+    )
+
+    candidates = {
+        candidate.file: candidate
+        for candidate in locate_candidates(record, build_repository_map(repository))
+    }
+
+    assert candidates["alpha.py"].symbol == "send"
+    assert candidates["beta.py"].symbol is None
+
+
+def test_bare_symbol_can_be_unique_in_final_candidate_range(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "layout.py",
+        "class Widget:\n"
+        "    def remove_children(self):\n"
+        '        """Remove layout children and refresh height."""\n'
+        "        return None\n",
+    )
+    write_source(
+        repository,
+        "tree.py",
+        "class Tree:\n"
+        "    def remove_children(self):\n"
+        '        """Remove child tree nodes."""\n'
+        "        return None\n",
+    )
+    record = issue(
+        "Height not refreshed after removing children",
+        "```python\nawait view.remove_children()\n```",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=1,
+    )
+
+    assert candidates[0].file == "layout.py"
+    assert candidates[0].qualified_symbol == "Widget.remove_children"
+    assert (
+        "Issue references symbol Widget.remove_children"
+        in candidates[0].evidence
+    )
+
+
+def test_fenced_qualified_symbol_reference_disambiguates_methods(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "thread_cache.py",
+        "class Unrelated:\n"
+        "    def __init__(self):\n"
+        "        pass\n\n"
+        "class WorkerThread:\n"
+        "    def __init__(self):\n"
+        "        self.context = None\n",
+    )
+    record = issue(
+        "Worker callback loses context",
+        "```python\ncallback = WorkerThread.__init__\n```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "WorkerThread.__init__"
 
 
 def test_owner_terms_do_not_change_title_semantic_ranking(
