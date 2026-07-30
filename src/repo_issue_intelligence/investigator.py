@@ -121,6 +121,7 @@ SYMBOL_EVIDENCE_PREFIXES = (
 @dataclass(frozen=True)
 class IssueSignals:
     terms: frozenset[str]
+    content_terms: frozenset[str]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
@@ -233,12 +234,24 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
     explicit_identifiers = _extract_explicit_identifiers(text)
+    text_without_dotted_identifiers = IDENTIFIER_PATTERN.sub(
+        lambda match: " " if "." in match.group(0) else match.group(0),
+        text,
+    )
+    content_terms = _terms(text_without_dotted_identifiers)
+    content_terms.update(
+        term
+        for identifier in explicit_identifiers
+        if "." not in identifier
+        for term in _terms(identifier)
+    )
     paths = {
         match.group(0).replace("\\", "/").strip("'\"()[]{}:,")
         for match in PATH_REFERENCE_PATTERN.finditer(text)
     }
     return IssueSignals(
         terms=frozenset(_terms(text)),
+        content_terms=frozenset(content_terms),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
@@ -636,31 +649,60 @@ def _source_content(
     if "\x00" in text or len(text) > 1_000_000:
         return set(), set(), None
 
-    lowered = text.lower()
+    all_identifiers = signals.identifiers | signals.explicit_identifiers
+    bare_identifiers = {
+        identifier
+        for identifier in all_identifiers
+        if "." not in identifier
+    }
+    content_identifiers = bare_identifiers | {
+        identifier
+        for identifier in all_identifiers
+        if "." in identifier
+        and identifier.rsplit(".", maxsplit=1)[-1] not in bare_identifiers
+    }
     identifier_hits = {
         identifier
-        for identifier in signals.identifiers
-        if any(variant in lowered for variant in _identifier_variants(identifier))
+        for identifier in content_identifiers
+        if _content_matches_identifier(text, identifier)
     }
+    lowered = text.lower()
     content_overlap = {
-        term for term in signals.terms if len(term) >= 4 and term in lowered
+        term
+        for term in signals.content_terms
+        if len(term) >= 4 and term in lowered
     }
     first_line = None
-    variants = {
-        variant
-        for identifier in identifier_hits
-        for variant in _identifier_variants(identifier)
-    }
-    if variants:
+    if identifier_hits:
         first_line = next(
             (
                 line_number
                 for line_number, line in enumerate(text.splitlines(), start=1)
-                if any(variant in line.lower() for variant in variants)
+                if any(
+                    _content_matches_identifier(line, identifier)
+                    for identifier in identifier_hits
+                )
             ),
             None,
         )
     return identifier_hits, content_overlap, first_line
+
+
+def _content_matches_identifier(text: str, identifier: str) -> bool:
+    candidate = identifier.strip("`'\"()[]{}:,")
+    if "." in candidate:
+        return (
+            re.search(
+                rf"(?<![A-Za-z0-9_.]){re.escape(candidate)}(?![A-Za-z0-9_.])",
+                text,
+            )
+            is not None
+        )
+    lowered = text.lower()
+    return any(
+        variant in lowered
+        for variant in _identifier_variants(candidate)
+    )
 
 
 def _graph_seed_paths(

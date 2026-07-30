@@ -49,8 +49,9 @@ retained with their original case and dot boundaries. Bare names are direct only
 final candidate range, constrained by an exact owner, or scoped by a path that resolves to exactly
 one repository file. Loose suffix matching remains available for file retrieval, but an ambiguous
 basename cannot scope a direct symbol reference. A dotted value is direct only when its complete,
-case-preserving qualified identity matches; syntactic object calls separately expose their local
-callee. Repeated unscoped names and unmatched dotted terminals cannot independently select a
+case-preserving qualified identity matches; source-content retrieval applies the same full-token
+boundary and does not reuse dotted component terms. Syntactic object calls separately expose their
+local callee. Repeated unscoped names and unmatched dotted terminals cannot independently select a
 symbol. Owner names can disambiguate equivalent method names but do not contribute semantic title
 terms or override a different explicitly referenced function. A callee receives additional
 evidence only when at least two distinct issue-matching functions in the same file call it. The

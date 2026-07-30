@@ -10,10 +10,10 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.6005 | 3,134 ms |
-| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,609 ms |
-| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,822 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,402 ms |
+| Overall | 32/32 | 0.4375 | 0.8333 | 0.9062 | 0.9688 | 0.5989 | 3,264 ms |
+| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6764 | 3,790 ms |
+| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4569 | 1,666 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6038 | 3,640 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
@@ -31,16 +31,19 @@ identifiers from inline code, fenced examples, and tracebacks rank before title 
 Bare local identifiers receive the same priority only when they are unique in the final candidate
 range, constrained by an exact owner, or scoped by a path that uniquely resolves to one repository
 file; repeated unscoped names are only semantic tie-breakers. Loose suffix paths still contribute
-to file retrieval. Qualified matching preserves case and dot boundaries, and an unmatched dotted
-runtime value cannot fall back to its last component, so the ASGI event `websocket.accept` no
-longer selects or claims a direct reference to the Python method `WebSocket.accept`.
+to file retrieval. Qualified matching preserves case and dot boundaries. Source-content retrieval
+also matches dotted values only as complete, case-preserving tokens and excludes their component
+terms; syntactic object calls separately expose their local callee. The ASGI event
+`websocket.accept` therefore neither selects nor contributes terminal-name content evidence for
+the Python method `WebSocket.accept`.
 
-Compared with v0.11, 21 of 32 file orderings and 27 per-file symbol assignments change after
+Compared with v0.11, 28 of 32 file orderings and 29 per-file symbol assignments change after
 normalizing away qualified-name representation. Typer's labeled target moves from rank 3 to 2,
 while Textual's two-file target moves from ranks 4/10 to 5/10; their Recall thresholds remain
 unchanged. The stricter evidence contract removes false-positive dotted and ambiguous-basename
 scope, but it is not a monotonic metric gain: the Rich `print_json` fix file moves from rank 1 to
-7, reducing aggregate Recall@5 by `0.0157` and MRR by `0.0059`, while Recall@20 remains `0.9688`.
+7 and the pytest fixture-ordering fix file moves from rank 4 to 5, reducing aggregate Recall@5 by
+`0.0157` and MRR by `0.0075`, while Recall@20 remains `0.9688`.
 The corrected selector still restores `cookie_parser` and `send_wrapper` for the Starlette session
 case and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
 `WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but

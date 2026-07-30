@@ -68,6 +68,7 @@ def test_extract_issue_signals_records_called_identifiers_from_code_blocks() -> 
     )
     assert "compose" not in signals.explicit_identifiers
     assert "accept" not in signals.explicit_identifiers
+    assert "accept" not in signals.content_terms
 
 
 def test_extract_issue_signals_records_non_call_qualified_identifiers() -> None:
@@ -638,6 +639,8 @@ def test_protocol_event_does_not_fall_back_to_local_method(
         "    async def accept(self):\n"
         "        return None\n\n"
         "    async def close(self):\n"
+        "        return None\n\n"
+        "    async def send_denial_response(self):\n"
         "        return None\n",
     )
     record = issue(
@@ -653,6 +656,17 @@ def test_protocol_event_does_not_fall_back_to_local_method(
         for candidate in candidates
         for evidence in candidate.evidence
     )
+    assert not any(
+        "Source contains issue identifiers: websocket.accept" in evidence
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+    assert not any(
+        evidence.startswith("Source content matches issue terms:")
+        and "accept" in evidence
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
 
     title_candidates = locate_candidates(
         issue(
@@ -663,6 +677,20 @@ def test_protocol_event_does_not_fall_back_to_local_method(
     )
 
     assert all(candidate.symbol != "accept" for candidate in title_candidates)
+
+    call_candidates = locate_candidates(
+        issue(
+            "Denial response call fails",
+            "```python\nawait ws.send_denial_response()\n```",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert any(
+        "Source contains issue identifiers: send_denial_response" in evidence
+        for candidate in call_candidates
+        for evidence in candidate.evidence
+    )
 
 
 def test_exact_python_qualified_reference_matches_with_case_and_boundaries(
