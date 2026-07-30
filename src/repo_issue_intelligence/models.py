@@ -111,6 +111,9 @@ class FileRecord(BaseModel):
     language: str
     symbols: list[SymbolRecord] = Field(default_factory=list)
     imports: list[str] = Field(default_factory=list)
+    local_imports: list[str] = Field(default_factory=list)
+    local_import_symbols: dict[str, list[str]] = Field(default_factory=dict)
+    calls: list[str] = Field(default_factory=list)
     test_file: bool = False
 
 

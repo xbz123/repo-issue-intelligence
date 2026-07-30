@@ -85,6 +85,10 @@ CODE_SPAN_PATTERN = re.compile(r"`([^`\n]{1,120})`")
 IDENTIFIER_PATTERN = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b"
 )
+GRAPH_SEED_LIMIT = 8
+GRAPH_SEED_MIN_SCORE = 4.0
+GRAPH_BONUS_LIMIT = 10.0
+GRAPH_RERANK_BAND_SIZE = 10
 
 
 @dataclass(frozen=True)
@@ -208,13 +212,110 @@ def _source_content(
     return identifier_hits, content_overlap, first_line
 
 
+def _graph_relations(
+    repository_map: RepositoryMap,
+    base_scores: dict[str, float],
+    auxiliary_files: dict[str, bool],
+) -> dict[str, list[tuple[float, str]]]:
+    files_by_path = {file.path: file for file in repository_map.files}
+    symbol_definitions: dict[str, set[str]] = {}
+    for file in repository_map.files:
+        if file.test_file:
+            continue
+        for symbol in file.symbols:
+            symbol_definitions.setdefault(symbol.name, set()).add(file.path)
+
+    seed_paths = sorted(
+        (
+            path
+            for path, score in base_scores.items()
+            if score >= GRAPH_SEED_MIN_SCORE
+        ),
+        key=lambda path: (
+            -base_scores[path],
+            auxiliary_files[path],
+            path,
+        ),
+    )[:GRAPH_SEED_LIMIT]
+
+    relations: dict[str, list[tuple[float, str]]] = {}
+
+    def add_relation(target: str, bonus: float, evidence: str) -> None:
+        if target not in base_scores:
+            return
+        relations.setdefault(target, []).append((bonus, evidence))
+
+    for seed_path in seed_paths:
+        seed = files_by_path[seed_path]
+        for imported_path in seed.local_imports:
+            imported = files_by_path.get(imported_path)
+            if imported is None or imported.test_file:
+                continue
+            called_imports = set(
+                seed.local_import_symbols.get(imported_path, [])
+            ).intersection(seed.calls)
+            if seed.test_file:
+                add_relation(
+                    imported_path,
+                    3.5,
+                    f"Matching test imports this source file: {seed_path}",
+                )
+            elif called_imports:
+                add_relation(
+                    imported_path,
+                    8.0,
+                    "Related source calls imported symbols defined here: "
+                    + ", ".join(sorted(called_imports)),
+                )
+            else:
+                add_relation(
+                    imported_path,
+                    0.75,
+                    f"Related source imports this file: {seed_path}",
+                )
+
+            for second_hop_path in imported.local_imports:
+                second_hop = files_by_path.get(second_hop_path)
+                if second_hop is None or second_hop.test_file:
+                    continue
+                called_second_hop_imports = set(
+                    imported.local_import_symbols.get(second_hop_path, [])
+                ).intersection(imported.calls)
+                if called_second_hop_imports:
+                    add_relation(
+                        second_hop_path,
+                        5.0,
+                        "Two-hop source relation calls imported symbols defined "
+                        "here: "
+                        + ", ".join(sorted(called_second_hop_imports)),
+                    )
+
+        if seed.test_file:
+            continue
+        for called_symbol in seed.calls:
+            if len(called_symbol) < 8 or "_" not in called_symbol:
+                continue
+            targets = symbol_definitions.get(called_symbol, set()) - {seed_path}
+            if not targets or len(targets) > 4:
+                continue
+            for target in targets:
+                add_relation(
+                    target,
+                    2.0,
+                    f"Related source calls {called_symbol}, defined here: {seed_path}",
+                )
+    return relations
+
+
 def locate_candidates(
     issue: IssueRecord, repository_map: RepositoryMap, limit: int = 20
 ) -> list[CandidateLocation]:
     signals = extract_issue_signals(issue)
     keywords = set(signals.terms)
     root = Path(repository_map.root).resolve()
-    ranked: list[tuple[float, bool, str, CandidateLocation]] = []
+    base_scores: dict[str, float] = {}
+    auxiliary_files: dict[str, bool] = {}
+    candidates: dict[str, CandidateLocation] = {}
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(
@@ -309,30 +410,68 @@ def locate_candidates(
                 "Source content matches issue terms: "
                 + ", ".join(sorted(content_overlap)[:8])
             )
-        ranked.append(
-            (
-                raw_score,
-                auxiliary_file,
-                file.path,
-                CandidateLocation(
-                    file=file.path,
-                    symbol=best_symbol.name if best_symbol else None,
-                    lines=f"{best_symbol.line}-{best_symbol.end_line or best_symbol.line}"
-                    if best_symbol
-                    else f"{content_line}-{content_line}"
-                    if content_line
-                    else None,
-                    confidence=round(min(0.98, 0.2 + raw_score / 30), 2),
-                    evidence=evidence,
+        base_scores[file.path] = raw_score
+        auxiliary_files[file.path] = auxiliary_file
+        candidates[file.path] = CandidateLocation(
+            file=file.path,
+            symbol=best_symbol.name if best_symbol else None,
+            lines=f"{best_symbol.line}-{best_symbol.end_line or best_symbol.line}"
+            if best_symbol
+            else f"{content_line}-{content_line}"
+            if content_line
+            else None,
+            confidence=round(min(0.98, 0.2 + raw_score / 30), 2),
+            evidence=evidence,
+        )
+
+    graph_relations = _graph_relations(
+        repository_map,
+        base_scores,
+        auxiliary_files,
+    )
+    final_scores = dict(base_scores)
+    for path, relations in graph_relations.items():
+        unique_relations = sorted(
+            set(relations),
+            key=lambda relation: (-relation[0], relation[1]),
+        )
+        graph_bonus = min(
+            GRAPH_BONUS_LIMIT,
+            sum(bonus for bonus, _ in unique_relations[:2]),
+        )
+        final_scores[path] += graph_bonus
+        candidates[path].confidence = round(
+            min(0.98, 0.2 + final_scores[path] / 30),
+            2,
+        )
+        candidates[path].evidence.extend(
+            evidence for _, evidence in unique_relations[:2]
+        )
+
+    base_order = sorted(
+        base_scores,
+        key=lambda path: (
+            -base_scores[path],
+            auxiliary_files[path],
+            path,
+        ),
+    )
+    reranked_paths: list[str] = []
+    for start in range(0, min(limit, len(base_order)), GRAPH_RERANK_BAND_SIZE):
+        band = base_order[start : min(start + GRAPH_RERANK_BAND_SIZE, limit)]
+        reranked_paths.extend(
+            sorted(
+                band,
+                key=lambda path: (
+                    -final_scores[path],
+                    auxiliary_files[path],
+                    path,
                 ),
             )
         )
     return [
-        candidate
-        for _, _, _, candidate in sorted(
-            ranked,
-            key=lambda item: (-item[0], item[1], item[2]),
-        )[:limit]
+        candidates[path]
+        for path in reranked_paths
     ]
 
 

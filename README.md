@@ -108,16 +108,16 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.4-20-cases.json
+  --output benchmarks/results/deterministic-v0.5-graph-20-cases.json
 
-LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
+LLM_MAX_EVIDENCE_CHARS=12000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
   --model openai/gpt-oss-20b \
   --temperature 0.1 \
   --seed 1337 \
-  --llm-delay-seconds 40 \
-  --output benchmarks/results/hybrid-v0.4-20-cases.json
+  --llm-delay-seconds 45 \
+  --output benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json
 ```
 
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
@@ -182,7 +182,7 @@ Core endpoints:
 - `GET /v1/agent/runs/{run_id}`
 - `POST /v1/agent/runs/{run_id}/review`
 
-The v0.4 API continues to run the offline workflow. Optional Groq analysis is exposed through
+The v0.5 API continues to run the offline workflow. Optional Groq analysis is exposed through
 the CLI first so model credentials and quota use remain an explicit local operator decision.
 
 ## Priority model
@@ -242,8 +242,10 @@ The current frozen benchmark contains 20 closed issues with linked fix PRs acros
 Each case uses a committed Issue snapshot and a frozen pre-fix SHA. Only Git-tracked files are
 eligible for candidate retrieval.
 
-On the 20-case manifest, the deterministic path completed every case and achieved File Recall@1
-`0.2750`, Recall@5 `0.5917`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR `0.4925`. The wider
+On the 20-case manifest, the graph-reranked deterministic path completed every case and achieved
+File Recall@1 `0.3500`, Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR
+`0.5663`. Static Python import, imported-symbol call, call-name, and test-import evidence reranks
+within fixed Top-10 bands, so the lexical Top-10 and Top-20 member sets remain unchanged. The wider
 suite deliberately includes harder lexical and multi-file cases; its metrics must not be compared
 as if it were the same dataset as the historical 9-case run.
 

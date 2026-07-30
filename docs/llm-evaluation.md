@@ -5,7 +5,8 @@ quality improvement is claimed.
 
 ## Variants
 
-1. `deterministic`: rules, duplicate similarity, AST index, and lexical candidate ranking.
+1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
+   bounded static-graph reranking inside fixed Top-10 bands.
 2. `hybrid`: deterministic retrieval followed by GPT-OSS 20B evidence-ID reranking.
 
 An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files

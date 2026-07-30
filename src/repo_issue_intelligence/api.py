@@ -22,7 +22,7 @@ from .service import rank_issues
 
 app = FastAPI(
     title="Repo Issue Intelligence",
-    version="0.4.0",
+    version="0.5.0",
     description="Repository-aware GitHub issue prioritization and investigation MVP.",
 )
 

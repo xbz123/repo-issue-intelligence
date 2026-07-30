@@ -25,11 +25,18 @@ The current MVP ends at a human review gate. It does not execute generated comma
 
 ### Repository indexing
 
-`repository_index.py` scans supported source files and uses Python AST parsing to collect imports, classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
+`repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
+locally resolved Python import targets, imported symbols, called names, classes, functions, line
+ranges, entrypoints, runtime files, tests, and framework indicators.
 
 ### Investigation
 
-`investigator.py` ranks candidate files and symbols using explicit evidence signals. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
+`investigator.py` ranks candidate files and symbols using explicit evidence signals. Lexical and
+bounded content matching define the candidate pool. Static local-import, imported-symbol call,
+call-name definition, two-hop import, and matching-test import relations then rerank within fixed
+Top-10 bands. This lets graph evidence improve ordering without changing the lexical Top-10 or
+Top-20 membership. It emits confirmed facts, confidence-scored hypotheses, missing evidence, and
+a non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
 ### Agent runtime
 
@@ -74,8 +81,9 @@ live GitHub API, verifies that the labeled fix files exist, and indexes only pat
 bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this benchmark
 contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
 normalizes paths and identifiers, gives explicit stack-trace/source-path references the strongest
-signal, searches bounded source content, downranks tests and documentation, and retains 20
-candidates. Per-candidate evidence caps preserve candidate breadth before LLM reranking.
+signal, searches bounded source content, downranks tests and documentation, retains 20
+candidates, and applies bounded static graph evidence inside fixed rank bands. Per-candidate
+evidence caps preserve candidate breadth before LLM reranking.
 
 ### Benchmark candidate pipeline
 
@@ -120,16 +128,15 @@ not include background workers, automatic snapshot resume, or generated-command 
 The current benchmark contains 20 cases across seven repositories, which is useful for error
 analysis but not statistically strong enough for a broad quality claim. The historical nine-case
 manifest remains frozen for comparisons. LLM hypotheses are not confirmed root causes. Retrieval
-remains lexical/content based; it has no import graph, call graph, test-to-source mapping, or
-semantic vector index.
+has bounded Python static relations, not a control-flow-aware call graph, cross-language graph,
+semantic test-to-source mapping, or vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> import/call-graph evidence
   -> inspect Git history and related tests
-  -> rerun deterministic and Hybrid on manifest v3
+  -> add reverse references and control-flow-aware graph evidence
   -> add symbol labels and expand to 30-50 cases
 ```
 

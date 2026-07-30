@@ -116,6 +116,162 @@ def test_locate_candidates_prefers_compound_title_identifier(
     assert "Issue title strongly matches symbol TyperOption" in candidates[0].evidence
 
 
+def test_repository_map_records_local_imports_and_called_symbols(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .parser import parse_request\n\n"
+        "def handle_request():\n"
+        "    return parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(file for file in repository_map.files if file.path.endswith("api.py"))
+
+    assert api.local_imports == ["src/package/parser.py"]
+    assert api.local_import_symbols == {
+        "src/package/parser.py": ["parse_request"]
+    }
+    assert "parse_request" in api.calls
+
+
+def test_locate_candidates_propagates_local_import_evidence(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .parser import parse_request\n\n"
+        "def handle_request():\n"
+        "    return parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n    return None\n",
+    )
+    record = issue(
+        "API request failure",
+        "The traceback points to src/package/api.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    parser = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/parser.py"
+    )
+
+    assert (
+        "Related source calls imported symbols defined here: parse_request"
+        in parser.evidence
+    )
+
+
+def test_locate_candidates_maps_matching_test_to_source(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "tests/test_widget.py",
+        "from package.widget import remove_children\n\n"
+        "def test_reflow():\n"
+        "    remove_children()\n",
+    )
+    write_source(
+        repository,
+        "src/package/widget.py",
+        "def remove_children():\n    return None\n",
+    )
+    record = issue(
+        "Widget reflow fails",
+        "The failure occurs in tests/test_widget.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    widget = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/widget.py"
+    )
+
+    assert "Matching test imports this source file: tests/test_widget.py" in widget.evidence
+
+
+def test_locate_candidates_propagates_called_symbol_evidence(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/portal.py",
+        "def start_portal(backend):\n"
+        "    return backend.run_async_from_thread()\n",
+    )
+    write_source(
+        repository,
+        "src/package/backend.py",
+        "def run_async_from_thread():\n    return None\n",
+    )
+    record = issue(
+        "Portal fails under free threading",
+        "The traceback points to src/package/portal.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    backend = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/backend.py"
+    )
+
+    assert (
+        "Related source calls run_async_from_thread, defined here: "
+        "src/package/portal.py"
+    ) in backend.evidence
+
+
+def test_graph_reranking_does_not_expand_the_lexical_candidate_pool(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "from .target import target_operation\n\n"
+        "def handle_failure():\n"
+        "    return target_operation()\n",
+    )
+    write_source(
+        repository,
+        "src/target.py",
+        "def target_operation():\n    return None\n",
+    )
+    for index in range(20):
+        write_source(
+            repository,
+            f"src/shared_failure_{index}.py",
+            "def shared_failure():\n    return None\n",
+        )
+    record = issue(
+        "Shared failure",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+
+    assert len(candidates) == 20
+    assert all(candidate.file != "src/target.py" for candidate in candidates)
+
+
 def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     for index in range(25):
