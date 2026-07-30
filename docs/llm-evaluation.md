@@ -15,13 +15,13 @@ outside the deterministic candidate pool.
 ## Dataset
 
 The current frozen dataset contains 32 closed issues across 13 repositories that link to a fix
-pull request. Manifest version 6 stores the complete evaluated Issue snapshot and never fetches
+pull request. Manifest version 7 stores the complete evaluated Issue snapshot and never fetches
 mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- 16 manually reviewed symbols across 15 high-confidence cases;
+- 17 manually reviewed symbols across 16 high-confidence cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
@@ -35,7 +35,8 @@ Do not include API keys, private repository content, or unreviewed generated lab
 versions 2 and 3 are retained for provenance but are superseded because their pre-fix SHAs were
 not derived correctly. Manifest version 5 is retained as
 `benchmarks/cases-v0.10-corrected-20-cases.json` because it is the frozen input for the corrected
-Groq/OpenCode comparison.
+Groq/OpenCode comparison. Manifest version 6 is retained as
+`benchmarks/cases-v0.11-32-cases.json` for the pre-qualified-symbol baseline.
 
 ## Metrics
 
@@ -85,11 +86,14 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The current manifest-v6 v0.11 baseline completed 32/32 cases with File Recall@1 `0.4375`,
+The current manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4375`,
 Recall@5 `0.8490`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. Across the 15
-symbol-labeled cases and 16 reviewed targets, Symbol Recall@1 is `0.2000`, Symbol Recall@5 is
-`0.5000`, Symbol Recall@10 is `0.5333`, Symbol Recall@20 is `0.6000`, and symbol MRR is `0.2926`.
-Two complete runs produced identical candidates and metrics after excluding timing fields.
+symbol-labeled cases and 16 reviewed targets from v0.11, every per-case metric remains unchanged.
+After adding the reviewed `WorkerThread.__init__` target, the 16 labeled cases and 17 targets reach
+Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.5312`, Symbol Recall@10 `0.5625`, Symbol Recall@20
+`0.6250`, and symbol MRR `0.2868`. The harder rank-5 case lowers the average Recall@1 and MRR while
+increasing deeper recall. All 32 file rankings are unchanged, and two complete v0.12 runs produced
+identical candidates and metrics after excluding timing fields.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 
@@ -102,7 +106,7 @@ The retained corrected manifest-v5 snapshot also received paired real-provider r
   `0.9250`, Recall@20 `1.0000`, and MRR `0.6794`. Average successful model latency was `870 ms`;
   successful final calls used 82,329 input and 2,763 output tokens.
 
-These are paired localization results on manifest v5, not manifest v6. They support an ordering
+These are paired localization results on manifest v5, not manifest v7. They support an ordering
 improvement over the same v5 deterministic candidate pool, while Recall@20 remains bounded by
 deterministic retrieval. A separate three-real-case OpenCode full-schema run succeeded on two
 cases; the Typer case exhausted two invalid structured responses and used fallback. The compact

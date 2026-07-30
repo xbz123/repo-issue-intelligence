@@ -132,7 +132,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.11-expanded-32-cases.json
+  --output benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
@@ -157,13 +157,14 @@ uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget. Current manifest version 6
-embeds 32 complete Issue snapshots across 13 repositories, corrected pre-fix SHAs, and 16 manually
-reviewed symbol targets across 15 cases. Manifest version 5 is retained as
+model sees a broad candidate set under the same total character budget. Current manifest version 7
+embeds 32 complete Issue snapshots across 13 repositories, corrected pre-fix SHAs, and 17 manually
+reviewed symbol targets across 16 cases. Manifest version 5 is retained as
 `benchmarks/cases-v0.10-corrected-20-cases.json` so the reviewed Groq and OpenCode runs remain
-reproducible. Repository indexing is restricted to `git ls-files`; live Issue edits and ignored
-artifacts in reused workspaces therefore cannot change benchmark inputs. A cached commit is reused
-without a network request.
+reproducible, and version 6 remains available as `benchmarks/cases-v0.11-32-cases.json`.
+Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
+reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
+network request.
 
 Discover and curate additional Issue/Fix-PR cases:
 
@@ -278,12 +279,15 @@ The current frozen benchmark contains 32 closed issues with linked fix PRs acros
 Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
 pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
-On manifest v6, v0.11 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8490`,
-Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. On the 15 labeled cases, Symbol Recall@1
-is `0.2000`, Recall@5 is `0.5000`, Recall@10 is `0.5333`, Recall@20 is `0.6000`, and symbol MRR is
-`0.2926`. Two complete v0.11 runs produced identical candidate files, candidate symbols, and
-metrics after excluding timing fields. The larger label set deliberately exposes that the current
-single-best-function selector is substantially weaker than file localization.
+On manifest v7, v0.12 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8490`,
+Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. On the 16 labeled cases, Symbol Recall@1
+is `0.1875`, Recall@5 is `0.5312`, Recall@10 is `0.5625`, Recall@20 is `0.6250`, and symbol MRR is
+`0.2868`. Qualified AST identities now distinguish methods such as `WorkerThread.__init__` while
+the public unqualified `symbol` field remains compatible. The 15 previously labeled cases retain
+their exact metrics, all 32 file rankings are unchanged, and two complete v0.12 runs produced
+identical candidates and metrics after excluding timing fields. The larger label set deliberately
+exposes that the current single-best-symbol selector is substantially weaker than file
+localization.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only
@@ -291,7 +295,7 @@ as superseded historical artifacts, not as valid pre-fix comparisons. A paired m
 completed after the correction: DeepSeek returned valid reranks for 20/20 cases with no fallback,
 while GPT-OSS 20B returned 17/20 valid reranks and used deterministic fallback for three HTTP 429
 cases. Those results are valid for the retained 20-case v5 snapshot but are not a measurement on
-the new 32-case v6 suite.
+the current 32-case v7 suite.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.

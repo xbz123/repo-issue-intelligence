@@ -100,6 +100,7 @@ class DuplicateMatch(BaseModel):
 
 class SymbolRecord(BaseModel):
     name: str
+    qualified_name: str | None = None
     kind: str
     line: int
     end_line: int | None = None
@@ -132,6 +133,7 @@ class RepositoryMap(BaseModel):
 class CandidateLocation(BaseModel):
     file: str
     symbol: str | None = None
+    qualified_symbol: str | None = None
     lines: str | None = None
     confidence: float
     evidence: list[str]

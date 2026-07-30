@@ -242,6 +242,89 @@ def test_repository_map_records_local_imports_and_called_symbols(
     assert "parse_request" in api.references
 
 
+def test_repository_map_records_qualified_method_names(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/thread_cache.py",
+        "class Unrelated:\n"
+        "    def __init__(self):\n"
+        "        pass\n\n"
+        "class WorkerThread:\n"
+        "    def __init__(self):\n"
+        "        pass\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/thread_cache.py"
+    )
+
+    assert {
+        symbol.qualified_name
+        for symbol in source.symbols
+        if symbol.name == "__init__"
+    } == {"Unrelated.__init__", "WorkerThread.__init__"}
+
+
+def test_locate_candidates_uses_class_context_to_disambiguate_methods(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/thread_cache.py",
+        "class Unrelated:\n"
+        "    def __init__(self):\n"
+        "        pass\n\n"
+        "class WorkerThread:\n"
+        "    def __init__(self):\n"
+        "        self.context = None\n\n"
+        "    def _work(self):\n"
+        "        return self.context\n",
+    )
+    record = issue(
+        "ThreadCache workers leak context",
+        "`WorkerThreads` retain context when they are spawned.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "__init__"
+    assert candidates[0].qualified_symbol == "WorkerThread.__init__"
+    assert any(
+        "Symbol WorkerThread.__init__ matches" in evidence
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_qualified_owner_match_does_not_treat_body_method_as_class_match(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "typer/core.py",
+        "class TyperOption:\n"
+        "    def value_from_envvar(self):\n"
+        "        return None\n\n"
+        "class TyperCommand:\n"
+        "    def main(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "envvar not working for `typer.Options`",
+        "The example calls app.command and uses __main__.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "value_from_envvar"
+    assert candidates[0].qualified_symbol == "TyperOption.value_from_envvar"
+
+
 def test_locate_candidates_propagates_within_file_call_evidence(
     tmp_path: Path,
 ) -> None:

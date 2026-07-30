@@ -96,7 +96,7 @@ def collect_evidence(
             EvidenceSnippet(
                 id=f"E{len(snippets) + 1}",
                 file=candidate.file,
-                symbol=candidate.symbol,
+                symbol=candidate.qualified_symbol or candidate.symbol,
                 lines=f"{start}-{end}",
                 content=content,
             )

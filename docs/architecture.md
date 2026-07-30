@@ -105,8 +105,10 @@ dotted-name/URL false path matches, gives explicit stack-trace/source-path refer
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
 and applies bounded graph/history evidence. Compound identifier variants preserve source term
 order rather than depending on set iteration. Per-candidate evidence caps preserve candidate
-breadth before LLM reranking. Optional symbol labels are aggregated only across labeled cases;
-exact file-plus-symbol matches retain the candidate file rank.
+breadth before LLM reranking. Python AST symbols retain both their local name and qualified
+class/function ownership. Optional symbol labels are aggregated only across labeled cases; exact
+file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
+and retain the candidate file rank.
 
 ### Benchmark candidate pipeline
 
@@ -151,22 +153,22 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current benchmark contains 32 cases across 13 repositories and 16 manually reviewed symbol
-targets across 15 cases. This is materially stronger for error analysis but still not statistically
+The current benchmark contains 32 cases across 13 repositories and 17 manually reviewed symbol
+targets across 16 cases. This is materially stronger for error analysis but still not statistically
 strong enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. Manifest version 5 is retained as
 the reproducible input for the corrected 20-case Groq and OpenCode comparison; version 6 is the
-current expanded deterministic suite. LLM hypotheses are not confirmed root causes. Retrieval has
-bounded Python static/history relations, function-level calls, and a single-best-function selector,
-but not class ownership or qualified symbol names, cross-file control-flow beyond bounded two-hop
-call names, runtime/backend dispatch, a cross-language graph, semantic test-to-source mapping,
-multi-symbol ranking, or a vector index.
+retained 32-case expansion and version 7 is the current qualified-symbol suite. LLM hypotheses are
+not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
+calls, qualified class/function ownership, and a single-best-symbol selector, but not cross-file
+control-flow beyond bounded two-hop call names, runtime/backend dispatch, a cross-language graph,
+semantic test-to-source mapping, multi-symbol ranking, or a vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> add qualified-symbol/runtime dispatch and multi-symbol ranking
+  -> add runtime/backend dispatch and multi-symbol ranking
   -> add semantic test-to-source mapping
   -> add cross-language graph evidence
   -> independently review another 8-18 cases after the 32-case suite stabilizes

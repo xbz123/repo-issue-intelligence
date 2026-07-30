@@ -6,16 +6,28 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
-## v0.11 outcome
+## v0.12 qualified-symbol outcome
 
-The current manifest is version 6. It expands the corrected 20-case suite to 32 independently
-reviewed cases across 13 repositories:
+The current manifest is version 7. It keeps the 32 independently reviewed cases across 13
+repositories and adds qualified class/function ownership without changing the frozen Issue,
+repository, commit, or file ground truth:
 
 - 12 main, 7 calibration, and 13 generalization cases;
-- 16 reviewed function targets across 15 cases;
+- 17 reviewed symbol targets across 16 cases;
 - 32/32 successful frozen-checkout evaluations;
 - two complete deterministic runs with identical candidate and metric output after removing
   timing fields.
+
+All 32 file rankings and all 15 previously labeled per-case symbol metrics remain unchanged.
+Trio's reviewed `WorkerThread.__init__` method is now an unambiguous target and is recovered at
+rank 5. Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.5312`, Recall@10 `0.5625`, Recall@20
+`0.6250`, and MRR `0.2868`. The added rank-5 case raises deeper recall while lowering Recall@1 and
+MRR as denominator-weighted averages.
+
+## v0.11 expansion outcome
+
+Manifest version 6 expanded the corrected 20-case suite to 32 cases and is retained as
+`benchmarks/cases-v0.11-32-cases.json`.
 
 The discovery pass screened 186 Issue/Fix-PR candidates from Click, Pydantic, SQLAlchemy, HTTPX,
 Django, aiohttp, HTTPCore, Flask, Werkzeug, and Trio. Thirty-two reached `needs_review`; manual
@@ -36,11 +48,11 @@ diff and relationship review accepted the following 12:
 | Generalization | Werkzeug | [#3138](https://github.com/pallets/werkzeug/issues/3138) / [#3140](https://github.com/pallets/werkzeug/pull/3140) | `src/werkzeug/serving.py` |
 | Generalization | Trio | [#3472](https://github.com/python-trio/trio/issues/3472) / [#3473](https://github.com/python-trio/trio/pull/3473) | `src/trio/_core/_thread_cache.py` |
 
-Ten of the new cases have function labels taken from reviewed production hunks. HTTPCore's fix is
-an import guard rather than a function, and Trio changes `WorkerThread.__init__`; the current
-unqualified-symbol contract cannot distinguish that method from other `__init__` definitions, so
-neither case is given a misleading symbol label. HTTPCore's coverage-only `_backends/anyio.py`
-edit is also excluded from file ground truth.
+Ten of the new cases initially received function labels taken from reviewed production hunks.
+HTTPCore's fix is an import guard rather than a function, and Trio changes
+`WorkerThread.__init__`; manifest v6's unqualified-symbol contract could not distinguish that
+method from other `__init__` definitions, so neither case received a misleading symbol label.
+HTTPCore's coverage-only `_backends/anyio.py` edit is also excluded from file ground truth.
 
 The v0.11 deterministic result is File Recall@1 `0.4375`, Recall@5 `0.8490`, Recall@10 `0.9062`,
 Recall@20 `0.9688`, and MRR `0.6064`. On the 15 symbol-labeled cases, Symbol Recall@1 is `0.2000`,
@@ -115,7 +127,7 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.11-expanded-32-cases.json
+  --output benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
@@ -124,7 +136,7 @@ must use the corrected ordered-commit checks. The v0.11 accepted catalog is
 `candidates-v0.11.json`; `candidates-v0.7.json` remains the corrected audit record for the
 20-case base suite.
 
-## Candidate projects after v0.11
+## Candidate projects after v0.12
 
 The 30-case threshold is now met without concentrating all new labels in one framework. Discovery
 also showed why acceptance remains manual: the HTTPX and Django scans produced no reviewable
@@ -140,6 +152,7 @@ to satisfy a quota.
 | `django/django` | Generalization | larger repository and deeper cross-module behavior |
 | `pallets/click` | Calibration | compact CLI parsing and option behavior |
 
-The next expansion should prioritize repositories or cases that add qualified methods,
-runtime/backend dispatch, or cross-language behavior. Promote a repository to a larger share only
-after its initial cases pass checkout validation and add failure modes not already represented.
+The next expansion should prioritize repositories or cases that add runtime/backend dispatch,
+multi-symbol edits, semantic test-to-source relationships, or cross-language behavior. Promote a
+repository to a larger share only after its initial cases pass checkout validation and add failure
+modes not already represented.

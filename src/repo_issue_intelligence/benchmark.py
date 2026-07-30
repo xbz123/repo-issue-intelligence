@@ -65,6 +65,7 @@ class BenchmarkSymbolTarget(BaseModel):
 
 
 class BenchmarkSymbolCandidate(BenchmarkSymbolTarget):
+    qualified_symbol: str | None = None
     rank: int = Field(ge=1)
 
 
@@ -389,6 +390,7 @@ def evaluate_case(
         BenchmarkSymbolCandidate(
             file=file,
             symbol=candidate_locations[file].symbol,
+            qualified_symbol=candidate_locations[file].qualified_symbol,
             rank=rank,
         )
         for rank, file in enumerate(candidate_files, start=1)
@@ -397,10 +399,17 @@ def evaluate_case(
     expected_symbol_keys = {
         (target.file, target.symbol) for target in case.expected_symbols
     }
-    symbol_ranks = {
-        (candidate.file, candidate.symbol): candidate.rank
-        for candidate in candidate_symbols
-    }
+    symbol_ranks: dict[tuple[str, str], int] = {}
+    for target in case.expected_symbols:
+        matching_ranks = [
+            candidate.rank
+            for candidate in candidate_symbols
+            if candidate.file == target.file
+            and target.symbol
+            in {candidate.symbol, candidate.qualified_symbol}
+        ]
+        if matching_ranks:
+            symbol_ranks[(target.file, target.symbol)] = min(matching_ranks)
     first_symbol_rank = min(
         (
             symbol_ranks[key]

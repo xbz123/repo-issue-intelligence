@@ -71,6 +71,19 @@ class _FunctionCallCollector(ast.NodeVisitor):
         return
 
 
+def _qualified_symbol_name(
+    node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    parents: dict[ast.AST, ast.AST],
+) -> str:
+    names = [node.name]
+    parent = parents.get(node)
+    while parent is not None:
+        if isinstance(parent, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            names.append(parent.name)
+        parent = parents.get(parent)
+    return ".".join(reversed(names))
+
+
 def _python_metadata(
     path: Path,
 ) -> tuple[
@@ -89,11 +102,17 @@ def _python_metadata(
     calls: list[str] = []
     symbol_calls: dict[str, set[str]] = {}
     references: list[str] = []
+    parents = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             symbols.append(
                 SymbolRecord(
                     name=node.name,
+                    qualified_name=_qualified_symbol_name(node, parents),
                     kind="function",
                     line=node.lineno,
                     end_line=getattr(node, "end_lineno", None),
@@ -108,6 +127,7 @@ def _python_metadata(
             symbols.append(
                 SymbolRecord(
                     name=node.name,
+                    qualified_name=_qualified_symbol_name(node, parents),
                     kind="class",
                     line=node.lineno,
                     end_line=getattr(node, "end_lineno", None),
