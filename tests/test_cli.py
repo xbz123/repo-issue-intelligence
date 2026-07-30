@@ -98,6 +98,27 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     assert "GROQ_API_KEY is required" in result.output
 
 
+def test_benchmark_opencode_requires_provider_key(tmp_path: Path, monkeypatch) -> None:
+    manifest = Path("benchmarks/cases.json").resolve()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            str(manifest),
+            "--variant",
+            "hybrid",
+            "--provider",
+            "opencode",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "OPENCODE_API_KEY is required" in result.output
+
+
 def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> None:
     class FakeAnalyzer:
         def __init__(

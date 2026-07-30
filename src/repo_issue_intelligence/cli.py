@@ -32,13 +32,53 @@ from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
-from .llm_client import GroqIssueAnalyzer
+from .llm_client import (
+    GroqIssueAnalyzer,
+    IssueAnalyzer,
+    LLMProvider,
+    OpenCodeIssueAnalyzer,
+)
 from .models import IssueRecord, ReviewDecision
 from .repository_index import build_repository_map, save_repository_map
 from .service import rank_issues
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
+
+
+def _build_issue_analyzer(
+    settings: Settings,
+    provider: LLMProvider,
+    model: str | None,
+    temperature: float | None = None,
+    seed: int | None = None,
+) -> IssueAnalyzer:
+    common = {
+        "max_output_tokens": settings.llm_max_output_tokens,
+        "timeout_seconds": settings.llm_timeout_seconds,
+    }
+    if temperature is not None:
+        common["temperature"] = temperature
+    if seed is not None:
+        common["seed"] = seed
+    if provider is LLMProvider.GROQ:
+        if settings.groq_api_key is None:
+            raise typer.BadParameter("GROQ_API_KEY is required for the Groq provider")
+        return GroqIssueAnalyzer(
+            api_key=settings.groq_api_key.get_secret_value(),
+            model=model or settings.llm_model,
+            reasoning_effort=settings.llm_reasoning_effort,
+            **common,
+        )
+    if settings.opencode_api_key is None:
+        raise typer.BadParameter("OPENCODE_API_KEY is required for the OpenCode provider")
+    common["max_output_tokens"] = settings.opencode_max_output_tokens
+    common["timeout_seconds"] = settings.opencode_timeout_seconds
+    return OpenCodeIssueAnalyzer(
+        api_key=settings.opencode_api_key.get_secret_value(),
+        model=model or settings.opencode_model,
+        **common,
+    )
 
 
 def _load(path: Path) -> list[IssueRecord]:
@@ -131,11 +171,15 @@ def agent_run_command(
     ] = None,
     llm: Annotated[
         bool,
-        typer.Option("--llm", help="Enable evidence-grounded Groq analysis."),
+        typer.Option("--llm", help="Enable evidence-grounded model analysis."),
     ] = False,
+    provider: Annotated[
+        LLMProvider,
+        typer.Option("--provider", help="OpenAI-compatible inference provider."),
+    ] = LLMProvider.GROQ,
     model: Annotated[
         str | None,
-        typer.Option("--model", help="Groq model ID used when --llm is enabled."),
+        typer.Option("--model", help="Provider model ID used when --llm is enabled."),
     ] = None,
     output: Path = Path("reports/agent-run.json"),
 ) -> None:
@@ -144,15 +188,7 @@ def agent_run_command(
     database = database or settings.agent_db_path
     analyzer = None
     if llm:
-        if settings.groq_api_key is None:
-            raise typer.BadParameter("GROQ_API_KEY is required when --llm is enabled")
-        analyzer = GroqIssueAnalyzer(
-            api_key=settings.groq_api_key.get_secret_value(),
-            model=model or settings.llm_model,
-            max_output_tokens=settings.llm_max_output_tokens,
-            timeout_seconds=settings.llm_timeout_seconds,
-            reasoning_effort=settings.llm_reasoning_effort,
-        )
+        analyzer = _build_issue_analyzer(settings, provider, model)
     try:
         run = run_agent(
             _load(issues_file),
@@ -233,9 +269,13 @@ def benchmark(
     ] = None,
     workspace: Path = Path("benchmarks/workspaces"),
     output: Path = Path("benchmarks/results/latest.json"),
+    provider: Annotated[
+        LLMProvider,
+        typer.Option("--provider", help="OpenAI-compatible inference provider."),
+    ] = LLMProvider.GROQ,
     model: Annotated[
         str | None,
-        typer.Option("--model", help="Groq model ID for the hybrid variant."),
+        typer.Option("--model", help="Provider model ID for the hybrid variant."),
     ] = None,
     llm_delay_seconds: Annotated[
         float,
@@ -263,14 +303,10 @@ def benchmark(
     settings = Settings()
     analyzer = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
-        if settings.groq_api_key is None:
-            raise typer.BadParameter("GROQ_API_KEY is required for the hybrid variant")
-        analyzer = GroqIssueAnalyzer(
-            api_key=settings.groq_api_key.get_secret_value(),
-            model=model or settings.llm_model,
-            max_output_tokens=settings.llm_max_output_tokens,
-            timeout_seconds=settings.llm_timeout_seconds,
-            reasoning_effort=settings.llm_reasoning_effort,
+        analyzer = _build_issue_analyzer(
+            settings,
+            provider,
+            model,
             temperature=temperature,
             seed=seed,
         )

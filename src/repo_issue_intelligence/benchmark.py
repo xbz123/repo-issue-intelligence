@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from .evidence import collect_evidence
 from .github_client import REPOSITORY_PATTERN
 from .investigator import investigate
-from .llm_client import GroqAPIError
+from .llm_client import LLMProviderError
 from .models import (
     EvidenceRerankResult,
     EvidenceSnippet,
@@ -42,6 +42,7 @@ class BenchmarkVariant(StrEnum):
 
 
 class EvidenceReranker(Protocol):
+    provider: str
     model: str
 
     def rerank(
@@ -149,6 +150,7 @@ class BenchmarkRun(BaseModel):
     manifest_name: str
     manifest_version: int
     variant: BenchmarkVariant
+    provider: str | None = None
     model: str | None = None
     max_evidence_chars: int | None = None
     max_output_tokens: int | None = None
@@ -246,7 +248,7 @@ def _hybrid_candidate_files(
         max_chars_per_snippet=600,
     )
     if not evidence:
-        raise GroqAPIError("No repository evidence was available for hybrid reranking")
+        raise LLMProviderError("No repository evidence was available for hybrid reranking")
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
@@ -257,10 +259,10 @@ def _hybrid_candidate_files(
             evidence_files = {snippet.id: snippet.file for snippet in evidence}
             reranked_ids = analysis.analysis.reranked_evidence_ids
             if not reranked_ids:
-                raise GroqAPIError("Reranker returned no evidence IDs")
+                raise LLMProviderError("Reranker returned no evidence IDs")
             unknown_ids = set(reranked_ids) - evidence_files.keys()
             if unknown_ids:
-                raise GroqAPIError(
+                raise LLMProviderError(
                     "Reranker returned unknown evidence IDs: "
                     + ", ".join(sorted(unknown_ids))
                 )
@@ -270,7 +272,7 @@ def _hybrid_candidate_files(
             ]
             remaining = [candidate.file for candidate in report.candidates]
             return _unique_files([*reranked, *remaining]), analysis, attempt
-        except GroqAPIError as error:
+        except LLMProviderError as error:
             last_error = error
             if attempt == max_attempts:
                 break
@@ -321,7 +323,7 @@ def evaluate_case(
                 llm_retry_delay_seconds,
                 variant is BenchmarkVariant.HYBRID_FULL,
             )
-        except GroqAPIError as llm_error:
+        except LLMProviderError as llm_error:
             fallback_used = True
             llm_attempts = max_llm_attempts
             error = f"{type(llm_error).__name__}: {llm_error}"
@@ -495,6 +497,7 @@ def run_benchmark(
         manifest_name=manifest.name,
         manifest_version=manifest.version,
         variant=variant,
+        provider=getattr(analyzer, "provider", None),
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,
         max_output_tokens=getattr(analyzer, "max_output_tokens", None),

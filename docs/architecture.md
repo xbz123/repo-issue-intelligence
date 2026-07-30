@@ -52,7 +52,8 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
 
-When an operator explicitly enables Groq analysis, two nodes are inserted before review:
+When an operator explicitly enables an OpenAI-compatible provider, two nodes are inserted before
+review:
 
 ```text
 rank_issues
@@ -66,22 +67,29 @@ rank_issues
 
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
-budget. `llm_analyze` calls `openai/gpt-oss-20b` through Groq with strict JSON Schema output.
+budget. `llm_analyze` can call GPT-OSS through Groq or DeepSeek V4 Flash through OpenCode.
+Both providers use `/chat/completions`; only their base URL, credential, model, and structured
+output capability differ. Groq uses strict JSON Schema output. OpenCode uses `json_object` plus
+an explicit schema/example prompt and the same local Pydantic validation.
 Every snippet must receive one support/contradiction/neutral observation, and every hypothesis
 must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
 provide a deterministic fallback when the model omits the free-form contradiction list. If the
 model requests more evidence, at least one hypothesis must name the missing artifact.
-GPT-OSS uses low reasoning effort and a bounded completion budget by default.
+GPT-OSS uses low reasoning effort and a 1,600-token completion budget by default. OpenCode uses a
+4,096-token budget and 60-second timeout because reasoning tokens share the completion budget and
+observed valid responses can exceed 30 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 Settings may load a primary and fallback Groq credential as `SecretStr` values, but automatic
 credential failover is not enabled; operators must select the intended credential explicitly.
+The OpenCode credential is also stored as `SecretStr` and selected explicitly with
+`--provider opencode`.
 
 Historical localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks
 out each frozen pre-fix SHA, loads the complete Issue snapshot from the manifest rather than the
 live GitHub API, verifies that the labeled fix files exist, and indexes only paths returned by
-`git ls-files`. It runs deterministic retrieval and optionally asks Groq only to rerank the
-bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this benchmark
-contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
+`git ls-files`. It runs deterministic retrieval and optionally asks the selected provider only to
+rerank the bounded evidence IDs. Root-cause hypotheses are intentionally excluded from this
+benchmark contract so their schema reliability does not contaminate file-ranking metrics. Retrieval
 normalizes paths and identifiers, gives explicit stack-trace/source-path references the strongest
 signal, searches bounded source content, downranks tests and documentation, retains 20
 candidates, and applies bounded static graph evidence inside fixed rank bands. Per-candidate
@@ -125,7 +133,7 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 ## Current boundaries
 
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
-deterministic and offline; the CLI can optionally add a bounded Groq LLM analysis step. It does
+deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
 The current benchmark contains 20 cases across seven repositories, which is useful for error
 analysis but not statistically strong enough for a broad quality claim. The historical nine-case

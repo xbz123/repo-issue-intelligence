@@ -6,7 +6,11 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from repo_issue_intelligence.llm_client import GroqAPIError, GroqIssueAnalyzer
+from repo_issue_intelligence.llm_client import (
+    GroqAPIError,
+    GroqIssueAnalyzer,
+    OpenCodeIssueAnalyzer,
+)
 from repo_issue_intelligence.models import (
     CandidateLocation,
     EvidenceSnippet,
@@ -183,6 +187,66 @@ def test_groq_analyzer_uses_minimal_schema_for_evidence_reranking() -> None:
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.input_tokens == 100
     assert result.output_tokens == 20
+
+
+def test_opencode_analyzer_uses_openai_compatible_json_object() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "opencode-rerank-request",
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "Authentication evidence is most relevant.",
+                                    "reranked_evidence_ids": ["E1"],
+                                }
+                            )
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 80, "completion_tokens": 12},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        temperature=0.1,
+        seed=1337,
+        client=client,
+    )
+
+    result = analyzer.rerank(issue(), evidence())
+
+    assert captured_request["response_format"] == {"type": "json_object"}
+    assert captured_request["max_tokens"] == 4_096
+    assert "max_completion_tokens" not in captured_request
+    assert "reasoning_effort" not in captured_request
+    assert captured_request["seed"] == 1337
+    assert "Return only one minified JSON object" in captured_request["messages"][0]["content"]
+    assert "reranked_evidence_ids" in captured_request["messages"][0]["content"]
+    assert '"reranked_evidence_ids":["E1","E2"]' in captured_request["messages"][0]["content"]
+    assert result.provider == "opencode"
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+    assert result.input_tokens == 80
+    assert result.output_tokens == 12
+
+
+def test_provider_client_ignores_malformed_inherited_no_proxy(monkeypatch) -> None:
+    monkeypatch.setenv("NO_PROXY", "::1")
+
+    analyzer = OpenCodeIssueAnalyzer("test-key")
+
+    analyzer.close()
 
 
 def test_groq_analyzer_rejects_empty_evidence_reranking() -> None:

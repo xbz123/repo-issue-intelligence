@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional Groq-backed analysis step can inspect bounded code evidence for Top-K issues while preserving the offline baseline.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenAI-compatible analysis step can inspect bounded code evidence for Top-K issues through Groq or OpenCode while preserving the offline baseline.
 
 ## What it does
 
@@ -14,7 +14,8 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
-- Optionally calls Groq-hosted GPT-OSS 20B with strict JSON Schema output.
+- Optionally calls Groq-hosted GPT-OSS with strict JSON Schema output or OpenCode-hosted
+  DeepSeek V4 Flash with JSON-object output plus local Pydantic validation.
 - Requires one support/contradiction/neutral observation per repository evidence ID.
 - Validates every LLM hypothesis against repository evidence IDs and named missing artifacts.
 - Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
@@ -103,6 +104,29 @@ lines, and applies a configurable character budget before sending content. GPT-O
 low reasoning effort and a bounded output budget so strict structured generation fits within the
 free-tier token limits; both values can be changed through `.env`.
 
+OpenCode uses the same OpenAI-compatible chat-completions protocol with a different provider
+configuration:
+
+```bash
+export OPENCODE_API_KEY="..."
+
+uv run rii agent-run examples/issues.json \
+  --repo examples/demo_repository \
+  --top-k 1 \
+  --llm \
+  --provider opencode \
+  --model deepseek-v4-flash-free \
+  --database data/agent-runs.sqlite3 \
+  --output reports/agent-run-opencode.json
+```
+
+The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
+DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
+It uses `json_object` mode followed by the same local schema and evidence-ID validation as Groq.
+Only public repository evidence should be sent to free models: OpenCode states that data collected
+during the free period may be used to improve those models; see the
+[OpenCode Zen documentation](https://opencode.ai/docs/zen).
+
 Run the frozen real-project benchmark:
 
 ```bash
@@ -118,6 +142,15 @@ uv run rii benchmark benchmarks/cases.json \
   --seed 1337 \
   --llm-delay-seconds 45 \
   --output benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json
+
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --provider opencode \
+  --model deepseek-v4-flash-free \
+  --temperature 0.1 \
+  --seed 1337 \
+  --llm-delay-seconds 0 \
+  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json
 ```
 
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
@@ -182,7 +215,7 @@ Core endpoints:
 - `GET /v1/agent/runs/{run_id}`
 - `POST /v1/agent/runs/{run_id}/review`
 
-The v0.5 API continues to run the offline workflow. Optional Groq analysis is exposed through
+The v0.5 API continues to run the offline workflow. Optional provider analysis is exposed through
 the CLI first so model credentials and quota use remain an explicit local operator decision.
 
 ## Priority model
@@ -221,7 +254,7 @@ src/repo_issue_intelligence/
   github_client.py       paginated GitHub REST synchronization
   investigator.py        file/symbol ranking and hypothesis generation
   evidence.py            bounded repository source evidence collection
-  llm_client.py           strict-schema Groq GPT-OSS analysis
+  llm_client.py           OpenAI-compatible Groq/OpenCode analysis
   models.py              typed domain models
   repository_index.py    repository map and Python AST index
   scoring.py             severity, urgency, priority rules
@@ -257,6 +290,11 @@ Recall@5 `0.8583`, Recall@10 `0.8750`, Recall@20 `0.9250`, and MRR `0.6738`. Sev
 cases returned valid model output; three exhausted two attempts and used deterministic fallback.
 This improved aggregate Recall@1 and MRR over deterministic Retrieval v3, but calibration-tier
 MRR decreased, so no per-project universal improvement is claimed.
+
+DeepSeek V4 Flash Free achieved Recall@1 `0.6417`, Recall@5 `0.9250`, Recall@10 `0.9250`,
+Recall@20 `0.9250`, and MRR `0.8458`. All 20 cases returned valid output with no fallback.
+Average model latency was `14.6 s`, versus `0.8 s` for successful GPT-OSS 20B responses, so the
+quality gain carries a substantial latency and token cost even while the OpenCode model is free.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.

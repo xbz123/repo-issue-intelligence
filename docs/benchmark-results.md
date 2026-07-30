@@ -39,7 +39,9 @@ The machine-readable artifacts are:
 - `benchmarks/candidates-v0.4.json` — accepted candidate audit records;
 - `benchmarks/results/deterministic-v0.4-20-cases.json` — pre-graph deterministic output;
 - `benchmarks/results/deterministic-v0.5-graph-20-cases.json` — current deterministic output;
-- `benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json` — current Hybrid output.
+- `benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json` — Groq GPT-OSS Hybrid output;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json` — OpenCode
+  DeepSeek V4 Flash Hybrid output.
 
 ### Retrieval v3 Hybrid result
 
@@ -68,6 +70,35 @@ The run used `openai/gpt-oss-20b`, a 12,000-character evidence budget, a 1,600-t
 limit, low reasoning effort, `temperature=0.1`, `seed=1337`, at most two attempts, and a 62-second
 inter-case delay. Historical model results below remain useful for model-size decisions, but
 their nine-case metrics must not be mixed with this expanded result.
+
+### OpenCode DeepSeek V4 Flash Free result
+
+DeepSeek V4 Flash Free reranked the same frozen candidate pool through OpenCode's
+OpenAI-compatible chat-completions endpoint:
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 20/20 | 0.6417 | 0.9250 | 0.9250 | 0.9250 | 0.8458 | 20/20 |
+| Main | 7/7 | 0.7857 | 1.0000 | 1.0000 | 1.0000 | 0.8929 | 7/7 |
+| Calibration | 4/4 | 0.5000 | 0.8750 | 0.8750 | 0.8750 | 0.7083 | 4/4 |
+| Generalization | 9/9 | 0.5926 | 0.8889 | 0.8889 | 0.8889 | 0.8704 | 9/9 |
+
+Compared with deterministic Retrieval v3, DeepSeek improved Recall@1 by `0.2917`, Recall@5 by
+`0.0667`, Recall@10 by `0.0500`, and MRR by `0.2795`; Recall@20 remained bounded by the same
+candidate pool. Compared with GPT-OSS 20B, it improved Recall@1 by `0.2250` and MRR by `0.1720`.
+Unlike the GPT-OSS run, every tier improved over its deterministic baseline.
+
+All 20 cases returned locally validated JSON and evidence IDs; one case succeeded on its second
+attempt and none fell back. The run used a 16,000-character evidence budget, 4,096-token completion
+limit, 60-second timeout, `temperature=0.1`, best-effort `seed=1337`, and zero inter-case delay.
+It consumed 104,570 input and 32,981 output tokens. Successful model requests averaged `14.6 s`,
+about 18 times the GPT-OSS 20B model latency (`0.8 s`), so the quality improvement has a material
+latency and token tradeoff.
+
+The model is free for a limited period, and OpenCode states that free-period data may be used for
+model improvement. This project therefore sends only public benchmark Issue text and public source
+evidence. Repeated targeted runs produced different rankings despite the supplied seed, so the
+committed artifact is one complete run rather than a claim of deterministic model behavior.
 
 ## Historical 9-case result: Retrieval v2
 
