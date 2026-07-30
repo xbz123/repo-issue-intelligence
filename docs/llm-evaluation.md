@@ -14,14 +14,14 @@ outside the deterministic candidate pool.
 
 ## Dataset
 
-The current frozen dataset contains 20 closed issues across seven repositories that link to a fix
-pull request. Manifest version 5 stores the complete evaluated Issue snapshot and never fetches
+The current frozen dataset contains 32 closed issues across 13 repositories that link to a fix
+pull request. Manifest version 6 stores the complete evaluated Issue snapshot and never fetches
 mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- six manually reviewed symbols across five high-confidence cases;
+- 16 manually reviewed symbols across 15 high-confidence cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
@@ -33,7 +33,9 @@ a committed manual selection file with Issue/PR relationship and changed-file re
 
 Do not include API keys, private repository content, or unreviewed generated labels. Manifest
 versions 2 and 3 are retained for provenance but are superseded because their pre-fix SHAs were
-not derived correctly.
+not derived correctly. Manifest version 5 is retained as
+`benchmarks/cases-v0.10-corrected-20-cases.json` because it is the frozen input for the corrected
+Groq/OpenCode comparison.
 
 ## Metrics
 
@@ -83,18 +85,28 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The corrected manifest v5 v0.10 baseline completed 20/20 cases with File Recall@1 `0.3000`,
-Recall@5 `0.8583`, Recall@10 `0.9000`, Recall@20 `1.0000`, and MRR `0.5394`. On the five
-symbol-labeled cases, Symbol Recall@5 is `0.7000`, Symbol Recall@10 is `0.8000`, Symbol Recall@20
-is `1.0000` across all six reviewed targets, and symbol MRR is `0.2278`. Symbol Recall@1 remained
-`0.0000`. Two complete v0.10 runs produced identical candidate and metric outputs after excluding
-latency timestamps.
+The current manifest-v6 v0.11 baseline completed 32/32 cases with File Recall@1 `0.4375`,
+Recall@5 `0.8490`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. Across the 15
+symbol-labeled cases and 16 reviewed targets, Symbol Recall@1 is `0.2000`, Symbol Recall@5 is
+`0.5000`, Symbol Recall@10 is `0.5333`, Symbol Recall@20 is `0.6000`, and symbol MRR is `0.2926`.
+Two complete runs produced identical candidates and metrics after excluding timing fields.
 
-No LLM reranking result is yet valid for manifest v5. An integrity audit found that 18 of the
-previous 20 pre-fix SHAs were commits inside their fix PRs. Earlier GPT-OSS, DeepSeek, and
-free-model localization metrics are therefore superseded. Their response validity, latency, token,
-and fallback observations remain useful provider-integration evidence, but they cannot support a
-current localization-quality comparison.
+The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
+
+- OpenCode DeepSeek V4 Flash completed 20/20 valid reranks with no fallback. File Recall@1 was
+  `0.4417`, Recall@5 `0.8583`, Recall@10 `0.9250`, Recall@20 `1.0000`, and MRR `0.7257`.
+  Average successful model latency was `17.5 s`; the run used 102,925 input and 38,376 output
+  tokens.
+- Groq GPT-OSS 20B produced 17/20 valid reranks. Three cases exhausted retries with HTTP 429 and
+  used the deterministic fallback. File Recall@1 was `0.3917`, Recall@5 `0.8583`, Recall@10
+  `0.9250`, Recall@20 `1.0000`, and MRR `0.6794`. Average successful model latency was `870 ms`;
+  successful final calls used 82,329 input and 2,763 output tokens.
+
+These are paired localization results on manifest v5, not manifest v6. They support an ordering
+improvement over the same v5 deterministic candidate pool, while Recall@20 remains bounded by
+deterministic retrieval. A separate three-real-case OpenCode full-schema run succeeded on two
+cases; the Typer case exhausted two invalid structured responses and used fallback. The compact
+rerank schema is therefore more reliable than the full hypothesis schema.
 
 ## Free-model selection
 

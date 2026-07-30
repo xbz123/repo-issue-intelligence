@@ -151,14 +151,16 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current benchmark contains 20 cases across seven repositories and six manually reviewed
-symbol targets across five cases. This is useful for error analysis but not statistically strong
-enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
-historical artifacts because their pre-fix audit was incorrect. LLM hypotheses are not confirmed
-root causes. Retrieval has bounded Python static/history relations, function-level calls, and a
-single-best-function selector, but not class ownership or qualified symbol names, cross-file
-control-flow beyond bounded two-hop call names, runtime/backend dispatch, a cross-language graph,
-semantic test-to-source mapping, multi-symbol ranking, or a vector index.
+The current benchmark contains 32 cases across 13 repositories and 16 manually reviewed symbol
+targets across 15 cases. This is materially stronger for error analysis but still not statistically
+strong enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
+historical artifacts because their pre-fix audit was incorrect. Manifest version 5 is retained as
+the reproducible input for the corrected 20-case Groq and OpenCode comparison; version 6 is the
+current expanded deterministic suite. LLM hypotheses are not confirmed root causes. Retrieval has
+bounded Python static/history relations, function-level calls, and a single-best-function selector,
+but not class ownership or qualified symbol names, cross-file control-flow beyond bounded two-hop
+call names, runtime/backend dispatch, a cross-language graph, semantic test-to-source mapping,
+multi-symbol ranking, or a vector index.
 
 ## Next workflow extensions
 
@@ -167,7 +169,7 @@ current human_review
   -> add qualified-symbol/runtime dispatch and multi-symbol ranking
   -> add semantic test-to-source mapping
   -> add cross-language graph evidence
-  -> expand high-confidence symbol labels and the suite to 30-50 cases
+  -> independently review another 8-18 cases after the 32-case suite stabilizes
 ```
 
 The human review node remains mandatory before any future execution step.
