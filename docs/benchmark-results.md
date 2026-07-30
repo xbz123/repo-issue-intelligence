@@ -1,82 +1,97 @@
 # Real-Project File Localization Benchmark
 
-## Current result: bounded cross-file call propagation on corrected pre-fix inputs
+## Current result: 32 frozen cases with expanded symbol ground truth
 
-On 2026-07-30, an integrity audit compared every manifest SHA with the ordered commits of its
-linked fix PR. Eighteen of the previous 20 SHAs were commits inside the fix PR rather than true
-pre-fix commits. Manifest v5 corrects every case to the parent of the first PR commit. The
-discovery path now always loads the ordered PR history and blocks any proposed pre-fix SHA found
-inside the PR commit set.
-
-The v0.10 deterministic runner successfully checked out all 20 corrected commits, verified every
-expected file, and improved Recall@10 without changing Recall@1, Recall@5, Recall@20, or MRR:
+On 2026-07-30, manifest v6 expanded the corrected suite from 20 to 32 manually reviewed
+Issue/Fix-PR cases and from 7 to 13 public Python repositories. Every case stores an immutable
+Issue snapshot, the fix PR, and the parent of the first PR commit. The runner checked out all 32
+pre-fix commits, verified the reviewed production files, and indexed only Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 20/20 | 0.3000 | 0.8583 | 0.9000 | 1.0000 | 0.5394 | 1,456 ms |
-| Main | 7/7 | 0.4286 | 1.0000 | 1.0000 | 1.0000 | 0.6357 | 1,310 ms |
-| Calibration | 4/4 | 0.1250 | 0.6250 | 0.6250 | 1.0000 | 0.4097 | 832 ms |
-| Generalization | 9/9 | 0.2778 | 0.8519 | 0.9444 | 1.0000 | 0.5222 | 1,846 ms |
+| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 1,964 ms |
+| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 2,634 ms |
+| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 830 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 1,956 ms |
 
-Five cases also contain six manually reviewed function targets from real fix diffs:
+Fifteen cases now contain 16 function targets taken from reviewed production hunks:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 5 | 0.0000 | 0.7000 | 0.8000 | 1.0000 | 0.2278 |
-| Calibration | 3 | 0.0000 | 0.6667 | 0.6667 | 1.0000 | 0.2130 |
-| Generalization | 2 | 0.0000 | 0.7500 | 1.0000 | 1.0000 | 0.2500 |
+| Overall | 15 | 0.2000 | 0.5000 | 0.5333 | 0.6000 | 0.2926 |
+| Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.2500 | 0.2500 |
+| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1482 |
+| Generalization | 5 | 0.4000 | 0.7000 | 0.8000 | 0.8000 | 0.5000 |
 
-The initial labels are deliberately narrow and come from reviewed production hunks:
+Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
+exact reviewed file and symbol and retains the parent file's candidate rank. The current
+investigator emits one best unqualified symbol per file, so qualified methods such as
+`WorkerThread.__init__` are not labeled until the data and output contracts can represent them
+without ambiguity.
 
-- Typer `typer/core.py::value_from_envvar`;
-- Typer `typer/rich_utils.py::_make_rich_text`;
-- Textual `src/textual/_compositor.py::_arrange_root` and
-  `src/textual/widget.py::remove_children`;
-- AnyIO `src/anyio/from_thread.py::start_blocking_portal`;
-- Rich `rich/ansi.py::decode`.
+The expanded result is intentionally harder than the 20-case v0.10 result. One Pydantic production
+file is absent from the Top-20 candidate pool, and several correct files are retrieved but the
+within-file selector chooses a neighboring function. This is useful negative evidence: candidate
+generation is close to saturation on the current file suite, while symbol localization remains a
+material bottleneck.
 
-Symbol aggregates exclude the 15 unlabeled cases instead of treating them as misses. A symbol
-match requires the exact reviewed file and symbol and retains the parent file's candidate rank.
-The current contract allows one reviewed symbol per expected file because the investigator emits
-one best symbol for each candidate file.
-The v0.8 selector separates file scoring from within-file function selection. File scores retain
-the v0.7 lexical/graph/history contract. Inside each selected file, directly referenced functions
-take precedence; otherwise normalized title terms are weighted by their rarity among functions,
-with the original lexical order retained as a fallback. This recovered Typer's
-`value_from_envvar` and `_make_rich_text` without changing any file rank.
-
-V0.9 adds bounded function-level call edges to the Python repository map. A callee receives
-within-file evidence only when at least two distinct issue-matching callers agree, which recovers
-Textual's `_arrange_root` without regressing Typer or Rich. All six reviewed targets now occur
-within Top-20.
-
-V0.10 follows a uniquely resolved, title-matching call into one concrete function and then follows
-that function's own bounded call names for one additional hop. It does not propagate through
-`abc`, protocol, or interface layers, and it rejects ambiguous symbol definitions. A single
-Top-10 diversity slot is available to the strongest such expansion. This moved Textual's
-`_compositor.py::_arrange_root` from rank 18 to rank 10, raising both File and Symbol Recall@10,
-while the other 19 per-case metrics remained unchanged.
-
-V0.9 also preserves the source order of compound identifier terms before generating variants.
-The previous set-based join could turn `is_alt_screen` into either `alt_screen` or `screen_alt`
-under different Python hash seeds. Two complete v0.10 runs produced identical per-case candidate
-files, candidate symbols, Recall, and MRR.
+V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
+within-file call edges, and bounded two-hop propagation through uniquely resolved concrete
+functions. It blocks ambiguous definitions and abstract/interface layers, and preserves the
+strong relation that triggers a Top-10 diversity promotion. Two complete v0.11 runs produced
+identical candidate lists and metrics after recursively removing timestamps and elapsed-time
+fields.
 
 Current machine-readable artifacts:
 
-- `benchmarks/cases.json` — current manifest version 5;
-- `benchmarks/cases-v0.7-clean-pre-fix.json` — corrected file-only manifest version 4;
-- `benchmarks/candidates-v0.7.json` — corrected expansion audit records;
-- `benchmarks/results/deterministic-v0.7-clean-pre-fix-20-cases.json` — corrected file-only run;
-- `benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json` — symbol baseline;
-- `benchmarks/results/deterministic-v0.8-hierarchical-symbols-20-cases.json` — lexical symbol rerank;
-- `benchmarks/results/deterministic-v0.9-call-aware-symbols-20-cases.json` — within-file call baseline;
-- `benchmarks/results/deterministic-v0.10-cross-file-call-propagation-20-cases.json` — current run.
+- `benchmarks/cases.json` — current manifest version 6;
+- `benchmarks/cases-v0.10-corrected-20-cases.json` — frozen manifest v5 used for paired LLM runs;
+- `benchmarks/candidates-v0.11.json` — accepted audit catalog for the 12 new cases;
+- `benchmarks/expansion-v0.11-selection.json` — explicit manual acceptance decisions;
+- `benchmarks/cases-v0.11-32-cases.json` — named copy of the current 32-case manifest;
+- `benchmarks/results/deterministic-v0.11-expanded-32-cases.json` — current deterministic run;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.10-manifest-v5-20-cases.json` — corrected-v5
+  OpenCode rerank;
+- `benchmarks/results/hybrid-gpt-oss-20b-v0.10-manifest-v5-20-cases.json` — corrected-v5 Groq
+  rerank;
+- `benchmarks/results/hybrid-full-deepseek-v4-flash-v0.10-manifest-v5-3-cases.json` — corrected-v5
+  full-schema smoke test.
 
-All result files generated from manifest versions 2 and 3 remain committed for provenance but are
-superseded as localization-quality evidence. Their provider latency, structured-output validity,
-and fallback behavior still document integration behavior; their Recall and MRR values must not
-be compared with manifest v5.
+All results generated from manifest versions 2 and 3 remain committed for provenance but are
+superseded as localization-quality evidence. Provider integration observations may remain useful,
+but their Recall and MRR values must not be mixed with the corrected v5 or expanded v6 suites.
+
+## External LLM reranking on corrected manifest v5
+
+The paired external-model runs intentionally use the frozen 20-case manifest v5. This isolates
+model reranking from the later v6 dataset expansion and prevents mutable GitHub Issue text from
+entering the comparison.
+
+| Model | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Deterministic v0.10 | 20/20 | 0.3000 | 0.8583 | 0.9000 | 1.0000 | 0.5394 | — |
+| DeepSeek V4 Flash Free | 20/20 | 0.4417 | 0.8583 | 0.9250 | 1.0000 | 0.7257 | 20/20 |
+| GPT-OSS 20B | 20/20 | 0.3917 | 0.8583 | 0.9250 | 1.0000 | 0.6794 | 17/20 |
+
+DeepSeek increased MRR by `0.1863` and Recall@1 by `0.1417` over the deterministic ordering. All
+20 responses passed local JSON and evidence-ID validation with no fallback. Successful requests
+averaged `17.5 s` and consumed 102,925 input plus 38,376 output tokens.
+
+GPT-OSS increased MRR by `0.1400` and Recall@1 by `0.0917`. Seventeen responses were valid; three
+cases exhausted retry handling after Groq HTTP 429 and used the deterministic fallback. Across the
+run there were 24 attempts and four cases retried. Successful calls averaged `870 ms` and consumed
+82,329 input plus 2,763 output tokens. The run kept the configured primary key and did not rotate
+to an exposed or backup credential.
+
+On the five symbol-labeled v5 cases, DeepSeek reached Symbol Recall@1 `0.5000`, Recall@5 `0.8000`,
+and Symbol MRR `0.7111`; GPT-OSS reached `0.3000`, `0.8000`, and `0.6111`. Both retained Symbol
+Recall@20 `1.0000`. These are small-sample reranking results, not evidence that either model can
+recover a symbol or file missing from deterministic retrieval.
+
+A separate three-case DeepSeek smoke test exercised the full investigation schema rather than the
+compact rerank contract. Two cases returned valid full analyses; Typer exhausted two invalid
+structured-output attempts and fell back. The result supports keeping localization reranking and
+full hypothesis generation as separate evaluated contracts.
 
 ### Superseded Retrieval v4 DeepSeek Hybrid result
 
@@ -316,17 +331,19 @@ hypothesis-format failure from being counted as a file-localization failure.
 
 ## Limitations and next experiment
 
-Twenty cases across seven repositories are materially better for error analysis but still too few
-for a strong general quality claim. The Hybrid path only reranks evidence that deterministic
-retrieval already found and cannot recover a file outside the 20-file candidate pool. Retrieval
-v4 reaches Recall@20 `1.0000` on this suite, which makes a larger independently labeled suite
-necessary before further candidate-generation claims. Token totals include successful final
-requests only; they do not estimate development-time failed requests.
+Thirty-two cases across 13 repositories are enough for repeatable error analysis but remain too
+small for a broad general-quality claim. The suite contains only Python projects, and its accepted
+cases depend on public Issue/Fix-PR relationships that are easier to audit than many real
+maintenance tasks. The Hybrid path only reranks evidence deterministic retrieval already found;
+it cannot recover Pydantic's missed pipeline file or any other file outside the 20-file pool.
+Token totals include successful final responses, not every development-time request.
 
-The next retrieval iteration should expand independently reviewed symbol labels, add semantic
-test-to-source mapping, qualified-symbol/runtime dispatch, and cross-language relations, then grow
-toward 30-50 cases.
-Candidate-pool changes should continue to be evaluated separately from model reranking.
+The next retrieval iteration should focus on the measured failures rather than adding prompt
+complexity: qualified method identities, runtime/backend dispatch, semantic test-to-source
+mapping, and cross-language relations. Further expansion should target 40-50 cases only when the
+new cases add those failure modes. Candidate-pool changes must continue to be evaluated separately
+from model reranking, and v6 LLM comparisons should use repeated runs rather than selecting a
+single favorable sample.
 
 ## GPT-OSS 20B versus 120B
 

@@ -1,0 +1,115 @@
+{
+  "name": "real-project-benchmark-expansion-v0.11",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "pallets-click-issue-2809-pr-3256",
+      "case_id": "click-hidden-prompt-custom-error",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #3256 explicitly fixes Issue #2809 and changes prompt error handling for hide_input=True.",
+        "The accepted production target is src/click/termui.py; tests and CHANGES.rst are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-click-issue-2819-pr-3678",
+      "case_id": "click-help-parameter-name",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #3678 explicitly fixes Issue #2819 by reserving the automatic help option storage name.",
+        "The accepted production target is src/click/core.py; documentation, tests, and typing fixtures are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-click-issue-3360-pr-3434",
+      "case_id": "click-helpformatter-empty-usage",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #3434 closes Issue #3360 and adds an early return for usage lines without arguments.",
+        "The accepted production target is src/click/formatting.py; tests and CHANGES.rst are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pydantic-pydantic-issue-9532-pr-9570",
+      "case_id": "pydantic-typeadapter-union-typing",
+      "tier": "main",
+      "review_notes": [
+        "PR #9570 explicitly fixes Issue #9532 by correcting TypeAdapter constructor overload typing.",
+        "The accepted production target is pydantic/type_adapter.py; the typing test fixture is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pydantic-pydantic-issue-13465-pr-13483",
+      "case_id": "pydantic-extra-typevar-substitution",
+      "tier": "main",
+      "review_notes": [
+        "PR #13483 explicitly fixes Issue #13465 and changes inherited __pydantic_extra__ type-variable substitution.",
+        "The accepted production target is pydantic/_internal/_fields.py; the regression test is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pydantic-pydantic-issue-13507-pr-13516",
+      "case_id": "pydantic-pipeline-constraint-schema",
+      "tier": "main",
+      "review_notes": [
+        "PR #13516 explicitly fixes Issue #13507 by preserving chained constraints in the pipeline core schema.",
+        "The accepted production target is pydantic/experimental/pipeline.py; tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pydantic-pydantic-issue-13520-pr-13521",
+      "case_id": "pydantic-safe-annotations-metaclass",
+      "tier": "main",
+      "review_notes": [
+        "PR #13521 explicitly fixes Issue #13520 and the regression introduced by PR #13070.",
+        "The accepted production target is pydantic/_internal/_typing_extra.py; tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "aio-libs-aiohttp-issue-5303-pr-13170",
+      "case_id": "aiohttp-last-modified-rounding",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #13170 explicitly fixes Issue #5303 by aligning datetime and timestamp last_modified rounding.",
+        "The original fix PR is selected instead of its backports; aiohttp/web_response.py is the production target."
+      ]
+    },
+    {
+      "candidate_id": "aio-libs-aiohttp-issue-13099-pr-13137",
+      "case_id": "aiohttp-request-text-decode-error",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #13137 explicitly fixes Issue #13099 by mapping request-body UnicodeDecodeError to HTTP 415.",
+        "The accepted production target is aiohttp/web_request.py; tests and changelog fragments are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-httpcore-issue-946-pr-955",
+      "case_id": "httpcore-trio-unsupported-platform",
+      "tier": "main",
+      "review_notes": [
+        "PR #955 explicitly closes Issue #946 and handles Trio raising NotImplementedError on unsupported platforms.",
+        "The behavioral fix is the import guard in httpcore/_synchronization.py; the coverage-only edit in _backends/anyio.py and the changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-werkzeug-issue-3138-pr-3140",
+      "case_id": "werkzeug-duplicate-100-continue",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #3140 explicitly closes Issue #3138 and removes Werkzeug's duplicate 100 Continue response.",
+        "The accepted production target is src/werkzeug/serving.py; tests and CHANGES.rst are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-trio-trio-issue-3472-pr-3473",
+      "case_id": "trio-thread-cache-context-leak",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #3473 explicitly fixes Issue #3472 by constructing free-threaded workers with an empty Context.",
+        "The accepted production target is src/trio/_core/_thread_cache.py; tests and news fragments are excluded."
+      ]
+    }
+  ]
+}

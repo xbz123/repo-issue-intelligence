@@ -132,35 +132,38 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.10-cross-file-call-propagation-20-cases.json
+  --output benchmarks/results/deterministic-v0.11-expanded-32-cases.json
 
-LLM_MAX_EVIDENCE_CHARS=12000 LLM_MAX_OUTPUT_TOKENS=1600 \
-uv run rii benchmark benchmarks/cases.json \
+LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
+uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
   --variant hybrid \
   --model openai/gpt-oss-20b \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 45 \
-  --output benchmarks/results/hybrid-20b-v0.5-graph-20-cases.json
+  --output benchmarks/results/hybrid-gpt-oss-20b-v0.10-manifest-v5-20-cases.json
 
-uv run rii benchmark benchmarks/cases.json \
+LLM_MAX_EVIDENCE_CHARS=16000 \
+uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
   --variant hybrid \
   --provider opencode \
   --model deepseek-v4-flash-free \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.5-20-cases.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.10-manifest-v5-20-cases.json
 ```
 
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget. Manifest version 5 embeds
-20 complete Issue snapshots across seven repositories, corrected pre-fix SHAs, and six manually
-reviewed symbol targets across five cases. Repository indexing is restricted to `git ls-files`;
-live Issue edits and ignored artifacts in reused workspaces therefore cannot change benchmark
-inputs. A cached commit is reused without a network request.
+model sees a broad candidate set under the same total character budget. Current manifest version 6
+embeds 32 complete Issue snapshots across 13 repositories, corrected pre-fix SHAs, and 16 manually
+reviewed symbol targets across 15 cases. Manifest version 5 is retained as
+`benchmarks/cases-v0.10-corrected-20-cases.json` so the reviewed Groq and OpenCode runs remain
+reproducible. Repository indexing is restricted to `git ls-files`; live Issue edits and ignored
+artifacts in reused workspaces therefore cannot change benchmark inputs. A cached commit is reused
+without a network request.
 
 Discover and curate additional Issue/Fix-PR cases:
 
@@ -266,29 +269,29 @@ See `docs/architecture.md` for system boundaries and
 
 ## Evaluation
 
-The current frozen benchmark contains 20 closed issues with linked fix PRs across seven projects:
+The current frozen benchmark contains 32 closed issues with linked fix PRs across 13 projects:
 
-- Main: Starlette (4) and FastAPI (3).
-- Calibration: Typer (2) and Rich (2).
-- Generalization: Textual (3), AnyIO (3), and pytest (3).
+- Main: Starlette (4), FastAPI (3), Pydantic (4), and HTTPCore (1).
+- Calibration: Typer (2), Rich (2), and Click (3).
+- Generalization: Textual (3), AnyIO (3), pytest (3), aiohttp (2), Werkzeug (1), and Trio (1).
 
 Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
 pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
 
-On corrected manifest v5, v0.10 completed every case and achieved File Recall@1 `0.3000`,
-Recall@5 `0.8583`, Recall@10 `0.9000`, Recall@20 `1.0000`, and MRR `0.5394`. Bounded cross-file
-call propagation moved Textual's `_compositor.py::_arrange_root` from rank 18 to rank 10 without
-changing Recall@1, Recall@5, Recall@20, or MRR. On the five labeled cases, Symbol Recall@5 is
-`0.7000`, Recall@10 is `0.8000`, Recall@20 is `1.0000`, and symbol MRR is `0.2278`.
-Symbol Recall@1 remains `0.0000` because no labeled parent file currently ranks first. Two complete
-v0.10 runs produced identical candidate and metric outputs.
+On manifest v6, v0.11 completed every case and achieved File Recall@1 `0.4375`, Recall@5 `0.8490`,
+Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. On the 15 labeled cases, Symbol Recall@1
+is `0.2000`, Recall@5 is `0.5000`, Recall@10 is `0.5333`, Recall@20 is `0.6000`, and symbol MRR is
+`0.2926`. Two complete v0.11 runs produced identical candidate files, candidate symbols, and
+metrics after excluding timing fields. The larger label set deliberately exposes that the current
+single-best-function selector is substantially weaker than file localization.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only
-as superseded historical artifacts, not as valid pre-fix comparisons. The corrected manifest has
-not yet received a new LLM reranking run. Earlier provider latency, structured-output, and fallback
-observations remain implementation evidence, but their localization metrics must not be compared
-with manifest v5.
+as superseded historical artifacts, not as valid pre-fix comparisons. A paired manifest-v5 rerun
+completed after the correction: DeepSeek returned valid reranks for 20/20 cases with no fallback,
+while GPT-OSS 20B returned 17/20 valid reranks and used deterministic fallback for three HTTP 429
+cases. Those results are valid for the retained 20-case v5 snapshot but are not a measurement on
+the new 32-case v6 suite.
 
 This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
 pool across the expanded suite. It still does not establish root-cause accuracy.

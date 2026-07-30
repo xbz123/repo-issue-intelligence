@@ -6,6 +6,48 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.11 outcome
+
+The current manifest is version 6. It expands the corrected 20-case suite to 32 independently
+reviewed cases across 13 repositories:
+
+- 12 main, 7 calibration, and 13 generalization cases;
+- 16 reviewed function targets across 15 cases;
+- 32/32 successful frozen-checkout evaluations;
+- two complete deterministic runs with identical candidate and metric output after removing
+  timing fields.
+
+The discovery pass screened 186 Issue/Fix-PR candidates from Click, Pydantic, SQLAlchemy, HTTPX,
+Django, aiohttp, HTTPCore, Flask, Werkzeug, and Trio. Thirty-two reached `needs_review`; manual
+diff and relationship review accepted the following 12:
+
+| Tier | Repository | Issue / fix PR | Expected production files |
+|---|---|---|---|
+| Calibration | Click | [#2809](https://github.com/pallets/click/issues/2809) / [#3256](https://github.com/pallets/click/pull/3256) | `src/click/termui.py` |
+| Calibration | Click | [#2819](https://github.com/pallets/click/issues/2819) / [#3678](https://github.com/pallets/click/pull/3678) | `src/click/core.py` |
+| Calibration | Click | [#3360](https://github.com/pallets/click/issues/3360) / [#3434](https://github.com/pallets/click/pull/3434) | `src/click/formatting.py` |
+| Main | Pydantic | [#9532](https://github.com/pydantic/pydantic/issues/9532) / [#9570](https://github.com/pydantic/pydantic/pull/9570) | `pydantic/type_adapter.py` |
+| Main | Pydantic | [#13465](https://github.com/pydantic/pydantic/issues/13465) / [#13483](https://github.com/pydantic/pydantic/pull/13483) | `pydantic/_internal/_fields.py` |
+| Main | Pydantic | [#13507](https://github.com/pydantic/pydantic/issues/13507) / [#13516](https://github.com/pydantic/pydantic/pull/13516) | `pydantic/experimental/pipeline.py` |
+| Main | Pydantic | [#13520](https://github.com/pydantic/pydantic/issues/13520) / [#13521](https://github.com/pydantic/pydantic/pull/13521) | `pydantic/_internal/_typing_extra.py` |
+| Generalization | aiohttp | [#5303](https://github.com/aio-libs/aiohttp/issues/5303) / [#13170](https://github.com/aio-libs/aiohttp/pull/13170) | `aiohttp/web_response.py` |
+| Generalization | aiohttp | [#13099](https://github.com/aio-libs/aiohttp/issues/13099) / [#13137](https://github.com/aio-libs/aiohttp/pull/13137) | `aiohttp/web_request.py` |
+| Main | HTTPCore | [#946](https://github.com/encode/httpcore/issues/946) / [#955](https://github.com/encode/httpcore/pull/955) | `httpcore/_synchronization.py` |
+| Generalization | Werkzeug | [#3138](https://github.com/pallets/werkzeug/issues/3138) / [#3140](https://github.com/pallets/werkzeug/pull/3140) | `src/werkzeug/serving.py` |
+| Generalization | Trio | [#3472](https://github.com/python-trio/trio/issues/3472) / [#3473](https://github.com/python-trio/trio/pull/3473) | `src/trio/_core/_thread_cache.py` |
+
+Ten of the new cases have function labels taken from reviewed production hunks. HTTPCore's fix is
+an import guard rather than a function, and Trio changes `WorkerThread.__init__`; the current
+unqualified-symbol contract cannot distinguish that method from other `__init__` definitions, so
+neither case is given a misleading symbol label. HTTPCore's coverage-only `_backends/anyio.py`
+edit is also excluded from file ground truth.
+
+The v0.11 deterministic result is File Recall@1 `0.4375`, Recall@5 `0.8490`, Recall@10 `0.9062`,
+Recall@20 `0.9688`, and MRR `0.6064`. On the 15 symbol-labeled cases, Symbol Recall@1 is `0.2000`,
+Recall@5 `0.5000`, Recall@10 `0.5333`, Recall@20 `0.6000`, and MRR `0.2926`. The lower symbol
+scores are retained as an honest measurement of the expanded suite's unresolved within-file
+localization problem.
+
 ## v0.4 outcome
 
 The v0.4 expansion increased the frozen file-localization benchmark from 9 to 20 cases and from
@@ -25,7 +67,7 @@ The v0.4 expansion increased the frozen file-localization benchmark from 9 to 20
 | Calibration | Rich | [#2027](https://github.com/Textualize/rich/issues/2027) / [#2038](https://github.com/Textualize/rich/pull/2038) | `rich/console.py`, `rich/highlighter.py` |
 | Calibration | Rich | [#3577](https://github.com/Textualize/rich/issues/3577) / [#4076](https://github.com/Textualize/rich/pull/4076) | `rich/ansi.py` |
 
-The corrected current manifest has 7 main, 4 calibration, and 9 generalization cases. The
+The corrected 20-case base manifest has 7 main, 4 calibration, and 9 generalization cases. Its
 deterministic runner completed 20/20 cases with Recall@1 0.3000, Recall@5 0.8583, Recall@10
 0.8750, Recall@20 1.0000, and MRR 0.5396.
 
@@ -65,26 +107,30 @@ rii benchmark-audit pytest-dev/pytest 634 1766 \
   --output benchmarks/candidates/pytest-634-pr-1766.json
 
 rii benchmark-curate \
-  benchmarks/cases-v0.3.json \
-  benchmarks/expansion-v0.4-selection.json \
-  benchmarks/candidates-v0.4.json \
-  --catalog-output benchmarks/candidates/rebuilt-v0.4.json \
-  --manifest-output benchmarks/candidates/rebuilt-cases-v0.4.json
+  benchmarks/cases-v0.10-corrected-20-cases.json \
+  benchmarks/expansion-v0.11-selection.json \
+  benchmarks/candidates-v0.11.json \
+  --catalog-output benchmarks/candidates/rebuilt-v0.11.json \
+  --manifest-output benchmarks/candidates/rebuilt-cases-v0.11.json
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.7-symbol-ground-truth-20-cases.json
+  --output benchmarks/results/deterministic-v0.11-expanded-32-cases.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
-catalog, manual selection, frozen manifest, and evaluated results are committed. The v0.4 curation
-command above reproduces only the historical expansion flow; current audits must use the corrected
-ordered-commit checks and `candidates-v0.7.json`.
+catalog, manual selection, frozen manifest, and evaluated results are committed. Current audits
+must use the corrected ordered-commit checks. The v0.11 accepted catalog is
+`candidates-v0.11.json`; `candidates-v0.7.json` remains the corrected audit record for the
+20-case base suite.
 
-## Candidate projects for the next wave
+## Candidate projects after v0.11
 
-The next target is 30-50 cases without concentrating labels in one framework. These repositories
-are candidates only and require the same audit:
+The 30-case threshold is now met without concentrating all new labels in one framework. Discovery
+also showed why acceptance remains manual: the HTTPX and Django scans produced no reviewable
+candidates in the configured window, while the SQLAlchemy review queue was dominated by
+documentation changes. Those repositories remain useful future targets, but should not be added
+to satisfy a quota.
 
 | Repository | Intended role | Useful coverage |
 |---|---|---|
@@ -94,6 +140,6 @@ are candidates only and require the same audit:
 | `django/django` | Generalization | larger repository and deeper cross-module behavior |
 | `pallets/click` | Calibration | compact CLI parsing and option behavior |
 
-Add two or three cases per repository first. Promote a repository to a larger share only after its
-initial cases pass checkout validation and add failure modes not already represented. Symbol-level
-labels should be added to a smaller high-confidence subset before the suite grows beyond 30 cases.
+The next expansion should prioritize repositories or cases that add qualified methods,
+runtime/backend dispatch, or cross-language behavior. Promote a repository to a larger share only
+after its initial cases pass checkout validation and add failure modes not already represented.
