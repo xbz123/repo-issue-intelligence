@@ -10,40 +10,45 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 2,347 ms |
-| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 3,094 ms |
-| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 955 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 2,406 ms |
+| Overall | 32/32 | 0.4375 | 0.8490 | 0.9062 | 0.9688 | 0.6064 | 3,580 ms |
+| Main | 12/12 | 0.5000 | 0.8333 | 0.9167 | 0.9167 | 0.6347 | 4,342 ms |
+| Calibration | 7/7 | 0.3571 | 0.7857 | 0.7857 | 1.0000 | 0.5556 | 2,585 ms |
+| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9615 | 1.0000 | 0.6077 | 3,413 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 16 | 0.1875 | 0.5312 | 0.5625 | 0.6250 | 0.2868 |
+| Overall | 16 | 0.1875 | 0.4688 | 0.5000 | 0.5625 | 0.2743 |
 | Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.2500 | 0.2500 |
 | Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1482 |
-| Generalization | 6 | 0.3333 | 0.7500 | 0.8333 | 0.8333 | 0.4500 |
+| Generalization | 6 | 0.3333 | 0.5833 | 0.6667 | 0.6667 | 0.4167 |
 
 Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
 exact reviewed file and symbol and retains the parent file's candidate rank. The investigator now
-stores both the backward-compatible local name and a qualified identity. This distinguishes
-methods with repeated local names: Trio's `WorkerThread.__init__` is recovered at rank 5 without
-changing the file ordering.
+stores both the backward-compatible local name and a qualified identity. Exact local or qualified
+identifiers from inline code, fenced examples, and tracebacks rank before title semantics.
+Qualified matching preserves case and dot boundaries, so the ASGI event `websocket.accept` no
+longer selects the Python method `WebSocket.accept`. Owner names are used only to disambiguate
+otherwise equivalent method names or as a final tie-break.
 
 The 15 previously labeled v0.11 cases retain their exact per-case symbol metrics, and all 32 file
-rankings are unchanged. Adding the harder rank-5 Trio method raises deeper symbol recall but lowers
-the aggregate Recall@1 and MRR denominator-weighted averages. One Pydantic production file remains
-absent from the Top-20 candidate pool, and several correct files are retrieved while the within-file
-selector chooses a neighboring function. This is useful negative evidence: candidate generation is
-close to saturation on the current file suite, while symbol localization remains a material
-bottleneck.
+rankings are unchanged. A case-by-case comparison found symbol-list changes in 28 of 32 cases:
+the corrected selector restores `cookie_parser` and `send_wrapper` for the Starlette session case
+and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
+`WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but
+not that method; allowing the owner to choose across different method names would recreate the
+reviewed false-positive mechanism. One Pydantic production file remains absent from the Top-20
+candidate pool, and several correct files are retrieved while the within-file selector chooses a
+neighboring function. This is useful negative evidence: candidate generation is close to saturation
+on the current file suite, while symbol localization remains a material bottleneck.
 
 V0.10's retrieval contract remains unchanged. It combines lexical and content evidence, history,
 within-file call edges, and bounded two-hop propagation through uniquely resolved concrete
 functions. It blocks ambiguous definitions and abstract/interface layers, and preserves the
-strong relation that triggers a Top-10 diversity promotion. Two complete v0.12 runs produced
-identical candidate lists and metrics after recursively removing timestamps and elapsed-time
-fields.
+strong relation that triggers a Top-10 diversity promotion. Two complete review-fixed v0.12 runs
+produced identical candidate lists and metrics after recursively removing timestamps and
+elapsed-time fields.
 
 Current machine-readable artifacts:
 

@@ -84,9 +84,13 @@ PATH_REFERENCE_PATTERN = re.compile(
     rf"[A-Za-z0-9_.-]+\.(?:{SOURCE_SUFFIXES})(?![A-Za-z0-9_])",
     re.IGNORECASE,
 )
-CODE_SPAN_PATTERN = re.compile(r"`([^`\n]{1,120})`")
+CODE_SPAN_PATTERN = re.compile(r"(?<!`)`([^`\n]{1,120})`(?!`)")
+FENCED_CODE_PATTERN = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 IDENTIFIER_PATTERN = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b"
+)
+CALLED_IDENTIFIER_PATTERN = re.compile(
+    r"\b((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
@@ -110,6 +114,7 @@ class IssueSignals:
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
+    explicit_identifiers: frozenset[str]
     paths: frozenset[str]
 
 
@@ -120,6 +125,7 @@ class SymbolMatch:
     local_overlap: frozenset[str]
     primary_identifier_match: bool
     exact_identifier_match: bool
+    explicit_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
     semantic_terms: frozenset[str]
@@ -160,6 +166,26 @@ def _compact_identifier_variants(value: str) -> set[str]:
     return {variant for variant in variants if len(variant) >= 4}
 
 
+def _extract_explicit_identifiers(text: str) -> set[str]:
+    code_regions = [
+        *CODE_SPAN_PATTERN.findall(text),
+        *FENCED_CODE_PATTERN.findall(text),
+    ]
+    identifiers: set[str] = set()
+    for region in code_regions:
+        candidate = region.strip()
+        if IDENTIFIER_PATTERN.fullmatch(candidate):
+            identifiers.add(candidate)
+        for match in CALLED_IDENTIFIER_PATTERN.finditer(region):
+            prefix = region[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            called_identifier = match.group(1)
+            identifiers.add(called_identifier)
+            identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
+    return identifiers
+
+
 def _extract_identifiers(text: str) -> set[str]:
     identifiers = {
         span.strip()
@@ -188,6 +214,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
+        explicit_identifiers=frozenset(_extract_explicit_identifiers(text)),
         paths=frozenset(paths),
     )
 
@@ -214,6 +241,11 @@ def _semantic_terms(terms: frozenset[str] | set[str]) -> set[str]:
     return {_semantic_term(term) for term in terms}
 
 
+def _matches_qualified_identity(identity: str, identifier: str) -> bool:
+    candidate = identifier.strip("`'\"()[]{}:,")
+    return candidate == identity or candidate.endswith(f".{identity}")
+
+
 def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
     identity = symbol.qualified_name or symbol.name
     local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
@@ -223,7 +255,9 @@ def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
     identity_parts = identity.split(".")
     owner_identity = ".".join(identity_parts[:-1])
     owner_compact_variants = _compact_identifier_variants(owner_identity)
-    qualified_compact_variants = _compact_identifier_variants(identity)
+    source_scoped_identifiers = (
+        signals.explicit_identifiers | signals.primary_identifiers
+    )
     return SymbolMatch(
         symbol=symbol,
         overlap=frozenset(signals.terms & terms),
@@ -236,19 +270,22 @@ def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
             symbol_variants & _identifier_variants(identifier)
             for identifier in signals.identifiers
         ),
+        explicit_identifier_match=any(
+            "." not in identifier and identifier == symbol.name
+            for identifier in signals.explicit_identifiers
+        ),
         qualified_component_match=identity != symbol.name
         and any(
             owner_compact_variants
             & _compact_identifier_variants(identifier)
-            for identifier in signals.identifiers
+            for identifier in source_scoped_identifiers
         ),
         qualified_identifier_match=identity != symbol.name
         and any(
-            qualified_compact_variants
-            & _compact_identifier_variants(identifier)
-            for identifier in signals.identifiers
+            _matches_qualified_identity(identity, identifier)
+            for identifier in source_scoped_identifiers
         ),
-        semantic_terms=frozenset(_semantic_terms(terms)),
+        semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
 
@@ -262,25 +299,20 @@ def _select_symbol(
 
     functions = [match for match in matches if match.symbol.kind == "function"]
 
-    def referenced_overlap(match: SymbolMatch) -> int:
-        if match.qualified_identifier_match:
-            return len(match.overlap)
-        if match.exact_identifier_match:
-            return len(match.local_overlap)
-        return 0
-
     directly_referenced = [
         match
         for match in functions
-        if referenced_overlap(match) >= 2
+        if match.explicit_identifier_match or match.qualified_identifier_match
     ]
     if directly_referenced:
         return max(
             directly_referenced,
             key=lambda match: (
-                referenced_overlap(match),
                 match.qualified_identifier_match,
+                match.explicit_identifier_match,
                 match.primary_identifier_match,
+                len(match.local_overlap),
+                match.qualified_component_match,
                 -match.symbol.line,
             ),
         )
@@ -315,22 +347,22 @@ def _select_symbol(
 
     def semantic_score(
         match: SymbolMatch,
-    ) -> tuple[int, bool, float, float, bool, int, int]:
+    ) -> tuple[int, float, float, bool, bool, int, int]:
         overlap = primary_terms & match.semantic_terms
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
             relation_scores.get(match.symbol.name, 0),
-            match.qualified_component_match,
             max(rarity, default=0),
             sum(rarity),
             not match.symbol.name.startswith("_"),
+            match.qualified_component_match,
             -match.symbol.line,
-            len(match.overlap),
+            len(match.local_overlap),
         )
 
     if functions and max(semantic_score(match)[:3] for match in functions) > (
         0,
-        False,
+        0,
         0,
     ):
         return max(functions, key=semantic_score)
@@ -338,11 +370,11 @@ def _select_symbol(
     fallback = max(
         matches,
         key=lambda match: (
-            match.qualified_component_match,
             match.primary_identifier_match,
             match.qualified_identifier_match,
             match.exact_identifier_match,
-            len(match.overlap),
+            len(match.local_overlap),
+            match.qualified_component_match,
             -match.symbol.line,
         ),
     )

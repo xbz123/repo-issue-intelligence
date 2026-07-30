@@ -15,14 +15,17 @@ repository, commit, or file ground truth:
 - 12 main, 7 calibration, and 13 generalization cases;
 - 17 reviewed symbol targets across 16 cases;
 - 32/32 successful frozen-checkout evaluations;
-- two complete deterministic runs with identical candidate and metric output after removing
-  timing fields.
+- two complete review-fixed deterministic runs with identical candidate and metric output after
+  removing timing fields.
 
 All 32 file rankings and all 15 previously labeled per-case symbol metrics remain unchanged.
-Trio's reviewed `WorkerThread.__init__` method is now an unambiguous target and is recovered at
-rank 5. Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.5312`, Recall@10 `0.5625`, Recall@20
-`0.6250`, and MRR `0.2868`. The added rank-5 case raises deeper recall while lowering Recall@1 and
-MRR as denominator-weighted averages.
+Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.4688`, Recall@10 `0.5000`, Recall@20 `0.5625`,
+and MRR `0.2743`. The qualified contract can represent Trio's reviewed
+`WorkerThread.__init__` method, but the issue does not explicitly reference `__init__`; the
+review-fixed selector therefore keeps it as a miss instead of allowing an owner-name match to
+override stronger local method evidence. Across all 32 cases, 28 symbol candidate lists changed
+while every file list stayed fixed. This includes correcting `websocket.accept` so it no longer
+matches the Python method `WebSocket.accept`.
 
 ## v0.11 expansion outcome
 

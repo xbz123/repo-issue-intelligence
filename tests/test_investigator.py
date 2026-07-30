@@ -51,6 +51,23 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
     )
     assert {"send_denial_response", "RuntimeError"} <= signals.identifiers
     assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.primary_identifiers
+    assert "send_denial_response" in signals.explicit_identifiers
+
+
+def test_extract_issue_signals_records_called_identifiers_from_code_blocks() -> None:
+    record = issue(
+        "Height not refreshed after removing children",
+        "```python\ndef compose():\n    return view.remove_children()\n```\n"
+        "Expected ASGI message `websocket.accept`.",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert {"view.remove_children", "remove_children"} <= (
+        signals.explicit_identifiers
+    )
+    assert "compose" not in signals.explicit_identifiers
+    assert "accept" not in signals.explicit_identifiers
 
 
 def test_identifier_variants_preserve_source_term_order() -> None:
@@ -287,7 +304,7 @@ def test_locate_candidates_uses_class_context_to_disambiguate_methods(
     )
     record = issue(
         "ThreadCache workers leak context",
-        "`WorkerThreads` retain context when they are spawned.",
+        "The `__init__` method on `WorkerThreads` retains the spawning context.",
     )
 
     candidates = locate_candidates(record, build_repository_map(repository))
@@ -323,6 +340,107 @@ def test_qualified_owner_match_does_not_treat_body_method_as_class_match(
 
     assert candidates[0].symbol == "value_from_envvar"
     assert candidates[0].qualified_symbol == "TyperOption.value_from_envvar"
+
+
+def test_explicit_local_symbol_reference_ranks_before_owner_match(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "cache.py",
+        "class Cache:\n"
+        "    def clear(self):\n"
+        "        return None\n\n"
+        "def flush():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Flush bug",
+        "The `Cache` invokes `flush`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "flush"
+    assert candidates[0].qualified_symbol is None
+
+
+def test_owner_terms_do_not_change_title_semantic_ranking(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "starlette/requests.py",
+        "def cookie_parser(cookie):\n"
+        '    \"\"\"Parse a cookie header.\"\"\"\n'
+        "    return cookie\n\n"
+        "class Request:\n"
+        "    async def send_push_promise(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "SessionMiddleware sends a new set-cookie for every request",
+        "The cookie should not be replaced when session data is unchanged.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "cookie_parser"
+    assert candidates[0].qualified_symbol is None
+
+
+def test_protocol_event_does_not_match_python_qualified_symbol(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "starlette/websockets.py",
+        "class WebSocket:\n"
+        "    async def accept(self):\n"
+        "        return None\n\n"
+        "    async def send_denial_response(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "Can not use `send_denial_response`",
+        "Expected ASGI message `websocket.accept`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "send_denial_response"
+    assert candidates[0].qualified_symbol == "WebSocket.send_denial_response"
+    assert not any(
+        "Issue references symbol WebSocket.accept" in evidence
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_exact_python_qualified_reference_matches_with_case_and_boundaries(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "starlette/websockets.py",
+        "class WebSocket:\n"
+        "    async def accept(self):\n"
+        "        return None\n\n"
+        "    async def send_denial_response(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "`WebSocket.accept` fails",
+        "The Python method raises before accepting the connection.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "accept"
+    assert candidates[0].qualified_symbol == "WebSocket.accept"
 
 
 def test_locate_candidates_propagates_within_file_call_evidence(

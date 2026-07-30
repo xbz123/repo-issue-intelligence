@@ -11,7 +11,7 @@
   "reasoning_effort": null,
   "temperature": null,
   "seed": null,
-  "created_at": "2026-07-30T14:22:13.007344Z",
+  "created_at": "2026-07-30T16:16:22.793958Z",
   "results": [
     {
       "case_id": "starlette-streaming-denial-response",
@@ -51,20 +51,20 @@
       "candidate_symbols": [
         {
           "file": "starlette/websockets.py",
-          "symbol": "accept",
-          "qualified_symbol": "WebSocket.accept",
+          "symbol": "send_denial_response",
+          "qualified_symbol": "WebSocket.send_denial_response",
           "rank": 1
         },
         {
           "file": "starlette/responses.py",
-          "symbol": "stream_response",
-          "qualified_symbol": "StreamingResponse.stream_response",
+          "symbol": "__call__",
+          "qualified_symbol": "Response.__call__",
           "rank": 2
         },
         {
           "file": "starlette/middleware/base.py",
-          "symbol": "__init__",
-          "qualified_symbol": "_StreamingResponse.__init__",
+          "symbol": "__call__",
+          "qualified_symbol": "_StreamingResponse.__call__",
           "rank": 3
         },
         {
@@ -87,20 +87,20 @@
         },
         {
           "file": "tests/middleware/test_base.py",
-          "symbol": "receive",
-          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
+          "symbol": "__call__",
+          "qualified_symbol": "CustomMiddlewareWithoutBaseHTTPMiddleware.__call__",
           "rank": 7
         },
         {
           "file": "starlette/middleware/errors.py",
-          "symbol": "_send",
-          "qualified_symbol": "ServerErrorMiddleware.__call__._send",
+          "symbol": "__call__",
+          "qualified_symbol": "ServerErrorMiddleware.__call__",
           "rank": 8
         },
         {
           "file": "starlette/testclient.py",
-          "symbol": "receive",
-          "qualified_symbol": "WebSocketTestSession.receive",
+          "symbol": "__call__",
+          "qualified_symbol": "_WrapASGI2.__call__",
           "rank": 9
         },
         {
@@ -123,8 +123,8 @@
         },
         {
           "file": "starlette/applications.py",
-          "symbol": "__init__",
-          "qualified_symbol": "Starlette.__init__",
+          "symbol": "__call__",
+          "qualified_symbol": "Starlette.__call__",
           "rank": 13
         },
         {
@@ -147,8 +147,8 @@
         },
         {
           "file": "tests/test_responses.py",
-          "symbol": "app",
-          "qualified_symbol": "test_text_response.app",
+          "symbol": "send",
+          "qualified_symbol": "test_file_response_on_head_method.send",
           "rank": 17
         },
         {
@@ -159,8 +159,8 @@
         },
         {
           "file": "starlette/concurrency.py",
-          "symbol": "run_until_first_complete",
-          "qualified_symbol": null,
+          "symbol": "run",
+          "qualified_symbol": "run_until_first_complete.run",
           "rank": 19
         }
       ],
@@ -184,7 +184,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 815.843,
+      "analysis_elapsed_ms": 773.381,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -240,8 +240,8 @@
         },
         {
           "file": "starlette/requests.py",
-          "symbol": "send_push_promise",
-          "qualified_symbol": "Request.send_push_promise",
+          "symbol": "cookie_parser",
+          "qualified_symbol": null,
           "rank": 2
         },
         {
@@ -252,8 +252,8 @@
         },
         {
           "file": "starlette/middleware/sessions.py",
-          "symbol": "__init__",
-          "qualified_symbol": "SessionMiddleware.__init__",
+          "symbol": "send_wrapper",
+          "qualified_symbol": "SessionMiddleware.__call__.send_wrapper",
           "rank": 4
         },
         {
@@ -271,7 +271,7 @@
         {
           "file": "tests/middleware/test_base.py",
           "symbol": "receive",
-          "qualified_symbol": "test_read_request_disconnected_client.receive",
+          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
           "rank": 7
         },
         {
@@ -288,7 +288,7 @@
         },
         {
           "file": "tests/test_testclient.py",
-          "symbol": "test_testclient_headers_behavior",
+          "symbol": "test_domain_restricted_cookies",
           "qualified_symbol": null,
           "rank": 10
         },
@@ -306,8 +306,8 @@
         },
         {
           "file": "tests/middleware/test_errors.py",
-          "symbol": "app",
-          "qualified_symbol": "test_debug_after_response_sent.app",
+          "symbol": "test_debug_after_response_sent",
+          "qualified_symbol": null,
           "rank": 13
         },
         {
@@ -318,14 +318,14 @@
         },
         {
           "file": "tests/middleware/test_https_redirect.py",
-          "symbol": "homepage",
-          "qualified_symbol": "test_https_redirect_middleware.homepage",
+          "symbol": "test_https_redirect_middleware",
+          "qualified_symbol": null,
           "rank": 15
         },
         {
           "file": "tests/middleware/test_trusted_host.py",
-          "symbol": "homepage",
-          "qualified_symbol": "test_trusted_host_middleware.homepage",
+          "symbol": "test_trusted_host_middleware",
+          "qualified_symbol": null,
           "rank": 16
         },
         {
@@ -376,7 +376,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 873.544,
+      "analysis_elapsed_ms": 850.665,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -437,8 +437,8 @@
         },
         {
           "file": "starlette/applications.py",
-          "symbol": "middleware",
-          "qualified_symbol": "Starlette.middleware",
+          "symbol": "route",
+          "qualified_symbol": "Starlette.route",
           "rank": 3
         },
         {
@@ -461,8 +461,8 @@
         },
         {
           "file": "starlette/responses.py",
-          "symbol": "render",
-          "qualified_symbol": "JSONResponse.render",
+          "symbol": "stream_response",
+          "qualified_symbol": "StreamingResponse.stream_response",
           "rank": 7
         },
         {
@@ -485,14 +485,14 @@
         },
         {
           "file": "starlette/endpoints.py",
-          "symbol": "__await__",
-          "qualified_symbol": "HTTPEndpoint.__await__",
+          "symbol": "HTTPEndpoint",
+          "qualified_symbol": null,
           "rank": 11
         },
         {
           "file": "starlette/middleware/exceptions.py",
-          "symbol": "__call__",
-          "qualified_symbol": "ExceptionMiddleware.__call__",
+          "symbol": "ExceptionMiddleware",
+          "qualified_symbol": null,
           "rank": 12
         },
         {
@@ -503,8 +503,8 @@
         },
         {
           "file": "starlette/middleware/sessions.py",
-          "symbol": "send_wrapper",
-          "qualified_symbol": "SessionMiddleware.__call__.send_wrapper",
+          "symbol": "SessionMiddleware",
+          "qualified_symbol": null,
           "rank": 14
         },
         {
@@ -521,8 +521,8 @@
         },
         {
           "file": "starlette/schemas.py",
-          "symbol": "render",
-          "qualified_symbol": "OpenAPIResponse.render",
+          "symbol": "OpenAPIResponse",
+          "qualified_symbol": "BaseSchemaGenerator.OpenAPIResponse",
           "rank": 17
         },
         {
@@ -564,7 +564,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 851.532,
+      "analysis_elapsed_ms": 786.785,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -625,8 +625,8 @@
         },
         {
           "file": "starlette/routing.py",
-          "symbol": "route",
-          "qualified_symbol": "Router.route",
+          "symbol": "request_response",
+          "qualified_symbol": null,
           "rank": 3
         },
         {
@@ -673,14 +673,14 @@
         },
         {
           "file": "starlette/datastructures.py",
-          "symbol": "raw",
-          "qualified_symbol": "Headers.raw",
+          "symbol": "setdefault",
+          "qualified_symbol": "MutableHeaders.setdefault",
           "rank": 12
         },
         {
           "file": "starlette/middleware/base.py",
-          "symbol": "wrapped_receive",
-          "qualified_symbol": "_CachedRequest.wrapped_receive",
+          "symbol": "_CachedRequest",
+          "qualified_symbol": null,
           "rank": 13
         },
         {
@@ -698,7 +698,7 @@
         {
           "file": "tests/middleware/test_base.py",
           "symbol": "receive",
-          "qualified_symbol": "test_read_request_disconnected_client.receive",
+          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.receive",
           "rank": 16
         },
         {
@@ -740,7 +740,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 544.206,
+      "analysis_elapsed_ms": 554.147,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -842,8 +842,8 @@
         },
         {
           "file": "typer/_click/parser.py",
-          "symbol": "takes_value",
-          "qualified_symbol": "_Option.takes_value",
+          "symbol": "_Option",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
@@ -933,7 +933,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 1008.517,
+      "analysis_elapsed_ms": 1040.96,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1005,8 +1005,8 @@
         },
         {
           "file": "typer/main.py",
-          "symbol": "lenient_issubclass",
-          "qualified_symbol": null,
+          "symbol": "command",
+          "qualified_symbol": "Typer.command",
           "rank": 4
         },
         {
@@ -1089,8 +1089,8 @@
         },
         {
           "file": "typer/utils.py",
-          "symbol": "__init__",
-          "qualified_symbol": "MixedAnnotatedAndDefaultStyleError.__init__",
+          "symbol": "_param_type_to_user_string",
+          "qualified_symbol": null,
           "rank": 19
         },
         {
@@ -1120,7 +1120,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.3333,
-      "analysis_elapsed_ms": 726.527,
+      "analysis_elapsed_ms": 754.164,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1188,8 +1188,8 @@
         },
         {
           "file": "src/textual/app.py",
-          "symbol": "return_value",
-          "qualified_symbol": "App.return_value",
+          "symbol": "refresh",
+          "qualified_symbol": "App.refresh",
           "rank": 4
         },
         {
@@ -1312,7 +1312,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2885.725,
+      "analysis_elapsed_ms": 2975.868,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1512,7 +1512,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 3412.339,
+      "analysis_elapsed_ms": 3383.928,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1701,7 +1701,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2988.711,
+      "analysis_elapsed_ms": 2498.469,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1852,8 +1852,8 @@
         },
         {
           "file": "src/anyio/streams/memory.py",
-          "symbol": "statistics",
-          "qualified_symbol": "_MemoryObjectStreamState.statistics",
+          "symbol": "clone",
+          "qualified_symbol": "MemoryObjectReceiveStream.clone",
           "rank": 18
         },
         {
@@ -1889,7 +1889,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1198.314,
+      "analysis_elapsed_ms": 1180.454,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -1980,14 +1980,14 @@
         },
         {
           "file": "tests/test_to_thread.py",
-          "symbol": "test_run_sync_worker_cyclic_references",
+          "symbol": "test_run_in_thread_cancelled",
           "qualified_symbol": null,
           "rank": 7
         },
         {
           "file": "tests/test_from_thread.py",
-          "symbol": "test_from_async",
-          "qualified_symbol": "TestBlockingPortal.test_from_async",
+          "symbol": "test_thread_cancelled",
+          "qualified_symbol": null,
           "rank": 8
         },
         {
@@ -2058,8 +2058,8 @@
         },
         {
           "file": "src/anyio/_backends/_trio.py",
-          "symbol": "is_running",
-          "qualified_symbol": "TestRunner.is_running",
+          "symbol": "run_test",
+          "qualified_symbol": "TestRunner.run_test",
           "rank": 20
         }
       ],
@@ -2084,7 +2084,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 2076.701,
+      "analysis_elapsed_ms": 1752.487,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2145,14 +2145,14 @@
         },
         {
           "file": "src/anyio/_core/_tasks.py",
-          "symbol": "create_task_group",
-          "qualified_symbol": null,
+          "symbol": "name",
+          "qualified_symbol": "TaskHandle.name",
           "rank": 3
         },
         {
           "file": "tests/test_taskgroups.py",
-          "symbol": "test_task_name_default",
-          "qualified_symbol": "TestCreateTask.test_task_name_default",
+          "symbol": "fail",
+          "qualified_symbol": "test_nested_task_group_filtering.fail",
           "rank": 4
         },
         {
@@ -2169,8 +2169,8 @@
         },
         {
           "file": "tests/test_from_thread.py",
-          "symbol": "taskfunc",
-          "qualified_symbol": "TestBlockingPortal.test_start_task_soon_with_name.taskfunc",
+          "symbol": "test_start_task_soon_with_name",
+          "qualified_symbol": "TestBlockingPortal.test_start_task_soon_with_name",
           "rank": 7
         },
         {
@@ -2266,7 +2266,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1013.213,
+      "analysis_elapsed_ms": 974.822,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2442,7 +2442,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2050.905,
+      "analysis_elapsed_ms": 2083.889,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2624,7 +2624,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2303.064,
+      "analysis_elapsed_ms": 2358.548,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2673,8 +2673,8 @@
       "candidate_symbols": [
         {
           "file": "fastapi/routing.py",
-          "symbol": "post",
-          "qualified_symbol": "APIRouter.post",
+          "symbol": "include_router",
+          "qualified_symbol": "APIRouter.include_router",
           "rank": 1
         },
         {
@@ -2685,8 +2685,8 @@
         },
         {
           "file": "fastapi/applications.py",
-          "symbol": "post",
-          "qualified_symbol": "FastAPI.post",
+          "symbol": "include_router",
+          "qualified_symbol": "FastAPI.include_router",
           "rank": 3
         },
         {
@@ -2727,8 +2727,8 @@
         },
         {
           "file": "fastapi/exceptions.py",
-          "symbol": "FastAPIError",
-          "qualified_symbol": null,
+          "symbol": "__init__",
+          "qualified_symbol": "HTTPException.__init__",
           "rank": 10
         },
         {
@@ -2806,7 +2806,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 3749.895,
+      "analysis_elapsed_ms": 3776.794,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -2879,7 +2879,7 @@
         },
         {
           "file": "_pytest/hookspec.py",
-          "symbol": "pytest_generate_tests",
+          "symbol": "pytest_enter_pdb",
           "qualified_symbol": null,
           "rank": 5
         },
@@ -2945,8 +2945,8 @@
         },
         {
           "file": "_pytest/recwarn.py",
-          "symbol": "deprecated_call",
-          "qualified_symbol": null,
+          "symbol": "list",
+          "qualified_symbol": "WarningsRecorder.list",
           "rank": 16
         },
         {
@@ -2988,7 +2988,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1240.914,
+      "analysis_elapsed_ms": 1184.853,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3055,13 +3055,13 @@
         },
         {
           "file": "src/_pytest/fixtures.py",
-          "symbol": "fixture",
-          "qualified_symbol": null,
+          "symbol": "_register_fixture",
+          "qualified_symbol": "FixtureManager._register_fixture",
           "rank": 4
         },
         {
           "file": "src/_pytest/hookspec.py",
-          "symbol": "pytest_addoption",
+          "symbol": "pytest_collection_modifyitems",
           "qualified_symbol": null,
           "rank": 5
         },
@@ -3097,13 +3097,13 @@
         },
         {
           "file": "src/_pytest/recwarn.py",
-          "symbol": "deprecated_call",
-          "qualified_symbol": null,
+          "symbol": "list",
+          "qualified_symbol": "WarningsRecorder.list",
           "rank": 11
         },
         {
           "file": "src/_pytest/junitxml.py",
-          "symbol": "pytest_addoption",
+          "symbol": "_warn_incompatibility_with_xunit2",
           "qualified_symbol": null,
           "rank": 12
         },
@@ -3133,8 +3133,8 @@
         },
         {
           "file": "src/_pytest/cacheprovider.py",
-          "symbol": "pytest_addoption",
-          "qualified_symbol": null,
+          "symbol": "set",
+          "qualified_symbol": "Cache.set",
           "rank": 20
         }
       ],
@@ -3158,7 +3158,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 2781.163,
+      "analysis_elapsed_ms": 2743.243,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3213,13 +3213,13 @@
         },
         {
           "file": "src/_pytest/doctest.py",
-          "symbol": "doctest_namespace",
-          "qualified_symbol": null,
+          "symbol": "__init__",
+          "qualified_symbol": "ReprFailDoctest.__init__",
           "rank": 2
         },
         {
           "file": "src/_pytest/pathlib.py",
-          "symbol": "import_path",
+          "symbol": "spec_matches_module_path",
           "qualified_symbol": null,
           "rank": 3
         },
@@ -3231,8 +3231,8 @@
         },
         {
           "file": "src/_pytest/config/__init__.py",
-          "symbol": "getini",
-          "qualified_symbol": "Config.getini",
+          "symbol": "__init__",
+          "qualified_symbol": "ConftestImportFailure.__init__",
           "rank": 5
         },
         {
@@ -3249,8 +3249,8 @@
         },
         {
           "file": "src/_pytest/python.py",
-          "symbol": "_get_first_non_fixture_func",
-          "qualified_symbol": null,
+          "symbol": "__init__",
+          "qualified_symbol": "Package.__init__",
           "rank": 8
         },
         {
@@ -3261,8 +3261,8 @@
         },
         {
           "file": "src/_pytest/main.py",
-          "symbol": "pytest_addoption",
-          "qualified_symbol": null,
+          "symbol": "__init__",
+          "qualified_symbol": "FSHookProxy.__init__",
           "rank": 11
         },
         {
@@ -3285,14 +3285,14 @@
         },
         {
           "file": "src/_pytest/assertion/rewrite.py",
-          "symbol": "is_rewrite_disabled",
-          "qualified_symbol": "AssertionRewriter.is_rewrite_disabled",
+          "symbol": "__init__",
+          "qualified_symbol": "AssertionRewritingHook.__init__",
           "rank": 15
         },
         {
           "file": "src/_pytest/terminal.py",
-          "symbol": "no_header",
-          "qualified_symbol": "TerminalReporter.no_header",
+          "symbol": "__init__",
+          "qualified_symbol": "MoreQuietAction.__init__",
           "rank": 16
         },
         {
@@ -3303,8 +3303,8 @@
         },
         {
           "file": "src/_pytest/warning_types.py",
-          "symbol": "simple",
-          "qualified_symbol": "PytestExperimentalApiWarning.simple",
+          "symbol": "warn_explicit_for",
+          "qualified_symbol": null,
           "rank": 19
         },
         {
@@ -3334,7 +3334,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 3980.143,
+      "analysis_elapsed_ms": 3690.303,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3390,8 +3390,8 @@
         },
         {
           "file": "rich/table.py",
-          "symbol": "copy",
-          "qualified_symbol": "Column.copy",
+          "symbol": "Table",
+          "qualified_symbol": null,
           "rank": 2
         },
         {
@@ -3420,8 +3420,8 @@
         },
         {
           "file": "rich/pretty.py",
-          "symbol": "expandable",
-          "qualified_symbol": "_Line.expandable",
+          "symbol": "install",
+          "qualified_symbol": null,
           "rank": 7
         },
         {
@@ -3432,14 +3432,14 @@
         },
         {
           "file": "rich/columns.py",
-          "symbol": "add_renderable",
-          "qualified_symbol": "Columns.add_renderable",
+          "symbol": "Columns",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
           "file": "rich/palette.py",
-          "symbol": "__rich_console__",
-          "qualified_symbol": "ColorBox.__rich_console__",
+          "symbol": "ColorBox",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -3450,8 +3450,8 @@
         },
         {
           "file": "rich/containers.py",
-          "symbol": "append",
-          "qualified_symbol": "Lines.append",
+          "symbol": "Lines",
+          "qualified_symbol": null,
           "rank": 12
         },
         {
@@ -3474,8 +3474,8 @@
         },
         {
           "file": "rich/color.py",
-          "symbol": "system",
-          "qualified_symbol": "Color.system",
+          "symbol": "ColorSystem",
+          "qualified_symbol": null,
           "rank": 16
         },
         {
@@ -3524,7 +3524,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 1033.581,
+      "analysis_elapsed_ms": 1000.917,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3578,14 +3578,14 @@
       "candidate_symbols": [
         {
           "file": "rich/console.py",
-          "symbol": "color_system",
-          "qualified_symbol": "Console.color_system",
+          "symbol": "print",
+          "qualified_symbol": "Console.print",
           "rank": 1
         },
         {
           "file": "rich/table.py",
-          "symbol": "copy",
-          "qualified_symbol": "Column.copy",
+          "symbol": "grid",
+          "qualified_symbol": "Table.grid",
           "rank": 2
         },
         {
@@ -3626,13 +3626,13 @@
         },
         {
           "file": "rich/columns.py",
-          "symbol": "add_renderable",
-          "qualified_symbol": "Columns.add_renderable",
+          "symbol": "Columns",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
           "file": "rich/__init__.py",
-          "symbol": "get_console",
+          "symbol": "print",
           "qualified_symbol": null,
           "rank": 10
         },
@@ -3674,8 +3674,8 @@
         },
         {
           "file": "rich/color.py",
-          "symbol": "system",
-          "qualified_symbol": "Color.system",
+          "symbol": "from_ansi",
+          "qualified_symbol": "Color.from_ansi",
           "rank": 17
         },
         {
@@ -3686,8 +3686,8 @@
         },
         {
           "file": "rich/pretty.py",
-          "symbol": "to_repr",
-          "qualified_symbol": "traverse.to_repr",
+          "symbol": "__repr__",
+          "qualified_symbol": "BrokenRepr.__repr__",
           "rank": 19
         },
         {
@@ -3713,7 +3713,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.0556,
-      "analysis_elapsed_ms": 1603.578,
+      "analysis_elapsed_ms": 3436.933,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3773,8 +3773,8 @@
         },
         {
           "file": "src/click/core.py",
-          "symbol": "main",
-          "qualified_symbol": "Command.main",
+          "symbol": "fail",
+          "qualified_symbol": "Context.fail",
           "rank": 2
         },
         {
@@ -3786,7 +3786,7 @@
         {
           "file": "src/click/exceptions.py",
           "symbol": "show",
-          "qualified_symbol": "UsageError.show",
+          "qualified_symbol": "ClickException.show",
           "rank": 4
         },
         {
@@ -3851,8 +3851,8 @@
         },
         {
           "file": "tests/test_defaults.py",
-          "symbol": "lookup_default",
-          "qualified_symbol": "test_lookup_default_override_respected.CustomContext.lookup_default",
+          "symbol": "test_shared_param_prefers_first_default",
+          "qualified_symbol": null,
           "rank": 16
         },
         {
@@ -3894,7 +3894,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 834.156,
+      "analysis_elapsed_ms": 4660.277,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -3948,8 +3948,8 @@
       "candidate_symbols": [
         {
           "file": "src/click/core.py",
-          "symbol": "main",
-          "qualified_symbol": "Command.main",
+          "symbol": "command",
+          "qualified_symbol": "Group.command",
           "rank": 1
         },
         {
@@ -3972,8 +3972,8 @@
         },
         {
           "file": "src/click/exceptions.py",
-          "symbol": "show",
-          "qualified_symbol": "NoArgsIsHelpError.show",
+          "symbol": "MissingParameter",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -3990,8 +3990,8 @@
         },
         {
           "file": "src/click/formatting.py",
-          "symbol": "write",
-          "qualified_symbol": "HelpFormatter.write",
+          "symbol": "HelpFormatter",
+          "qualified_symbol": null,
           "rank": 8
         },
         {
@@ -4014,8 +4014,8 @@
         },
         {
           "file": "src/click/parser.py",
-          "symbol": "takes_value",
-          "qualified_symbol": "_Option.takes_value",
+          "symbol": "_Option",
+          "qualified_symbol": null,
           "rank": 12
         },
         {
@@ -4081,7 +4081,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 818.484,
+      "analysis_elapsed_ms": 4638.699,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4171,8 +4171,8 @@
         },
         {
           "file": "src/click/exceptions.py",
-          "symbol": "__init__",
-          "qualified_symbol": "Exit.__init__",
+          "symbol": "Exit",
+          "qualified_symbol": null,
           "rank": 7
         },
         {
@@ -4183,14 +4183,14 @@
         },
         {
           "file": "src/click/parser.py",
-          "symbol": "process",
-          "qualified_symbol": "_Argument.process",
+          "symbol": "add_argument",
+          "qualified_symbol": "_OptionParser.add_argument",
           "rank": 9
         },
         {
           "file": "src/click/core.py",
-          "symbol": "invoke",
-          "qualified_symbol": "Context.invoke",
+          "symbol": "exit",
+          "qualified_symbol": "Context.exit",
           "rank": 10
         },
         {
@@ -4268,7 +4268,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 0.25,
-      "analysis_elapsed_ms": 660.977,
+      "analysis_elapsed_ms": 2563.803,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4382,8 +4382,8 @@
         },
         {
           "file": "pydantic/functional_validators.py",
-          "symbol": "__call__",
-          "qualified_symbol": "_V2ValidatorClsMethod.__call__",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
           "rank": 11
         },
         {
@@ -4461,7 +4461,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 3569.427,
+      "analysis_elapsed_ms": 6978.274,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4533,8 +4533,8 @@
         },
         {
           "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
+          "symbol": "get",
+          "qualified_symbol": "_FieldNameStack.get",
           "rank": 4
         },
         {
@@ -4563,8 +4563,8 @@
         },
         {
           "file": "pydantic/types.py",
-          "symbol": "__class_getitem__",
-          "qualified_symbol": "Json.__class_getitem__",
+          "symbol": "conint",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
@@ -4588,7 +4588,7 @@
         {
           "file": "pydantic/_internal/_mock_val_ser.py",
           "symbol": "attempt_rebuild_fn",
-          "qualified_symbol": "set_model_mocks.attempt_rebuild_fn",
+          "qualified_symbol": "set_type_adapter_mocks.attempt_rebuild_fn",
           "rank": 13
         },
         {
@@ -4654,7 +4654,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 6510.397,
+      "analysis_elapsed_ms": 9804.928,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4714,8 +4714,8 @@
         },
         {
           "file": "pydantic/json_schema.py",
-          "symbol": "json_or_python_schema",
-          "qualified_symbol": "GenerateJsonSchema.json_or_python_schema",
+          "symbol": "json_schema",
+          "qualified_symbol": "GenerateJsonSchema.json_schema",
           "rank": 2
         },
         {
@@ -4738,8 +4738,8 @@
         },
         {
           "file": "pydantic/types.py",
-          "symbol": "__get_pydantic_core_schema__",
-          "qualified_symbol": "Json.__get_pydantic_core_schema__",
+          "symbol": "conint",
+          "qualified_symbol": null,
           "rank": 6
         },
         {
@@ -4822,8 +4822,8 @@
         },
         {
           "file": "pydantic/functional_validators.py",
-          "symbol": "__get_pydantic_core_schema__",
-          "qualified_symbol": "ValidateAs.__get_pydantic_core_schema__",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
           "rank": 20
         }
       ],
@@ -4841,7 +4841,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 7159.332,
+      "analysis_elapsed_ms": 10260.091,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -4943,8 +4943,8 @@
         },
         {
           "file": "pydantic/functional_validators.py",
-          "symbol": "__call__",
-          "qualified_symbol": "_V2ValidatorClsMethod.__call__",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
           "rank": 9
         },
         {
@@ -4997,8 +4997,8 @@
         },
         {
           "file": "pydantic/_internal/_generate_schema.py",
-          "symbol": "generate_schema",
-          "qualified_symbol": "GenerateSchema.generate_schema",
+          "symbol": "get",
+          "qualified_symbol": "_FieldNameStack.get",
           "rank": 18
         },
         {
@@ -5032,7 +5032,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 8338.138,
+      "analysis_elapsed_ms": 11531.473,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5140,8 +5140,8 @@
         },
         {
           "file": "tests/test_benchmarks_web_fileresponse.py",
-          "symbol": "make_last_modified_header",
-          "qualified_symbol": "test_simple_web_file_response_not_modified.make_last_modified_header",
+          "symbol": "test_simple_web_file_response_not_modified",
+          "qualified_symbol": null,
           "rank": 10
         },
         {
@@ -5225,7 +5225,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 3088.901,
+      "analysis_elapsed_ms": 6497.914,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5387,8 +5387,8 @@
         },
         {
           "file": "aiohttp/web_exceptions.py",
-          "symbol": "HTTPUnsupportedMediaType",
-          "qualified_symbol": null,
+          "symbol": "text",
+          "qualified_symbol": "HTTPException.text",
           "rank": 19
         }
       ],
@@ -5412,7 +5412,7 @@
       "symbol_recall_at_10": 1.0,
       "symbol_recall_at_20": 1.0,
       "symbol_reciprocal_rank": 1.0,
-      "analysis_elapsed_ms": 3776.754,
+      "analysis_elapsed_ms": 7119.937,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5551,8 +5551,8 @@
         },
         {
           "file": "httpcore/_backends/trio.py",
-          "symbol": "start_tls",
-          "qualified_symbol": "TrioStream.start_tls",
+          "symbol": "TrioStream",
+          "qualified_symbol": null,
           "rank": 16
         },
         {
@@ -5588,7 +5588,7 @@
       "symbol_recall_at_10": null,
       "symbol_recall_at_20": null,
       "symbol_reciprocal_rank": null,
-      "analysis_elapsed_ms": 361.85,
+      "analysis_elapsed_ms": 2343.225,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5666,8 +5666,8 @@
         },
         {
           "file": "src/werkzeug/middleware/http_proxy.py",
-          "symbol": "ProxyMiddleware",
-          "qualified_symbol": null,
+          "symbol": "read",
+          "qualified_symbol": "ProxyMiddleware.proxy_to.application.read",
           "rank": 5
         },
         {
@@ -5781,7 +5781,7 @@
       "symbol_recall_at_10": 0.0,
       "symbol_recall_at_20": 0.0,
       "symbol_reciprocal_rank": 0.0,
-      "analysis_elapsed_ms": 1315.025,
+      "analysis_elapsed_ms": 5104.21,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5835,8 +5835,8 @@
       "candidate_symbols": [
         {
           "file": "src/trio/_threads.py",
-          "symbol": "to_thread_run_sync",
-          "qualified_symbol": null,
+          "symbol": "run_sync",
+          "qualified_symbol": "RunSync.run_sync",
           "rank": 1
         },
         {
@@ -5859,8 +5859,8 @@
         },
         {
           "file": "src/trio/_core/_thread_cache.py",
-          "symbol": "__init__",
-          "qualified_symbol": "WorkerThread.__init__",
+          "symbol": "start_thread_soon",
+          "qualified_symbol": null,
           "rank": 5
         },
         {
@@ -5907,8 +5907,8 @@
         },
         {
           "file": "src/trio/testing/_raises_group.py",
-          "symbol": "RaisesGroup",
-          "qualified_symbol": null,
+          "symbol": "type",
+          "qualified_symbol": "_ExceptionInfo.type",
           "rank": 13
         },
         {
@@ -5970,11 +5970,11 @@
       "candidate_pool_recall": 1.0,
       "reciprocal_rank": 0.2,
       "symbol_recall_at_1": 0.0,
-      "symbol_recall_at_5": 1.0,
-      "symbol_recall_at_10": 1.0,
-      "symbol_recall_at_20": 1.0,
-      "symbol_reciprocal_rank": 0.2,
-      "analysis_elapsed_ms": 1522.286,
+      "symbol_recall_at_5": 0.0,
+      "symbol_recall_at_10": 0.0,
+      "symbol_recall_at_20": 0.0,
+      "symbol_reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 5261.707,
       "llm_attempts": 0,
       "llm_fallback_used": false,
       "llm_request_id": null,
@@ -5996,7 +5996,7 @@
     "file_recall_at_20": 0.9688,
     "candidate_pool_recall": 0.9688,
     "mean_reciprocal_rank": 0.6064,
-    "average_analysis_elapsed_ms": 2346.692,
+    "average_analysis_elapsed_ms": 3580.192,
     "llm_success_rate": null,
     "llm_cases": 0,
     "llm_successes": 0,
@@ -6006,10 +6006,10 @@
     "llm_output_tokens": 0,
     "symbol_cases": 16,
     "symbol_recall_at_1": 0.1875,
-    "symbol_recall_at_5": 0.5312,
-    "symbol_recall_at_10": 0.5625,
-    "symbol_recall_at_20": 0.625,
-    "mean_symbol_reciprocal_rank": 0.2868
+    "symbol_recall_at_5": 0.4688,
+    "symbol_recall_at_10": 0.5,
+    "symbol_recall_at_20": 0.5625,
+    "mean_symbol_reciprocal_rank": 0.2743
   },
   "by_tier": {
     "main": {
@@ -6022,7 +6022,7 @@
       "file_recall_at_20": 0.9167,
       "candidate_pool_recall": 0.9167,
       "mean_reciprocal_rank": 0.6347,
-      "average_analysis_elapsed_ms": 3094.011,
+      "average_analysis_elapsed_ms": 4341.85,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6047,7 +6047,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.5556,
-      "average_analysis_elapsed_ms": 955.117,
+      "average_analysis_elapsed_ms": 2585.108,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6072,7 +6072,7 @@
       "file_recall_at_20": 1.0,
       "candidate_pool_recall": 1.0,
       "mean_reciprocal_rank": 0.6077,
-      "average_analysis_elapsed_ms": 2406.168,
+      "average_analysis_elapsed_ms": 3412.938,
       "llm_success_rate": null,
       "llm_cases": 0,
       "llm_successes": 0,
@@ -6082,10 +6082,10 @@
       "llm_output_tokens": 0,
       "symbol_cases": 6,
       "symbol_recall_at_1": 0.3333,
-      "symbol_recall_at_5": 0.75,
-      "symbol_recall_at_10": 0.8333,
-      "symbol_recall_at_20": 0.8333,
-      "mean_symbol_reciprocal_rank": 0.45
+      "symbol_recall_at_5": 0.5833,
+      "symbol_recall_at_10": 0.6667,
+      "symbol_recall_at_20": 0.6667,
+      "mean_symbol_reciprocal_rank": 0.4167
     }
   }
 }

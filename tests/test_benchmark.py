@@ -222,7 +222,7 @@ def test_evaluate_case_matches_qualified_symbol_ground_truth(
     record = IssueRecord(
         number=42,
         title="ThreadCache workers leak context",
-        body="`WorkerThreads` retain context when they are spawned.",
+        body="The `__init__` method on `WorkerThreads` retains the spawning context.",
         labels=["bug"],
         created_at=updated_at,
         updated_at=updated_at,

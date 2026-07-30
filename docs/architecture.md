@@ -42,9 +42,13 @@ matches a specific title term. Propagation stops at abstract/protocol layers and
 definitions. Git evidence uses at most 50 prior commits from 100 fetched ancestors, blames at most
 five lines for each of two seed candidates, and ignores broad commits. File scoring and symbol
 selection are separate: file scores retain the lexical/graph/history contract, while functions
-inside each file are selected using direct identifier references and normalized title-term rarity,
-with the original lexical match as a fallback. A callee receives additional evidence only when at
-least two distinct issue-matching functions in the same file call it. The investigator emits
+inside each file are selected using source-scoped direct identifier references and normalized
+title-term rarity, with the original lexical match as a fallback. Direct references come from
+inline code, fenced examples, tracebacks, and title identifiers; qualified identities preserve
+case and dot boundaries. Owner names can disambiguate equivalent method names but do not contribute
+semantic title terms or override a different explicitly referenced function. A callee receives
+additional evidence only when at least two distinct issue-matching functions in the same file call
+it. The investigator emits
 confirmed facts, confidence-scored hypotheses, missing evidence, and a non-executed reproduction
 plan. Candidate locations are not presented as confirmed root causes.
 

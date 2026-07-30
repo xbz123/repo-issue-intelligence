@@ -90,10 +90,12 @@ The current manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 
 Recall@5 `0.8490`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. Across the 15
 symbol-labeled cases and 16 reviewed targets from v0.11, every per-case metric remains unchanged.
 After adding the reviewed `WorkerThread.__init__` target, the 16 labeled cases and 17 targets reach
-Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.5312`, Symbol Recall@10 `0.5625`, Symbol Recall@20
-`0.6250`, and symbol MRR `0.2868`. The harder rank-5 case lowers the average Recall@1 and MRR while
-increasing deeper recall. All 32 file rankings are unchanged, and two complete v0.12 runs produced
-identical candidates and metrics after excluding timing fields.
+Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.4688`, Symbol Recall@10 `0.5000`, Symbol Recall@20
+`0.5625`, and symbol MRR `0.2743`. The qualified identity is representable, but the review-fixed
+selector does not infer `__init__` from an owner-only mention. All 32 file rankings are unchanged;
+a full audit found symbol-list changes in 28 cases, including the corrected Starlette protocol-event
+and session-cookie selections. Two complete review-fixed v0.12 runs produced identical candidates
+and metrics after excluding timing fields.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 
