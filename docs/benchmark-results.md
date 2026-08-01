@@ -92,6 +92,8 @@ Current machine-readable artifacts:
 - `benchmarks/results/deterministic-v0.11-expanded-32-cases.json` — retained v0.11 baseline;
 - `benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json` — current
   deterministic run;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json` — current
+  manifest-v7 OpenCode DeepSeek rerank;
 - `benchmarks/results/hybrid-deepseek-v4-flash-v0.10-manifest-v5-20-cases.json` — corrected-v5
   OpenCode rerank;
 - `benchmarks/results/hybrid-gpt-oss-20b-v0.10-manifest-v5-20-cases.json` — corrected-v5 Groq
@@ -102,6 +104,53 @@ Current machine-readable artifacts:
 All results generated from manifest versions 2 and 3 remain committed for provenance but are
 superseded as localization-quality evidence. Provider integration observations may remain useful,
 but their Recall and MRR values must not be mixed with the corrected v5 or current v7 suites.
+
+## External LLM reranking on current manifest v7
+
+On 2026-08-01, an authorized OpenCode `deepseek-v4-flash-free` run reranked the current
+manifest-v7 candidate pool. Every frozen Issue snapshot and candidate snippet came from the 13
+public benchmark repositories. All 32 cases remain in the denominator, including cases where the
+provider response failed validation and the runner used its deterministic fallback.
+
+| Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Deterministic v0.12 | 32/32 | 0.4479 | 0.7812 | 0.8906 | 0.9844 | 0.6428 | — |
+| DeepSeek V4 Flash Free | 32/32 | 0.7135 | 0.8958 | 0.9375 | 0.9844 | 0.8547 | 28/32 |
+
+The same paired run produced the following symbol metrics on the 16 labeled cases:
+
+| Variant | Labeled cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
+|---|---:|---:|---:|---:|---:|---:|
+| Deterministic v0.12 | 16 | 0.1875 | 0.4688 | 0.4688 | 0.5938 | 0.3099 |
+| DeepSeek V4 Flash Free | 16 | 0.4688 | 0.5312 | 0.5312 | 0.5938 | 0.5245 |
+
+DeepSeek increased file Recall@1 by `0.2656`, Recall@5 by `0.1146`, Recall@10 by `0.0469`,
+and MRR by `0.2119`; Recall@20 was unchanged because reranking cannot add a missing file to the
+deterministic Top-20 pool. Twelve expected-file ranks improved, 18 were unchanged, and two
+worsened. Five labeled symbol ranks improved, 11 were unchanged, and none worsened. Restricting
+the paired calculation to the 28 cases with valid LLM responses still increased file Recall@1
+from `0.4405` to `0.7440` and MRR from `0.6394` to `0.8816`, so the aggregate improvement is not
+an artifact of dropping fallback cases.
+
+Twenty-four cases completed in one provider attempt. Eight required a second attempt: four then
+returned a valid rerank, while `anyio-freethreading-runvar`, `fastapi-pydantic-json-form`,
+`click-help-parameter-name`, and `pydantic-typeadapter-union-typing` exhausted two `json_invalid`
+responses and used the exact deterministic order. A separate four-case diagnostic rerun recovered
+the FastAPI and Pydantic cases on the first attempt; the AnyIO and Click cases again failed twice.
+This indicates a mixture of transient and reproducible schema reliability failures for the current
+model and prompt.
+
+The 28 successful final calls recorded 145,469 input and 59,682 output tokens and averaged
+`20.1 s` of provider latency. Failed attempts do not expose token usage in the stored artifact, so
+these counts are not total provider consumption. Analysis-stage latency after repository
+preparation averaged `36.3 s` per case. The run uses `seed=1337` as best effort, but it is one full
+run and does not establish variance or deterministic provider output.
+
+A later deterministic single-case audit reproduced the current Werkzeug metrics and expected-file
+rank but found a metric-neutral rank-20 tail difference from the earlier committed deterministic
+artifact (`src/werkzeug/_reloader.py` instead of `src/werkzeug/urls.py`). Two repeated current
+runs matched each other. The cause is not established, so exact long-tail candidate reproducibility
+remains a documented residual risk even though it does not affect the reported benchmark metrics.
 
 ## External LLM reranking on corrected manifest v5
 

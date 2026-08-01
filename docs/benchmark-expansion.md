@@ -44,6 +44,15 @@ names unconditionally.
 Specific title-to-path evidence is protected from weaker tail expansion; this recovers
 `pydantic/experimental/pipeline.py` without restoring unsafe name propagation.
 
+An authorized OpenCode `deepseek-v4-flash-free` rerank subsequently completed all 32 cases on this
+same manifest and deterministic candidate pool. Twenty-eight responses were valid and four used
+the deterministic fallback after two `json_invalid` attempts. File Recall@1 reached `0.7135`,
+Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`; on the 16 labeled
+cases, Symbol Recall@1 reached `0.4688` and symbol MRR `0.5245`. This is evidence that model
+reranking improves ordering within the frozen pool, not that it can recover Rich's missing
+`highlighter.py` or replace candidate generation. The full result and fallback audit are recorded
+in `docs/benchmark-results.md`.
+
 ## v0.11 expansion outcome
 
 Manifest version 6 expanded the corrected 20-case suite to 32 cases and is retained as

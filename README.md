@@ -135,6 +135,16 @@ uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
   --output benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json
 
+LLM_MAX_EVIDENCE_CHARS=16000 \
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --provider opencode \
+  --model deepseek-v4-flash-free \
+  --temperature 0.1 \
+  --seed 1337 \
+  --llm-delay-seconds 0 \
+  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json
+
 LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
   --variant hybrid \
@@ -309,6 +319,19 @@ MRR by `0.0356`, while lowering Recall@5 by `0.0521`. Two complete runs produced
 candidates and metrics after excluding timing fields. The reviewed `WorkerThread.__init__` target
 is representable but not recovered without an explicit method reference, which deliberately
 exposes the limits of the current single-best-symbol selector.
+
+An authorized OpenCode `deepseek-v4-flash-free` hybrid run evaluated all 32 manifest-v7 cases.
+All cases remained in the metric denominator: 28 returned valid reranks and four exhausted two
+`json_invalid` attempts before using the deterministic fallback. File Recall@1 reached `0.7135`,
+Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`. On the 16 labeled
+cases, Symbol Recall@1 reached `0.4688`, Recall@5/10 `0.5312`, Recall@20 `0.5938`, and symbol MRR
+`0.5245`. Relative to deterministic, 12 file ranks improved, 18 were unchanged, and two worsened;
+five labeled symbol ranks improved and none worsened. The 28 successful final calls recorded
+145,469 input and 59,682 output tokens with `20.1 s` average model latency. A separate diagnostic
+rerun recovered two of the four fallback cases, while the AnyIO free-threading and Click parameter
+cases again returned invalid JSON. This is one best-effort-seed run, not a stability estimate.
+A later deterministic audit also observed a metric-neutral rank-20 tail change for the Werkzeug
+case, so exact long-tail candidate reproducibility remains a known limitation.
 
 An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
 PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only

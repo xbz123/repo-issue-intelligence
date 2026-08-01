@@ -105,6 +105,24 @@ scope-safe contract changed 31 file lists and 31 symbol lists, increased File Re
 and MRR by `0.0356`, and lowered Recall@5 by `0.0521`. Two complete review-fixed v0.12 runs produced
 identical candidates, symbols, and metrics after excluding timing fields.
 
+An authorized current-manifest run then sent the frozen public Issue snapshots and bounded public
+candidate snippets to OpenCode `deepseek-v4-flash-free`. All 32 cases completed and remained in the
+denominator. Twenty-eight responses passed local schema and evidence-ID validation; four cases
+exhausted two `json_invalid` attempts and used the deterministic fallback. File Recall@1 was
+`0.7135`, Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`. On the 16
+labeled cases, Symbol Recall@1 was `0.4688`, Recall@5/10 `0.5312`, Recall@20 `0.5938`, and MRR
+`0.5245`. Relative to the paired deterministic baseline, 12 file ranks improved, 18 were unchanged,
+and two worsened; five labeled symbol ranks improved and none worsened.
+
+The 28 successful final calls recorded 145,469 input and 59,682 output tokens and averaged
+`20.1 s` of provider latency. Failed attempts are not included in those token totals. A separate
+diagnostic rerun recovered two of the four fallback cases; the AnyIO free-threading and Click
+parameter cases again produced invalid JSON twice. This is a single best-effort-seed run rather
+than a stability estimate. A later deterministic Werkzeug audit also found a metric-neutral
+rank-20 tail difference from the earlier artifact, so exact long-tail candidate reproducibility is
+not claimed. The reviewed artifact is
+`benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json`.
+
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 
 - OpenCode DeepSeek V4 Flash completed 20/20 valid reranks with no fallback. File Recall@1 was
