@@ -28,22 +28,31 @@ The current MVP ends at a human review gate. It does not execute generated comma
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
 classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
-Broad called-name and local-name caller maps remain serialized for compatibility. Separate
-`name_calls` and qualified-caller maps record only direct `ast.Name` calls; ranking consumers use
-these receiver-safe edges instead of treating every `ast.Attribute` terminal as a local callee.
+Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
+`resolved_calls` field stores caller identity, local spelling, target repository file, and target
+symbol. It is built with Python `symtable` scope information and accepts a direct `ast.Name` call
+only when the name resolves to one unconditional module function or one explicit module-level
+`from ... import ...` binding. Parameters, assignments, loop/context/exception/match targets,
+local imports, nested bindings, closures, ambiguous definitions, statically visible `global`
+assignments, or definition-time rebinding make a call unresolved. Dynamic mutation through
+reflection is not resolved. `name_calls` and qualified-caller maps are compatibility views derived
+from these resolved edges; ranking never falls back to their broader historical forms. A `src/` or
+`lib/` prefix is removed only when that directory is a source-layout root without a root
+`__init__.py`; top-level `src.py`, `lib.py`, and real `src`/`lib` packages keep their module names.
 
 ### Investigation
 
 `investigator.py` ranks candidate files and symbols using explicit evidence signals. Lexical and
-bounded content matching define the base pool. Static imports, loaded references, dynamic
-call-name/backend definitions, two-hop relations, matching-test imports, and bounded prior Git
-co-changes add graph evidence. Legacy graph weights still rerank inside fixed Top-10 bands; up to
-three strong expansion candidates may enter the Top-20. One Top-10 diversity slot is reserved for
-a two-hop call candidate only when the first called symbol has a unique concrete definition and
-matches a specific title term. Propagation stops at abstract/protocol layers and ambiguous symbol
-definitions. Git evidence uses at most 50 prior commits from 100 fetched ancestors, blames at most
-five lines for each of two seed candidates, and ignores broad commits. File scoring and symbol
-selection are separate: file scores retain the lexical/graph/history contract, while functions
+bounded content matching define the base pool. Static imports, scope-resolved calls and references,
+caller-specific two-hop relations, matching-test imports, and bounded prior Git co-changes add
+graph evidence. Graph weights still rerank inside fixed Top-10 bands; up to three expansion
+candidates may enter the Top-20. One Top-10 diversity slot is reserved for a two-hop call candidate
+only when both hops are exact resolved edges, the first symbol matches a specific title term, and
+the path is concrete rather than an abstract/protocol or auxiliary layer. Candidates with an exact
+path, specific title-to-path match, path identifier, or primary symbol match cannot be evicted by a
+weaker tail expansion. Git evidence uses at most 50 prior commits from 100 fetched ancestors,
+blames at most five lines for each of two seed candidates, and ignores broad commits. File scoring
+and symbol selection are separate: file scores retain the lexical/graph/history contract, while functions
 inside each file are selected using source-scoped direct identifier references and normalized
 title-term rarity, with the original lexical match as a fallback. Direct references come from
 inline code, fenced examples, tracebacks, and title identifiers; non-call qualified identities are
@@ -51,18 +60,20 @@ retained with their original case and dot boundaries. Bare names are direct only
 final candidate range, constrained by an exact owner, or scoped by a path that resolves to exactly
 one repository file. Loose suffix matching remains available for file retrieval, but an ambiguous
 basename cannot scope a direct symbol reference. A dotted value is direct only when its complete,
-case-preserving qualified identity matches; source-content retrieval applies the same full-token
-boundary and does not reuse dotted component terms. Syntactic object calls separately expose their
-local callee for Issue-text matching. Repeated unscoped names and unmatched dotted terminals cannot
+case-preserving qualified identity matches; source-content retrieval applies full identifier
+boundaries to bare names and the same full-token boundary to dotted values, without reusing dotted
+component terms. Syntactic object calls separately expose their local callee for Issue-text
+matching. Repeated unscoped names and unmatched dotted terminals cannot
 independently select a symbol. Owner names can disambiguate equivalent method names but do not
 contribute semantic title terms or override a different explicitly referenced function. A callee
 receives additional evidence only when at least two distinct issue-matching functions in the same
-file directly call it by `ast.Name`. The caller identity is preserved in relation scoring and
-evidence, and the local target must resolve to one function in the file. Calls through
+file have exact resolved edges to it. The caller and callee identities are preserved in relation
+scoring and evidence. Calls through
 `self.method()`, `receiver.method()`, or `module.function()` do not become local edges until a
 receiver-aware resolver can prove their target. Older repository maps remain readable, but maps
-without the safe qualified edge field skip call-relation inference instead of falling back to broad
-legacy names. Bounded two-hop propagation uses the same direct-call and uniqueness rules. The
+without `resolved_calls` skip call-relation inference instead of falling back to broad legacy
+names. Bounded two-hop propagation follows the exact target function and only that function's
+resolved external calls. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
@@ -178,8 +189,8 @@ historical artifacts because their pre-fix audit was incorrect. Manifest version
 the reproducible input for the corrected 20-case Groq and OpenCode comparison; version 6 is the
 retained 32-case expansion and version 7 is the current qualified-symbol suite. LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
-calls, qualified class/function ownership, and a single-best-symbol selector, but not cross-file
-control-flow beyond bounded two-hop direct-name calls, receiver/type resolution, runtime/backend
+resolved calls, qualified class/function ownership, and a single-best-symbol selector, but not
+cross-file control-flow beyond bounded two-hop resolved-name calls, receiver/type resolution, runtime/backend
 dispatch, a cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a
 vector index.
 

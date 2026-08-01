@@ -2,8 +2,12 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from repo_issue_intelligence.investigator import (
+    _content_matches_identifier,
     _identifier_variants,
+    _merge_tail_expansions,
     extract_issue_signals,
     investigate,
     locate_candidates,
@@ -95,6 +99,28 @@ def test_identifier_variants_preserve_source_term_order() -> None:
     assert "screen_alt" not in variants
 
 
+@pytest.mark.parametrize(
+    ("identifier", "source"),
+    [
+        ("get", "def compute_target():\n    return None\n"),
+        ("set", "def reset():\n    return None\n"),
+        ("data", "metadata = {}\n"),
+        ("run", "runner = callback\n"),
+    ],
+)
+def test_content_identifier_matching_rejects_substrings(
+    identifier: str,
+    source: str,
+) -> None:
+    assert not _content_matches_identifier(source, identifier)
+
+
+def test_content_identifier_matching_accepts_identifier_boundaries() -> None:
+    assert _content_matches_identifier("def get():\n    return None\n", "get")
+    assert _content_matches_identifier("response = client.get()\n", "get")
+    assert _content_matches_identifier("def get_value():\n    return None\n", "get_value")
+
+
 def test_locate_candidates_prioritizes_exact_issue_path(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     write_source(
@@ -116,6 +142,50 @@ def test_locate_candidates_prioritizes_exact_issue_path(tmp_path: Path) -> None:
 
     assert candidates[0].file == "starlette/middleware/base.py"
     assert "Issue references this exact source path" in candidates[0].evidence
+
+
+def test_locate_candidates_records_title_to_path_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/ansi.py",
+        "def decode(value):\n"
+        "    return value\n",
+    )
+    write_source(
+        repository,
+        "src/package/console.py",
+        "def render_line(value):\n"
+        "    return value\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "ANSI trailing newline is removed",
+            "Console output loses the final line break.",
+        ),
+        build_repository_map(repository),
+    )
+    ansi = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/ansi.py"
+    )
+
+    assert "Path matches issue title terms: ansi" in ansi.evidence
+
+
+def test_tail_expansions_do_not_evict_directly_supported_base_path() -> None:
+    merged = _merge_tail_expansions(
+        ["first.py", "second.py", "direct.py"],
+        ["expanded.py"],
+        ["direct.py"],
+        limit=3,
+    )
+
+    assert merged == ["first.py", "direct.py", "expanded.py"]
 
 
 def test_locate_candidates_uses_source_content_identifiers(tmp_path: Path) -> None:
@@ -277,7 +347,120 @@ def test_repository_map_records_local_imports_and_called_symbols(
     assert api.qualified_symbol_calls == {
         "handle_request": ["parse_request"]
     }
+    assert [
+        call.model_dump()
+        for call in api.resolved_calls
+    ] == [
+        {
+            "caller": "handle_request",
+            "local_name": "parse_request",
+            "target_file": "src/package/parser.py",
+            "target_symbol": "parse_request",
+        }
+    ]
     assert "parse_request" in api.references
+
+
+@pytest.mark.parametrize(
+    ("module_path", "import_name"),
+    [
+        ("src.py", "src"),
+        ("lib.py", "lib"),
+        ("lib/__init__.py", "lib"),
+    ],
+    ids=["src-module", "lib-module", "lib-package"],
+)
+def test_repository_map_preserves_top_level_src_and_lib_modules(
+    tmp_path: Path,
+    module_path: str,
+    import_name: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "app.py",
+        f"from {import_name} import helper\n\n"
+        "def handle_request():\n"
+        "    return helper()\n",
+    )
+    write_source(
+        repository,
+        module_path,
+        "def helper():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    app = next(file for file in repository_map.files if file.path == "app.py")
+
+    assert app.local_imports == [module_path]
+    assert [
+        call.model_dump()
+        for call in app.resolved_calls
+    ] == [
+        {
+            "caller": "handle_request",
+            "local_name": "helper",
+            "target_file": module_path,
+            "target_symbol": "helper",
+        }
+    ]
+
+
+@pytest.mark.parametrize("root_package", ["src", "lib"])
+def test_repository_map_preserves_real_src_and_lib_packages(
+    tmp_path: Path,
+    root_package: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, f"{root_package}/__init__.py", "")
+    write_source(
+        repository,
+        f"{root_package}/helpers.py",
+        "def helper():\n    return None\n",
+    )
+    write_source(
+        repository,
+        "app.py",
+        f"from {root_package}.helpers import helper\n\n"
+        "def handle_request():\n"
+        "    return helper()\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    app = next(file for file in repository_map.files if file.path == "app.py")
+
+    assert app.local_imports == [f"{root_package}/helpers.py"]
+    assert [
+        (call.target_file, call.target_symbol)
+        for call in app.resolved_calls
+    ] == [(f"{root_package}/helpers.py", "helper")]
+
+
+def test_repository_map_keeps_standard_src_layout_imports(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from package.parser import parse_request\n\n"
+        "def handle_request():\n"
+        "    return parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(file for file in repository_map.files if file.path.endswith("api.py"))
+
+    assert api.local_imports == ["src/package/parser.py"]
+    assert [
+        (call.target_file, call.target_symbol)
+        for call in api.resolved_calls
+    ] == [("src/package/parser.py", "parse_request")]
 
 
 def test_repository_map_records_qualified_method_names(tmp_path: Path) -> None:
@@ -355,6 +538,7 @@ def test_duplicate_method_call_edges_do_not_leak_into_symbol_selection(
 
     legacy_repository_map = repository_map.model_copy(deep=True)
     legacy_repository_map.files[0].qualified_symbol_calls = {}
+    legacy_repository_map.files[0].resolved_calls = []
     legacy_candidates = locate_candidates(
         issue(
             "Worker retry failed request",
@@ -367,6 +551,35 @@ def test_duplicate_method_call_edges_do_not_leak_into_symbol_selection(
     assert not any(
         "Issue-matching symbols call rebuild" in evidence
         for evidence in legacy_candidates[0].evidence
+    )
+
+
+def test_duplicate_qualified_caller_identity_does_not_create_call_edge(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Worker:\n"
+        "    def refresh_failed_request(self):\n"
+        "        return rebuild()\n\n"
+        "    def refresh_failed_request(self):\n"
+        "        return None\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/worker.py"
+    )
+
+    assert not any(
+        call.caller == "Worker.refresh_failed_request"
+        for call in source.resolved_calls
     )
 
 
@@ -443,6 +656,469 @@ def test_attribute_calls_do_not_resolve_to_same_named_local_function(
         "Issue-matching symbols call rebuild" in evidence
         for evidence in candidates[0].evidence
     )
+
+
+def test_parameter_calls_do_not_resolve_to_same_named_module_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "def retry_failed_request(rebuild):\n"
+        "    return rebuild()\n\n"
+        "def refresh_failed_request(rebuild):\n"
+        "    return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert source.name_calls == []
+    assert source.qualified_symbol_calls == {}
+
+    candidates = locate_candidates(
+        issue(
+            "Retry failed request",
+            "Both retry paths fail before rebuilding state.",
+        ),
+        repository_map,
+    )
+
+    assert candidates[0].symbol != "rebuild"
+    assert not any(
+        "Issue-matching symbols call rebuild" in evidence
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_assigned_callable_does_not_resolve_to_same_named_module_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "def retry_failed_request(callback):\n"
+        "    rebuild = callback\n"
+        "    return rebuild()\n\n"
+        "def refresh_failed_request(callback):\n"
+        "    rebuild = callback\n"
+        "    return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert source.name_calls == []
+    assert source.qualified_symbol_calls == {}
+
+    candidates = locate_candidates(
+        issue(
+            "Retry failed request",
+            "Both retry paths fail before rebuilding state.",
+        ),
+        repository_map,
+    )
+
+    assert candidates[0].symbol != "rebuild"
+    assert not any(
+        "Issue-matching symbols call rebuild" in evidence
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_shadowed_import_call_does_not_create_cross_file_relation(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .backend import rebuild\n\n"
+        "def retry_failed_request(rebuild):\n"
+        "    return rebuild()\n",
+    )
+    write_source(
+        repository,
+        "src/package/backend.py",
+        "def rebuild():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    api = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/api.py"
+    )
+
+    assert api.name_calls == []
+    assert api.qualified_symbol_calls == {}
+
+    candidates = locate_candidates(
+        issue(
+            "Retry failed request",
+            "The traceback points to src/package/api.py.",
+        ),
+        repository_map,
+    )
+    backend = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/backend.py"
+    )
+
+    assert not any(
+        "calls imported symbols" in evidence
+        or "references imported symbols" in evidence
+        for evidence in backend.evidence
+    )
+
+
+def test_import_alias_resolves_to_the_exact_exported_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .parser import parse_request as parse\n\n"
+        "def handle_request():\n"
+        "    return parse()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/api.py"
+    )
+
+    assert [
+        call.model_dump()
+        for call in api.resolved_calls
+    ] == [
+        {
+            "caller": "handle_request",
+            "local_name": "parse",
+            "target_file": "src/package/parser.py",
+            "target_symbol": "parse_request",
+        }
+    ]
+
+    candidates = locate_candidates(
+        issue(
+            "API request failure",
+            "The traceback points to src/package/api.py.",
+        ),
+        repository_map,
+    )
+    parser = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/parser.py"
+    )
+
+    assert (
+        "Related source calls imported symbols defined here: parse_request"
+        in parser.evidence
+    )
+
+
+def test_unimported_name_does_not_resolve_to_same_named_external_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "def handle_request():\n"
+        "    return parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n"
+        "    return None\n",
+    )
+    repository_map = build_repository_map(repository)
+    api = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/api.py"
+    )
+
+    assert api.resolved_calls == []
+
+    candidates = locate_candidates(
+        issue(
+            "API request failure",
+            "The traceback points to src/package/api.py.",
+        ),
+        repository_map,
+    )
+    parser = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/parser.py"
+    )
+
+    assert not any(
+        "Related source calls" in evidence
+        for evidence in parser.evidence
+    )
+
+
+@pytest.mark.parametrize(
+    "caller_source",
+    [
+        (
+            "def caller(callbacks):\n"
+            "    for rebuild in callbacks:\n"
+            "        return rebuild()\n"
+        ),
+        (
+            "def caller(context):\n"
+            "    with context as rebuild:\n"
+            "        return rebuild()\n"
+        ),
+        (
+            "def caller():\n"
+            "    try:\n"
+            "        raise RuntimeError\n"
+            "    except RuntimeError as rebuild:\n"
+            "        return rebuild()\n"
+        ),
+        (
+            "def caller():\n"
+            "    def rebuild():\n"
+            "        return None\n"
+            "    return rebuild()\n"
+        ),
+        (
+            "def caller():\n"
+            "    from .backend import rebuild\n"
+            "    return rebuild()\n"
+        ),
+        (
+            "def caller():\n"
+            "    global rebuild\n"
+            "    return rebuild()\n"
+        ),
+        (
+            "def caller(callbacks):\n"
+            "    return [rebuild() for rebuild in callbacks]\n"
+        ),
+        (
+            "def caller(value):\n"
+            "    match value:\n"
+            "        case {'callback': rebuild}:\n"
+            "            return rebuild()\n"
+            "    return None\n"
+        ),
+    ],
+    ids=[
+        "for-target",
+        "with-target",
+        "except-target",
+        "nested-function",
+        "local-import",
+        "declared-global",
+        "comprehension-target",
+        "match-target",
+    ],
+)
+def test_lexical_bindings_are_not_resolved_to_module_function(
+    tmp_path: Path,
+    caller_source: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        caller_source
+        + "\n"
+        + "def rebuild():\n"
+        + "    return None\n",
+    )
+    write_source(
+        repository,
+        "src/package/backend.py",
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert not any(
+        call.caller == "caller" and call.target_symbol == "rebuild"
+        for call in source.resolved_calls
+    )
+
+
+def test_free_variable_call_is_not_resolved_to_module_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "def outer(rebuild):\n"
+        "    def caller():\n"
+        "        return rebuild()\n"
+        "    return caller\n\n"
+        "def outer_nonlocal(callback):\n"
+        "    rebuild = callback\n"
+        "    def caller():\n"
+        "        nonlocal rebuild\n"
+        "        return rebuild()\n"
+        "    return caller\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert not any(
+        call.caller == "outer.caller" and call.target_symbol == "rebuild"
+        for call in source.resolved_calls
+    )
+    assert not any(
+        call.caller == "outer_nonlocal.caller"
+        and call.target_symbol == "rebuild"
+        for call in source.resolved_calls
+    )
+
+
+def test_global_mutation_invalidates_module_function_resolution(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "def replace_rebuild(callback):\n"
+        "    global rebuild\n"
+        "    rebuild = callback\n\n"
+        "def caller():\n"
+        "    return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert not any(
+        call.caller == "caller" and call.target_symbol == "rebuild"
+        for call in source.resolved_calls
+    )
+
+
+@pytest.mark.parametrize(
+    "definition_time_rebinding",
+    [
+        "def configure(value=(rebuild := (lambda: None))):\n"
+        "    return value\n",
+        "def decorator(value):\n"
+        "    return value\n\n"
+        "@(rebuild := decorator)\n"
+        "class Config:\n"
+        "    pass\n",
+    ],
+    ids=["function-default", "class-decorator"],
+)
+def test_definition_time_rebinding_invalidates_module_function_resolution(
+    tmp_path: Path,
+    definition_time_rebinding: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "def rebuild():\n"
+        "    return None\n\n"
+        + definition_time_rebinding
+        + "\n"
+        + "def caller():\n"
+        + "    return rebuild()\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert not any(
+        call.caller == "caller" and call.target_symbol == "rebuild"
+        for call in source.resolved_calls
+    )
+
+
+def test_class_and_static_methods_resolve_unshadowed_module_function(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/retry.py",
+        "class Worker:\n"
+        "    @classmethod\n"
+        "    def retry_failed_request(cls):\n"
+        "        return rebuild()\n\n"
+        "    @staticmethod\n"
+        "    def refresh_failed_request():\n"
+        "        return rebuild()\n\n"
+        "def rebuild():\n"
+        "    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    source = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/retry.py"
+    )
+
+    assert {
+        (call.caller, call.target_symbol)
+        for call in source.resolved_calls
+    } == {
+        ("Worker.refresh_failed_request", "rebuild"),
+        ("Worker.retry_failed_request", "rebuild"),
+    }
 
 
 def test_locate_candidates_uses_class_context_to_disambiguate_methods(
@@ -1031,12 +1707,14 @@ def test_graph_reranking_promotes_bounded_two_hop_call_chain(
     write_source(
         repository,
         "src/seed.py",
+        "from .screen import refresh_layout\n\n"
         "def update_height():\n"
         "    return refresh_layout()\n",
     )
     write_source(
         repository,
         "src/screen.py",
+        "from .compositor import reflow_children\n\n"
         "def refresh_layout():\n"
         "    return reflow_children()\n",
     )
@@ -1175,6 +1853,45 @@ def test_graph_reranking_skips_unresolved_attribute_first_hop(
     )
 
 
+def test_graph_reranking_skips_callback_parameter_first_hop(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "def update(refresh_layout):\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "def refresh_layout():\n"
+        "    return reflow_children()\n",
+    )
+    write_source(
+        repository,
+        "src/rebuild.py",
+        "def reflow_children():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Refresh layout fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(
+        not any(
+            evidence.startswith("Related source calls refresh_layout")
+            or evidence.startswith("Two-hop source call chain via ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
 def test_graph_reranking_does_not_propagate_through_abstract_layer(
     tmp_path: Path,
 ) -> None:
@@ -1182,12 +1899,14 @@ def test_graph_reranking_does_not_propagate_through_abstract_layer(
     write_source(
         repository,
         "src/backend.py",
+        "from ._abc import start_soon\n\n"
         "def start_task():\n"
         "    return start_soon()\n",
     )
     write_source(
         repository,
         "src/_abc.py",
+        "from .asyncio_backend import create_task\n\n"
         "def start_soon():\n"
         "    return create_task()\n",
     )
@@ -1220,6 +1939,7 @@ def test_graph_reranking_does_not_resolve_local_callee_to_unrelated_file(
     write_source(
         repository,
         "src/seed.py",
+        "from .screen import refresh_layout\n\n"
         "def update_height():\n"
         "    return refresh_layout()\n",
     )
@@ -1262,12 +1982,14 @@ def test_graph_reranking_does_not_propagate_through_auxiliary_file(
     write_source(
         repository,
         "src/seed.py",
+        "from docs.refresh import refresh_layout\n\n"
         "def update_layout():\n"
         "    return refresh_layout()\n",
     )
     write_source(
         repository,
         "docs/refresh.py",
+        "from src.compositor import reflow_content\n\n"
         "def refresh_layout():\n"
         "    return reflow_content()\n",
     )

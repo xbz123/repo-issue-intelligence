@@ -86,21 +86,24 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The current manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4375`,
-Recall@5 `0.8333`, Recall@10 `0.8906`, Recall@20 `0.9688`, and MRR `0.6072`.
+The current manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
+Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
 After adding the reviewed `WorkerThread.__init__` target, the 16 labeled cases and 17 targets reach
 Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.4688`, Symbol Recall@10 `0.4688`, Symbol Recall@20
-`0.5312`, and symbol MRR `0.2795`. The qualified identity is representable, but the review-fixed
+`0.5938`, and symbol MRR `0.3099`. The qualified identity is representable, but the review-fixed
 selector does not infer `__init__` from an owner-only mention. Source-content retrieval now treats
 dotted tokens as complete, case-preserving identities and excludes their component terms unless a
-syntactic call in Issue text separately exposes the local callee. Function-level source call
-relations retain qualified caller identities and accept only direct `ast.Name` calls; unresolved
-attribute receivers and legacy broad call maps do not contribute inference edges. A full audit
-found changed file orderings and per-file symbol lists in all 32 cases relative to v0.11, including
-the corrected Starlette protocol-event and session-cookie selections. Relative to the immediately
-preceding v0.12 artifact, receiver-safe edges changed 24 file lists and 29 symbol lists; File
-Recall@20 stayed fixed while Textual's `_compositor.py` moved from rank 10 to 18. Two complete
-review-fixed v0.12 runs produced identical candidates and metrics after excluding timing fields.
+syntactic call in Issue text separately exposes the local callee. Function-level source relations
+consume exact file-and-symbol `resolved_calls` produced with lexical scope analysis; parameters,
+local assignments/imports, closures, statically visible `global` assignments, unresolved receivers,
+legacy broad maps, or definition-time rebinding cannot contribute inference edges. Specific
+title-to-path matches remain in the candidate pool when weaker graph expansions are added. A full
+audit found changed file orderings and per-file symbol lists in all 32 cases relative to v0.11,
+including the corrected Starlette protocol-event and session-cookie selections. Relative to the
+immediately preceding v0.12 artifact, the complete
+scope-safe contract changed 31 file lists and 31 symbol lists, increased File Recall@20 by `0.0156`
+and MRR by `0.0356`, and lowered Recall@5 by `0.0521`. Two complete review-fixed v0.12 runs produced
+identical candidates, symbols, and metrics after excluding timing fields.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 

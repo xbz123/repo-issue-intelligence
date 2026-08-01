@@ -1,8 +1,8 @@
 # Real-Project File Localization Benchmark
 
-## Current result: qualified symbol identities on 32 frozen cases
+## Current result: scope-resolved call edges on 32 frozen cases
 
-On 2026-07-31, manifest v7 retained the 32 manually reviewed Issue/Fix-PR cases across 13 public
+On 2026-08-01, manifest v7 retained the 32 manually reviewed Issue/Fix-PR cases across 13 public
 Python repositories and added qualified class/function ownership to the symbol contract. Every case
 stores an immutable Issue snapshot, the fix PR, and the parent of the first PR commit. The runner
 checked out all 32 pre-fix commits, verified the reviewed production files, and indexed only
@@ -10,19 +10,19 @@ Git-tracked paths.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 32/32 | 0.4375 | 0.8333 | 0.8906 | 0.9688 | 0.6072 | 3,161 ms |
-| Main | 12/12 | 0.5417 | 0.8333 | 0.9167 | 0.9167 | 0.6972 | 3,787 ms |
-| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 1.0000 | 0.4450 | 1,677 ms |
-| Generalization | 13/13 | 0.4231 | 0.8974 | 0.9231 | 1.0000 | 0.6115 | 3,382 ms |
+| Overall | 32/32 | 0.4479 | 0.7812 | 0.8906 | 0.9844 | 0.6428 | 4,765 ms |
+| Main | 12/12 | 0.5417 | 0.7500 | 0.9167 | 1.0000 | 0.6826 | 6,550 ms |
+| Calibration | 7/7 | 0.2857 | 0.7143 | 0.7857 | 0.9286 | 0.4812 | 2,209 ms |
+| Generalization | 13/13 | 0.4487 | 0.8462 | 0.9231 | 1.0000 | 0.6930 | 4,492 ms |
 
 Sixteen cases now contain 17 symbol targets taken from reviewed production hunks:
 
 | Labeled scope | Cases | Symbol Recall@1 | Symbol Recall@5 | Symbol Recall@10 | Symbol Recall@20 | Symbol MRR |
 |---|---:|---:|---:|---:|---:|---:|
-| Overall | 16 | 0.1875 | 0.4688 | 0.4688 | 0.5312 | 0.2795 |
-| Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.2500 | 0.2500 |
-| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.1620 |
-| Generalization | 6 | 0.3333 | 0.5833 | 0.5833 | 0.5833 | 0.4167 |
+| Overall | 16 | 0.1875 | 0.4688 | 0.4688 | 0.5938 | 0.3099 |
+| Main | 4 | 0.2500 | 0.2500 | 0.2500 | 0.5000 | 0.2667 |
+| Calibration | 6 | 0.0000 | 0.5000 | 0.5000 | 0.6667 | 0.2042 |
+| Generalization | 6 | 0.3333 | 0.5833 | 0.5833 | 0.5833 | 0.4444 |
 
 Symbol aggregates exclude unlabeled cases instead of counting them as misses. A match requires the
 exact reviewed file and symbol and retains the parent file's candidate rank. The investigator now
@@ -35,35 +35,49 @@ to file retrieval. Qualified matching preserves case and dot boundaries. Source-
 also matches dotted values only as complete, case-preserving tokens and excludes their component
 terms; syntactic object calls in Issue text separately expose their local callee. The ASGI event
 `websocket.accept` therefore neither selects nor contributes terminal-name content evidence for
-the Python method `WebSocket.accept`.
+the Python method `WebSocket.accept`. Bare names also require identifier boundaries: `get`, `set`,
+`data`, and `run` no longer match `target`, `reset`, `metadata`, or `runner` as substrings.
 
-Compared with v0.11, all 32 file orderings and all 32 per-file symbol candidate lists change after
-normalizing away qualified-name representation. Typer's option target moves from rank 4 to 3,
-while Textual's two-file target moves from ranks 4/10 to 4/18. The stricter evidence contract
-removes false-positive dotted, ambiguous-basename, and unresolved-receiver scope, but it is not a
-monotonic metric gain: the Rich `print_json` fix file moves from rank 1 to 7 and Textual's
-`_compositor.py` leaves the Top-10. Relative to v0.11, aggregate Recall@5 decreases by `0.0157`,
-Recall@10 decreases by `0.0156`, MRR increases by `0.0008`, and Recall@20 remains `0.9688`.
+Compared with v0.11, all 32 file orderings and all 32 per-file local-symbol candidate lists change.
+The scope-safe call contract and direct title-to-path protection improve Recall@1 by `0.0104`,
+Recall@20 by `0.0156`, and MRR by `0.0364`; Recall@5 decreases by `0.0678` and Recall@10 by
+`0.0156`. Typer's reviewed option file is rank 2, Textual's two reviewed files are ranks 3/18,
+Rich's ANSI parser is rank 17, and Pydantic's experimental pipeline is recovered at rank 15.
+The stricter evidence contract removes false-positive dotted, ambiguous-basename, unresolved
+receiver, and lexically shadowed call scope, but the lower Recall@5 is retained rather than hidden.
 The corrected selector still restores `cookie_parser` and `send_wrapper` for the Starlette session
 case and selects `WebSocket.send_denial_response` for the denial-response case. Trio's reviewed
 `WorkerThread.__init__` target remains a miss because the issue identifies the owning classes but
 not that method; allowing the owner to choose across different method names would recreate the
-reviewed false-positive mechanism. One Pydantic production file remains absent from the Top-20
-candidate pool, and several correct files are retrieved while the within-file selector chooses a
-neighboring function. This is useful negative evidence: candidate generation is close to
-saturation on the current file suite, while symbol localization remains a material bottleneck.
+reviewed false-positive mechanism. Rich's `highlighter.py` is the only reviewed production file
+absent from the Top-20 candidate pool, and several correct files are retrieved while the
+within-file selector chooses a neighboring function. This is useful negative evidence: candidate
+generation is close to saturation on the current file suite, while symbol localization remains a
+material bottleneck.
+
+Relative to the immediately preceding B1/B2 pre-fix artifact, boundary-aware bare-name matching
+changes 25 file orderings and 25 corresponding symbol lists without changing any Recall metric.
+The pytest fixture-ordering target improves from rank 8 to 7, while Rich's ANSI target moves from
+rank 16 to 17; file MRR changes from `0.6424` to `0.6428` and symbol MRR from `0.3101` to `0.3099`.
 
 The retrieval structure still combines lexical and content evidence, history, within-file call
 edges, and bounded two-hop propagation through uniquely resolved concrete functions. The current
-call contract retains the broad local-name maps for stored-data compatibility but uses only
-qualified-caller edges collected from direct `ast.Name` calls for inference. Attribute calls such
-as `self.rebuild()`, `backend.rebuild()`, or `view.refresh_layout()` cannot resolve to a same-named
-local function or start a strong two-hop promotion without receiver resolution. This prevents both
-duplicate callers such as `Cache.refresh` / `Worker.refresh` and unrelated attribute receivers from
-creating fabricated relation evidence. The graph also blocks ambiguous definitions and
-abstract/interface layers and preserves the strong relation that triggers a Top-10 diversity
-promotion. The Textual Top-10 loss is retained as honest negative evidence: recovering it safely
-requires receiver/type or runtime-dispatch resolution, not re-enabling terminal-name matching.
+call contract retains broad local-name maps for stored-data compatibility, but inference consumes
+only `resolved_calls`. Those edges require a unique caller identity, a uniquely resolved local
+function or `from ... import ...` target, and a lexical-scope check using Python's symbol table.
+Parameters, assignments, loop/exception/pattern targets, local imports, nested definitions,
+closures, declared globals, ambiguous aliases, and duplicate qualified callers do not become
+inference edges; definition-time rebinding also invalidates a target. Attribute calls such as
+`self.rebuild()`, `backend.rebuild()`, or
+`view.refresh_layout()` also cannot resolve without receiver analysis. The graph blocks ambiguous
+definitions and abstract/interface layers, preserves the strong relation that triggers a Top-10
+diversity promotion, and prevents graph-tail expansions from evicting base candidates with direct
+path or symbol evidence. The Textual Top-10 loss is retained as honest negative evidence:
+recovering it safely requires receiver/type or runtime-dispatch resolution, not terminal-name
+matching.
+Repository module resolution strips `src/` or `lib/` only when that directory is a source-layout
+root without a root `__init__.py`; top-level `src.py`, `lib.py`, and real `src`/`lib` packages keep
+their importable names.
 Two complete review-fixed v0.12 runs produced identical candidate lists and metrics after
 recursively removing timestamps and elapsed-time fields.
 

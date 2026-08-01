@@ -107,6 +107,13 @@ class SymbolRecord(BaseModel):
     docstring: str | None = None
 
 
+class ResolvedCall(BaseModel):
+    caller: str | None = None
+    local_name: str
+    target_file: str
+    target_symbol: str
+
+
 class FileRecord(BaseModel):
     path: str
     language: str
@@ -118,6 +125,8 @@ class FileRecord(BaseModel):
     name_calls: list[str] = Field(default_factory=list)
     symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
+    resolved_calls: list[ResolvedCall] = Field(default_factory=list)
+    resolved_import_references: dict[str, list[str]] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)
     test_file: bool = False
 

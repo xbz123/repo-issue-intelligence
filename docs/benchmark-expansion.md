@@ -19,8 +19,9 @@ repository, commit, or file ground truth:
   removing timing fields.
 
 The complete review-fixed selector, content matcher, and call-edge contract change all 32 file
-orderings relative to v0.11 while preserving File Recall@20 `0.9688`. Aggregate Symbol Recall@1 is
-`0.1875`, Recall@5 `0.4688`, Recall@10 `0.4688`, Recall@20 `0.5312`, and MRR `0.2795`. The
+orderings relative to v0.11. File Recall@1 is `0.4479`, Recall@5 `0.7812`, Recall@10 `0.8906`,
+Recall@20 `0.9844`, and MRR `0.6428`. Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.4688`,
+Recall@10 `0.4688`, Recall@20 `0.5938`, and MRR `0.3099`. The
 qualified contract can represent Trio's reviewed
 `WorkerThread.__init__` method, but the issue does not explicitly reference `__init__`; the
 review-fixed selector therefore keeps it as a miss instead of allowing an owner-name match to
@@ -30,10 +31,18 @@ lists change after normalizing away qualified-name representation. This includes
 source-content evidence, rejecting ambiguous basename scope, and preventing an unscoped `__call__`
 reference from selecting unrelated implementations across Starlette's candidate files. Qualified
 caller edges also prevent repeated methods in one file from sharing calls or creating fabricated
-relation evidence. Inference now consumes only direct `ast.Name` calls, so unresolved
-`self.method()` and `receiver.method()` calls cannot be reassigned to a same-named local function
-or start a strong two-hop promotion. Broad legacy call fields remain readable but do not drive
-ranking.
+relation evidence. Inference now consumes only direct `ast.Name` calls that lexical scope analysis
+resolves to one module function or imported repository symbol. Parameters, assignments, local
+imports, loop/context/exception/match targets, nested bindings, closures, statically visible
+`global` assignments, definition-time rebinding, `self.method()`, and `receiver.method()` cannot be
+reassigned to a same-named function or start a strong two-hop promotion. Broad legacy call fields
+remain readable but do not drive ranking.
+Bare source-content identifiers now require identifier boundaries, so short names such as `get`,
+`set`, `data`, and `run` cannot match `target`, `reset`, `metadata`, or `runner`. Source-layout
+inference also preserves top-level `src`/`lib` modules and packages instead of stripping those
+names unconditionally.
+Specific title-to-path evidence is protected from weaker tail expansion; this recovers
+`pydantic/experimental/pipeline.py` without restoring unsafe name propagation.
 
 ## v0.11 expansion outcome
 
