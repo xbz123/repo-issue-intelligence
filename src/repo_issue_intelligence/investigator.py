@@ -703,26 +703,50 @@ def _source_content(
     return identifier_hits, content_overlap, first_line
 
 
+def _is_identifier_continuation(character: str) -> bool:
+    return bool(character) and ("_" + character).isidentifier()
+
+
+def _has_valid_identifier_boundaries(
+    text: str,
+    match_start: int,
+    match_end: int,
+    *,
+    reject_dot: bool = False,
+) -> bool:
+    before = text[match_start - 1] if match_start > 0 else ""
+    after = text[match_end] if match_end < len(text) else ""
+    if reject_dot and (before == "." or after == "."):
+        return False
+    return not (
+        _is_identifier_continuation(before)
+        or _is_identifier_continuation(after)
+    )
+
+
 def _content_matches_identifier(text: str, identifier: str) -> bool:
     candidate = identifier.strip("`'\"()[]{}:,")
     if not candidate:
         return False
     if "." in candidate:
-        return (
-            re.search(
-                rf"(?<![A-Za-z0-9_.]){re.escape(candidate)}(?![A-Za-z0-9_.])",
+        return any(
+            _has_valid_identifier_boundaries(
                 text,
+                match.start(),
+                match.end(),
+                reject_dot=True,
             )
-            is not None
+            for match in re.finditer(re.escape(candidate), text)
         )
     lowered = text.lower()
     return any(
-        re.search(
-            rf"(?<![A-Za-z0-9_]){re.escape(variant)}(?![A-Za-z0-9_])",
+        _has_valid_identifier_boundaries(
             lowered,
+            match.start(),
+            match.end(),
         )
-        is not None
         for variant in _identifier_variants(candidate)
+        for match in re.finditer(re.escape(variant), lowered)
     )
 
 

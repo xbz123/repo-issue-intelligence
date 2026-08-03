@@ -121,6 +121,69 @@ def test_content_identifier_matching_accepts_identifier_boundaries() -> None:
     assert _content_matches_identifier("def get_value():\n    return None\n", "get_value")
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "变量data值",
+        "édataβ",
+        "a\u0301data",
+        "data\u0301",
+        "a\u203fdata",
+    ],
+    ids=[
+        "cjk-surround",
+        "accent-surround",
+        "combining-before",
+        "combining-after",
+        "connector-before",
+    ],
+)
+def test_content_identifier_matching_rejects_unicode_identifier_continuations(
+    source: str,
+) -> None:
+    assert source.isidentifier()
+    assert not _content_matches_identifier(source, "data")
+
+
+@pytest.mark.parametrize("root", ["src", "lib"])
+def test_repository_map_coexists_src_and_lib_root_modules(
+    tmp_path: Path,
+    root: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "app.py",
+        f"from {root} import helper\n"
+        "from package.api import handle\n\n"
+        "def invoke():\n"
+        "    helper()\n"
+        "    handle()\n",
+    )
+    write_source(
+        repository,
+        f"{root}.py",
+        "def helper():\n    return None\n",
+    )
+    write_source(
+        repository,
+        f"{root}/package/api.py",
+        "def handle():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    app = next(file for file in repository_map.files if file.path == "app.py")
+
+    assert app.local_imports == [f"{root}.py", f"{root}/package/api.py"]
+    assert {
+        (call.local_name, call.target_file, call.target_symbol)
+        for call in app.resolved_calls
+    } == {
+        ("helper", f"{root}.py", "helper"),
+        ("handle", f"{root}/package/api.py", "handle"),
+    }
+
+
 def test_locate_candidates_prioritizes_exact_issue_path(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     write_source(

@@ -614,7 +614,7 @@ def _python_module(
     is_package = bool(parts and parts[-1] == "__init__")
     if is_package:
         parts.pop()
-    if parts and parts[0] in source_roots:
+    if parts and len(parts) > 1 and parts[0] in source_roots:
         parts.pop(0)
     module = ".".join(parts)
     package = module if is_package else module.rpartition(".")[0]
