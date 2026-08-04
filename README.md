@@ -133,7 +133,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json
+  --output benchmarks/results/deterministic-v0.13-expanded-50-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -143,7 +143,7 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 LLM_MAX_OUTPUT_TOKENS=1600 \
 uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
@@ -168,11 +168,12 @@ uv run rii benchmark benchmarks/cases-v0.10-corrected-20-cases.json \
 The Hybrid benchmark uses a deliberately small reranking schema rather than the full investigation
 schema. This isolates file-ranking quality from hypothesis-generation reliability and avoids
 misclassifying schema failures as localization failures. Each evidence snippet is capped so the
-model sees a broad candidate set under the same total character budget. Current manifest version 7
-embeds 32 complete Issue snapshots across 13 repositories, corrected pre-fix SHAs, and 17 manually
-reviewed symbol targets across 16 cases. Manifest version 5 is retained as
+model sees a broad candidate set under the same total character budget. Current manifest version 8
+embeds 50 complete Issue snapshots across 21 repositories, corrected pre-fix SHAs, and 39 manually
+reviewed symbol targets across 33 cases. Manifest version 5 is retained as
 `benchmarks/cases-v0.10-corrected-20-cases.json` so the reviewed Groq and OpenCode runs remain
-reproducible, and version 6 remains available as `benchmarks/cases-v0.11-32-cases.json`.
+reproducible, version 6 remains available as `benchmarks/cases-v0.11-32-cases.json`, and version 7
+as `benchmarks/cases-v0.12-qualified-symbols-32-cases.json`.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
 reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
 network request.
@@ -281,68 +282,38 @@ See `docs/architecture.md` for system boundaries and
 
 ## Evaluation
 
-The current frozen benchmark contains 32 closed issues with linked fix PRs across 13 projects:
+The current frozen benchmark contains 50 closed issues with linked fix PRs across 21 projects:
+17 main, 11 calibration, and 22 generalization cases. It records 62 reviewed production-file
+targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issue snapshot and the
+parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
+for candidate retrieval.
 
-- Main: Starlette (4), FastAPI (3), Pydantic (4), and HTTPCore (1).
-- Calibration: Typer (2), Rich (2), and Click (3).
-- Generalization: Textual (3), AnyIO (3), pytest (3), aiohttp (2), Werkzeug (1), and Trio (1).
+Two manifest-v8 deterministic runs completed 50/50 cases and produced identical candidates,
+symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. Symbol Recall@1 is
+`0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and symbol MRR `0.2866`.
 
-Each case uses a committed Issue snapshot and the parent of the first fix-PR commit as its frozen
-pre-fix SHA. Only Git-tracked files are eligible for candidate retrieval.
+Qualified AST identities distinguish repeated local names while the public unqualified `symbol`
+field remains compatible. Bare identifiers require identifier boundaries and only receive direct
+priority when unique or constrained by an owner or uniquely resolved repository path. Inference
+consumes only lexically scope-resolved direct calls; unresolved receiver calls, shadowed names,
+ambiguous definitions, and legacy broad call maps cannot fabricate strong graph evidence. Real
+top-level `src` and `lib` modules/packages retain their importable names, while layout directories
+are stripped only when they are actual source roots.
 
-On manifest v7, v0.12 completed every case and achieved File Recall@1 `0.4479`, Recall@5 `0.7812`,
-Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`. On the 16 labeled cases, Symbol Recall@1
-is `0.1875`, Recall@5 is `0.4688`, Recall@10 is `0.4688`, Recall@20 is `0.5938`, and symbol MRR is
-`0.3099`. Qualified AST identities distinguish repeated local names while the public unqualified
-`symbol` field remains compatible. Symbol selection gives exact qualified references priority over
-title semantics. Bare names receive direct priority only when unique in the final candidate range
-or constrained by an owner or a source path that resolves to one repository file; repeated
-unscoped names remain semantic tie-breakers. Fenced non-call references and traceback frames retain
-qualified identities. Source-content retrieval matches bare names on identifier boundaries and
-dotted values only as complete, case-preserving tokens; it does not reuse dotted terminal
-components or component terms, while a syntactic call in Issue text still exposes its local callee
-separately. Repository-source inference consumes only `resolved_calls`: direct `ast.Name` calls
-whose caller scope is unambiguous and whose callee
-resolves to one module function or explicitly imported repository symbol. Parameters, assignments,
-loop/context/exception targets, local imports, nested bindings, closures, statically visible
-`global` assignments, or definition-time rebinding invalidate automatic resolution. Unresolved
-`self.method()`, `receiver.method()`, and `module.function()` calls remain only in legacy inspection
-fields and cannot fabricate relation evidence. Specific title-to-path evidence is protected from
-eviction by weaker graph expansions. A top-level `src.py`, `lib.py`, or package such as
-`lib/__init__.py` retains its real module identity; `src/` and `lib/` are treated as source-layout
-roots only when the repository contains that directory without a root package marker.
-Compared with v0.11, the complete review-fixed contract changes all 32 file orderings and all 32
-per-file symbol candidate lists, increases File Recall@20 by `0.0156`, and raises file MRR by
-`0.0364`; File Recall@5 decreases by `0.0678`. Compared with the immediately preceding v0.12
-artifact, it changes 31 file orderings and 31 symbol lists, raises File Recall@20 by `0.0156` and
-MRR by `0.0356`, while lowering Recall@5 by `0.0521`. Two complete runs produced identical
-candidates and metrics after excluding timing fields. The reviewed `WorkerThread.__init__` target
-is representable but not recovered without an explicit method reference, which deliberately
-exposes the limits of the current single-best-symbol selector.
+An authorized OpenCode `deepseek-v4-flash-free` hybrid run kept all 50 cases in the denominator.
+It reached File Recall@1 `0.6267`, Recall@5 `0.8133`, Recall@10 `0.8800`, Recall@20 `0.9300`, and
+MRR `0.7831`; 15 ranks improved, 35 were unchanged, and none worsened. Only 29/50 reranks were
+valid. Thirteen cases exhausted retries after an upstream DFLASH grammar HTTP 400 and eight after
+invalid JSON, then used the exact deterministic order. Successful final calls recorded 150,558
+input and 69,217 output tokens with `23.3 s` average model latency. This is evidence of ordering
+gain when reranking succeeds, not a production-reliability or root-cause-accuracy claim.
 
-An authorized OpenCode `deepseek-v4-flash-free` hybrid run evaluated all 32 manifest-v7 cases.
-All cases remained in the metric denominator: 28 returned valid reranks and four exhausted two
-`json_invalid` attempts before using the deterministic fallback. File Recall@1 reached `0.7135`,
-Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`. On the 16 labeled
-cases, Symbol Recall@1 reached `0.4688`, Recall@5/10 `0.5312`, Recall@20 `0.5938`, and symbol MRR
-`0.5245`. Relative to deterministic, 12 file ranks improved, 18 were unchanged, and two worsened;
-five labeled symbol ranks improved and none worsened. The 28 successful final calls recorded
-145,469 input and 59,682 output tokens with `20.1 s` average model latency. A separate diagnostic
-rerun recovered two of the four fallback cases, while the AnyIO free-threading and Click parameter
-cases again returned invalid JSON. This is one best-effort-seed run, not a stability estimate.
-A later deterministic audit also observed a metric-neutral rank-20 tail change for the Werkzeug
-case, so exact long-tail candidate reproducibility remains a known limitation.
-
-An integrity audit found that 18 of the previous 20 pre-fix SHAs were commits inside their fix
-PRs. All file- and model-quality metrics produced from manifest versions 2 and 3 are retained only
-as superseded historical artifacts, not as valid pre-fix comparisons. A paired manifest-v5 rerun
-completed after the correction: DeepSeek returned valid reranks for 20/20 cases with no fallback,
-while GPT-OSS 20B returned 17/20 valid reranks and used deterministic fallback for three HTTP 429
-cases. Those results are valid for the retained 20-case v5 snapshot but are not a measurement on
-the current 32-case v7 suite.
-
-This supports a bounded claim: deterministic retrieval finds most labeled fix files in its Top-20
-pool across the expanded suite. It still does not establish root-cause accuracy.
+The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
+2026, and only 11 of 50 cases have multi-file production ground truth. Five cases still miss at
+least one reviewed file at Top-20, so hybrid reranking cannot recover them. Superseded manifests
+and older paired model runs remain committed for provenance but must not be mixed with current
+manifest-v8 quality metrics.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.

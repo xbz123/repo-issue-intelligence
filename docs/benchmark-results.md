@@ -1,6 +1,64 @@
 # Real-Project File Localization Benchmark
 
-## Current result: scope-resolved call edges on 32 frozen cases
+## Current result: manifest v8 on 50 frozen cases
+
+On 2026-08-04, manifest v8 expanded the reviewed benchmark from 32 to 50 Issue/Fix-PR cases and
+from 13 to 21 public Python repositories. The 18 additions were accepted through a committed audit
+catalog and manual selection record. Every case embeds the complete Issue snapshot, the merged
+same-repository fix PR, the parent of the first ordered PR commit, and reviewed production-file
+ground truth. The resulting suite contains 17 main, 11 calibration, and 22 generalization cases,
+with 62 file targets. Thirty-three cases also contain 39 reviewed symbol targets.
+
+Two complete deterministic runs finished 50/50 cases. After removing only timestamps and elapsed
+fields, their candidate files, candidate symbols, per-case metrics, tier metrics, and overall
+metrics were structurally identical.
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9300 | 0.6016 | 6,094 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9118 | 0.6124 | 8,419 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 0.9545 | 0.5183 | 3,403 ms |
+| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 0.9318 | 0.6349 | 5,644 ms |
+
+The paired OpenCode `deepseek-v4-flash-free` run kept all 50 cases in the denominator and used
+the exact deterministic candidate pool:
+
+| Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Deterministic v0.13 | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9300 | 0.6016 | - |
+| DeepSeek V4 Flash Free | 50/50 | 0.6267 | 0.8133 | 0.8800 | 0.9300 | 0.7831 | 29/50 |
+
+Fifteen expected-file reciprocal ranks improved, 35 were unchanged, and none worsened. All 21
+fallback cases retained the exact deterministic order. On the 29 cases with a valid rerank, file
+Recall@1 moved from `0.4080` to `0.7874`, Recall@5 from `0.7069` to `0.9195`, and MRR from
+`0.6095` to `0.9224`. This paired subset shows that the aggregate gain is attributable to valid
+reranks rather than excluding provider failures.
+
+Provider reliability is a material limitation. Thirteen cases exhausted two attempts after the
+OpenCode upstream returned HTTP 400 because DFLASH speculative decoding did not support the
+requested grammar-constrained path. Eight more exhausted two locally invalid JSON responses. The
+29 successful final calls recorded 150,558 input and 69,217 output tokens and averaged `23.3 s`;
+failed attempts expose no token counts, so these are not total provider-consumption numbers. This
+is one best-effort-seed run and does not establish model-output variance.
+
+On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
+`0.1970/0.3636/0.3636/0.4242` with MRR `0.2866`. Hybrid changed those values to
+`0.3485/0.4242/0.4242/0.4242` with MRR `0.4040`. Reranking cannot recover a symbol whose parent
+file or selected within-file symbol is absent from the deterministic pool.
+
+The new 18-case slice is harder than the retained 32 cases. Its deterministic Recall@1/5/20 and
+MRR are `0.3333/0.5278/0.8333/0.5283`; hybrid reaches
+`0.5556/0.6944/0.8333/0.7066`, with nine valid reranks and nine fallbacks. Five cases still miss
+at least one reviewed file at Top-20: Rich `highlighter.py`, Celery `worker/pidbox.py`, Poetry
+`console/commands/publish.py` and `utils/env/python/manager.py`, and Scrapy
+`utils/decorators.py`. These are candidate-generation failures, not reranker failures.
+
+The 50-case suite is an initial scale expansion, not a balanced population sample. Sixteen of the
+18 new Issues were created in 2026 and two in 2024; only 11 of 50 cases have multi-file production
+ground truth. Future curation should add older cases and more multi-file/backend-dispatch fixes
+instead of continuing to sample primarily from recent merged work.
+
+## Previous result: scope-resolved call edges on 32 frozen cases
 
 On 2026-08-01, manifest v7 retained the 32 manually reviewed Issue/Fix-PR cases across 13 public
 Python repositories and added qualified class/function ownership to the symbol contract. Every case
@@ -83,16 +141,22 @@ recursively removing timestamps and elapsed-time fields.
 
 Current machine-readable artifacts:
 
-- `benchmarks/cases.json` — current manifest version 7;
+- `benchmarks/cases.json` — current manifest version 8;
+- `benchmarks/candidates-v0.13.json` — accepted audit catalog for the 18 new cases;
+- `benchmarks/expansion-v0.13-selection.json` — explicit review decisions for the new cases;
+- `benchmarks/cases-v0.13-expanded-50-cases.json` — named copy of manifest v8;
+- `benchmarks/results/deterministic-v0.13-expanded-50-cases.json` — current deterministic run;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json` — paired
+  manifest-v8 OpenCode DeepSeek rerank;
 - `benchmarks/cases-v0.10-corrected-20-cases.json` — frozen manifest v5 used for paired LLM runs;
 - `benchmarks/candidates-v0.11.json` — accepted audit catalog for the 12 new cases;
 - `benchmarks/expansion-v0.11-selection.json` — explicit manual acceptance decisions;
 - `benchmarks/cases-v0.11-32-cases.json` — retained pre-qualified-symbol manifest v6;
 - `benchmarks/cases-v0.12-qualified-symbols-32-cases.json` — named copy of manifest v7;
 - `benchmarks/results/deterministic-v0.11-expanded-32-cases.json` — retained v0.11 baseline;
-- `benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json` — current
+- `benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json` — retained v7
   deterministic run;
-- `benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json` — current
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json` — retained
   manifest-v7 OpenCode DeepSeek rerank;
 - `benchmarks/results/hybrid-deepseek-v4-flash-v0.10-manifest-v5-20-cases.json` — corrected-v5
   OpenCode rerank;
@@ -103,9 +167,9 @@ Current machine-readable artifacts:
 
 All results generated from manifest versions 2 and 3 remain committed for provenance but are
 superseded as localization-quality evidence. Provider integration observations may remain useful,
-but their Recall and MRR values must not be mixed with the corrected v5 or current v7 suites.
+but their Recall and MRR values must not be mixed with the corrected v5, v7, or current v8 suites.
 
-## External LLM reranking on current manifest v7
+## Previous external LLM reranking on manifest v7
 
 On 2026-08-01, an authorized OpenCode `deepseek-v4-flash-free` run reranked the current
 manifest-v7 candidate pool. Every frozen Issue snapshot and candidate snippet came from the 13

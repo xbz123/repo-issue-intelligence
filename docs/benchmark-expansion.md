@@ -6,9 +6,51 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.13 50-case expansion outcome
+
+Manifest v8 adds 18 manually reviewed Issue/Fix-PR pairs from eight repositories: Uvicorn,
+Celery, Flask, Black, pip, mypy, Poetry, and Scrapy. The current suite contains 50 cases across 21
+repositories: 17 main, 11 calibration, and 22 generalization. It has 62 reviewed production-file
+targets, including 11 multi-file cases, and 39 reviewed symbol targets across 33 cases.
+
+The committed `candidates-v0.13.json` catalog records all 18 additions as `accepted`, with no
+blocking audit failure. `expansion-v0.13-selection.json` contains one unique manual decision per
+candidate and case. Each selected PR is merged in the same repository, is recorded by GitHub as a
+closing PR for the Issue, and has a reviewed pre-fix SHA equal to the parent of the first ordered
+PR commit. All reviewed production files exist at that commit.
+
+| Repository | Cases | Selected Issue / fix PR pairs |
+|---|---:|---|
+| Uvicorn | 2 | #3035 / #3036, #3040 / #3041 |
+| Celery | 3 | #10312 / #10313, #10322 / #10324, #10340 / #10363 |
+| Flask | 2 | #5621 / #5632, #5628 / #5630 |
+| Black | 2 | #5225 / #5238, #5243 / #5244 |
+| pip | 2 | #14079 / #14084, #14136 / #14143 |
+| mypy | 2 | #21736 / #21737, #21777 / #21788 |
+| Poetry | 3 | #10760 / #10769, #10770 / #10784, #10830 / #10917 |
+| Scrapy | 2 | #7759 / #7763, #7796 / #7818 |
+
+Two complete deterministic evaluations produced identical candidates, symbols, and metrics after
+excluding timestamps and elapsed fields. The 50-case baseline is File Recall@1 `0.4067`,
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. The 33 labeled cases
+reach Symbol Recall@1 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and MRR `0.2866`.
+
+An authorized OpenCode `deepseek-v4-flash-free` run completed all 50 cases and kept provider
+failures in the denominator through deterministic fallback. It reached File Recall@1 `0.6267`,
+Recall@5 `0.8133`, Recall@10 `0.8800`, Recall@20 `0.9300`, and MRR `0.7831`. Twenty-nine reranks
+were valid; 13 cases exhausted retries after an upstream DFLASH grammar HTTP 400 and eight after
+invalid JSON. Fifteen expected-file ranks improved and none worsened. This supports a bounded
+ordering-gain claim for valid reranks, while the 58% success rate is a provider-reliability warning.
+
+The expansion is intentionally labeled an initial 50-case suite rather than a representative
+sample. Sixteen of the 18 additions were created in 2026 and two in 2024, and the 11 multi-file
+cases remain below the earlier diversity target. The next selection pass should prioritize older
+Issue/Fix-PR pairs, multi-file production changes, backend/runtime dispatch, and current Top-20
+misses instead of adding more recent single-file cases.
+
 ## v0.12 qualified-symbol outcome
 
-The current manifest is version 7. It keeps the 32 independently reviewed cases across 13
+The previous qualified-symbol manifest is version 7. It keeps 32 independently reviewed cases across 13
 repositories and adds qualified class/function ownership without changing the frozen Issue,
 repository, commit, or file ground truth:
 
@@ -156,22 +198,23 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.12-qualified-symbols-32-cases.json
+  --output benchmarks/results/deterministic-v0.13-expanded-50-cases.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
 catalog, manual selection, frozen manifest, and evaluated results are committed. Current audits
-must use the corrected ordered-commit checks. The v0.11 accepted catalog is
-`candidates-v0.11.json`; `candidates-v0.7.json` remains the corrected audit record for the
-20-case base suite.
+must use the corrected ordered-commit checks. The current accepted catalog and decisions are
+`candidates-v0.13.json` and `expansion-v0.13-selection.json`; the v0.11 and v0.7 catalogs retain
+the prior 32-case and corrected 20-case provenance.
 
-## Candidate projects after v0.12
+## Candidate projects after v0.13
 
-The 30-case threshold is now met without concentrating all new labels in one framework. Discovery
-also showed why acceptance remains manual: the HTTPX and Django scans produced no reviewable
-candidates in the configured window, while the SQLAlchemy review queue was dominated by
-documentation changes. Those repositories remain useful future targets, but should not be added
-to satisfy a quota.
+The 50-case threshold is now met across 21 repositories. The next expansion should improve
+temporal and structural balance rather than satisfy a larger quota. Discovery also showed why
+acceptance remains manual: earlier HTTPX and Django scans produced no reviewable candidates in the
+configured window, while the SQLAlchemy review queue was dominated by documentation changes.
+Those repositories remain useful future targets only when a concrete pair adds a missing failure
+mode.
 
 | Repository | Intended role | Useful coverage |
 |---|---|---|
