@@ -6,16 +6,99 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
-## v0.11 outcome
+## v0.13 50-case expansion outcome
 
-The current manifest is version 6. It expands the corrected 20-case suite to 32 independently
-reviewed cases across 13 repositories:
+Manifest v8 adds 18 manually reviewed Issue/Fix-PR pairs from eight repositories: Uvicorn,
+Celery, Flask, Black, pip, mypy, Poetry, and Scrapy. The current suite contains 50 cases across 21
+repositories: 17 main, 11 calibration, and 22 generalization. It has 62 reviewed production-file
+targets, including 11 multi-file cases, and 39 reviewed symbol targets across 33 cases.
+
+The committed `candidates-v0.13.json` catalog records all 18 additions as `accepted`, with no
+blocking audit failure. `expansion-v0.13-selection.json` contains one unique manual decision per
+candidate and case. Each selected PR is merged in the same repository, is recorded by GitHub as a
+closing PR for the Issue, and has a reviewed pre-fix SHA equal to the parent of the first ordered
+PR commit. All reviewed production files exist at that commit.
+
+| Repository | Cases | Selected Issue / fix PR pairs |
+|---|---:|---|
+| Uvicorn | 2 | #3035 / #3036, #3040 / #3041 |
+| Celery | 3 | #10312 / #10313, #10322 / #10324, #10340 / #10363 |
+| Flask | 2 | #5621 / #5632, #5628 / #5630 |
+| Black | 2 | #5225 / #5238, #5243 / #5244 |
+| pip | 2 | #14079 / #14084, #14136 / #14143 |
+| mypy | 2 | #21736 / #21737, #21777 / #21788 |
+| Poetry | 3 | #10760 / #10769, #10770 / #10784, #10830 / #10917 |
+| Scrapy | 2 | #7759 / #7763, #7796 / #7818 |
+
+Two complete deterministic evaluations produced identical candidates, symbols, and metrics after
+excluding timestamps and elapsed fields. The 50-case baseline is File Recall@1 `0.4067`,
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. The 33 labeled cases
+reach Symbol Recall@1 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and MRR `0.2866`.
+
+An authorized OpenCode `deepseek-v4-flash-free` run completed all 50 cases and kept provider
+failures in the denominator through deterministic fallback. It reached File Recall@1 `0.6267`,
+Recall@5 `0.8133`, Recall@10 `0.8800`, Recall@20 `0.9300`, and MRR `0.7831`. Twenty-nine reranks
+were valid; 13 cases exhausted retries after an upstream DFLASH grammar HTTP 400 and eight after
+invalid JSON. Fifteen expected-file ranks improved and none worsened. This supports a bounded
+ordering-gain claim for valid reranks, while the 58% success rate is a provider-reliability warning.
+
+The expansion is intentionally labeled an initial 50-case suite rather than a representative
+sample. Sixteen of the 18 additions were created in 2026 and two in 2024, and the 11 multi-file
+cases remain below the earlier diversity target. The next selection pass should prioritize older
+Issue/Fix-PR pairs, multi-file production changes, backend/runtime dispatch, and current Top-20
+misses instead of adding more recent single-file cases.
+
+## v0.12 qualified-symbol outcome
+
+The previous qualified-symbol manifest is version 7. It keeps 32 independently reviewed cases across 13
+repositories and adds qualified class/function ownership without changing the frozen Issue,
+repository, commit, or file ground truth:
 
 - 12 main, 7 calibration, and 13 generalization cases;
-- 16 reviewed function targets across 15 cases;
+- 17 reviewed symbol targets across 16 cases;
 - 32/32 successful frozen-checkout evaluations;
-- two complete deterministic runs with identical candidate and metric output after removing
-  timing fields.
+- two complete review-fixed deterministic runs with identical candidate and metric output after
+  removing timing fields.
+
+The complete review-fixed selector, content matcher, and call-edge contract change all 32 file
+orderings relative to v0.11. File Recall@1 is `0.4479`, Recall@5 `0.7812`, Recall@10 `0.8906`,
+Recall@20 `0.9844`, and MRR `0.6428`. Aggregate Symbol Recall@1 is `0.1875`, Recall@5 `0.4688`,
+Recall@10 `0.4688`, Recall@20 `0.5938`, and MRR `0.3099`. The
+qualified contract can represent Trio's reviewed
+`WorkerThread.__init__` method, but the issue does not explicitly reference `__init__`; the
+review-fixed selector therefore keeps it as a miss instead of allowing an owner-name match to
+override stronger local method evidence. Across all 32 cases, all 32 per-file symbol candidate
+lists change after normalizing away qualified-name representation. This includes preventing
+`websocket.accept` from degrading to either the Python method `WebSocket.accept` or terminal-name
+source-content evidence, rejecting ambiguous basename scope, and preventing an unscoped `__call__`
+reference from selecting unrelated implementations across Starlette's candidate files. Qualified
+caller edges also prevent repeated methods in one file from sharing calls or creating fabricated
+relation evidence. Inference now consumes only direct `ast.Name` calls that lexical scope analysis
+resolves to one module function or imported repository symbol. Parameters, assignments, local
+imports, loop/context/exception/match targets, nested bindings, closures, statically visible
+`global` assignments, definition-time rebinding, `self.method()`, and `receiver.method()` cannot be
+reassigned to a same-named function or start a strong two-hop promotion. Broad legacy call fields
+remain readable but do not drive ranking.
+Bare source-content identifiers now require identifier boundaries, so short names such as `get`,
+`set`, `data`, and `run` cannot match `target`, `reset`, `metadata`, or `runner`. Source-layout
+inference also preserves top-level `src`/`lib` modules and packages instead of stripping those
+names unconditionally.
+Specific title-to-path evidence is protected from weaker tail expansion; this recovers
+`pydantic/experimental/pipeline.py` without restoring unsafe name propagation.
+
+An authorized OpenCode `deepseek-v4-flash-free` rerank subsequently completed all 32 cases on this
+same manifest and deterministic candidate pool. Twenty-eight responses were valid and four used
+the deterministic fallback after two `json_invalid` attempts. File Recall@1 reached `0.7135`,
+Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`; on the 16 labeled
+cases, Symbol Recall@1 reached `0.4688` and symbol MRR `0.5245`. This is evidence that model
+reranking improves ordering within the frozen pool, not that it can recover Rich's missing
+`highlighter.py` or replace candidate generation. The full result and fallback audit are recorded
+in `docs/benchmark-results.md`.
+
+## v0.11 expansion outcome
+
+Manifest version 6 expanded the corrected 20-case suite to 32 cases and is retained as
+`benchmarks/cases-v0.11-32-cases.json`.
 
 The discovery pass screened 186 Issue/Fix-PR candidates from Click, Pydantic, SQLAlchemy, HTTPX,
 Django, aiohttp, HTTPCore, Flask, Werkzeug, and Trio. Thirty-two reached `needs_review`; manual
@@ -36,11 +119,11 @@ diff and relationship review accepted the following 12:
 | Generalization | Werkzeug | [#3138](https://github.com/pallets/werkzeug/issues/3138) / [#3140](https://github.com/pallets/werkzeug/pull/3140) | `src/werkzeug/serving.py` |
 | Generalization | Trio | [#3472](https://github.com/python-trio/trio/issues/3472) / [#3473](https://github.com/python-trio/trio/pull/3473) | `src/trio/_core/_thread_cache.py` |
 
-Ten of the new cases have function labels taken from reviewed production hunks. HTTPCore's fix is
-an import guard rather than a function, and Trio changes `WorkerThread.__init__`; the current
-unqualified-symbol contract cannot distinguish that method from other `__init__` definitions, so
-neither case is given a misleading symbol label. HTTPCore's coverage-only `_backends/anyio.py`
-edit is also excluded from file ground truth.
+Ten of the new cases initially received function labels taken from reviewed production hunks.
+HTTPCore's fix is an import guard rather than a function, and Trio changes
+`WorkerThread.__init__`; manifest v6's unqualified-symbol contract could not distinguish that
+method from other `__init__` definitions, so neither case received a misleading symbol label.
+HTTPCore's coverage-only `_backends/anyio.py` edit is also excluded from file ground truth.
 
 The v0.11 deterministic result is File Recall@1 `0.4375`, Recall@5 `0.8490`, Recall@10 `0.9062`,
 Recall@20 `0.9688`, and MRR `0.6064`. On the 15 symbol-labeled cases, Symbol Recall@1 is `0.2000`,
@@ -115,22 +198,23 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.11-expanded-32-cases.json
+  --output benchmarks/results/deterministic-v0.13-expanded-50-cases.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
 catalog, manual selection, frozen manifest, and evaluated results are committed. Current audits
-must use the corrected ordered-commit checks. The v0.11 accepted catalog is
-`candidates-v0.11.json`; `candidates-v0.7.json` remains the corrected audit record for the
-20-case base suite.
+must use the corrected ordered-commit checks. The current accepted catalog and decisions are
+`candidates-v0.13.json` and `expansion-v0.13-selection.json`; the v0.11 and v0.7 catalogs retain
+the prior 32-case and corrected 20-case provenance.
 
-## Candidate projects after v0.11
+## Candidate projects after v0.13
 
-The 30-case threshold is now met without concentrating all new labels in one framework. Discovery
-also showed why acceptance remains manual: the HTTPX and Django scans produced no reviewable
-candidates in the configured window, while the SQLAlchemy review queue was dominated by
-documentation changes. Those repositories remain useful future targets, but should not be added
-to satisfy a quota.
+The 50-case threshold is now met across 21 repositories. The next expansion should improve
+temporal and structural balance rather than satisfy a larger quota. Discovery also showed why
+acceptance remains manual: earlier HTTPX and Django scans produced no reviewable candidates in the
+configured window, while the SQLAlchemy review queue was dominated by documentation changes.
+Those repositories remain useful future targets only when a concrete pair adds a missing failure
+mode.
 
 | Repository | Intended role | Useful coverage |
 |---|---|---|
@@ -140,6 +224,7 @@ to satisfy a quota.
 | `django/django` | Generalization | larger repository and deeper cross-module behavior |
 | `pallets/click` | Calibration | compact CLI parsing and option behavior |
 
-The next expansion should prioritize repositories or cases that add qualified methods,
-runtime/backend dispatch, or cross-language behavior. Promote a repository to a larger share only
-after its initial cases pass checkout validation and add failure modes not already represented.
+The next expansion should prioritize repositories or cases that add runtime/backend dispatch,
+multi-symbol edits, semantic test-to-source relationships, or cross-language behavior. Promote a
+repository to a larger share only after its initial cases pass checkout validation and add failure
+modes not already represented.

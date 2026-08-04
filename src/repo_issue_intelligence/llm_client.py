@@ -292,7 +292,7 @@ class OpenAICompatibleIssueAnalyzer:
             "deterministic_candidates": [
                 {
                     "file": candidate.file,
-                    "symbol": candidate.symbol,
+                    "symbol": candidate.qualified_symbol or candidate.symbol,
                     "lines": candidate.lines,
                     "confidence": candidate.confidence,
                     "evidence": candidate.evidence,

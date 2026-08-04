@@ -100,10 +100,18 @@ class DuplicateMatch(BaseModel):
 
 class SymbolRecord(BaseModel):
     name: str
+    qualified_name: str | None = None
     kind: str
     line: int
     end_line: int | None = None
     docstring: str | None = None
+
+
+class ResolvedCall(BaseModel):
+    caller: str | None = None
+    local_name: str
+    target_file: str
+    target_symbol: str
 
 
 class FileRecord(BaseModel):
@@ -114,7 +122,11 @@ class FileRecord(BaseModel):
     local_imports: list[str] = Field(default_factory=list)
     local_import_symbols: dict[str, list[str]] = Field(default_factory=dict)
     calls: list[str] = Field(default_factory=list)
+    name_calls: list[str] = Field(default_factory=list)
     symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
+    qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
+    resolved_calls: list[ResolvedCall] = Field(default_factory=list)
+    resolved_import_references: dict[str, list[str]] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)
     test_file: bool = False
 
@@ -132,6 +144,7 @@ class RepositoryMap(BaseModel):
 class CandidateLocation(BaseModel):
     file: str
     symbol: str | None = None
+    qualified_symbol: str | None = None
     lines: str | None = None
     confidence: float
     evidence: list[str]
