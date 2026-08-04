@@ -132,7 +132,8 @@ UNICODE_ID_CONTINUE_CATEGORIES = {
     "Pc",
 }
 UNICODE_OTHER_ID_START = {"\u2118", "\u212e", "\u309b", "\u309c"}
-UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da"}
+UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da", "\u30fb", "\uff65"}
+UNICODE_ID_CONTINUE_EXCLUSIONS = {"\u2e2f"}
 ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS = {"$", "\u200c", "\u200d"}
 
 
@@ -733,7 +734,7 @@ def _is_identifier_continuation(
         return False
     if language not in ECMASCRIPT_LANGUAGES:
         return ("_" + character).isidentifier()
-    return (
+    return character not in UNICODE_ID_CONTINUE_EXCLUSIONS and (
         unicodedata.category(character) in UNICODE_ID_CONTINUE_CATEGORIES
         or character in UNICODE_OTHER_ID_START
         or character in UNICODE_OTHER_ID_CONTINUE

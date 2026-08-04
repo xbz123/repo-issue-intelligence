@@ -155,6 +155,8 @@ def test_content_identifier_matching_rejects_unicode_identifier_continuations(
         "data\u200dvalue",
         "\u037adata",
         "prefix\u309bdata",
+        "data\u30fbvalue",
+        "prefix\uff65data",
     ],
     ids=[
         "dollar-before",
@@ -163,6 +165,8 @@ def test_content_identifier_matching_rejects_unicode_identifier_continuations(
         "zwj-after",
         "id-continue-before",
         "other-id-start-before",
+        "katakana-middle-dot-after",
+        "halfwidth-katakana-middle-dot-before",
     ],
 )
 def test_content_identifier_matching_uses_ecmascript_continuations(
@@ -176,6 +180,11 @@ def test_content_identifier_matching_uses_ecmascript_continuations(
     )
     assert _content_matches_identifier(
         "const data = object.data;",
+        "data",
+        language=language,
+    )
+    assert _content_matches_identifier(
+        "prefix\u2e2fdata",
         "data",
         language=language,
     )
