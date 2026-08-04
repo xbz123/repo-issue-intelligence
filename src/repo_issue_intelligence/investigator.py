@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,6 +118,22 @@ SYMBOL_EVIDENCE_PREFIXES = (
     "Issue references owning symbol ",
     "Issue-matching symbols call ",
 )
+ECMASCRIPT_LANGUAGES = {"JavaScript", "TypeScript"}
+UNICODE_ID_CONTINUE_CATEGORIES = {
+    "Lu",
+    "Ll",
+    "Lt",
+    "Lm",
+    "Lo",
+    "Nl",
+    "Mn",
+    "Mc",
+    "Nd",
+    "Pc",
+}
+UNICODE_OTHER_ID_START = {"\u2118", "\u212e", "\u309b", "\u309c"}
+UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da"}
+ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS = {"$", "\u200c", "\u200d"}
 
 
 @dataclass(frozen=True)
@@ -653,6 +670,7 @@ def _source_content(
     root: Path,
     relative_path: str,
     signals: IssueSignals,
+    language: str,
 ) -> tuple[set[str], set[str], int | None]:
     path = (root / relative_path).resolve()
     if not path.is_relative_to(root) or not path.is_file():
@@ -679,7 +697,7 @@ def _source_content(
     identifier_hits = {
         identifier
         for identifier in content_identifiers
-        if _content_matches_identifier(text, identifier)
+        if _content_matches_identifier(text, identifier, language=language)
     }
     lowered = text.lower()
     content_overlap = {
@@ -694,7 +712,11 @@ def _source_content(
                 line_number
                 for line_number, line in enumerate(text.splitlines(), start=1)
                 if any(
-                    _content_matches_identifier(line, identifier)
+                    _content_matches_identifier(
+                        line,
+                        identifier,
+                        language=language,
+                    )
                     for identifier in identifier_hits
                 )
             ),
@@ -703,8 +725,21 @@ def _source_content(
     return identifier_hits, content_overlap, first_line
 
 
-def _is_identifier_continuation(character: str) -> bool:
-    return bool(character) and ("_" + character).isidentifier()
+def _is_identifier_continuation(
+    character: str,
+    language: str | None,
+) -> bool:
+    if not character:
+        return False
+    if language not in ECMASCRIPT_LANGUAGES:
+        return ("_" + character).isidentifier()
+    return (
+        unicodedata.category(character) in UNICODE_ID_CONTINUE_CATEGORIES
+        or character in UNICODE_OTHER_ID_START
+        or character in UNICODE_OTHER_ID_CONTINUE
+        or "\u1369" <= character <= "\u1371"
+        or character in ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS
+    )
 
 
 def _has_valid_identifier_boundaries(
@@ -713,18 +748,24 @@ def _has_valid_identifier_boundaries(
     match_end: int,
     *,
     reject_dot: bool = False,
+    language: str | None = None,
 ) -> bool:
     before = text[match_start - 1] if match_start > 0 else ""
     after = text[match_end] if match_end < len(text) else ""
     if reject_dot and (before == "." or after == "."):
         return False
     return not (
-        _is_identifier_continuation(before)
-        or _is_identifier_continuation(after)
+        _is_identifier_continuation(before, language)
+        or _is_identifier_continuation(after, language)
     )
 
 
-def _content_matches_identifier(text: str, identifier: str) -> bool:
+def _content_matches_identifier(
+    text: str,
+    identifier: str,
+    *,
+    language: str | None = None,
+) -> bool:
     candidate = identifier.strip("`'\"()[]{}:,")
     if not candidate:
         return False
@@ -735,6 +776,7 @@ def _content_matches_identifier(text: str, identifier: str) -> bool:
                 match.start(),
                 match.end(),
                 reject_dot=True,
+                language=language,
             )
             for match in re.finditer(re.escape(candidate), text)
         )
@@ -744,6 +786,7 @@ def _content_matches_identifier(text: str, identifier: str) -> bool:
             lowered,
             match.start(),
             match.end(),
+            language=language,
         )
         for variant in _identifier_variants(candidate)
         for match in re.finditer(re.escape(variant), lowered)
@@ -1235,6 +1278,7 @@ def locate_candidates(
             root,
             file.path,
             signals,
+            file.language,
         )
         raw_score = (
             30.0 * exact_path

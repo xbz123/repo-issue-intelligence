@@ -145,6 +145,72 @@ def test_content_identifier_matching_rejects_unicode_identifier_continuations(
     assert not _content_matches_identifier(source, "data")
 
 
+@pytest.mark.parametrize("language", ["JavaScript", "TypeScript"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "$data",
+        "data$value",
+        "prefix\u200cdata",
+        "data\u200dvalue",
+        "\u037adata",
+        "prefix\u309bdata",
+    ],
+    ids=[
+        "dollar-before",
+        "dollar-after",
+        "zwnj-before",
+        "zwj-after",
+        "id-continue-before",
+        "other-id-start-before",
+    ],
+)
+def test_content_identifier_matching_uses_ecmascript_continuations(
+    language: str,
+    source: str,
+) -> None:
+    assert not _content_matches_identifier(
+        source,
+        "data",
+        language=language,
+    )
+    assert _content_matches_identifier(
+        "const data = object.data;",
+        "data",
+        language=language,
+    )
+
+
+@pytest.mark.parametrize(
+    ("extension", "source"),
+    [
+        ("js", "const $data = 1;\n"),
+        ("ts", "const prefix\u200cdata = 1;\n"),
+    ],
+)
+def test_locate_candidates_applies_ecmascript_content_boundaries(
+    tmp_path: Path,
+    extension: str,
+    source: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, f"frontend.{extension}", source)
+    write_source(repository, "backend.py", "data = 1\n")
+
+    candidates = {
+        candidate.file: candidate
+        for candidate in locate_candidates(
+            issue("Unexpected lookup", "The `data` lookup fails."),
+            build_repository_map(repository),
+        )
+    }
+    identifier_evidence = "Source contains issue identifiers: data"
+
+    assert identifier_evidence in candidates["backend.py"].evidence
+    assert identifier_evidence not in candidates[f"frontend.{extension}"].evidence
+    assert candidates[f"frontend.{extension}"].lines is None
+
+
 @pytest.mark.parametrize("root", ["src", "lib"])
 def test_repository_map_coexists_src_and_lib_root_modules(
     tmp_path: Path,
