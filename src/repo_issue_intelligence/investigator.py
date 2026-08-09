@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ from .models import (
     IssueRecord,
     RepositoryMap,
     ReproductionPlan,
+    ResolvedCall,
     SymbolRecord,
 )
 
@@ -84,9 +86,16 @@ PATH_REFERENCE_PATTERN = re.compile(
     rf"[A-Za-z0-9_.-]+\.(?:{SOURCE_SUFFIXES})(?![A-Za-z0-9_])",
     re.IGNORECASE,
 )
-CODE_SPAN_PATTERN = re.compile(r"`([^`\n]{1,120})`")
+CODE_SPAN_PATTERN = re.compile(r"(?<!`)`([^`\n]{1,120})`(?!`)")
+FENCED_CODE_PATTERN = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 IDENTIFIER_PATTERN = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b"
+)
+CALLED_IDENTIFIER_PATTERN = re.compile(
+    r"\b((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\s*\("
+)
+TRACEBACK_IDENTIFIER_PATTERN = re.compile(
+    r"\bin\s+((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\b"
 )
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
@@ -95,21 +104,47 @@ GRAPH_RERANK_BAND_SIZE = 10
 GRAPH_EXPANSION_MIN_BONUS = 5.0
 GRAPH_EXPANSION_SLOTS = 3
 GRAPH_STRONG_EXPANSION_SLOTS = 1
-GRAPH_DYNAMIC_CALL_MIN_LENGTH = 8
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
+SPECIFIC_PATH_TERM_MAX_FILES = 3
 HISTORY_COMMIT_LIMIT = 50
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
 BLAME_FILE_LIMIT = 20
+SYMBOL_EVIDENCE_PREFIXES = (
+    "Symbol ",
+    "Issue references symbol ",
+    "Issue title strongly matches symbol ",
+    "Issue references owning symbol ",
+    "Issue-matching symbols call ",
+)
+ECMASCRIPT_LANGUAGES = {"JavaScript", "TypeScript"}
+UNICODE_ID_CONTINUE_CATEGORIES = {
+    "Lu",
+    "Ll",
+    "Lt",
+    "Lm",
+    "Lo",
+    "Nl",
+    "Mn",
+    "Mc",
+    "Nd",
+    "Pc",
+}
+UNICODE_OTHER_ID_START = {"\u2118", "\u212e", "\u309b", "\u309c"}
+UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da", "\u30fb", "\uff65"}
+UNICODE_ID_CONTINUE_EXCLUSIONS = {"\u2e2f"}
+ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS = {"$", "\u200c", "\u200d"}
 
 
 @dataclass(frozen=True)
 class IssueSignals:
     terms: frozenset[str]
+    content_terms: frozenset[str]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
+    explicit_identifiers: frozenset[str]
     paths: frozenset[str]
 
 
@@ -117,8 +152,14 @@ class IssueSignals:
 class SymbolMatch:
     symbol: SymbolRecord
     overlap: frozenset[str]
+    local_overlap: frozenset[str]
     primary_identifier_match: bool
     exact_identifier_match: bool
+    explicit_identifier_match: bool
+    unscoped_explicit_identifier_match: bool
+    unscoped_dotted_identifier_match: bool
+    qualified_component_match: bool
+    qualified_identifier_match: bool
     semantic_terms: frozenset[str]
 
 
@@ -157,6 +198,41 @@ def _compact_identifier_variants(value: str) -> set[str]:
     return {variant for variant in variants if len(variant) >= 4}
 
 
+def _extract_explicit_identifiers(text: str) -> set[str]:
+    fenced_regions = FENCED_CODE_PATTERN.findall(text)
+    code_regions = [*CODE_SPAN_PATTERN.findall(text), *fenced_regions]
+    identifiers: set[str] = set()
+    for region in code_regions:
+        candidate = region.strip()
+        if IDENTIFIER_PATTERN.fullmatch(candidate):
+            identifiers.add(candidate)
+        for match in CALLED_IDENTIFIER_PATTERN.finditer(region):
+            prefix = region[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            called_identifier = match.group(1)
+            identifiers.add(called_identifier)
+            identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
+    for region in fenced_regions:
+        for match in IDENTIFIER_PATTERN.finditer(region):
+            identifier = match.group(0)
+            if "." not in identifier and not (
+                identifier.startswith("__") and identifier.endswith("__")
+            ):
+                continue
+            prefix = region[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            identifiers.add(identifier)
+    for match in TRACEBACK_IDENTIFIER_PATTERN.finditer(text):
+        identifier = match.group(1)
+        if "." in identifier or (
+            identifier.startswith("__") and identifier.endswith("__")
+        ):
+            identifiers.add(identifier)
+    return identifiers
+
+
 def _extract_identifiers(text: str) -> set[str]:
     identifiers = {
         span.strip()
@@ -176,15 +252,29 @@ def _extract_identifiers(text: str) -> set[str]:
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
+    explicit_identifiers = _extract_explicit_identifiers(text)
+    text_without_dotted_identifiers = IDENTIFIER_PATTERN.sub(
+        lambda match: " " if "." in match.group(0) else match.group(0),
+        text,
+    )
+    content_terms = _terms(text_without_dotted_identifiers)
+    content_terms.update(
+        term
+        for identifier in explicit_identifiers
+        if "." not in identifier
+        for term in _terms(identifier)
+    )
     paths = {
         match.group(0).replace("\\", "/").strip("'\"()[]{}:,")
         for match in PATH_REFERENCE_PATTERN.finditer(text)
     }
     return IssueSignals(
         terms=frozenset(_terms(text)),
+        content_terms=frozenset(content_terms),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
+        explicit_identifiers=frozenset(explicit_identifiers),
         paths=frozenset(paths),
     )
 
@@ -211,22 +301,112 @@ def _semantic_terms(terms: frozenset[str] | set[str]) -> set[str]:
     return {_semantic_term(term) for term in terms}
 
 
-def _match_symbol(symbol: SymbolRecord, signals: IssueSignals) -> SymbolMatch:
-    terms = _terms(symbol.name) | _terms(symbol.docstring or "")
+def _matches_qualified_identity(identity: str, identifier: str) -> bool:
+    candidate = identifier.strip("`'\"()[]{}:,")
+    return candidate == identity or candidate.endswith(f".{identity}")
+
+
+def _match_symbol(
+    symbol: SymbolRecord,
+    signals: IssueSignals,
+    unique_symbol_names: frozenset[str],
+    path_scoped: bool,
+) -> SymbolMatch:
+    identity = symbol.qualified_name or symbol.name
+    local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
+    terms = _terms(identity) | local_terms
     symbol_variants = _identifier_variants(symbol.name)
     symbol_compact_variants = _compact_identifier_variants(symbol.name)
+    identity_parts = identity.split(".")
+    owner_identity = ".".join(identity_parts[:-1])
+    owner_compact_variants = _compact_identifier_variants(owner_identity)
+    source_scoped_identifiers = (
+        signals.explicit_identifiers | signals.primary_identifiers
+    )
+    local_identifiers = {
+        identifier
+        for identifier in signals.identifiers | signals.explicit_identifiers
+        if "." not in identifier
+    }
+    local_identifier_match = any(
+        symbol_variants & _identifier_variants(identifier)
+        for identifier in local_identifiers
+    )
+    qualified_identifier_match = identity != symbol.name and any(
+        _matches_qualified_identity(identity, identifier)
+        for identifier in source_scoped_identifiers
+    )
+    bare_explicit_match = any(
+        "." not in identifier and identifier == symbol.name
+        for identifier in signals.explicit_identifiers
+    )
+    exact_owner_match = bool(owner_identity) and any(
+        _matches_qualified_identity(owner_identity, identifier)
+        or _matches_qualified_identity(
+            owner_identity.rsplit(".", maxsplit=1)[-1],
+            identifier,
+        )
+        for identifier in source_scoped_identifiers
+    )
+    owner_name = owner_identity.rsplit(".", maxsplit=1)[-1]
+    class_owner_match = bool(owner_identity) and any(
+        "." not in identifier
+        and any(character.isupper() for character in identifier[1:])
+        and (
+            identifier == owner_name
+            or (
+                identifier.endswith("s")
+                and identifier[:-1] == owner_name
+            )
+        )
+        for identifier in signals.identifiers
+    )
+    scoped_bare_explicit_match = bare_explicit_match and (
+        symbol.name in unique_symbol_names
+        or path_scoped
+        or exact_owner_match
+        or class_owner_match
+    )
+    unscoped_dotted_identifier_match = (
+        not qualified_identifier_match
+        and not local_identifier_match
+        and any(
+            "." in identifier
+            and (
+                identifier.rsplit(".", maxsplit=1)[-1].casefold()
+                == symbol.name.casefold()
+            )
+            for identifier in signals.identifiers | signals.explicit_identifiers
+        )
+    )
+    overlap = signals.terms & terms
+    local_overlap = signals.terms & local_terms
+    if unscoped_dotted_identifier_match:
+        symbol_name_terms = _terms(symbol.name)
+        overlap -= symbol_name_terms
+        local_overlap -= symbol_name_terms
     return SymbolMatch(
         symbol=symbol,
-        overlap=frozenset(signals.terms & terms),
+        overlap=frozenset(overlap),
+        local_overlap=frozenset(local_overlap),
         primary_identifier_match=any(
             symbol_compact_variants & _compact_identifier_variants(identifier)
             for identifier in signals.primary_identifiers
         ),
-        exact_identifier_match=any(
-            symbol_variants & _identifier_variants(identifier)
-            for identifier in signals.identifiers
+        exact_identifier_match=local_identifier_match,
+        explicit_identifier_match=scoped_bare_explicit_match,
+        unscoped_explicit_identifier_match=(
+            bare_explicit_match and not scoped_bare_explicit_match
         ),
-        semantic_terms=frozenset(_semantic_terms(terms)),
+        unscoped_dotted_identifier_match=unscoped_dotted_identifier_match,
+        qualified_component_match=identity != symbol.name
+        and any(
+            owner_compact_variants
+            & _compact_identifier_variants(identifier)
+            for identifier in source_scoped_identifiers
+        ),
+        qualified_identifier_match=qualified_identifier_match,
+        semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
 
@@ -239,17 +419,21 @@ def _select_symbol(
         return None
 
     functions = [match for match in matches if match.symbol.kind == "function"]
+
     directly_referenced = [
         match
         for match in functions
-        if match.exact_identifier_match and len(match.overlap) >= 2
+        if match.explicit_identifier_match or match.qualified_identifier_match
     ]
     if directly_referenced:
         return max(
             directly_referenced,
             key=lambda match: (
-                len(match.overlap),
+                match.qualified_identifier_match,
+                match.explicit_identifier_match,
                 match.primary_identifier_match,
+                len(match.local_overlap),
+                match.qualified_component_match,
                 -match.symbol.line,
             ),
         )
@@ -270,90 +454,224 @@ def _select_symbol(
         for match in functions
         for term in match.semantic_terms
     )
-    matches_by_name = {
-        match.symbol.name: match
+    matches_by_identity = {
+        _symbol_identity(match.symbol): match
         for match in functions
     }
     relation_scores = {
-        called_name: sum(
-            min(len(matches_by_name[caller].overlap), 4)
+        called_identity: sum(
+            min(len(matches_by_identity[caller].local_overlap), 4)
             for caller in callers
         )
-        for called_name, callers in related_callers.items()
+        for called_identity, callers in related_callers.items()
     }
 
     def semantic_score(
         match: SymbolMatch,
-    ) -> tuple[int, float, float, bool, int, int]:
+    ) -> tuple[int, float, float, bool, bool, bool, int, int]:
         overlap = primary_terms & match.semantic_terms
+        if match.unscoped_dotted_identifier_match:
+            overlap -= _semantic_terms(_terms(match.symbol.name))
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
-            relation_scores.get(match.symbol.name, 0),
+            relation_scores.get(_symbol_identity(match.symbol), 0),
             max(rarity, default=0),
             sum(rarity),
+            match.unscoped_explicit_identifier_match,
             not match.symbol.name.startswith("_"),
+            match.qualified_component_match,
             -match.symbol.line,
-            len(match.overlap),
+            len(match.local_overlap),
         )
 
-    if functions and max(semantic_score(match)[:2] for match in functions) > (0, 0):
+    if functions and max(semantic_score(match)[:3] for match in functions) > (
+        0,
+        0,
+        0,
+    ):
         return max(functions, key=semantic_score)
 
     fallback = max(
         matches,
         key=lambda match: (
             match.primary_identifier_match,
-            match.exact_identifier_match,
-            len(match.overlap),
+            match.qualified_identifier_match,
+            match.exact_identifier_match
+            and not (
+                match.unscoped_explicit_identifier_match
+                or match.unscoped_dotted_identifier_match
+            ),
+            (
+                len(match.local_overlap)
+                if not (
+                    match.unscoped_explicit_identifier_match
+                    or match.unscoped_dotted_identifier_match
+                )
+                else 0
+            ),
+            match.qualified_component_match,
             -match.symbol.line,
         ),
     )
     if not (
         fallback.primary_identifier_match
-        or fallback.exact_identifier_match
-        or fallback.overlap
+        or (
+            fallback.exact_identifier_match
+            and not (
+                fallback.unscoped_explicit_identifier_match
+                or fallback.unscoped_dotted_identifier_match
+            )
+        )
+        or (
+            fallback.overlap
+            and not (
+                fallback.unscoped_explicit_identifier_match
+                or fallback.unscoped_dotted_identifier_match
+            )
+        )
     ):
         return None
     return fallback
 
 
+def _symbol_identity(symbol: SymbolRecord) -> str:
+    return symbol.qualified_name or symbol.name
+
+
 def _related_symbol_callers(
     matches: list[SymbolMatch],
-    symbol_calls: dict[str, list[str]],
+    resolved_calls: list[ResolvedCall],
+    file_path: str,
 ) -> dict[str, tuple[str, ...]]:
-    functions = {
-        match.symbol.name: match
+    functions_by_identity = {
+        _symbol_identity(match.symbol): match
         for match in matches
         if match.symbol.kind == "function"
     }
+
     callers_by_target: dict[str, set[str]] = {}
-    for caller_name, called_names in symbol_calls.items():
-        caller = functions.get(caller_name)
-        if caller is None or len(caller.overlap) < 2:
+    for call in resolved_calls:
+        if call.caller is None or call.target_file != file_path:
             continue
-        for called_name in set(called_names) & functions.keys():
-            if called_name != caller_name:
-                callers_by_target.setdefault(called_name, set()).add(caller_name)
+        caller = functions_by_identity.get(call.caller)
+        target = functions_by_identity.get(call.target_symbol)
+        if caller is None or target is None:
+            continue
+        if len(caller.local_overlap) < 2:
+            continue
+        caller_identity = _symbol_identity(caller.symbol)
+        target_identity = _symbol_identity(target.symbol)
+        if target_identity != caller_identity:
+            callers_by_target.setdefault(target_identity, set()).add(
+                caller_identity
+            )
     return {
-        called_name: tuple(sorted(callers))
-        for called_name, callers in callers_by_target.items()
+        called_identity: tuple(sorted(callers))
+        for called_identity, callers in callers_by_target.items()
         if len(callers) >= 2
     }
 
 
+def _symbol_evidence(
+    match: SymbolMatch | None,
+    related_callers: dict[str, tuple[str, ...]],
+) -> list[str]:
+    if match is None:
+        return []
+
+    symbol = match.symbol
+    label = symbol.qualified_name or symbol.name
+    evidence: list[str] = []
+    if match.overlap:
+        evidence.append(
+            f"Symbol {label} matches: "
+            + ", ".join(sorted(match.overlap))
+        )
+    if match.qualified_identifier_match or (
+        match.exact_identifier_match
+        and not match.unscoped_explicit_identifier_match
+    ):
+        evidence.append(f"Issue references symbol {label}")
+    if match.primary_identifier_match:
+        evidence.append(f"Issue title strongly matches symbol {label}")
+    if match.qualified_component_match:
+        evidence.append(
+            f"Issue references owning symbol {label.rsplit('.', 1)[0]}"
+        )
+    callers = related_callers.get(_symbol_identity(symbol), ())
+    if callers:
+        evidence.append(
+            "Issue-matching symbols call "
+            f"{symbol.name}: {', '.join(callers)}"
+        )
+    return evidence
+
+
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
-    normalized = file_path.lower().replace("\\", "/").lstrip("./")
+    normalized = _normalize_path_reference(file_path)
     return any(
-        reference.lower().replace("\\", "/").rstrip("/").endswith(normalized)
-        or normalized.endswith(reference.lower().replace("\\", "/").lstrip("./"))
+        _normalize_path_reference(reference).endswith(normalized)
+        or normalized.endswith(_normalize_path_reference(reference))
         for reference in references
     )
+
+
+def _normalize_path_reference(value: str) -> str:
+    return value.lower().replace("\\", "/").rstrip("/").lstrip("./")
+
+
+def _symbol_scoped_paths(
+    file_paths: list[str],
+    references: frozenset[str],
+) -> frozenset[str]:
+    normalized_paths = {
+        path: _normalize_path_reference(path)
+        for path in file_paths
+    }
+    scoped_paths: set[str] = set()
+    for reference in references:
+        normalized_reference = _normalize_path_reference(reference)
+        relative_matches = {
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_reference == normalized_path
+        }
+        if len(relative_matches) == 1:
+            scoped_paths.update(relative_matches)
+            continue
+        absolute_matches = [
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_reference.endswith(f"/{normalized_path}")
+        ]
+        if absolute_matches:
+            longest_length = max(
+                len(normalized_paths[path])
+                for path in absolute_matches
+            )
+            longest_matches = {
+                path
+                for path in absolute_matches
+                if len(normalized_paths[path]) == longest_length
+            }
+            if len(longest_matches) == 1:
+                scoped_paths.update(longest_matches)
+            continue
+        suffix_matches = {
+            path
+            for path, normalized_path in normalized_paths.items()
+            if normalized_path.endswith(f"/{normalized_reference}")
+        }
+        if len(suffix_matches) == 1:
+            scoped_paths.update(suffix_matches)
+    return frozenset(scoped_paths)
 
 
 def _source_content(
     root: Path,
     relative_path: str,
     signals: IssueSignals,
+    language: str,
 ) -> tuple[set[str], set[str], int | None]:
     path = (root / relative_path).resolve()
     if not path.is_relative_to(root) or not path.is_file():
@@ -365,31 +683,115 @@ def _source_content(
     if "\x00" in text or len(text) > 1_000_000:
         return set(), set(), None
 
-    lowered = text.lower()
+    all_identifiers = signals.identifiers | signals.explicit_identifiers
+    bare_identifiers = {
+        identifier
+        for identifier in all_identifiers
+        if "." not in identifier
+    }
+    content_identifiers = bare_identifiers | {
+        identifier
+        for identifier in all_identifiers
+        if "." in identifier
+        and identifier.rsplit(".", maxsplit=1)[-1] not in bare_identifiers
+    }
     identifier_hits = {
         identifier
-        for identifier in signals.identifiers
-        if any(variant in lowered for variant in _identifier_variants(identifier))
+        for identifier in content_identifiers
+        if _content_matches_identifier(text, identifier, language=language)
     }
+    lowered = text.lower()
     content_overlap = {
-        term for term in signals.terms if len(term) >= 4 and term in lowered
+        term
+        for term in signals.content_terms
+        if len(term) >= 4 and term in lowered
     }
     first_line = None
-    variants = {
-        variant
-        for identifier in identifier_hits
-        for variant in _identifier_variants(identifier)
-    }
-    if variants:
+    if identifier_hits:
         first_line = next(
             (
                 line_number
                 for line_number, line in enumerate(text.splitlines(), start=1)
-                if any(variant in line.lower() for variant in variants)
+                if any(
+                    _content_matches_identifier(
+                        line,
+                        identifier,
+                        language=language,
+                    )
+                    for identifier in identifier_hits
+                )
             ),
             None,
         )
     return identifier_hits, content_overlap, first_line
+
+
+def _is_identifier_continuation(
+    character: str,
+    language: str | None,
+) -> bool:
+    if not character:
+        return False
+    if language not in ECMASCRIPT_LANGUAGES:
+        return ("_" + character).isidentifier()
+    return character not in UNICODE_ID_CONTINUE_EXCLUSIONS and (
+        unicodedata.category(character) in UNICODE_ID_CONTINUE_CATEGORIES
+        or character in UNICODE_OTHER_ID_START
+        or character in UNICODE_OTHER_ID_CONTINUE
+        or "\u1369" <= character <= "\u1371"
+        or character in ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS
+    )
+
+
+def _has_valid_identifier_boundaries(
+    text: str,
+    match_start: int,
+    match_end: int,
+    *,
+    reject_dot: bool = False,
+    language: str | None = None,
+) -> bool:
+    before = text[match_start - 1] if match_start > 0 else ""
+    after = text[match_end] if match_end < len(text) else ""
+    if reject_dot and (before == "." or after == "."):
+        return False
+    return not (
+        _is_identifier_continuation(before, language)
+        or _is_identifier_continuation(after, language)
+    )
+
+
+def _content_matches_identifier(
+    text: str,
+    identifier: str,
+    *,
+    language: str | None = None,
+) -> bool:
+    candidate = identifier.strip("`'\"()[]{}:,")
+    if not candidate:
+        return False
+    if "." in candidate:
+        return any(
+            _has_valid_identifier_boundaries(
+                text,
+                match.start(),
+                match.end(),
+                reject_dot=True,
+                language=language,
+            )
+            for match in re.finditer(re.escape(candidate), text)
+        )
+    lowered = text.lower()
+    return any(
+        _has_valid_identifier_boundaries(
+            lowered,
+            match.start(),
+            match.end(),
+            language=language,
+        )
+        for variant in _identifier_variants(candidate)
+        for match in re.finditer(re.escape(variant), lowered)
+    )
 
 
 def _graph_seed_paths(
@@ -580,13 +982,6 @@ def _graph_relations(
     signals: IssueSignals,
 ) -> dict[str, list[tuple[float, str]]]:
     files_by_path = {file.path: file for file in repository_map.files}
-    symbol_definitions: dict[str, set[str]] = {}
-    for file in repository_map.files:
-        if file.test_file:
-            continue
-        for symbol in file.symbols:
-            symbol_definitions.setdefault(symbol.name, set()).add(file.path)
-
     seed_paths = _graph_seed_paths(base_scores, auxiliary_files)
 
     relations: dict[str, list[tuple[float, str]]] = {}
@@ -615,18 +1010,41 @@ def _graph_relations(
             return
         relations.setdefault(target, []).append((bonus, evidence))
 
+    def concrete_target(path: str) -> bool:
+        target_parts = {
+            Path(part).stem.lstrip("_").lower()
+            for part in Path(path).parts
+        }
+        return (
+            not auxiliary_files.get(path, True)
+            and not target_parts.intersection(
+                {
+                    "abc",
+                    "interface",
+                    "interfaces",
+                    "protocol",
+                    "protocols",
+                }
+            )
+        )
+
     for seed_path in seed_paths:
         seed = files_by_path[seed_path]
+        calls_by_target: dict[str, set[str]] = {}
+        for call in seed.resolved_calls:
+            if call.target_file != seed_path:
+                calls_by_target.setdefault(call.target_file, set()).add(
+                    call.target_symbol
+                )
+
         for imported_path in seed.local_imports:
             imported = files_by_path.get(imported_path)
             if imported is None or imported.test_file:
                 continue
-            called_imports = set(
-                seed.local_import_symbols.get(imported_path, [])
-            ).intersection(seed.calls)
+            called_imports = calls_by_target.get(imported_path, set())
             referenced_imports = set(
-                seed.local_import_symbols.get(imported_path, [])
-            ).intersection(seed.references)
+                seed.resolved_import_references.get(imported_path, [])
+            )
             if seed.test_file:
                 add_relation(
                     imported_path,
@@ -667,98 +1085,94 @@ def _graph_relations(
                     f"Related source imports this file: {seed_path}",
                 )
 
-            for second_hop_path in imported.local_imports:
-                second_hop = files_by_path.get(second_hop_path)
-                if second_hop is None or second_hop.test_file:
-                    continue
-                called_second_hop_imports = set(
-                    imported.local_import_symbols.get(second_hop_path, [])
-                ).intersection(imported.calls)
-                referenced_second_hop_imports = set(
-                    imported.local_import_symbols.get(second_hop_path, [])
-                ).intersection(imported.references)
-                if called_second_hop_imports:
-                    bonus = (
-                        9.0
-                        if any(
-                            matches_primary_issue(symbol)
-                            for symbol in called_second_hop_imports
-                        )
-                        else 5.0
-                    )
-                    add_relation(
-                        second_hop_path,
-                        bonus,
-                        "Two-hop source relation calls imported symbols defined "
-                        "here: "
-                        + ", ".join(sorted(called_second_hop_imports)),
-                    )
-                elif referenced_second_hop_imports:
-                    add_relation(
-                        second_hop_path,
-                        4.0,
-                        "Two-hop source relation references imported symbols "
-                        "defined here: "
-                        + ", ".join(sorted(referenced_second_hop_imports)),
-                    )
-
         if seed.test_file:
             continue
-        strong_first_hops: list[tuple[str, str]] = []
-        for called_symbol in seed.calls:
-            if len(called_symbol) < GRAPH_DYNAMIC_CALL_MIN_LENGTH:
-                continue
-            targets = symbol_definitions.get(called_symbol, set()) - {seed_path}
-            if not targets or len(targets) > 4:
-                continue
-            for target in targets:
-                bonus = 9.0 if matches_primary_issue(called_symbol) else 2.0
-                add_relation(
-                    target,
-                    bonus,
-                    f"Related source calls {called_symbol}, defined here: {seed_path}",
-                )
-            if len(targets) == 1 and matches_specific_primary_issue(called_symbol):
-                target = next(iter(targets))
-                target_parts = {
-                    Path(part).stem.lstrip("_").lower()
-                    for part in Path(target).parts
-                }
-                if (
-                    not auxiliary_files.get(target, True)
-                    and not target_parts.intersection(
-                        {
-                            "abc",
-                            "interface",
-                            "interfaces",
-                            "protocol",
-                            "protocols",
-                        }
-                    )
-                ):
-                    strong_first_hops.append((called_symbol, target))
 
-        for first_hop_symbol, first_hop_path in sorted(strong_first_hops):
-            first_hop = files_by_path[first_hop_path]
-            second_hop_calls = first_hop.symbol_calls.get(first_hop_symbol, [])
-            for called_symbol in second_hop_calls:
-                if len(called_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
+        external_calls = [
+            call
+            for call in seed.resolved_calls
+            if call.target_file != seed_path
+        ]
+        for first_call in external_calls:
+            first_hop = files_by_path.get(first_call.target_file)
+            if first_hop is None or first_hop.test_file:
+                continue
+            second_hop_calls = [
+                call
+                for call in first_hop.resolved_calls
+                if call.caller == first_call.target_symbol
+                and call.target_file not in {seed_path, first_hop.path}
+            ]
+            for second_call in second_hop_calls:
+                if len(second_call.target_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
                     continue
-                targets = symbol_definitions.get(called_symbol, set())
-                if targets.intersection({seed_path, first_hop_path}):
+                second_hop = files_by_path.get(second_call.target_file)
+                if second_hop is None or second_hop.test_file:
                     continue
-                if len(targets) != 1:
-                    continue
-                target = next(iter(targets))
-                if auxiliary_files.get(target, True):
-                    continue
-                add_relation(
-                    target,
-                    9.0 if matches_primary_issue(called_symbol) else 8.0,
-                    f"{GRAPH_STRONG_EXPANSION_PREFIX}{first_hop_symbol} reaches "
-                    f"{called_symbol}, defined here: {first_hop_path}",
+                bonus = (
+                    9.0
+                    if matches_primary_issue(second_call.target_symbol)
+                    else 5.0
                 )
+                add_relation(
+                    second_call.target_file,
+                    bonus,
+                    "Two-hop source relation calls imported symbols defined "
+                    f"here: {second_call.target_symbol}",
+                )
+                if (
+                    matches_specific_primary_issue(first_call.target_symbol)
+                    and concrete_target(first_call.target_file)
+                    and concrete_target(second_call.target_file)
+                ):
+                    add_relation(
+                        second_call.target_file,
+                        (
+                            9.0
+                            if matches_primary_issue(second_call.target_symbol)
+                            else 8.0
+                        ),
+                        f"{GRAPH_STRONG_EXPANSION_PREFIX}"
+                        f"{first_call.target_symbol} reaches "
+                        f"{second_call.target_symbol}, defined here: "
+                        f"{first_call.target_file}",
+                    )
     return relations
+
+
+def _merge_tail_expansions(
+    ranked_paths: list[str],
+    tail_expansions: list[str],
+    protected_paths: list[str],
+    limit: int,
+) -> list[str]:
+    accepted_expansions = list(dict.fromkeys(tail_expansions))[:limit]
+    retained = ranked_paths[: max(0, limit - len(accepted_expansions))]
+    retained_set = set(retained)
+    ranked_set = set(ranked_paths)
+    protected_set = set(protected_paths)
+
+    for path in protected_paths[:limit]:
+        if path in retained_set or path not in ranked_set:
+            continue
+        replace_index = next(
+            (
+                index
+                for index in range(len(retained) - 1, -1, -1)
+                if retained[index] not in protected_set
+            ),
+            None,
+        )
+        if replace_index is not None:
+            retained_set.remove(retained[replace_index])
+            retained[replace_index] = path
+            retained_set.add(path)
+        elif accepted_expansions:
+            accepted_expansions.pop()
+            retained.append(path)
+            retained_set.add(path)
+
+    return [*retained, *accepted_expansions][:limit]
 
 
 def locate_candidates(
@@ -771,6 +1185,26 @@ def locate_candidates(
     auxiliary_files: dict[str, bool] = {}
     candidates: dict[str, CandidateLocation] = {}
     blame_lines: dict[str, str | None] = {}
+    content_lines: dict[str, int | None] = {}
+    symbol_name_counts = Counter(
+        symbol.name
+        for file in repository_map.files
+        for symbol in file.symbols
+        if symbol.kind == "function"
+    )
+    unique_symbol_names = frozenset(
+        name for name, count in symbol_name_counts.items() if count == 1
+    )
+    path_term_counts = Counter(
+        term
+        for file in repository_map.files
+        for term in _terms(file.path)
+    )
+    protected_base_paths: set[str] = set()
+    symbol_scoped_paths = _symbol_scoped_paths(
+        [file.path for file in repository_map.files],
+        signals.paths,
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(
@@ -778,6 +1212,11 @@ def locate_candidates(
         )
         path_terms = _terms(file.path)
         path_overlap = keywords & path_terms
+        primary_path_overlap = {
+            term
+            for term in signals.primary_terms & path_terms
+            if path_term_counts[term] <= SPECIFIC_PATH_TERM_MAX_FILES
+        }
         import_overlap = {
             word for word in keywords if any(word in item.lower() for item in file.imports)
         }
@@ -790,21 +1229,30 @@ def locate_candidates(
                 for variant in _compact_identifier_variants(identifier)
             )
         }
-        symbol_matches = [_match_symbol(symbol, signals) for symbol in file.symbols]
+        symbol_matches = [
+            _match_symbol(
+                symbol,
+                signals,
+                unique_symbol_names,
+                file.path in symbol_scoped_paths,
+            )
+            for symbol in file.symbols
+        ]
         related_symbol_callers = _related_symbol_callers(
             symbol_matches,
-            file.symbol_calls,
+            file.resolved_calls,
+            file.path,
         )
         score_match: SymbolMatch | None = None
         for match in symbol_matches:
             if (
                 match.primary_identifier_match,
                 match.exact_identifier_match,
-                len(match.overlap),
+                len(match.local_overlap),
             ) > (
                 score_match.primary_identifier_match if score_match else False,
                 score_match.exact_identifier_match if score_match else False,
-                len(score_match.overlap) if score_match else 0,
+                len(score_match.local_overlap) if score_match else 0,
             ):
                 score_match = match
         blame_match = _select_symbol(symbol_matches, signals, {})
@@ -816,21 +1264,22 @@ def locate_candidates(
         primary_symbol_match = (
             score_match.primary_identifier_match if score_match else False
         )
+        if (
+            exact_path
+            or path_identifier_hits
+            or primary_path_overlap
+            or primary_symbol_match
+        ):
+            protected_base_paths.add(file.path)
         exact_symbol = score_match.exact_identifier_match if score_match else False
-        best_overlap = set(score_match.overlap) if score_match else set()
+        best_overlap = set(score_match.local_overlap) if score_match else set()
         blame_symbol = blame_match.symbol if blame_match else None
         selected_symbol = selected_match.symbol if selected_match else None
-        selected_overlap = set(selected_match.overlap) if selected_match else set()
-        selected_primary_match = (
-            selected_match.primary_identifier_match if selected_match else False
-        )
-        selected_exact = (
-            selected_match.exact_identifier_match if selected_match else False
-        )
         content_identifiers, content_overlap, content_line = _source_content(
             root,
             file.path,
             signals,
+            file.language,
         )
         raw_score = (
             30.0 * exact_path
@@ -839,6 +1288,7 @@ def locate_candidates(
             + 5.0 * min(len(path_identifier_hits), 2)
             + 2.5 * len(best_overlap)
             + 4.0 * len(path_overlap)
+            + 6.0 * len(primary_path_overlap)
             + 0.7 * len(import_overlap)
             + 3.0 * min(len(content_identifiers), 4)
             + 0.4 * min(len(content_overlap), 8)
@@ -856,27 +1306,12 @@ def locate_candidates(
             )
         if path_overlap:
             evidence.append(f"Path matches issue terms: {', '.join(sorted(path_overlap))}")
-        if selected_symbol and selected_overlap:
+        if primary_path_overlap:
             evidence.append(
-                f"Symbol {selected_symbol.name} matches: "
-                + ", ".join(sorted(selected_overlap))
+                "Path matches issue title terms: "
+                + ", ".join(sorted(primary_path_overlap))
             )
-        if selected_symbol and selected_exact:
-            evidence.append(f"Issue references symbol {selected_symbol.name}")
-        if selected_symbol and selected_primary_match:
-            evidence.append(
-                f"Issue title strongly matches symbol {selected_symbol.name}"
-            )
-        related_callers = (
-            related_symbol_callers.get(selected_symbol.name, ())
-            if selected_symbol
-            else ()
-        )
-        if selected_symbol and related_callers:
-            evidence.append(
-                "Issue-matching symbols call "
-                f"{selected_symbol.name}: {', '.join(related_callers)}"
-            )
+        evidence.extend(_symbol_evidence(selected_match, related_symbol_callers))
         if import_overlap:
             evidence.append(f"Imports match component terms: {', '.join(sorted(import_overlap))}")
         if content_identifiers:
@@ -891,6 +1326,7 @@ def locate_candidates(
             )
         base_scores[file.path] = raw_score
         auxiliary_files[file.path] = auxiliary_file
+        content_lines[file.path] = content_line
         blame_lines[file.path] = (
             f"{blame_symbol.line}-{blame_symbol.end_line or blame_symbol.line}"
             if blame_symbol
@@ -901,6 +1337,12 @@ def locate_candidates(
         candidates[file.path] = CandidateLocation(
             file=file.path,
             symbol=selected_symbol.name if selected_symbol else None,
+            qualified_symbol=(
+                selected_symbol.qualified_name
+                if selected_symbol
+                and selected_symbol.qualified_name != selected_symbol.name
+                else None
+            ),
             lines=(
                 f"{selected_symbol.line}-"
                 f"{selected_symbol.end_line or selected_symbol.line}"
@@ -1044,13 +1486,81 @@ def locate_candidates(
         *reranked_base[retained_first_band_size:first_band_size],
         *deferred_promotions,
     ]
-    retained_base = [
+    base_with_promotions = [
         *promoted_first_band,
         *deferred_paths,
         *reranked_base[first_band_size:],
-    ][: max(0, limit - len(tail_expansions))]
-    reranked_paths = [*retained_base, *tail_expansions]
+    ]
+    protected_order = [
+        path
+        for path in reranked_base
+        if path in protected_base_paths
+    ]
+    reranked_paths = _merge_tail_expansions(
+        base_with_promotions,
+        tail_expansions,
+        protected_order,
+        limit,
+    )
+    files_by_path = {file.path: file for file in repository_map.files}
+    candidate_symbol_name_counts = Counter(
+        symbol.name
+        for path in reranked_paths
+        for symbol in files_by_path[path].symbols
+        if symbol.kind == "function"
+    )
+    candidate_unique_symbol_names = frozenset(
+        name
+        for name, count in candidate_symbol_name_counts.items()
+        if count == 1
+    )
     for path in reranked_paths:
+        file = files_by_path[path]
+        symbol_matches = [
+            _match_symbol(
+                symbol,
+                signals,
+                candidate_unique_symbol_names,
+                path in symbol_scoped_paths,
+            )
+            for symbol in file.symbols
+        ]
+        related_symbol_callers = _related_symbol_callers(
+            symbol_matches,
+            file.resolved_calls,
+            file.path,
+        )
+        selected_match = _select_symbol(
+            symbol_matches,
+            signals,
+            related_symbol_callers,
+        )
+        selected_symbol = selected_match.symbol if selected_match else None
+        candidate = candidates[path]
+        candidate.symbol = selected_symbol.name if selected_symbol else None
+        candidate.qualified_symbol = (
+            selected_symbol.qualified_name
+            if selected_symbol
+            and selected_symbol.qualified_name != selected_symbol.name
+            else None
+        )
+        content_line = content_lines[path]
+        candidate.lines = (
+            f"{selected_symbol.line}-"
+            f"{selected_symbol.end_line or selected_symbol.line}"
+            if selected_symbol
+            else f"{content_line}-{content_line}"
+            if content_line
+            else None
+        )
+        candidate.evidence = [
+            evidence
+            for evidence in candidate.evidence
+            if not evidence.startswith(SYMBOL_EVIDENCE_PREFIXES)
+        ]
+        candidate.evidence.extend(
+            _symbol_evidence(selected_match, related_symbol_callers)
+        )
         candidates[path].evidence.extend(
             evidence for _, evidence in blame_relations.get(path, [])[:1]
         )
@@ -1066,7 +1576,9 @@ def investigate(issue: IssueRecord, repository_map: RepositoryMap) -> Investigat
     for index, candidate in enumerate(candidates[:3], start=1):
         location = candidate.file
         if candidate.symbol:
-            location = f"{location}::{candidate.symbol}"
+            location = (
+                f"{location}::{candidate.qualified_symbol or candidate.symbol}"
+            )
         hypotheses.append(
             Hypothesis(
                 id=f"H{index}",

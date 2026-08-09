@@ -14,14 +14,14 @@ outside the deterministic candidate pool.
 
 ## Dataset
 
-The current frozen dataset contains 32 closed issues across 13 repositories that link to a fix
-pull request. Manifest version 6 stores the complete evaluated Issue snapshot and never fetches
+The current frozen dataset contains 50 closed issues across 21 repositories that link to a fix
+pull request. Manifest version 8 stores the complete evaluated Issue snapshot and never fetches
 mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- 16 manually reviewed symbols across 15 high-confidence cases;
+- 39 manually reviewed symbols across 33 high-confidence cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
@@ -35,7 +35,9 @@ Do not include API keys, private repository content, or unreviewed generated lab
 versions 2 and 3 are retained for provenance but are superseded because their pre-fix SHAs were
 not derived correctly. Manifest version 5 is retained as
 `benchmarks/cases-v0.10-corrected-20-cases.json` because it is the frozen input for the corrected
-Groq/OpenCode comparison.
+Groq/OpenCode comparison. Manifest version 6 is retained as
+`benchmarks/cases-v0.11-32-cases.json` for the pre-qualified-symbol baseline, and manifest version
+7 is retained as `benchmarks/cases-v0.12-qualified-symbols-32-cases.json`.
 
 ## Metrics
 
@@ -85,11 +87,64 @@ The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison a
 three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
 conclusions must not mix datasets or the localization and schema-reliability endpoints.
 
-The current manifest-v6 v0.11 baseline completed 32/32 cases with File Recall@1 `0.4375`,
-Recall@5 `0.8490`, Recall@10 `0.9062`, Recall@20 `0.9688`, and MRR `0.6064`. Across the 15
-symbol-labeled cases and 16 reviewed targets, Symbol Recall@1 is `0.2000`, Symbol Recall@5 is
-`0.5000`, Symbol Recall@10 is `0.5333`, Symbol Recall@20 is `0.6000`, and symbol MRR is `0.2926`.
-Two complete runs produced identical candidates and metrics after excluding timing fields.
+## Current manifest-v8 paired result
+
+Manifest v8 completed two deterministic 50-case runs with structurally identical candidates,
+symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
+`0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. On 33
+symbol-labeled cases, Symbol Recall@1 was `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`,
+and symbol MRR `0.2866`.
+
+The authorized OpenCode `deepseek-v4-flash-free` run used the same 50 candidate pools and kept all
+fallbacks in the denominator. Hybrid File Recall@1 was `0.6267`, Recall@5 `0.8133`, Recall@10
+`0.8800`, Recall@20 `0.9300`, and MRR `0.7831`. Fifteen expected-file ranks improved, 35 were
+unchanged, and none worsened. On the 29 cases with valid model output, Recall@1 increased from
+`0.4080` to `0.7874` and MRR from `0.6095` to `0.9224`.
+
+Only 29 of 50 reranks were valid. Thirteen cases exhausted two attempts after an upstream DFLASH
+grammar HTTP 400, and eight exhausted two invalid JSON responses. Every fallback preserved the
+deterministic order. Successful final calls used 150,558 input and 69,217 output tokens and
+averaged `23.3 s`; failed attempts do not expose token counts. The result therefore supports
+ordering quality when a rerank is valid, but the observed 58% success rate does not support a
+production-reliability claim. The reviewed artifact is
+`benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json`.
+
+The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
+Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
+After adding the reviewed `WorkerThread.__init__` target, the 16 labeled cases and 17 targets reach
+Symbol Recall@1 `0.1875`, Symbol Recall@5 `0.4688`, Symbol Recall@10 `0.4688`, Symbol Recall@20
+`0.5938`, and symbol MRR `0.3099`. The qualified identity is representable, but the review-fixed
+selector does not infer `__init__` from an owner-only mention. Source-content retrieval now treats
+dotted tokens as complete, case-preserving identities and excludes their component terms unless a
+syntactic call in Issue text separately exposes the local callee. Function-level source relations
+consume exact file-and-symbol `resolved_calls` produced with lexical scope analysis; parameters,
+local assignments/imports, closures, statically visible `global` assignments, unresolved receivers,
+legacy broad maps, or definition-time rebinding cannot contribute inference edges. Specific
+title-to-path matches remain in the candidate pool when weaker graph expansions are added. A full
+audit found changed file orderings and per-file symbol lists in all 32 cases relative to v0.11,
+including the corrected Starlette protocol-event and session-cookie selections. Relative to the
+immediately preceding v0.12 artifact, the complete
+scope-safe contract changed 31 file lists and 31 symbol lists, increased File Recall@20 by `0.0156`
+and MRR by `0.0356`, and lowered Recall@5 by `0.0521`. Two complete review-fixed v0.12 runs produced
+identical candidates, symbols, and metrics after excluding timing fields.
+
+An authorized manifest-v7 run then sent the frozen public Issue snapshots and bounded public
+candidate snippets to OpenCode `deepseek-v4-flash-free`. All 32 cases completed and remained in the
+denominator. Twenty-eight responses passed local schema and evidence-ID validation; four cases
+exhausted two `json_invalid` attempts and used the deterministic fallback. File Recall@1 was
+`0.7135`, Recall@5 `0.8958`, Recall@10 `0.9375`, Recall@20 `0.9844`, and MRR `0.8547`. On the 16
+labeled cases, Symbol Recall@1 was `0.4688`, Recall@5/10 `0.5312`, Recall@20 `0.5938`, and MRR
+`0.5245`. Relative to the paired deterministic baseline, 12 file ranks improved, 18 were unchanged,
+and two worsened; five labeled symbol ranks improved and none worsened.
+
+The 28 successful final calls recorded 145,469 input and 59,682 output tokens and averaged
+`20.1 s` of provider latency. Failed attempts are not included in those token totals. A separate
+diagnostic rerun recovered two of the four fallback cases; the AnyIO free-threading and Click
+parameter cases again produced invalid JSON twice. This is a single best-effort-seed run rather
+than a stability estimate. A later deterministic Werkzeug audit also found a metric-neutral
+rank-20 tail difference from the earlier artifact, so exact long-tail candidate reproducibility is
+not claimed. The reviewed artifact is
+`benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json`.
 
 The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
 
@@ -102,7 +157,7 @@ The retained corrected manifest-v5 snapshot also received paired real-provider r
   `0.9250`, Recall@20 `1.0000`, and MRR `0.6794`. Average successful model latency was `870 ms`;
   successful final calls used 82,329 input and 2,763 output tokens.
 
-These are paired localization results on manifest v5, not manifest v6. They support an ordering
+These are paired localization results on manifest v5, not manifest v7. They support an ordering
 improvement over the same v5 deterministic candidate pool, while Recall@20 remains bounded by
 deterministic retrieval. A separate three-real-case OpenCode full-schema run succeeded on two
 cases; the Typer case exhausted two invalid structured responses and used fallback. The compact
@@ -112,8 +167,10 @@ rerank schema is therefore more reliable than the full hypothesis schema.
 
 The historical shortlist is deliberately small:
 
-- `deepseek-v4-flash-free` remains the default: 5/5 valid screening responses, MRR `0.8000`,
-  and `12.4 s` average latency on the screening subset.
+- `deepseek-v4-flash-free` remains the default quality reference because its valid v8 reranks
+  raised paired MRR substantially, but the 50-case run returned only 29/50 valid final responses.
+  Any production path must retain deterministic fallback and monitor upstream DFLASH grammar
+  errors as well as invalid JSON.
 - `nemotron-3-ultra-free` matched DeepSeek's screening metrics but averaged `26.5 s`, so it does
   not justify a full run yet.
 - `north-mini-code-free` returned only 3/5 valid responses and averaged `40.3 s` when successful.

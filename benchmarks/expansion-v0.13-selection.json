@@ -1,0 +1,169 @@
+{
+  "name": "real-project-benchmark-expansion-v0.13",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "kludex-uvicorn-issue-3035-pr-3036",
+      "case_id": "uvicorn-nonascii-websocket-headers",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #3036 is the merged closing fix for Issue #3035; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is uvicorn/protocols/websockets/websockets_impl.py, uvicorn/protocols/websockets/websockets_sansio_impl.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "kludex-uvicorn-issue-3040-pr-3041",
+      "case_id": "uvicorn-sansio-denial-duplicate-headers",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #3041 is the merged closing fix for Issue #3040; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is uvicorn/protocols/websockets/websockets_sansio_impl.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "celery-celery-issue-10312-pr-10313",
+      "case_id": "celery-redis-backend-ssl-url",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #10313 is the merged closing fix for Issue #10312; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is celery/backends/redis.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "celery-celery-issue-10322-pr-10324",
+      "case_id": "celery-dst-gap-make-aware",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #10324 is the merged closing fix for Issue #10322; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is celery/utils/time.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "celery-celery-issue-10340-pr-10363",
+      "case_id": "celery-pidbox-reset-fd-leak",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #10363 is the merged closing fix for Issue #10340; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is celery/worker/pidbox.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-flask-issue-5621-pr-5632",
+      "case_id": "flask-secret-key-rotation",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #5632 is the merged closing fix for Issue #5621; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/flask/app.py, src/flask/sessions.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-flask-issue-5628-pr-5630",
+      "case_id": "flask-dotenv-precedence",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #5630 is the merged closing fix for Issue #5628; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/flask/cli.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-black-issue-5225-pr-5238",
+      "case_id": "black-fmtoff-class-blank-lines",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #5238 is the merged closing fix for Issue #5225; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/black/lines.py, src/black/mode.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-black-issue-5243-pr-5244",
+      "case_id": "black-starred-type-params-trailing-comma",
+      "tier": "calibration",
+      "review_notes": [
+        "PR #5244 is the merged closing fix for Issue #5243; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/black/nodes.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-pip-issue-14079-pr-14084",
+      "case_id": "pip-download-protocol-error-resume",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #14084 is the merged closing fix for Issue #14079; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/pip/_internal/network/download.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-pip-issue-14136-pr-14143",
+      "case_id": "pip-rich-option-error-usage",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #14143 is the merged closing fix for Issue #14136; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/pip/_internal/cli/parser.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-mypy-issue-21736-pr-21737",
+      "case_id": "mypy-frozen-dataclass-covariance",
+      "tier": "main",
+      "review_notes": [
+        "PR #21737 is the merged closing fix for Issue #21736; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is mypy/checker.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-mypy-issue-21777-pr-21788",
+      "case_id": "mypy-generic-default-strict-optional",
+      "tier": "main",
+      "review_notes": [
+        "PR #21788 is the merged closing fix for Issue #21777; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is mypy/typeanal.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-poetry-poetry-issue-10760-pr-10769",
+      "case_id": "poetry-publish-no-interaction",
+      "tier": "main",
+      "review_notes": [
+        "PR #10769 is the merged closing fix for Issue #10760; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/poetry/console/commands/publish.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-poetry-poetry-issue-10770-pr-10784",
+      "case_id": "poetry-empty-conda-prefix",
+      "tier": "main",
+      "review_notes": [
+        "PR #10784 is the merged closing fix for Issue #10770; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/poetry/utils/env/env_manager.py, src/poetry/utils/env/python/manager.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-poetry-poetry-issue-10830-pr-10917",
+      "case_id": "poetry-relative-directory-url",
+      "tier": "main",
+      "review_notes": [
+        "PR #10917 is the merged closing fix for Issue #10830; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is src/poetry/installation/executor.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scrapy-scrapy-issue-7759-pr-7763",
+      "case_id": "scrapy-settings-iterable-update",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #7763 is the merged closing fix for Issue #7759; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is scrapy/settings/__init__.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scrapy-scrapy-issue-7796-pr-7818",
+      "case_id": "scrapy-pep649-signature",
+      "tier": "generalization",
+      "review_notes": [
+        "PR #7818 is the merged closing fix for Issue #7796; the Issue payload and ordered PR commit list were frozen from GitHub's public pages.",
+        "The reviewed production ground truth is scrapy/utils/decorators.py, scrapy/utils/python.py; tests, documentation, changelog, lock, configuration, generated, and integration-support files are excluded."
+      ]
+    }
+  ]
+}
