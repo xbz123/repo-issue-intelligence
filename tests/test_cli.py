@@ -6,7 +6,8 @@ from typer.testing import CliRunner
 
 from repo_issue_intelligence.benchmark import BenchmarkTier
 from repo_issue_intelligence.benchmark_discovery import CandidateCatalog
-from repo_issue_intelligence.cli import app
+from repo_issue_intelligence.cli import _build_benchmark_reranker, app
+from repo_issue_intelligence.config import Settings
 from repo_issue_intelligence.models import LLMAnalysis, LLMAnalysisResult
 
 runner = CliRunner()
@@ -98,7 +99,7 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     assert "GROQ_API_KEY is required" in result.output
 
 
-def test_benchmark_opencode_requires_provider_key(tmp_path: Path, monkeypatch) -> None:
+def test_hybrid_benchmark_requires_opencode_key(tmp_path: Path, monkeypatch) -> None:
     manifest = Path("benchmarks/cases.json").resolve()
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
@@ -110,13 +111,59 @@ def test_benchmark_opencode_requires_provider_key(tmp_path: Path, monkeypatch) -
             str(manifest),
             "--variant",
             "hybrid",
-            "--provider",
-            "opencode",
         ],
     )
 
     assert result.exit_code == 2
     assert "OPENCODE_API_KEY is required" in result.output
+
+
+def test_benchmark_does_not_accept_provider_or_model_overrides() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "benchmarks/cases.json",
+            "--variant",
+            "hybrid",
+            "--provider",
+            "groq",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "No such option: --provider" in result.output
+
+
+def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "benchmarks/cases.json",
+            "--variant",
+            "hybrid-full",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "hybrid-full" in result.output
+
+
+def test_benchmark_reranker_uses_long_read_timeout() -> None:
+    settings = Settings(
+        opencode_api_key="test-key",
+        opencode_timeout_seconds=1,
+        _env_file=None,
+    )
+
+    analyzer = _build_benchmark_reranker(settings, temperature=0.1, seed=1337)
+
+    assert analyzer.timeout_seconds == 180
+    assert analyzer.rerank_initial_output_tokens == 256
+    assert analyzer.rerank_max_output_tokens == 1_024
+    assert analyzer.rerank_reasoning_effort == "none"
+    analyzer.close()
 
 
 def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> None:

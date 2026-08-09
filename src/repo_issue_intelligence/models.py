@@ -202,7 +202,6 @@ class LLMAnalysisResult(BaseModel):
 
 
 class EvidenceRerankAnalysis(StrictOutputModel):
-    summary: str
     reranked_evidence_ids: list[str] = Field(min_length=1)
 
 
@@ -214,6 +213,7 @@ class EvidenceRerankResult(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     elapsed_ms: float
+    attempts: int = Field(default=1, ge=1)
     analysis: EvidenceRerankAnalysis
 
 

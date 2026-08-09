@@ -33,6 +33,8 @@ from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import (
+    OPENCODE_DEFAULT_MODEL,
+    OPENCODE_RERANK_TIMEOUT_SECONDS,
     GroqIssueAnalyzer,
     IssueAnalyzer,
     LLMProvider,
@@ -78,6 +80,26 @@ def _build_issue_analyzer(
         api_key=settings.opencode_api_key.get_secret_value(),
         model=model or settings.opencode_model,
         **common,
+    )
+
+
+def _build_benchmark_reranker(
+    settings: Settings,
+    temperature: float,
+    seed: int,
+) -> OpenCodeIssueAnalyzer:
+    if settings.opencode_api_key is None:
+        raise typer.BadParameter("OPENCODE_API_KEY is required for the hybrid benchmark")
+    return OpenCodeIssueAnalyzer(
+        api_key=settings.opencode_api_key.get_secret_value(),
+        model=OPENCODE_DEFAULT_MODEL,
+        max_output_tokens=settings.opencode_max_output_tokens,
+        timeout_seconds=max(
+            settings.opencode_timeout_seconds,
+            OPENCODE_RERANK_TIMEOUT_SECONDS,
+        ),
+        temperature=temperature,
+        seed=seed,
     )
 
 
@@ -260,7 +282,7 @@ def benchmark(
         BenchmarkVariant,
         typer.Option(
             "--variant",
-            help="Deterministic, minimal hybrid, or full-schema hybrid variant.",
+            help="Deterministic or DeepSeek V4 Flash hybrid variant.",
         ),
     ] = BenchmarkVariant.DETERMINISTIC,
     case_id: Annotated[
@@ -269,14 +291,6 @@ def benchmark(
     ] = None,
     workspace: Path = Path("benchmarks/workspaces"),
     output: Path = Path("benchmarks/results/latest.json"),
-    provider: Annotated[
-        LLMProvider,
-        typer.Option("--provider", help="OpenAI-compatible inference provider."),
-    ] = LLMProvider.GROQ,
-    model: Annotated[
-        str | None,
-        typer.Option("--model", help="Provider model ID for the hybrid variant."),
-    ] = None,
     llm_delay_seconds: Annotated[
         float,
         typer.Option(
@@ -303,13 +317,7 @@ def benchmark(
     settings = Settings()
     analyzer = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
-        analyzer = _build_issue_analyzer(
-            settings,
-            provider,
-            model,
-            temperature=temperature,
-            seed=seed,
-        )
+        analyzer = _build_benchmark_reranker(settings, temperature, seed)
     try:
         run = run_benchmark(
             load_manifest(manifest),

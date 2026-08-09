@@ -148,48 +148,7 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
     assert schema["properties"]["hypotheses"]["maxItems"] == 2
 
 
-def test_groq_analyzer_uses_minimal_schema_for_evidence_reranking() -> None:
-    captured_request = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured_request.update(json.loads(request.content))
-        return httpx.Response(
-            200,
-            json={
-                "id": "rerank-request",
-                "choices": [
-                    {
-                        "message": {
-                            "content": json.dumps(
-                                {
-                                    "summary": "Authentication evidence is most relevant.",
-                                    "reranked_evidence_ids": ["E1"],
-                                }
-                            )
-                        }
-                    }
-                ],
-                "usage": {"prompt_tokens": 100, "completion_tokens": 20},
-            },
-        )
-
-    client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
-        transport=httpx.MockTransport(handler),
-    )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
-
-    result = analyzer.rerank(issue(), evidence())
-
-    schema = captured_request["response_format"]["json_schema"]["schema"]
-    assert set(schema["properties"]) == {"summary", "reranked_evidence_ids"}
-    assert schema["properties"]["reranked_evidence_ids"]["minItems"] == 1
-    assert result.analysis.reranked_evidence_ids == ["E1"]
-    assert result.input_tokens == 100
-    assert result.output_tokens == 20
-
-
-def test_opencode_analyzer_uses_openai_compatible_json_object() -> None:
+def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
     captured_request = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -201,12 +160,7 @@ def test_opencode_analyzer_uses_openai_compatible_json_object() -> None:
                 "choices": [
                     {
                         "message": {
-                            "content": json.dumps(
-                                {
-                                    "summary": "Authentication evidence is most relevant.",
-                                    "reranked_evidence_ids": ["E1"],
-                                }
-                            )
+                            "content": "Evidence considered.\nRANK: E1",
                         }
                     }
                 ],
@@ -225,20 +179,26 @@ def test_opencode_analyzer_uses_openai_compatible_json_object() -> None:
         client=client,
     )
 
-    result = analyzer.rerank(issue(), evidence())
+    result = analyzer.rerank(
+        issue().model_copy(update={"body": "x" * 2_100}),
+        evidence(),
+    )
 
-    assert captured_request["response_format"] == {"type": "json_object"}
-    assert captured_request["max_tokens"] == 4_096
+    assert "response_format" not in captured_request
+    assert captured_request["max_tokens"] == 256
     assert "max_completion_tokens" not in captured_request
-    assert "reasoning_effort" not in captured_request
+    assert captured_request["reasoning_effort"] == "none"
     assert captured_request["seed"] == 1337
-    assert "Return only one minified JSON object" in captured_request["messages"][0]["content"]
-    assert "reranked_evidence_ids" in captured_request["messages"][0]["content"]
-    assert '"reranked_evidence_ids":["E1","E2"]' in captured_request["messages"][0]["content"]
+    assert "Return exactly one line" in captured_request["messages"][0]["content"]
+    assert "three\nstrongest evidence IDs" in captured_request["messages"][0]["content"]
+    assert "RANK: E3,E1,E2" in captured_request["messages"][0]["content"]
+    user_payload = json.loads(captured_request["messages"][1]["content"])
+    assert len(user_payload["issue"]["body"]) == 2_000
     assert result.provider == "opencode"
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.input_tokens == 80
     assert result.output_tokens == 12
+    assert result.attempts == 1
 
 
 def test_provider_client_ignores_malformed_inherited_no_proxy(monkeypatch) -> None:
@@ -249,7 +209,7 @@ def test_provider_client_ignores_malformed_inherited_no_proxy(monkeypatch) -> No
     analyzer.close()
 
 
-def test_groq_analyzer_rejects_empty_evidence_reranking() -> None:
+def test_opencode_deepseek_rerank_deduplicates_ids() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
@@ -258,12 +218,7 @@ def test_groq_analyzer_rejects_empty_evidence_reranking() -> None:
                 "choices": [
                     {
                         "message": {
-                            "content": json.dumps(
-                                {
-                                    "summary": "No evidence was ranked.",
-                                    "reranked_evidence_ids": [],
-                                }
-                            )
+                            "content": "RANK: E1,E1",
                         }
                     }
                 ],
@@ -271,13 +226,254 @@ def test_groq_analyzer_rejects_empty_evidence_reranking() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="invalid rerank response"):
+    result = analyzer.rerank(issue(), evidence())
+
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+
+
+@pytest.mark.parametrize(
+    ("content", "message"),
+    [
+        ("No ranking available", "found 0"),
+        ("RANK: E1\nRANK: E1", "found 2"),
+        ('{"RANK":"E1"}', "found 0"),
+    ],
+)
+def test_opencode_deepseek_rerank_rejects_invalid_rank_lines(
+    content: str,
+    message: str,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "invalid-rerank-request",
+                "choices": [{"message": {"content": content}}],
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match=message) as error:
         analyzer.rerank(issue(), evidence())
+
+    assert error.value.retryable is False
+
+
+def test_opencode_deepseek_rerank_rejects_unknown_evidence_id() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "unknown-rerank-request",
+                "choices": [{"message": {"content": "RANK: E999"}}],
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="unknown evidence IDs: E999"):
+        analyzer.rerank(issue(), evidence())
+
+
+def test_opencode_deepseek_rerank_rejects_more_than_three_ids() -> None:
+    snippets = [
+        EvidenceSnippet(
+            id=f"E{index}",
+            file=f"module_{index}.py",
+            symbol=f"function_{index}",
+            lines="1-2",
+            content="return None",
+        )
+        for index in range(1, 5)
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "oversized-rerank-request",
+                "choices": [{"message": {"content": "RANK: E1,E2,E3,E4"}}],
+                "usage": {"prompt_tokens": 40, "completion_tokens": 12},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="more than three") as error:
+        analyzer.rerank(issue(), snippets)
+
+    assert error.value.category == "invalid_rank"
+    assert error.value.input_tokens == 40
+    assert error.value.output_tokens == 12
+
+
+def test_opencode_deepseek_rerank_classifies_output_truncation() -> None:
+    requested_budgets = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        budget = json.loads(request.content)["max_tokens"]
+        requested_budgets.append(budget)
+        return httpx.Response(
+            200,
+            json={
+                "id": "truncated-rerank-request",
+                "choices": [
+                    {"finish_reason": "length", "message": {"content": ""}}
+                ],
+                "usage": {"prompt_tokens": 10, "completion_tokens": budget},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="exhausted both rank output budgets") as error:
+        analyzer.rerank(issue(), evidence())
+
+    assert error.value.retryable is False
+    assert error.value.category == "output_truncated"
+    assert error.value.attempts == 2
+    assert error.value.input_tokens == 20
+    assert error.value.output_tokens == 1_280
+    assert error.value.elapsed_ms >= 0
+    assert requested_budgets == [256, 1_024]
+
+
+def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> None:
+    requested_budgets = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        budget = json.loads(request.content)["max_tokens"]
+        requested_budgets.append(budget)
+        if budget == 256:
+            return httpx.Response(
+                200,
+                json={
+                    "id": "truncated-request",
+                    "choices": [
+                        {"finish_reason": "length", "message": {"content": ""}}
+                    ],
+                    "usage": {"prompt_tokens": 80, "completion_tokens": 256},
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "id": "successful-request",
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": "RANK: E1"}}
+                ],
+                "usage": {"prompt_tokens": 80, "completion_tokens": 100},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    result = analyzer.rerank(issue(), evidence())
+
+    assert requested_budgets == [256, 1_024]
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+    assert result.attempts == 2
+    assert result.input_tokens == 160
+    assert result.output_tokens == 356
+
+
+def test_opencode_rerank_rejects_other_models() -> None:
+    analyzer = OpenCodeIssueAnalyzer("test-key", model="other-model")
+
+    with pytest.raises(ValueError, match="only supports deepseek-v4-flash-free"):
+        analyzer.rerank(issue(), evidence())
+
+    analyzer.close()
+
+
+def test_opencode_deepseek_rerank_marks_grammar_400_non_retryable() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            400,
+            json={
+                "error": {
+                    "code": "upstream_error",
+                    "message": "DFLASH does not support grammar constrained decoding",
+                }
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="HTTP 400") as error:
+        analyzer.rerank(issue(), evidence())
+
+    assert "response_format" not in captured_request
+    assert error.value.retryable is False
+    assert error.value.category == "grammar_unsupported"
+
+
+def test_opencode_deepseek_rerank_marks_429_retryable() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, headers={"retry-after": "3"})
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="HTTP 429") as error:
+        analyzer.rerank(issue(), evidence())
+
+    assert error.value.retryable is True
+    assert error.value.retry_after == 3
+    assert error.value.category == "rate_limit"
+
+
+def test_opencode_deepseek_rerank_marks_5xx_retryable() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503)
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(GroqAPIError, match="HTTP 503") as error:
+        analyzer.rerank(issue(), evidence())
+
+    assert error.value.retryable is True
+    assert error.value.category == "server_error"
 
 
 def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:

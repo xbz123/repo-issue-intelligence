@@ -5,6 +5,7 @@ from pathlib import Path
 from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
+    BenchmarkRun,
     BenchmarkSymbolTarget,
     BenchmarkTier,
     BenchmarkVariant,
@@ -15,12 +16,11 @@ from repo_issue_intelligence.benchmark import (
     run_benchmark,
     tracked_repository_files,
 )
+from repo_issue_intelligence.llm_client import LLMProviderError
 from repo_issue_intelligence.models import (
     EvidenceRerankAnalysis,
     EvidenceRerankResult,
     IssueRecord,
-    LLMAnalysis,
-    LLMAnalysisResult,
 )
 from repo_issue_intelligence.repository_index import build_repository_map
 
@@ -66,16 +66,20 @@ def create_repository(root: Path) -> Path:
 
 
 class ReverseEvidenceAnalyzer:
-    provider = "groq"
-    model = "openai/gpt-oss-20b"
-    reasoning_effort = "low"
+    provider = "opencode"
+    model = "deepseek-v4-flash-free"
+    reasoning_effort = None
     temperature = 0.1
     seed = 1337
+    timeout_seconds = 180.0
+    rerank_initial_output_tokens = 256
+    rerank_max_output_tokens = 1_024
+    rerank_reasoning_effort = "none"
 
     def rerank(self, issue, evidence):
         reversed_ids = [snippet.id for snippet in reversed(evidence)]
         return EvidenceRerankResult(
-            provider="groq",
+            provider="opencode",
             model=self.model,
             request_id="benchmark-request",
             system_fingerprint="benchmark-fingerprint",
@@ -83,46 +87,7 @@ class ReverseEvidenceAnalyzer:
             output_tokens=100,
             elapsed_ms=10,
             analysis=EvidenceRerankAnalysis(
-                summary="The service evidence is more specific.",
                 reranked_evidence_ids=reversed_ids,
-            ),
-        )
-
-    def analyze(self, issue, report, evidence):
-        reversed_ids = [snippet.id for snippet in reversed(evidence)]
-        return LLMAnalysisResult(
-            provider="groq",
-            model=self.model,
-            request_id="full-benchmark-request",
-            system_fingerprint="full-benchmark-fingerprint",
-            input_tokens=300,
-            output_tokens=150,
-            elapsed_ms=15,
-            analysis=LLMAnalysis(
-                summary="The service evidence is more specific.",
-                issue_type="bug",
-                affected_component="token",
-                reproduction_completeness="partial",
-                evidence_observations=[
-                    {
-                        "evidence_id": snippet.id,
-                        "alignment": "supports_issue",
-                        "observation": f"{snippet.file} contains token handling.",
-                    }
-                    for snippet in evidence
-                ],
-                contradictions=[],
-                reranked_evidence_ids=reversed_ids,
-                hypotheses=[
-                    {
-                        "description": "Token validation may fail.",
-                        "confidence": 0.7,
-                        "evidence_ids": [reversed_ids[0]],
-                        "missing_evidence": ["Failing test"],
-                        "validation_step": "Inspect the existing token tests.",
-                    }
-                ],
-                needs_more_evidence=True,
             ),
         )
 
@@ -332,22 +297,10 @@ def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None
     assert result.llm_request_id == "benchmark-request"
     assert result.llm_system_fingerprint == "benchmark-fingerprint"
     assert result.llm_input_tokens == 200
-
-
-def test_evaluate_case_supports_full_schema_hybrid(tmp_path: Path) -> None:
-    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
-    result = evaluate_case(
-        benchmark_case(updated_at),
-        benchmark_issue(updated_at),
-        create_repository(tmp_path),
-        BenchmarkVariant.HYBRID_FULL,
-        analyzer=ReverseEvidenceAnalyzer(),
-    )
-
-    assert result.candidate_files[0] == "src/token_service.py"
-    assert result.llm_request_id == "full-benchmark-request"
-    assert result.llm_input_tokens == 300
-    assert result.llm_fallback_used is False
+    aggregate = _aggregate([result])
+    assert aggregate.llm_success_rate == 1
+    assert aggregate.llm_success_mean_reciprocal_rank == result.reciprocal_rank
+    assert aggregate.llm_fallback_reasons == {}
 
 
 def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:
@@ -392,7 +345,16 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
         analyzer=ReverseEvidenceAnalyzer(),
     )
 
-    assert run.provider == "groq"
+    assert run.provider == "opencode"
+    assert run.timeout_seconds == 180.0
+    assert run.max_chars_per_evidence == 300
+    assert run.initial_output_tokens == 256
+    assert run.max_output_tokens == 1_024
+    assert run.reasoning_effort == "none"
+
+    historical_payload = run.model_dump(mode="json")
+    historical_payload["variant"] = "hybrid-full"
+    assert BenchmarkRun.model_validate(historical_payload).variant == "hybrid-full"
 
 
 def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:
@@ -417,6 +379,28 @@ def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) ->
     assert aggregate.symbol_cases == 0
     assert aggregate.symbol_recall_at_5 is None
     assert aggregate.symbol_recall_at_20 is None
+
+
+def test_hybrid_empty_evidence_counts_as_fallback_without_request(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    repository = tmp_path / "empty-repository"
+    repository.mkdir()
+
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        repository,
+        BenchmarkVariant.HYBRID,
+        analyzer=ReverseEvidenceAnalyzer(),
+    )
+    aggregate = _aggregate([result])
+
+    assert result.llm_attempts == 0
+    assert result.llm_fallback_used is True
+    assert result.llm_fallback_reason == "no_evidence"
+    assert aggregate.llm_cases == 1
+    assert aggregate.llm_success_rate == 0
+    assert aggregate.llm_fallback_reasons == {"no_evidence": 1}
 
 
 def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> None:
@@ -475,15 +459,16 @@ class UnknownEvidenceAnalyzer(ReverseEvidenceAnalyzer):
         return EvidenceRerankResult(
             provider="custom",
             model=self.model,
+            input_tokens=7,
+            output_tokens=9,
             elapsed_ms=1,
             analysis=EvidenceRerankAnalysis(
-                summary="Invalid custom rerank",
                 reranked_evidence_ids=["E999"],
             ),
         )
 
 
-def test_hybrid_unknown_evidence_id_retries_then_falls_back(tmp_path: Path) -> None:
+def test_hybrid_unknown_evidence_id_falls_back_without_retry(tmp_path: Path) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
 
     result = evaluate_case(
@@ -495,7 +480,60 @@ def test_hybrid_unknown_evidence_id_retries_then_falls_back(tmp_path: Path) -> N
     )
 
     assert result.execution_succeeded is True
-    assert result.llm_attempts == 2
+    assert result.llm_attempts == 1
     assert result.llm_fallback_used is True
+    assert result.llm_fallback_reason == "unknown_evidence_id"
+    assert result.llm_input_tokens == 7
+    assert result.llm_output_tokens == 9
+    assert result.llm_elapsed_ms == 1
     assert result.candidate_files
     assert result.error == "LLMProviderError: Reranker returned unknown evidence IDs: E999"
+    aggregate = _aggregate([result])
+    assert aggregate.llm_success_rate == 0
+    assert aggregate.llm_success_mean_reciprocal_rank is None
+    assert aggregate.llm_fallback_reasons == {"unknown_evidence_id": 1}
+    assert aggregate.average_llm_elapsed_ms == 1
+    assert aggregate.average_llm_success_elapsed_ms is None
+    assert aggregate.llm_input_tokens == 7
+    assert aggregate.llm_output_tokens == 9
+
+
+class TransientEvidenceAnalyzer(ReverseEvidenceAnalyzer):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def rerank(self, issue, evidence):
+        self.calls += 1
+        if self.calls == 1:
+            raise LLMProviderError(
+                "OpenCode request timed out",
+                retryable=True,
+                input_tokens=10,
+                output_tokens=20,
+                elapsed_ms=30,
+            )
+        return super().rerank(issue, evidence)
+
+
+def test_hybrid_retries_transient_errors_with_backoff(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    delays: list[float] = []
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.sleep", delays.append)
+
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.HYBRID,
+        analyzer=TransientEvidenceAnalyzer(),
+    )
+
+    assert result.llm_attempts == 2
+    assert result.llm_fallback_used is False
+    assert result.llm_input_tokens == 210
+    assert result.llm_output_tokens == 120
+    assert result.llm_elapsed_ms == 40
+    assert delays == [1.0]

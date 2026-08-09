@@ -35,12 +35,14 @@ excluding timestamps and elapsed fields. The 50-case baseline is File Recall@1 `
 Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. The 33 labeled cases
 reach Symbol Recall@1 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and MRR `0.2866`.
 
-An authorized OpenCode `deepseek-v4-flash-free` run completed all 50 cases and kept provider
-failures in the denominator through deterministic fallback. It reached File Recall@1 `0.6267`,
-Recall@5 `0.8133`, Recall@10 `0.8800`, Recall@20 `0.9300`, and MRR `0.7831`. Twenty-nine reranks
-were valid; 13 cases exhausted retries after an upstream DFLASH grammar HTTP 400 and eight after
-invalid JSON. Fifteen expected-file ranks improved and none worsened. This supports a bounded
-ordering-gain claim for valid reranks, while the 58% success rate is a provider-reliability warning.
+Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs completed all 50 cases and kept
+every case in the denominator. Both returned 50/50 valid ranks with no fallback. File Recall@1 was
+`0.6567` and `0.6767`, Recall@5/10/20 was `0.8200/0.8600/0.9300` in both runs, and MRR was
+`0.8226` and `0.8326`. Against deterministic retrieval, each run improved 18 case-level reciprocal
+ranks, left 28 unchanged, and worsened four. The same 20 candidate files remained available in
+every case, while model ordering differed in 14/50 cases across repeats. This supports a bounded
+ordering-gain and two-run protocol-reliability claim, not deterministic model output or production
+reliability.
 
 The expansion is intentionally labeled an initial 50-case suite rather than a representative
 sample. Sixteen of the 18 additions were created in 2026 and two in 2024, and the 11 multi-file

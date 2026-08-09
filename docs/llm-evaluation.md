@@ -7,10 +7,14 @@ quality improvement is claimed.
 
 1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
    bounded static-graph reranking inside fixed Top-10 bands.
-2. `hybrid`: deterministic retrieval followed by provider-backed evidence-ID reranking.
+2. `hybrid`: deterministic retrieval followed only by OpenCode
+   `deepseek-v4-flash-free` evidence-ID reranking.
 
 An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
-outside the deterministic candidate pool.
+outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
+plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
+disables reasoning, asks for at most three IDs, starts with a 256-token output budget, and retries
+once at 1,024 tokens only if the first completion is truncated.
 
 ## Dataset
 
@@ -46,10 +50,11 @@ Groq/OpenCode comparison. Manifest version 6 is retained as
 - Duplicate precision, recall, and F1.
 - File Recall@1, @5, @10, and @20 plus file MRR.
 - Symbol Recall@1, @5, @10, and @20 plus symbol MRR on labeled cases only.
-- Invalid structured-response rate.
+- Rank-protocol success rate and fallback reasons.
 - Unknown evidence-reference rate.
 - Input and output tokens per issue.
 - Analysis latency per issue, measured after repository preparation.
+- MRR on valid reranks separately from overall MRR with all fallbacks retained.
 
 ## Reporting
 
@@ -95,19 +100,24 @@ symbols, and metrics after timestamps and elapsed fields were excluded. File Rec
 symbol-labeled cases, Symbol Recall@1 was `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`,
 and symbol MRR `0.2866`.
 
-The authorized OpenCode `deepseek-v4-flash-free` run used the same 50 candidate pools and kept all
-fallbacks in the denominator. Hybrid File Recall@1 was `0.6267`, Recall@5 `0.8133`, Recall@10
-`0.8800`, Recall@20 `0.9300`, and MRR `0.7831`. Fifteen expected-file ranks improved, 35 were
-unchanged, and none worsened. On the 29 cases with valid model output, Recall@1 increased from
-`0.4080` to `0.7874` and MRR from `0.6095` to `0.9224`.
+Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs used the same 50 deterministic
+candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks with
+no fallback. Run 1 File Recall@1/5/10/20 was `0.6567/0.8200/0.8600/0.9300` with MRR `0.8226`;
+run 2 was `0.6767/0.8200/0.8600/0.9300` with MRR `0.8326`. The two-run mean and population
+standard deviation were Recall@1 `0.6667 +/- 0.0100` and MRR `0.8276 +/- 0.0050`.
 
-Only 29 of 50 reranks were valid. Thirteen cases exhausted two attempts after an upstream DFLASH
-grammar HTTP 400, and eight exhausted two invalid JSON responses. Every fallback preserved the
-deterministic order. Successful final calls used 150,558 input and 69,217 output tokens and
-averaged `23.3 s`; failed attempts do not expose token counts. The result therefore supports
-ordering quality when a rerank is valid, but the observed 58% success rate does not support a
-production-reliability claim. The reviewed artifact is
-`benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json`.
+Protocol success was 100% in both runs. Valid-response MRR therefore equals overall MRR, and the
+fallback-reason map is empty. Grammar HTTP 400, invalid rank, and unknown evidence ID counts were
+all zero. All 100 requests completed in one attempt. Each run used 170,521 input tokens; output
+was 485 and 491 tokens, and average model latency was `4.13 s` and `4.96 s`. Run-level mean
+latency was `4.55 +/- 0.41 s` (population standard deviation).
+
+Against deterministic retrieval, both runs improved 18 case-level reciprocal ranks, left 28
+unchanged, and worsened four. Every case retained the same 20-file candidate set, but 14/50 file
+orders changed between repeats. Only `pydantic-safe-annotations-metaclass` changed expected-file
+reciprocal rank, from rank 2 to rank 1. Seed 1337 is therefore best effort. The reviewed artifacts
+are `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
+`benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`.
 
 The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
 Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
@@ -167,10 +177,10 @@ rerank schema is therefore more reliable than the full hypothesis schema.
 
 The historical shortlist is deliberately small:
 
-- `deepseek-v4-flash-free` remains the default quality reference because its valid v8 reranks
-  raised paired MRR substantially, but the 50-case run returned only 29/50 valid final responses.
-  Any production path must retain deterministic fallback and monitor upstream DFLASH grammar
-  errors as well as invalid JSON.
+- `deepseek-v4-flash-free` remains the only current benchmark reranker. Its plain rank-only
+  protocol returned 50/50 valid ranks in each of two v8 runs and raised paired MRR substantially.
+  Fixed-seed ordering still changed in 14/50 cases, so deterministic fallback and protocol
+  telemetry remain required even though neither run used fallback.
 - `nemotron-3-ultra-free` matched DeepSeek's screening metrics but averaged `26.5 s`, so it does
   not justify a full run yet.
 - `north-mini-code-free` returned only 3/5 valid responses and averaged `40.3 s` when successful.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from enum import StrEnum
 from time import perf_counter
@@ -24,9 +25,24 @@ from .models import (
 GROQ_API_BASE_URL = "https://api.groq.com/openai/v1"
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash-free"
-RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item is to
-contain the source location that must change to fix the GitHub issue. Use only evidence IDs from
-the input. Return the most relevant IDs first. Do not diagnose a root cause or propose a patch."""
+OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
+OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 1_024
+OPENCODE_RERANK_REASONING_EFFORT = "none"
+OPENCODE_RERANK_TIMEOUT_SECONDS = 180.0
+OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS = 2_000
+OPENCODE_RERANK_MAX_IDS = 3
+DEEPSEEK_RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item
+is to contain the source location that must change to fix the GitHub issue. Select only the three
+strongest evidence IDs (or every ID when fewer than three are supplied). Use only evidence IDs
+from the input. Return the most relevant ID first. Do not diagnose a root cause or propose a patch.
+
+Return exactly one line in this format:
+RANK: E3,E1,E2
+Do not return JSON, Markdown, code fences, a rationale, or any other text."""
+RANK_LINE_PATTERN = re.compile(
+    r"^\s*RANK:\s*([A-Za-z0-9_-]+(?:\s*,\s*[A-Za-z0-9_-]+)*)\s*$",
+    re.MULTILINE,
+)
 SYSTEM_PROMPT = """You investigate a GitHub issue using only the supplied repository evidence.
 
 Return the requested structured analysis. Candidate locations and hypotheses are not confirmed
@@ -65,9 +81,29 @@ class IssueAnalyzer(Protocol):
 
 
 class LLMProviderError(RuntimeError):
-    def __init__(self, message: str, retry_after: float | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        retry_after: float | None = None,
+        *,
+        retryable: bool = False,
+        category: str = "provider_error",
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        elapsed_ms: float = 0,
+        request_id: str | None = None,
+        system_fingerprint: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.retry_after = retry_after
+        self.retryable = retryable
+        self.category = category
+        self.attempts = 1
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.elapsed_ms = elapsed_ms
+        self.request_id = request_id
+        self.system_fingerprint = system_fingerprint
 
 
 # Compatibility alias for callers that imported the original provider-specific name.
@@ -114,6 +150,7 @@ class OpenAICompatibleIssueAnalyzer:
         )
         self.temperature = temperature
         self.seed = seed
+        self.timeout_seconds = timeout_seconds
         self._client = client or httpx.Client(
             base_url=base_url,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -135,17 +172,11 @@ class OpenAICompatibleIssueAnalyzer:
     ) -> tuple[str, dict, float]:
         if self.structured_output == "json_object":
             schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
-            example = ""
-            if schema_name == "evidence_rerank":
-                example = (
-                    '\nExample shape: {"summary":"Brief ranking rationale.",'
-                    '"reranked_evidence_ids":["E1","E2"]}'
-                )
             system_prompt = (
                 f"{system_prompt}\nReturn only one minified JSON object, without Markdown, "
-                f"that validates against this JSON Schema:\n{schema_text}{example}"
+                f"that validates against this JSON Schema:\n{schema_text}"
             )
-        payload = {
+        payload: dict = {
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
@@ -174,12 +205,19 @@ class OpenAICompatibleIssueAnalyzer:
         if self.provider == LLMProvider.GROQ and self.model.startswith("openai/gpt-oss-"):
             payload["reasoning_effort"] = self.reasoning_effort
 
+        return self._request_completion(payload)
+
+    def _request_completion(self, payload: dict) -> tuple[str, dict, float]:
         started = perf_counter()
         try:
             response = self._client.post("/chat/completions", json=payload)
         except httpx.HTTPError as error:
+            elapsed_ms = round((perf_counter() - started) * 1000, 3)
             raise GroqAPIError(
-                f"{self.provider_label} request failed: {type(error).__name__}"
+                f"{self.provider_label} request failed: {type(error).__name__}",
+                retryable=True,
+                category="transport",
+                elapsed_ms=elapsed_ms,
             ) from error
         elapsed_ms = round((perf_counter() - started) * 1000, 3)
         if response.status_code >= 400:
@@ -201,80 +239,37 @@ class OpenAICompatibleIssueAnalyzer:
                 parts = [value for value in (error_code, error_message[:500]) if value]
                 if parts:
                     detail = f": {' - '.join(parts)}"
+            lowered_detail = detail.lower()
+            if response.status_code == 429:
+                category = "rate_limit"
+            elif response.status_code >= 500:
+                category = "server_error"
+            elif response.status_code == 400 and (
+                "grammar" in lowered_detail or "dflash" in lowered_detail
+            ):
+                category = "grammar_unsupported"
+            else:
+                category = f"http_{response.status_code}"
             raise GroqAPIError(
                 f"{self.provider_label} API returned HTTP {response.status_code}{detail}",
                 retry_after=retry_after,
+                retryable=response.status_code == 429 or response.status_code >= 500,
+                category=category,
+                elapsed_ms=elapsed_ms,
             )
 
         try:
             response_payload = response.json()
             content = response_payload["choices"][0]["message"]["content"]
+            if not isinstance(content, str):
+                raise TypeError("completion content is not text")
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise GroqAPIError(
-                f"{self.provider_label} returned an invalid structured response"
+                f"{self.provider_label} returned an invalid structured response",
+                category="invalid_response",
+                elapsed_ms=elapsed_ms,
             ) from error
         return content, response_payload, elapsed_ms
-
-    def rerank(
-        self,
-        issue: IssueRecord,
-        evidence: Sequence[EvidenceSnippet],
-    ) -> EvidenceRerankResult:
-        user_payload = {
-            "issue": {
-                "number": issue.number,
-                "title": issue.title,
-                "body": issue.body[:3_000],
-                "labels": issue.labels,
-            },
-            "repository_evidence": [
-                snippet.model_dump(mode="json") for snippet in evidence
-            ],
-        }
-        content, response_payload, elapsed_ms = self._request_structured(
-            RERANK_SYSTEM_PROMPT,
-            user_payload,
-            EvidenceRerankAnalysis.model_json_schema(),
-            "evidence_rerank",
-        )
-        try:
-            analysis = EvidenceRerankAnalysis.model_validate_json(content)
-        except ValidationError as error:
-            details = ", ".join(
-                f"{'.'.join(str(value) for value in item['loc']) or '<root>'}:{item['type']}"
-                for item in error.errors(include_input=False, include_url=False)[:5]
-            )
-            raise GroqAPIError(
-                f"{self.provider_label} returned an invalid rerank response ({details})"
-            ) from error
-        except (TypeError, ValueError) as error:
-            raise GroqAPIError(
-                f"{self.provider_label} returned an invalid rerank response"
-            ) from error
-
-        valid_ids = {snippet.id for snippet in evidence}
-        reranked_ids = analysis.reranked_evidence_ids
-        if not reranked_ids:
-            raise GroqAPIError(
-                f"{self.provider_label} returned an empty evidence rerank"
-            )
-        unknown_ids = set(reranked_ids) - valid_ids
-        if unknown_ids:
-            raise GroqAPIError(
-                f"{self.provider_label} referenced unknown evidence IDs: "
-                f"{', '.join(sorted(unknown_ids))}"
-            )
-        usage = response_payload.get("usage") or {}
-        return EvidenceRerankResult(
-            provider=self.provider,
-            model=self.model,
-            request_id=response_payload.get("id"),
-            system_fingerprint=response_payload.get("system_fingerprint"),
-            input_tokens=int(usage.get("prompt_tokens") or 0),
-            output_tokens=int(usage.get("completion_tokens") or 0),
-            elapsed_ms=elapsed_ms,
-            analysis=analysis,
-        )
 
     def analyze(
         self,
@@ -427,4 +422,142 @@ class OpenCodeIssueAnalyzer(OpenAICompatibleIssueAnalyzer):
             temperature=temperature,
             seed=seed,
             client=client,
+        )
+        self.rerank_initial_output_tokens = OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS
+        self.rerank_max_output_tokens = OPENCODE_RERANK_MAX_OUTPUT_TOKENS
+        self.rerank_reasoning_effort = OPENCODE_RERANK_REASONING_EFFORT
+
+    def rerank(
+        self,
+        issue: IssueRecord,
+        evidence: Sequence[EvidenceSnippet],
+    ) -> EvidenceRerankResult:
+        if self.model != OPENCODE_DEFAULT_MODEL:
+            raise ValueError(
+                f"Benchmark reranking only supports {OPENCODE_DEFAULT_MODEL}"
+            )
+        user_payload = {
+            "issue": {
+                "number": issue.number,
+                "title": issue.title,
+                "body": issue.body[:OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS],
+                "labels": issue.labels,
+            },
+            "repository_evidence": [
+                snippet.model_dump(mode="json") for snippet in evidence
+            ],
+        }
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": DEEPSEEK_RERANK_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": json.dumps(user_payload, ensure_ascii=False),
+                },
+            ],
+            "temperature": self.temperature,
+            "reasoning_effort": self.rerank_reasoning_effort,
+        }
+        if self.seed is not None:
+            payload["seed"] = self.seed
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_elapsed_ms = 0.0
+        rank_lines: list[str] = []
+        response_payload: dict = {}
+        attempts = 0
+        for attempts, output_budget in enumerate(
+            (
+                OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS,
+                self.rerank_max_output_tokens,
+            ),
+            start=1,
+        ):
+            payload["max_tokens"] = output_budget
+            try:
+                content, response_payload, elapsed_ms = self._request_completion(payload)
+            except LLMProviderError as error:
+                error.attempts = attempts
+                error.input_tokens += total_input_tokens
+                error.output_tokens += total_output_tokens
+                error.elapsed_ms = round(error.elapsed_ms + total_elapsed_ms, 3)
+                raise
+            usage = response_payload.get("usage") or {}
+            total_input_tokens += int(usage.get("prompt_tokens") or 0)
+            total_output_tokens += int(usage.get("completion_tokens") or 0)
+            total_elapsed_ms += elapsed_ms
+            rank_lines = RANK_LINE_PATTERN.findall(content)
+            finish_reason = (
+                (response_payload.get("choices") or [{}])[0].get("finish_reason")
+            )
+            if rank_lines or finish_reason != "length":
+                break
+
+        if len(rank_lines) != 1:
+            finish_reason = (
+                (response_payload.get("choices") or [{}])[0].get("finish_reason")
+            )
+            category = "output_truncated" if finish_reason == "length" else "invalid_rank"
+            if category == "output_truncated":
+                message = (
+                    "OpenCode exhausted both rank output budgets before returning a RANK line"
+                )
+            else:
+                message = (
+                    "OpenCode returned an invalid rank response "
+                    f"(expected one RANK line, found {len(rank_lines)})"
+                )
+            error = LLMProviderError(
+                message,
+                category=category,
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                elapsed_ms=round(total_elapsed_ms, 3),
+                request_id=response_payload.get("id"),
+                system_fingerprint=response_payload.get("system_fingerprint"),
+            )
+            error.attempts = attempts
+            raise error
+        reranked_ids = list(
+            dict.fromkeys(value.strip() for value in rank_lines[0].split(","))
+        )
+        if len(reranked_ids) > OPENCODE_RERANK_MAX_IDS:
+            error = LLMProviderError(
+                "OpenCode returned more than three ranked evidence IDs",
+                category="invalid_rank",
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                elapsed_ms=round(total_elapsed_ms, 3),
+                request_id=response_payload.get("id"),
+                system_fingerprint=response_payload.get("system_fingerprint"),
+            )
+            error.attempts = attempts
+            raise error
+        valid_ids = {snippet.id for snippet in evidence}
+        unknown_ids = set(reranked_ids) - valid_ids
+        if unknown_ids:
+            error = LLMProviderError(
+                "OpenCode referenced unknown evidence IDs: "
+                + ", ".join(sorted(unknown_ids)),
+                category="unknown_evidence_id",
+                input_tokens=total_input_tokens,
+                output_tokens=total_output_tokens,
+                elapsed_ms=round(total_elapsed_ms, 3),
+                request_id=response_payload.get("id"),
+                system_fingerprint=response_payload.get("system_fingerprint"),
+            )
+            error.attempts = attempts
+            raise error
+        analysis = EvidenceRerankAnalysis(reranked_evidence_ids=reranked_ids)
+        return EvidenceRerankResult(
+            provider=self.provider,
+            model=self.model,
+            request_id=response_payload.get("id"),
+            system_fingerprint=response_payload.get("system_fingerprint"),
+            input_tokens=total_input_tokens,
+            output_tokens=total_output_tokens,
+            elapsed_ms=round(total_elapsed_ms, 3),
+            attempts=attempts,
+            analysis=analysis,
         )

@@ -20,35 +20,43 @@ metrics were structurally identical.
 | Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 0.9545 | 0.5183 | 3,403 ms |
 | Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 0.9318 | 0.6349 | 5,644 ms |
 
-The paired OpenCode `deepseek-v4-flash-free` run kept all 50 cases in the denominator and used
-the exact deterministic candidate pool:
+Two paired OpenCode `deepseek-v4-flash-free` rank-only runs kept all 50 cases in the denominator
+and used the exact deterministic candidate pool:
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid LLM |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Deterministic v0.13 | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9300 | 0.6016 | - |
-| DeepSeek V4 Flash Free | 50/50 | 0.6267 | 0.8133 | 0.8800 | 0.9300 | 0.7831 | 29/50 |
+| DeepSeek V4 Flash Free run 1 | 50/50 | 0.6567 | 0.8200 | 0.8600 | 0.9300 | 0.8226 | 50/50 |
+| DeepSeek V4 Flash Free run 2 | 50/50 | 0.6767 | 0.8200 | 0.8600 | 0.9300 | 0.8326 | 50/50 |
+| Two-run mean | 50/50 | 0.6667 | 0.8200 | 0.8600 | 0.9300 | 0.8276 | 50/50 |
 
-Fifteen expected-file reciprocal ranks improved, 35 were unchanged, and none worsened. All 21
-fallback cases retained the exact deterministic order. On the 29 cases with a valid rerank, file
-Recall@1 moved from `0.4080` to `0.7874`, Recall@5 from `0.7069` to `0.9195`, and MRR from
-`0.6095` to `0.9224`. This paired subset shows that the aggregate gain is attributable to valid
-reranks rather than excluding provider failures.
+Against deterministic retrieval, each run improved 18 case-level reciprocal ranks, left 28
+unchanged, and worsened four. All 100 requests completed in one attempt. Protocol success was
+100% in both runs, so valid-response MRR equals overall MRR and the fallback-reason map is empty.
+Grammar HTTP 400, invalid rank, and unknown evidence ID counts were all zero.
+The retained v0.13 JSON/grammar artifact had only 29/50 valid reranks, including 13 grammar HTTP
+400 failures and eight locally invalid JSON responses. The current result removes that response
+contract and disables unnecessary reasoning; it is not a selective rerun of only the failed cases.
 
-Provider reliability is a material limitation. Thirteen cases exhausted two attempts after the
-OpenCode upstream returned HTTP 400 because DFLASH speculative decoding did not support the
-requested grammar-constrained path. Eight more exhausted two locally invalid JSON responses. The
-29 successful final calls recorded 150,558 input and 69,217 output tokens and averaged `23.3 s`;
-failed attempts expose no token counts, so these are not total provider-consumption numbers. This
-is one best-effort-seed run and does not establish model-output variance.
+Each run recorded 170,521 input tokens. Output was 485 and 491 tokens, and average model latency
+was `4.13 s` and `4.96 s`; the run-level latency mean and population standard deviation were
+`4.55 +/- 0.41 s`. File Recall@1 mean and population standard deviation were
+`0.6667 +/- 0.0100`, while MRR was `0.8276 +/- 0.0050`.
+
+The deterministic 20-file candidate set was identical between repeats for all 50 cases, but model
+order changed in 14 cases. Only `pydantic-safe-annotations-metaclass` changed expected-file rank,
+from rank 2 in run 1 to rank 1 in run 2. Seed 1337 is therefore best effort rather than a guarantee
+of identical model output.
 
 On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
-`0.1970/0.3636/0.3636/0.4242` with MRR `0.2866`. Hybrid changed those values to
-`0.3485/0.4242/0.4242/0.4242` with MRR `0.4040`. Reranking cannot recover a symbol whose parent
+`0.1970/0.3636/0.3636/0.4242` with MRR `0.2866`. Both rank-only runs changed those values to
+`0.3636/0.4242/0.4242/0.4242` with MRR `0.4152`. Reranking cannot recover a symbol whose parent
 file or selected within-file symbol is absent from the deterministic pool.
 
 The new 18-case slice is harder than the retained 32 cases. Its deterministic Recall@1/5/20 and
-MRR are `0.3333/0.5278/0.8333/0.5283`; hybrid reaches
-`0.5556/0.6944/0.8333/0.7066`, with nine valid reranks and nine fallbacks. Five cases still miss
+MRR are `0.3333/0.5278/0.8333/0.5283`; both rank-only runs reach
+Recall@1/5/10/20 `0.5833/0.6389/0.6944/0.8333` and MRR `0.7390`, with 18/18 valid ranks and no
+fallback. Five cases still miss
 at least one reviewed file at Top-20: Rich `highlighter.py`, Celery `worker/pidbox.py`, Poetry
 `console/commands/publish.py` and `utils/env/python/manager.py`, and Scrapy
 `utils/decorators.py`. These are candidate-generation failures, not reranker failures.
@@ -146,8 +154,11 @@ Current machine-readable artifacts:
 - `benchmarks/expansion-v0.13-selection.json` — explicit review decisions for the new cases;
 - `benchmarks/cases-v0.13-expanded-50-cases.json` — named copy of manifest v8;
 - `benchmarks/results/deterministic-v0.13-expanded-50-cases.json` — current deterministic run;
-- `benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json` — paired
-  manifest-v8 OpenCode DeepSeek rerank;
+- `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
+  `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json` — current
+  paired manifest-v8 OpenCode DeepSeek rank-only repeats;
+- `benchmarks/results/hybrid-deepseek-v4-flash-v0.13-manifest-v8-50-cases.json` — retained
+  grammar/JSON protocol baseline;
 - `benchmarks/cases-v0.10-corrected-20-cases.json` — frozen manifest v5 used for paired LLM runs;
 - `benchmarks/candidates-v0.11.json` — accepted audit catalog for the 12 new cases;
 - `benchmarks/expansion-v0.11-selection.json` — explicit manual acceptance decisions;
