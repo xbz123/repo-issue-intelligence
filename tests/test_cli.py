@@ -2,6 +2,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from click import unstyle
 from typer.testing import CliRunner
 
 from repo_issue_intelligence.benchmark import BenchmarkTier
@@ -119,20 +120,23 @@ def test_hybrid_benchmark_requires_opencode_key(tmp_path: Path, monkeypatch) -> 
 
 
 def test_benchmark_does_not_accept_provider_or_model_overrides() -> None:
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "benchmarks/cases.json",
-            "--variant",
-            "hybrid",
-            "--provider",
-            "groq",
-        ],
-    )
+    for option, value in (("--provider", "groq"), ("--model", "other-model")):
+        result = runner.invoke(
+            app,
+            [
+                "benchmark",
+                "benchmarks/cases.json",
+                "--variant",
+                "hybrid",
+                option,
+                value,
+            ],
+        )
 
-    assert result.exit_code == 2
-    assert "No such option: --provider" in result.output
+        output = unstyle(result.output)
+        assert result.exit_code == 2
+        assert "No such option" in output
+        assert option in output
 
 
 def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
