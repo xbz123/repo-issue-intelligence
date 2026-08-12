@@ -44,6 +44,8 @@ class AgentGraphState(TypedDict, total=False):
 
 
 NodeFunction = Callable[[AgentGraphState], dict[str, Any]]
+RETRY_BASE_DELAY_SECONDS = 1.0
+RETRY_MAX_DELAY_SECONDS = 30.0
 
 
 def _summarize(values: dict[str, Any]) -> dict[str, Any]:
@@ -89,15 +91,20 @@ def _traced_node(
                 )
                 attempt_traces.append(trace)
                 store.append_trace(run_id, trace)
-                if attempt == max_attempts:
+                retryable = getattr(error, "retryable", None)
+                should_retry = attempt < max_attempts and retryable is not False
+                if not should_retry:
                     failed_state = dict(state)
                     failed_state["traces"] = [*state.get("traces", []), *attempt_traces]
                     failed_state["error"] = trace.error
                     store.save_snapshot(run_id, node_name, failed_state)
                     raise
                 retry_after = getattr(error, "retry_after", None)
+                retry_delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
                 if isinstance(retry_after, (int, float)) and retry_after > 0:
-                    sleep(min(float(retry_after), 30.0))
+                    retry_delay = max(retry_delay, float(retry_after))
+                if retryable is True:
+                    sleep(min(retry_delay, RETRY_MAX_DELAY_SECONDS))
             else:
                 finished_at = datetime.now(UTC)
                 trace = NodeTrace(

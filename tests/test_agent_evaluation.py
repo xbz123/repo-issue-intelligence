@@ -169,7 +169,7 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
     assert AgentAnalysisRun.model_validate_json(output.read_text(encoding="utf-8")) == run
 
 
-def test_agent_analysis_evaluation_records_failure_after_retries(
+def test_agent_analysis_evaluation_records_non_retryable_failure(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -186,11 +186,11 @@ def test_agent_analysis_evaluation_records_failure_after_retries(
     assert result.analysis_succeeded is False
     assert result.agent_status == "failed"
     assert result.persistence_verified is True
-    assert result.llm_attempts == 2
-    assert result.request_ids == ["request-invalid-1", "request-invalid-2"]
-    assert result.input_tokens == 203
-    assert result.output_tokens == 103
-    assert result.llm_elapsed_ms == 23
+    assert result.llm_attempts == 1
+    assert result.request_ids == ["request-invalid-1"]
+    assert result.input_tokens == 101
+    assert result.output_tokens == 51
+    assert result.llm_elapsed_ms == 11
     assert result.error_category == "invalid_response"
     assert result.error == "LLMProviderError: OpenCode returned invalid JSON"
     assert run.overall.failures == 1

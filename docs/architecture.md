@@ -91,7 +91,11 @@ rank_issues
   -> human_review
 ```
 
-Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
+Each node records its input/output summary, status, attempt number, error, and elapsed time. Generic
+runtime failures retain one compatibility retry before the run is marked failed. Provider errors
+are error-aware: invalid JSON/schema and evidence-contract failures stop after the first attempt,
+while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
+`retry-after` value is used as the minimum delay, with every wait capped at 30 seconds.
 
 When an operator explicitly enables OpenCode analysis, two nodes are inserted before review:
 
