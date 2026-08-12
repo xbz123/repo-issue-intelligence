@@ -76,6 +76,28 @@ On 2026-07-30, the same synthetic path also completed through OpenCode
 This is an integration and grounding smoke test over one synthetic case. The real-project
 localization benchmark is reported separately in `docs/benchmark-results.md`.
 
+## Three-run real-project full-analysis baseline
+
+On 2026-08-12, three authorized runs evaluated the complete Agent JSON contract on the frozen
+Starlette main, Typer calibration, and Textual generalization cases. All nine case-runs remained in
+the denominator. The first suite returned 3/3 valid analyses in one attempt, with 30,440 input and
+10,714 output tokens and mean provider latency of 15.75 seconds. The second suite returned one
+invalid structured response and then two HTTP 429 failures. After increasing the inter-case delay
+from three to 30 seconds, the third suite still returned three HTTP 429 failures.
+
+Across the three suites, 3/9 case-runs produced a valid full analysis, 5/9 ended in rate limiting,
+and 1/9 ended in invalid structured output. The first successful suite produced exactly one
+observation per supplied evidence item and one evidence-linked hypothesis for each case. The
+observed success rate is therefore 33.33%, far below the rank-only protocol, and does not support a
+production-reliability claim. The result also shows that a fixed seed and a longer delay between
+cases do not overcome the current account/provider limit.
+
+During this run, an initial persistence check compared the in-memory strict response subclass with
+the restored public base model and reported false despite identical serialized payloads. The
+evaluator now compares the public JSON payload and has a regression test using the real response
+subclass boundary. The next independent fixes are to preserve structured-response failure
+telemetry and to make Agent retry/backoff policy error-aware before repeating the external suite.
+
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
 Manifest v8 deterministic v0.16 completed three 50-case runs with structurally identical candidates,

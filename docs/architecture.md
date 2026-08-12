@@ -122,6 +122,14 @@ The trace records model, request ID, token usage, and latency, but never stores 
 Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
 selection; `--llm` always uses `deepseek-v4-flash-free`.
 
+`agent-evaluate` exercises this complete path against selected frozen benchmark cases. Repository
+maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the
+Agent evidence. A case counts as successful only when the complete local schema and evidence-ID
+contract pass, the graph reaches `awaiting_review`, and the final public Agent payload survives a
+SQLite JSON round-trip. The result keeps full validated analysis content plus request attempts,
+tokens, latency, skip state, and failure category; failures remain in the aggregate denominator.
+This reliability suite is deliberately separate from rank-only localization metrics.
+
 Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
@@ -185,7 +193,7 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 ### Interfaces
 
 - Typer CLI for synchronization, ranking, indexing, investigation, Agent runs, human review,
-  benchmark discovery/audit/curation, evaluation, and API startup.
+  full-analysis reliability, benchmark discovery/audit/curation, evaluation, and API startup.
 - FastAPI endpoints for issue analysis, repository indexing, Agent run creation/query, and review.
 
 ## Current boundaries

@@ -112,6 +112,23 @@ Only public repository evidence should be sent to free models: OpenCode states t
 during the free period may be used to improve those models; see the
 [OpenCode Zen documentation](https://opencode.ai/docs/zen).
 
+Evaluate the full JSON analysis path on frozen public Issue/repository inputs:
+
+```bash
+uv run rii agent-evaluate benchmarks/cases.json \
+  --case-id starlette-streaming-denial-response \
+  --case-id typer-option-envvar \
+  --case-id textual-remove-children-reflow \
+  --llm-delay-seconds 30 \
+  --output benchmarks/results/agent-analysis-latest.json
+```
+
+This is separate from the rank-only localization benchmark. Each case runs through LangGraph,
+uses only Git-tracked files at the frozen pre-fix SHA, validates the complete analysis and every
+evidence reference, restores the final Agent payload from a temporary SQLite store, and retains
+failures in the denominator. The command exits non-zero for provider/schema failures or skipped
+evidence so it can be used as a reliability gate.
+
 Run the frozen real-project benchmark:
 
 ```bash
