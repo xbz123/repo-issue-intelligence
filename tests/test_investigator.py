@@ -9,6 +9,7 @@ from repo_issue_intelligence.investigator import (
     _expansion_relation_bonus,
     _identifier_variants,
     _merge_tail_expansions,
+    _rerank_relation_bonus,
     _reserve_protected_paths,
     extract_issue_signals,
     investigate,
@@ -52,6 +53,9 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
         )
     ).paths
     assert {"streaming", "response", "base", "http", "middleware"} <= signals.terms
+    assert {"streaming", "response", "base", "http", "middleware"} <= (
+        signals.title_terms
+    )
     assert {"streaming", "response", "base", "http", "middleware"} <= (
         signals.primary_terms
     )
@@ -716,6 +720,16 @@ def test_direct_function_local_import_relation_cannot_expand_candidate() -> None
         )
         == 5.0
     )
+
+
+def test_reverse_import_relation_can_expand_but_cannot_rerank() -> None:
+    evidence = (
+        "Imports title-matching source module "
+        "src/package/worker/control.py: revoke, revoke_by_headers"
+    )
+
+    assert _rerank_relation_bonus(5.0, evidence) == 0
+    assert _expansion_relation_bonus(5.0, evidence) == 5.0
 
 
 @pytest.mark.parametrize(
@@ -2079,6 +2093,216 @@ def test_locate_candidates_propagates_local_import_evidence(tmp_path: Path) -> N
     assert (
         "Related source calls imported symbols defined here: parse_request"
         in parser.evidence
+    )
+
+
+def test_graph_expands_bounded_reverse_import_from_title_matching_module(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker/control.py",
+        "def revoke_tasks(task_ids):\n"
+        "    return task_ids\n\n"
+        "def revoke_by_headers(headers):\n"
+        "    return headers\n",
+    )
+    write_source(
+        repository,
+        "src/package/worker/pidbox.py",
+        "from . import control\n\n"
+        "class Pidbox:\n"
+        "    def reset(self):\n"
+        "        return control\n",
+    )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/package/worker/open_files_{index}.py",
+            "def abort_worker_after_open_files():\n"
+            '    """Abort worker after too many open files."""\n'
+            "    return None\n",
+        )
+    record = issue(
+        "Worker dies after multiple revokes with too many open files",
+        "The worker aborts after repeated remote-control messages.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+
+    pidbox = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/worker/pidbox.py"
+    )
+    assert any(
+        evidence.startswith(
+            "Imports title-matching source module "
+            "src/package/worker/control.py:"
+        )
+        for evidence in pidbox.evidence
+    )
+
+
+def test_graph_skips_reverse_import_without_repeated_matching_symbol_term(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker/control.py",
+        "def revoke_tasks(task_ids):\n"
+        "    return task_ids\n\n"
+        "def worker_dies():\n"
+        "    return None\n",
+    )
+    write_source(
+        repository,
+        "src/package/worker/pidbox.py",
+        "from . import control\n\n"
+        "def reset():\n"
+        "    return control\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Worker dies after multiple revokes",
+            "The worker aborts after remote-control messages.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert all(
+        not any(
+            evidence.startswith("Imports title-matching source module ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_graph_skips_reverse_import_for_wide_or_auxiliary_importers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker/control.py",
+        "def revoke_tasks(task_ids):\n"
+        "    return task_ids\n\n"
+        "def revoke_by_headers(headers):\n"
+        "    return headers\n",
+    )
+    for index in range(4):
+        write_source(
+            repository,
+            f"src/package/worker/consumer_{index}.py",
+            "from . import control\n\n"
+            "def consume():\n"
+            "    return control\n",
+        )
+    write_source(
+        repository,
+        "t/worker/pidbox.py",
+        "from package.worker import control\n\n"
+        "def reset():\n"
+        "    return control\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Worker dies after multiple revokes",
+            "The worker aborts after remote-control messages.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert all(
+        not any(
+            evidence.startswith("Imports title-matching source module ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_graph_skips_reverse_import_outside_title_path_scope(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker/control.py",
+        "def revoke_tasks(task_ids):\n"
+        "    return task_ids\n\n"
+        "def revoke_by_headers(headers):\n"
+        "    return headers\n",
+    )
+    write_source(
+        repository,
+        "src/package/api/pidbox.py",
+        "from package.worker import control\n\n"
+        "def reset():\n"
+        "    return control\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Worker dies after multiple revokes",
+            "The worker aborts after remote-control messages.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert all(
+        not any(
+            evidence.startswith("Imports title-matching source module ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_graph_skips_reverse_import_scoped_only_by_root_package(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "pydantic-core/python/pydantic_core/__init__.py", "")
+    write_source(
+        repository,
+        "pydantic-core/python/pydantic_core/control.py",
+        "def revoke_tasks(task_ids):\n"
+        "    return task_ids\n\n"
+        "def revoke_by_headers(headers):\n"
+        "    return headers\n",
+    )
+    write_source(
+        repository,
+        "pydantic-core/python/pydantic_core/pidbox.py",
+        "from . import control\n\n"
+        "def reset():\n"
+        "    return control\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Pydantic dies after multiple revokes",
+            "The process aborts after remote-control messages.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert all(
+        not any(
+            evidence.startswith("Imports title-matching source module ")
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
     )
 
 
