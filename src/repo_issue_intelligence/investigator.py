@@ -117,6 +117,10 @@ FUNCTION_LOCAL_TWO_HOP_PREFIX = (
 SHARED_QUALIFIED_CALL_PREFIX = "Shares issue-referenced qualified call "
 SHARED_QUALIFIED_CALL_MAX_FILES = 3
 REVERSE_IMPORT_RELATION_PREFIX = "Imports title-matching source module "
+REEXPORTED_IMPORT_RELATION_PREFIX = (
+    "Issue-referenced source imports re-exported symbols defined here: "
+)
+GENERIC_SUBSYSTEM_TERMS = {"common", "core", "shared", "util", "utils"}
 AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
@@ -1042,6 +1046,7 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
             FUNCTION_LOCAL_TWO_HOP_PREFIX,
             SHARED_QUALIFIED_CALL_PREFIX,
             REVERSE_IMPORT_RELATION_PREFIX,
+            REEXPORTED_IMPORT_RELATION_PREFIX,
         )
     ):
         return 0
@@ -1157,6 +1162,35 @@ def _graph_relations(
         and not set(Path(file.path).parts) & AUXILIARY_PATH_PARTS
     ]
     repository_paths = {file.path for file in repository_map.files}
+    referenced_source_paths = _symbol_scoped_paths(
+        list(repository_paths),
+        signals.paths,
+    )
+
+    def package_subsystem_terms(path: str) -> set[str]:
+        parts = list(Path(path).parts)
+        package_root_index = next(
+            (
+                index
+                for index in range(len(parts) - 1)
+                if str(Path(*parts[: index + 1], "__init__.py"))
+                in repository_paths
+            ),
+            None,
+        )
+        if package_root_index is not None:
+            parts = parts[package_root_index + 1 : -1]
+        else:
+            parts = parts[:-1]
+            if parts and parts[0] in {"src", "lib"}:
+                parts.pop(0)
+            if parts:
+                parts.pop(0)
+        return {
+            term
+            for term in _terms("/".join(parts))
+            if len(term) >= 3 and term not in GENERIC_SUBSYSTEM_TERMS
+        }
     importers_by_path: dict[str, set[str]] = {}
     for importer in production_files:
         for imported_path in importer.local_imports:
@@ -1306,6 +1340,83 @@ def _graph_relations(
                     call.target_symbol,
                 ) not in function_local_calls:
                     non_function_local_call_targets.add(call.target_file)
+
+        if seed_path in referenced_source_paths and not seed_is_auxiliary:
+            seed_subsystem_terms = package_subsystem_terms(seed_path)
+            referenced_seed_symbols = set(seed.references)
+            reexport_routes: dict[
+                str,
+                set[tuple[str, str]],
+            ] = {}
+            for facade_path, imported_symbols in (
+                seed.module_import_symbols.items()
+            ):
+                if Path(facade_path).name != "__init__.py":
+                    continue
+                facade = files_by_path.get(facade_path)
+                if (
+                    facade is None
+                    or facade.test_file
+                    or bool(
+                        set(Path(facade_path).parts) & AUXILIARY_PATH_PARTS
+                    )
+                ):
+                    continue
+                facade_definitions = {
+                    _symbol_identity(symbol)
+                    for symbol in facade.symbols
+                }
+                for target_path, forwarded_symbols in (
+                    facade.module_import_symbols.items()
+                ):
+                    target = files_by_path.get(target_path)
+                    if (
+                        target is None
+                        or target.test_file
+                        or bool(
+                            set(Path(target_path).parts)
+                            & AUXILIARY_PATH_PARTS
+                        )
+                        or target_path in {seed_path, facade_path}
+                        or not (
+                            seed_subsystem_terms
+                            & package_subsystem_terms(target_path)
+                        )
+                    ):
+                        continue
+                    target_definition_counts = Counter(
+                        _symbol_identity(symbol)
+                        for symbol in target.symbols
+                    )
+                    for symbol in (
+                        set(imported_symbols)
+                        & set(forwarded_symbols)
+                        & referenced_seed_symbols
+                    ):
+                        if (
+                            symbol in facade_definitions
+                            or target_definition_counts[symbol] != 1
+                        ):
+                            continue
+                        reexport_routes.setdefault(symbol, set()).add(
+                            (target_path, facade_path)
+                        )
+
+            symbols_by_target: dict[tuple[str, str], set[str]] = {}
+            for symbol, routes in reexport_routes.items():
+                if len(routes) != 1:
+                    continue
+                route = next(iter(routes))
+                symbols_by_target.setdefault(route, set()).add(symbol)
+            for (target_path, facade_path), symbols in sorted(
+                symbols_by_target.items()
+            ):
+                add_relation(
+                    target_path,
+                    7.0,
+                    REEXPORTED_IMPORT_RELATION_PREFIX
+                    + f"{', '.join(sorted(symbols))} via {facade_path}",
+                )
 
         for imported_path in seed.local_imports:
             imported = files_by_path.get(imported_path)
@@ -1712,6 +1823,15 @@ def locate_candidates(
         auxiliary_files,
         signals,
     )
+    protected_base_paths.update(
+        path
+        for path, relations in graph_relations.items()
+        if not auxiliary_files[path]
+        and any(
+            evidence.startswith(REEXPORTED_IMPORT_RELATION_PREFIX)
+            for _, evidence in relations
+        )
+    )
     history_relations = _history_relations(
         root,
         _graph_seed_paths(base_scores, auxiliary_files),
@@ -1762,6 +1882,14 @@ def locate_candidates(
             ),
             None,
         )
+        reexported_import_relation = next(
+            (
+                relation
+                for relation in unique_relations
+                if relation[1].startswith(REEXPORTED_IMPORT_RELATION_PREFIX)
+            ),
+            None,
+        )
         if strong_relation and strong_relation not in displayed_relations:
             displayed_relations = [*displayed_relations[:1], strong_relation]
         if (
@@ -1777,6 +1905,25 @@ def locate_candidates(
                 displayed_relations = [
                     *displayed_relations[:1],
                     shared_qualified_relation,
+                ]
+        if (
+            reexported_import_relation
+            and reexported_import_relation not in displayed_relations
+        ):
+            if strong_relation:
+                displayed_relations = [
+                    strong_relation,
+                    reexported_import_relation,
+                ]
+            elif shared_qualified_relation:
+                displayed_relations = [
+                    shared_qualified_relation,
+                    reexported_import_relation,
+                ]
+            else:
+                displayed_relations = [
+                    *displayed_relations[:1],
+                    reexported_import_relation,
                 ]
         final_scores[path] += graph_bonus
         candidates[path].confidence = round(

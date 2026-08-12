@@ -85,7 +85,13 @@ may use a shared target in the bounded tail expansion only when the Issue explic
 full call and seed caller, two or three production files contain that call, and caller identity is
 unambiguous or has exactly one non-overload implementation. Test seeds, common calls, shadowed
 module roots, duplicate implementations, and unresolved attribute receivers cannot trigger this
-relation. Shared-call evidence contributes no reranking score or strong Top-10 promotion. Other bounded two-hop propagation
+relation. Shared-call evidence contributes no reranking score or strong Top-10 promotion. The
+repository map also stores safe module-level imported-symbol bindings. From an exact Issue path,
+the investigator may follow one unique `__init__.py` re-export into a production target only when
+the source actually reads the imported name, the target definition is unique, and both files share
+a non-generic package subsystem. Unused, conditional, shadowed, ambiguous, auxiliary, and
+cross-subsystem routes are skipped. Re-export evidence is
+expansion-only and tail-protected, so it cannot rerank an existing shortlist. Other bounded two-hop propagation
 follows the exact target function and only that function's resolved external calls. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
