@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .agent_evaluation import run_agent_analysis_evaluation, save_agent_analysis_run
 from .agent_store import AgentStore
 from .agent_workflow import run_agent
 from .benchmark import (
@@ -33,6 +34,7 @@ from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import (
+    OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
     OPENCODE_RERANK_TIMEOUT_SECONDS,
     IssueAnalyzer,
     OpenCodeIssueAnalyzer,
@@ -79,6 +81,25 @@ def _build_benchmark_reranker(
         timeout_seconds=max(
             settings.opencode_timeout_seconds,
             OPENCODE_RERANK_TIMEOUT_SECONDS,
+        ),
+        temperature=temperature,
+        seed=seed,
+    )
+
+
+def _build_analysis_evaluator(
+    settings: Settings,
+    temperature: float,
+    seed: int,
+) -> OpenCodeIssueAnalyzer:
+    if settings.opencode_api_key is None:
+        raise typer.BadParameter("OPENCODE_API_KEY is required for Agent evaluation")
+    return OpenCodeIssueAnalyzer(
+        api_key=settings.opencode_api_key.get_secret_value(),
+        max_output_tokens=settings.opencode_max_output_tokens,
+        timeout_seconds=max(
+            settings.opencode_timeout_seconds,
+            OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
         ),
         temperature=temperature,
         seed=seed,
@@ -247,6 +268,52 @@ def agent_review_command(
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     console.print(f"Run {run.run_id} is now {run.status}")
+
+
+@app.command("agent-evaluate")
+def agent_evaluate_command(
+    manifest: Path,
+    case_id: Annotated[
+        list[str] | None,
+        typer.Option("--case-id", help="Evaluate only this frozen case; repeat as needed."),
+    ] = None,
+    workspace: Path = Path("benchmarks/workspaces"),
+    output: Path = Path("benchmarks/results/agent-analysis-latest.json"),
+    llm_delay_seconds: Annotated[
+        float,
+        typer.Option("--llm-delay-seconds", min=0, help="Delay between provider cases."),
+    ] = 0,
+    temperature: Annotated[
+        float,
+        typer.Option("--temperature", min=0, max=2),
+    ] = 0.1,
+    seed: Annotated[int, typer.Option("--seed")] = 1337,
+) -> None:
+    """Evaluate full DeepSeek analysis through the persisted Agent graph."""
+    settings = Settings()
+    analyzer = _build_analysis_evaluator(settings, temperature, seed)
+    try:
+        run = run_agent_analysis_evaluation(
+            load_manifest(manifest),
+            workspace,
+            analyzer,
+            case_ids=set(case_id) if case_id else None,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            llm_delay_seconds=llm_delay_seconds,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    finally:
+        analyzer.close()
+    save_agent_analysis_run(run, output)
+    console.print(
+        f"Agent analysis: {run.overall.analysis_successes}/{run.overall.cases} valid; "
+        f"first-attempt success={run.overall.first_attempt_success_rate:.4f}; "
+        f"persisted={run.overall.persistence_verified}/{run.overall.cases}"
+    )
+    console.print(f"Saved Agent analysis results to {output}")
+    if run.overall.failures or run.overall.skipped_no_evidence:
+        raise typer.Exit(code=1)
 
 
 @app.command()

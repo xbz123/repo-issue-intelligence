@@ -272,6 +272,28 @@ def test_agent_run_analyzes_only_issues_with_repository_evidence(
     assert llm_trace.metadata["input_tokens"] == 250
 
 
+def test_agent_run_limits_repository_index_to_included_files(tmp_path: Path) -> None:
+    repository = create_repository(tmp_path)
+    (repository / "ignored_noise.py").write_text(
+        "def ignored_noise():\n    return 'ignored noise failure'\n",
+        encoding="utf-8",
+    )
+    store = AgentStore(tmp_path / "agent.sqlite3")
+
+    run = run_agent(
+        [issue(1, "Ignored noise failure", "ignored_noise fails")],
+        repository,
+        top_k=1,
+        store=store,
+        included_files=["pyproject.toml", "data_store.py"],
+    )
+
+    assert all(
+        candidate.file != "ignored_noise.py"
+        for candidate in run.investigations[0].candidates
+    )
+
+
 def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypatch) -> None:
     repository = create_repository(tmp_path)
     store = AgentStore(tmp_path / "agent.sqlite3")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter, sleep
@@ -134,8 +134,18 @@ def _route_top_k_node(state: AgentGraphState) -> dict[str, Any]:
     return {"selected_issues": selected}
 
 
-def _build_repository_map_node(state: AgentGraphState) -> dict[str, Any]:
-    return {"repository_map": build_repository_map(Path(state["repository_root"]))}
+def _build_repository_map_node(
+    state: AgentGraphState,
+    included_files: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    if included_files is None:
+        return {"repository_map": build_repository_map(Path(state["repository_root"]))}
+    return {
+        "repository_map": build_repository_map(
+            Path(state["repository_root"]),
+            included_files=included_files,
+        )
+    }
 
 
 def _investigate_issues_node(state: AgentGraphState) -> dict[str, Any]:
@@ -200,12 +210,16 @@ def build_agent_graph(
     max_attempts: int = 2,
     llm_analyzer: IssueAnalyzer | None = None,
     max_evidence_chars: int = 16_000,
+    included_files: Sequence[str] | None = None,
 ):
     builder = StateGraph(AgentGraphState)
     nodes: list[tuple[str, NodeFunction]] = [
         ("rank_issues", _rank_issues_node),
         ("route_top_k", _route_top_k_node),
-        ("build_repository_map", _build_repository_map_node),
+        (
+            "build_repository_map",
+            lambda state: _build_repository_map_node(state, included_files),
+        ),
         ("investigate_issues", _investigate_issues_node),
     ]
     if llm_analyzer is not None:
@@ -248,6 +262,8 @@ def run_agent(
     store: AgentStore,
     llm_analyzer: IssueAnalyzer | None = None,
     max_evidence_chars: int = 16_000,
+    included_files: Sequence[str] | None = None,
+    max_attempts: int = 2,
 ) -> AgentRun:
     if not issues:
         raise ValueError("At least one issue is required")
@@ -274,8 +290,10 @@ def run_agent(
     graph = build_agent_graph(
         store,
         run.run_id,
+        max_attempts=max_attempts,
         llm_analyzer=llm_analyzer,
         max_evidence_chars=max_evidence_chars,
+        included_files=included_files,
     )
     initial_state: AgentGraphState = {
         "run_id": run.run_id,
