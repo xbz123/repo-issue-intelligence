@@ -254,7 +254,7 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Two manifest-v8 deterministic v0.15 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.15 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
 Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. Symbol Recall@1 is
 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and symbol MRR `0.2866`.

@@ -78,7 +78,7 @@ localization benchmark is reported separately in `docs/benchmark-results.md`.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
-Manifest v8 deterministic v0.15 completed two 50-case runs with structurally identical candidates,
+Manifest v8 deterministic v0.15 completed three 50-case runs with structurally identical candidates,
 symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
 `0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. On 33
 symbol-labeled cases, Symbol Recall@1 was `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`,

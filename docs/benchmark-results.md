@@ -8,7 +8,7 @@ symbol targets across 33 cases. Every case embeds the complete Issue snapshot, m
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Two complete deterministic runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic runs finished 50/50 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
