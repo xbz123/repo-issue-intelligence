@@ -6,6 +6,7 @@ import pytest
 
 from repo_issue_intelligence.investigator import (
     _content_matches_identifier,
+    _expansion_relation_bonus,
     _identifier_variants,
     _merge_tail_expansions,
     _reserve_protected_paths,
@@ -542,6 +543,120 @@ def test_repository_map_records_local_imports_and_called_symbols(
         }
     ]
     assert "parse_request" in api.references
+
+
+def test_repository_map_resolves_leading_function_local_import_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "def handle_request():\n"
+        '    \"\"\"Parse one request.\"\"\"\n'
+        "    from .parser import parse_request\n\n"
+        "    return parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/api.py"
+    )
+
+    assert [call.model_dump() for call in api.resolved_calls] == [
+        {
+            "caller": "handle_request",
+            "local_name": "parse_request",
+            "target_file": "src/package/parser.py",
+            "target_symbol": "parse_request",
+        }
+    ]
+    assert [call.model_dump() for call in api.function_local_import_calls] == [
+        {
+            "caller": "handle_request",
+            "local_name": "parse_request",
+            "target_file": "src/package/parser.py",
+            "target_symbol": "parse_request",
+        }
+    ]
+
+
+def test_direct_function_local_import_relation_cannot_expand_candidate() -> None:
+    assert (
+        _expansion_relation_bonus(
+            4.5,
+            "Function-local import calls symbols defined here: parse_request",
+        )
+        == 0
+    )
+    assert (
+        _expansion_relation_bonus(
+            5.0,
+            "Two-hop function-local import chain calls symbols defined here: "
+            "parse_request",
+        )
+        == 5.0
+    )
+
+
+@pytest.mark.parametrize(
+    "function_body",
+    [
+        (
+            "def handle_request(callback):\n"
+            "    from .parser import parse_request\n"
+            "    parse_request = callback\n"
+            "    return parse_request()\n"
+        ),
+        (
+            "def handle_request(enabled):\n"
+            "    if enabled:\n"
+            "        from .parser import parse_request\n"
+            "        return parse_request()\n"
+            "    return None\n"
+        ),
+        (
+            "def handle_request():\n"
+            "    parse_request()\n"
+            "    from .parser import parse_request\n"
+            "    return None\n"
+        ),
+        (
+            "def handle_request():\n"
+            "    from .parser import parse_request\n"
+            "    import callbacks as parse_request\n"
+            "    return parse_request()\n"
+        ),
+    ],
+    ids=["reassigned", "conditional", "after-use", "plain-import-collision"],
+)
+def test_repository_map_skips_unsafe_function_local_import_calls(
+    tmp_path: Path,
+    function_body: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/api.py", function_body)
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(
+        file
+        for file in repository_map.files
+        if file.path == "src/package/api.py"
+    )
+
+    assert api.resolved_calls == []
 
 
 @pytest.mark.parametrize(
@@ -1096,11 +1211,6 @@ def test_unimported_name_does_not_resolve_to_same_named_external_function(
         ),
         (
             "def caller():\n"
-            "    from .backend import rebuild\n"
-            "    return rebuild()\n"
-        ),
-        (
-            "def caller():\n"
             "    global rebuild\n"
             "    return rebuild()\n"
         ),
@@ -1121,7 +1231,6 @@ def test_unimported_name_does_not_resolve_to_same_named_external_function(
         "with-target",
         "except-target",
         "nested-function",
-        "local-import",
         "declared-global",
         "comprehension-target",
         "match-target",
@@ -2030,6 +2139,132 @@ def test_graph_reranking_promotes_bounded_two_hop_call_chain(
         "Two-hop source call chain via refresh_layout reaches "
         "reflow_children, defined here: src/screen.py"
     ) in compositor.evidence
+
+
+def test_graph_reranking_follows_local_import_into_constructor(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/console.py",
+        "def print_json(value):\n"
+        "    from .json_render import JSON\n\n"
+        "    return JSON(value)\n",
+    )
+    write_source(
+        repository,
+        "src/json_render.py",
+        "from .highlighter import JSONHighlighter\n\n"
+        "class JSON:\n"
+        "    def __init__(self, value):\n"
+        "        self.text = JSONHighlighter()(value)\n",
+    )
+    write_source(
+        repository,
+        "src/highlighter.py",
+        "class JSONHighlighter:\n"
+        "    def __call__(self, value):\n"
+        "        return value\n",
+    )
+    record = issue(
+        "JSON highlighting is incorrect",
+        "The traceback points to src/console.py.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+    )
+    highlighter = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/highlighter.py"
+    )
+
+    assert (
+        "Two-hop function-local import chain calls symbols defined here: "
+        "JSONHighlighter"
+    ) in highlighter.evidence
+
+
+def test_graph_reranking_keeps_mixed_import_calls_as_standard_relations(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "from .target import refresh\n\n"
+        "refresh()\n\n"
+        "def update():\n"
+        "    from .target import refresh\n\n"
+        "    return refresh()\n",
+    )
+    write_source(
+        repository,
+        "src/target.py",
+        "def refresh():\n    return None\n",
+    )
+    record = issue(
+        "Refresh fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    target = next(
+        candidate for candidate in candidates if candidate.file == "src/target.py"
+    )
+
+    assert (
+        "Related source calls imported symbols defined here: refresh"
+        in target.evidence
+    )
+    assert not any(
+        evidence.startswith("Function-local import calls symbols defined here: ")
+        for evidence in target.evidence
+    )
+
+
+def test_graph_reranking_does_not_use_function_local_second_hop(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/seed.py",
+        "from .screen import refresh_layout\n\n"
+        "def update_layout():\n"
+        "    return refresh_layout()\n",
+    )
+    write_source(
+        repository,
+        "src/screen.py",
+        "def refresh_layout():\n"
+        "    from .rebuild import reflow_children\n\n"
+        "    return reflow_children()\n",
+    )
+    write_source(
+        repository,
+        "src/rebuild.py",
+        "def reflow_children():\n    return None\n",
+    )
+    record = issue(
+        "Refresh layout fails",
+        "The traceback points to src/seed.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    rebuild = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/rebuild.py"
+    )
+
+    assert not any(
+        evidence.startswith("Two-hop source")
+        for evidence in rebuild.evidence
+    )
 
 
 def test_graph_reranking_skips_ambiguous_first_hop_callers(

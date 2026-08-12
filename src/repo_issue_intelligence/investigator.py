@@ -107,6 +107,12 @@ GRAPH_STRONG_EXPANSION_SLOTS = 1
 PROTECTED_BASE_RESERVATION_SLOTS = 1
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
+FUNCTION_LOCAL_RELATION_PREFIX = (
+    "Function-local import calls symbols defined here: "
+)
+FUNCTION_LOCAL_TWO_HOP_PREFIX = (
+    "Two-hop function-local import chain calls symbols defined here: "
+)
 SPECIFIC_PATH_TERM_MAX_FILES = 3
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
 HISTORY_COMMIT_LIMIT = 50
@@ -994,6 +1000,10 @@ def _blame_relations(
 
 
 def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
+    if evidence.startswith(
+        (FUNCTION_LOCAL_RELATION_PREFIX, FUNCTION_LOCAL_TWO_HOP_PREFIX)
+    ):
+        return 0
     if evidence.startswith("Changed with lexical seed files"):
         return 0
     if "references imported symbols" in evidence:
@@ -1006,6 +1016,12 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
         return min(bonus, 8.0)
     if evidence.startswith("Related source calls ") and ", defined here:" in evidence:
         return min(bonus, 2.0)
+    return bonus
+
+
+def _expansion_relation_bonus(bonus: float, evidence: str) -> float:
+    if evidence.startswith(FUNCTION_LOCAL_RELATION_PREFIX):
+        return 0
     return bonus
 
 
@@ -1064,12 +1080,29 @@ def _graph_relations(
 
     for seed_path in seed_paths:
         seed = files_by_path[seed_path]
+        function_local_calls = {
+            (
+                call.caller,
+                call.local_name,
+                call.target_file,
+                call.target_symbol,
+            )
+            for call in seed.function_local_import_calls
+        }
         calls_by_target: dict[str, set[str]] = {}
+        non_function_local_call_targets: set[str] = set()
         for call in seed.resolved_calls:
             if call.target_file != seed_path:
                 calls_by_target.setdefault(call.target_file, set()).add(
                     call.target_symbol
                 )
+                if (
+                    call.caller,
+                    call.local_name,
+                    call.target_file,
+                    call.target_symbol,
+                ) not in function_local_calls:
+                    non_function_local_call_targets.add(call.target_file)
 
         for imported_path in seed.local_imports:
             imported = files_by_path.get(imported_path)
@@ -1091,11 +1124,20 @@ def _graph_relations(
                     if any(matches_primary_issue(symbol) for symbol in called_imports)
                     else 8.0
                 )
+                evidence_prefix = (
+                    FUNCTION_LOCAL_RELATION_PREFIX
+                    if imported_path not in non_function_local_call_targets
+                    else "Related source calls imported symbols defined here: "
+                )
+                relation_bonus = (
+                    min(bonus, GRAPH_EXPANSION_MIN_BONUS - 0.5)
+                    if evidence_prefix == FUNCTION_LOCAL_RELATION_PREFIX
+                    else bonus
+                )
                 add_relation(
                     imported_path,
-                    bonus,
-                    "Related source calls imported symbols defined here: "
-                    + ", ".join(sorted(called_imports)),
+                    relation_bonus,
+                    evidence_prefix + ", ".join(sorted(called_imports)),
                 )
             elif referenced_imports:
                 bonus = (
@@ -1131,11 +1173,45 @@ def _graph_relations(
             first_hop = files_by_path.get(first_call.target_file)
             if first_hop is None or first_hop.test_file:
                 continue
+            first_hop_symbols = {
+                symbol.qualified_name or symbol.name: symbol
+                for symbol in first_hop.symbols
+            }
+            first_call_is_function_local = (
+                first_call.caller,
+                first_call.local_name,
+                first_call.target_file,
+                first_call.target_symbol,
+            ) in function_local_calls
+            target = first_hop_symbols.get(first_call.target_symbol)
+            target_callers = {first_call.target_symbol}
+            if (
+                first_call_is_function_local
+                and target is not None
+                and target.kind == "class"
+            ):
+                target_callers.add(f"{first_call.target_symbol}.__init__")
+            first_hop_function_local_calls = {
+                (
+                    call.caller,
+                    call.local_name,
+                    call.target_file,
+                    call.target_symbol,
+                )
+                for call in first_hop.function_local_import_calls
+            }
             second_hop_calls = [
                 call
                 for call in first_hop.resolved_calls
-                if call.caller == first_call.target_symbol
+                if call.caller in target_callers
                 and call.target_file not in {seed_path, first_hop.path}
+                and (
+                    call.caller,
+                    call.local_name,
+                    call.target_file,
+                    call.target_symbol,
+                )
+                not in first_hop_function_local_calls
             ]
             for second_call in second_hop_calls:
                 if len(second_call.target_symbol) < GRAPH_SECOND_HOP_CALL_MIN_LENGTH:
@@ -1151,11 +1227,19 @@ def _graph_relations(
                 add_relation(
                     second_call.target_file,
                     bonus,
-                    "Two-hop source relation calls imported symbols defined "
-                    f"here: {second_call.target_symbol}",
+                    (
+                        FUNCTION_LOCAL_TWO_HOP_PREFIX
+                        if first_call_is_function_local
+                        else (
+                            "Two-hop source relation calls imported symbols "
+                            "defined here: "
+                        )
+                    )
+                    + second_call.target_symbol,
                 )
                 if (
-                    matches_specific_primary_issue(first_call.target_symbol)
+                    not first_call_is_function_local
+                    and matches_specific_primary_issue(first_call.target_symbol)
                     and concrete_target(first_call.target_file)
                     and concrete_target(second_call.target_file)
                 ):
@@ -1517,9 +1601,13 @@ def locate_candidates(
         for path, relations in graph_relations.items()
         if path not in base_shortlist
         and sum(
-            bonus
-            for bonus, _ in sorted(
-                set(relations),
+            _expansion_relation_bonus(bonus, evidence)
+            for bonus, evidence in sorted(
+                (
+                    relation
+                    for relation in set(relations)
+                    if _expansion_relation_bonus(*relation) > 0
+                ),
                 key=lambda relation: (-relation[0], relation[1]),
             )[:2]
         )

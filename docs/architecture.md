@@ -74,8 +74,13 @@ scoring and evidence. Calls through
 `self.method()`, `receiver.method()`, or `module.function()` do not become local edges until a
 receiver-aware resolver can prove their target. Older repository maps remain readable, but maps
 without `resolved_calls` skip call-relation inference instead of falling back to broad legacy
-names. Bounded two-hop propagation follows the exact target function and only that function's
-resolved external calls. The
+names. Leading function-local `from` imports are resolved only when they occur after an optional
+docstring in the function's initial import block and the imported name is not a parameter, global,
+nonlocal, assignment target, later import, or other local binding. These calls are stored separately:
+their direct relation cannot rerank or qualify as a candidate expansion by itself. A single
+constructor-aware second hop may add a tail candidate, but it cannot receive strong Top-10 promotion
+and propagation stops before a second function-local import. Other bounded two-hop propagation
+follows the exact target function and only that function's resolved external calls. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
