@@ -1,0 +1,142 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash-free",
+  "max_evidence_chars": 16000,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 30.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-12T14:25:46.646891Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [],
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "llm_elapsed_ms": 998.229,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "rate_limit",
+      "error": "LLMProviderError: OpenCode API returned HTTP 429"
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [],
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "llm_elapsed_ms": 1221.193,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "rate_limit",
+      "error": "LLMProviderError: OpenCode API returned HTTP 429"
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [],
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "llm_elapsed_ms": 917.882,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "rate_limit",
+      "error": "LLMProviderError: OpenCode API returned HTTP 429"
+    }
+  ],
+  "overall": {
+    "cases": 3,
+    "analysis_successes": 0,
+    "skipped_no_evidence": 0,
+    "failures": 3,
+    "analysis_success_rate": 0.0,
+    "first_attempt_success_rate": 0.0,
+    "persistence_verified": 3,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "average_llm_elapsed_ms": null,
+    "error_categories": {
+      "rate_limit": 3
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "rate_limit": 1
+      }
+    },
+    "calibration": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "rate_limit": 1
+      }
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "rate_limit": 1
+      }
+    }
+  }
+}
