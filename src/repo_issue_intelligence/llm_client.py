@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
-from enum import StrEnum
 from time import perf_counter
-from typing import Literal, Protocol
+from typing import Protocol
 
 import httpx
 from pydantic import ValidationError
@@ -22,7 +21,6 @@ from .models import (
     LLMAnalysisResult,
 )
 
-GROQ_API_BASE_URL = "https://api.groq.com/openai/v1"
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash-free"
 OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
@@ -106,58 +104,37 @@ class LLMProviderError(RuntimeError):
         self.system_fingerprint = system_fingerprint
 
 
-# Compatibility alias for callers that imported the original provider-specific name.
-GroqAPIError = LLMProviderError
-
-
-class LLMProvider(StrEnum):
-    GROQ = "groq"
-    OPENCODE = "opencode"
-
-
-class OpenAICompatibleIssueAnalyzer:
+class OpenCodeIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
-        model: str,
-        provider: str,
-        base_url: str,
-        structured_output: Literal["json_schema", "json_object"],
-        max_output_tokens: int = 1_600,
-        timeout_seconds: float = 30.0,
-        reasoning_effort: str = "low",
+        max_output_tokens: int = 4_096,
+        timeout_seconds: float = 60.0,
         temperature: float = 1.0,
         seed: int | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         if not api_key:
-            raise ValueError(f"{provider} API key is required")
-        if reasoning_effort not in {"low", "medium", "high"}:
-            raise ValueError("reasoning_effort must be low, medium, or high")
+            raise ValueError("OpenCode API key is required")
         if not 0 <= temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
-        self.provider = provider
-        self.provider_label = (
-            "OpenCode" if provider == LLMProvider.OPENCODE else provider.capitalize()
-        )
-        self.model = model
-        self.structured_output = structured_output
+        self.provider = "opencode"
+        self.provider_label = "OpenCode"
+        self.model = OPENCODE_DEFAULT_MODEL
         self.max_output_tokens = max_output_tokens
-        self.reasoning_effort = (
-            reasoning_effort
-            if provider == LLMProvider.GROQ and model.startswith("openai/gpt-oss-")
-            else None
-        )
         self.temperature = temperature
         self.seed = seed
         self.timeout_seconds = timeout_seconds
         self._client = client or httpx.Client(
-            base_url=base_url,
+            base_url=OPENCODE_API_BASE_URL,
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=timeout_seconds,
             trust_env=False,
         )
         self._owns_client = client is None
+        self.rerank_initial_output_tokens = OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS
+        self.rerank_max_output_tokens = OPENCODE_RERANK_MAX_OUTPUT_TOKENS
+        self.rerank_reasoning_effort = OPENCODE_RERANK_REASONING_EFFORT
 
     def close(self) -> None:
         if self._owns_client:
@@ -168,14 +145,12 @@ class OpenAICompatibleIssueAnalyzer:
         system_prompt: str,
         user_payload: dict,
         schema: dict,
-        schema_name: str,
     ) -> tuple[str, dict, float]:
-        if self.structured_output == "json_object":
-            schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
-            system_prompt = (
-                f"{system_prompt}\nReturn only one minified JSON object, without Markdown, "
-                f"that validates against this JSON Schema:\n{schema_text}"
-            )
+        schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+        system_prompt = (
+            f"{system_prompt}\nReturn only one minified JSON object, without Markdown, "
+            f"that validates against this JSON Schema:\n{schema_text}"
+        )
         payload: dict = {
             "model": self.model,
             "messages": [
@@ -186,24 +161,11 @@ class OpenAICompatibleIssueAnalyzer:
                 },
             ],
             "temperature": self.temperature,
+            "response_format": {"type": "json_object"},
+            "max_tokens": self.max_output_tokens,
         }
-        if self.structured_output == "json_schema":
-            payload["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": schema_name,
-                    "strict": True,
-                    "schema": schema,
-                },
-            }
-            payload["max_completion_tokens"] = self.max_output_tokens
-        else:
-            payload["response_format"] = {"type": "json_object"}
-            payload["max_tokens"] = self.max_output_tokens
         if self.seed is not None:
             payload["seed"] = self.seed
-        if self.provider == LLMProvider.GROQ and self.model.startswith("openai/gpt-oss-"):
-            payload["reasoning_effort"] = self.reasoning_effort
 
         return self._request_completion(payload)
 
@@ -213,7 +175,7 @@ class OpenAICompatibleIssueAnalyzer:
             response = self._client.post("/chat/completions", json=payload)
         except httpx.HTTPError as error:
             elapsed_ms = round((perf_counter() - started) * 1000, 3)
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} request failed: {type(error).__name__}",
                 retryable=True,
                 category="transport",
@@ -250,7 +212,7 @@ class OpenAICompatibleIssueAnalyzer:
                 category = "grammar_unsupported"
             else:
                 category = f"http_{response.status_code}"
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} API returned HTTP {response.status_code}{detail}",
                 retry_after=retry_after,
                 retryable=response.status_code == 429 or response.status_code >= 500,
@@ -264,7 +226,7 @@ class OpenAICompatibleIssueAnalyzer:
             if not isinstance(content, str):
                 raise TypeError("completion content is not text")
         except (KeyError, IndexError, TypeError, ValueError) as error:
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} returned an invalid structured response",
                 category="invalid_response",
                 elapsed_ms=elapsed_ms,
@@ -302,12 +264,11 @@ class OpenAICompatibleIssueAnalyzer:
             SYSTEM_PROMPT,
             user_payload,
             LLMAnalysisResponse.model_json_schema(),
-            "issue_investigation",
         )
         try:
             analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} returned an invalid structured response"
             ) from error
 
@@ -349,7 +310,7 @@ class OpenAICompatibleIssueAnalyzer:
             observation.evidence_id for observation in analysis.evidence_observations
         }
         if observed_ids != valid_ids or len(analysis.evidence_observations) != len(evidence):
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} did not provide exactly one observation "
                 "for every evidence ID"
             )
@@ -358,7 +319,7 @@ class OpenAICompatibleIssueAnalyzer:
             and analysis.hypotheses
             and not any(hypothesis.missing_evidence for hypothesis in analysis.hypotheses)
         ):
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} requested more evidence without naming "
                 "a missing artifact"
             )
@@ -368,74 +329,15 @@ class OpenAICompatibleIssueAnalyzer:
         unknown_ids = referenced_ids - valid_ids
         if unknown_ids:
             unknown = ", ".join(sorted(unknown_ids))
-            raise GroqAPIError(
+            raise LLMProviderError(
                 f"{self.provider_label} cited unknown evidence IDs: {unknown}"
             )
-
-
-class GroqIssueAnalyzer(OpenAICompatibleIssueAnalyzer):
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "openai/gpt-oss-20b",
-        max_output_tokens: int = 1_600,
-        timeout_seconds: float = 30.0,
-        reasoning_effort: str = "low",
-        temperature: float = 1.0,
-        seed: int | None = None,
-        client: httpx.Client | None = None,
-    ) -> None:
-        super().__init__(
-            api_key=api_key,
-            model=model,
-            provider=LLMProvider.GROQ,
-            base_url=GROQ_API_BASE_URL,
-            structured_output="json_schema",
-            max_output_tokens=max_output_tokens,
-            timeout_seconds=timeout_seconds,
-            reasoning_effort=reasoning_effort,
-            temperature=temperature,
-            seed=seed,
-            client=client,
-        )
-
-
-class OpenCodeIssueAnalyzer(OpenAICompatibleIssueAnalyzer):
-    def __init__(
-        self,
-        api_key: str,
-        model: str = OPENCODE_DEFAULT_MODEL,
-        max_output_tokens: int = 4_096,
-        timeout_seconds: float = 60.0,
-        temperature: float = 1.0,
-        seed: int | None = None,
-        client: httpx.Client | None = None,
-    ) -> None:
-        super().__init__(
-            api_key=api_key,
-            model=model,
-            provider=LLMProvider.OPENCODE,
-            base_url=OPENCODE_API_BASE_URL,
-            structured_output="json_object",
-            max_output_tokens=max_output_tokens,
-            timeout_seconds=timeout_seconds,
-            temperature=temperature,
-            seed=seed,
-            client=client,
-        )
-        self.rerank_initial_output_tokens = OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS
-        self.rerank_max_output_tokens = OPENCODE_RERANK_MAX_OUTPUT_TOKENS
-        self.rerank_reasoning_effort = OPENCODE_RERANK_REASONING_EFFORT
 
     def rerank(
         self,
         issue: IssueRecord,
         evidence: Sequence[EvidenceSnippet],
     ) -> EvidenceRerankResult:
-        if self.model != OPENCODE_DEFAULT_MODEL:
-            raise ValueError(
-                f"Benchmark reranking only supports {OPENCODE_DEFAULT_MODEL}"
-            )
         user_payload = {
             "issue": {
                 "number": issue.number,

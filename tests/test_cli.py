@@ -81,7 +81,7 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     issues_file = Path("examples/issues.json").resolve()
     repository = Path("examples/demo_repository").resolve()
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
 
     result = runner.invoke(
         app,
@@ -97,7 +97,7 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 2
-    assert "GROQ_API_KEY is required" in result.output
+    assert "OPENCODE_API_KEY is required" in result.output
 
 
 def test_hybrid_benchmark_requires_opencode_key(tmp_path: Path, monkeypatch) -> None:
@@ -120,7 +120,7 @@ def test_hybrid_benchmark_requires_opencode_key(tmp_path: Path, monkeypatch) -> 
 
 
 def test_benchmark_does_not_accept_provider_or_model_overrides() -> None:
-    for option, value in (("--provider", "groq"), ("--model", "other-model")):
+    for option, value in (("--provider", "other"), ("--model", "other-model")):
         result = runner.invoke(
             app,
             [
@@ -128,6 +128,27 @@ def test_benchmark_does_not_accept_provider_or_model_overrides() -> None:
                 "benchmarks/cases.json",
                 "--variant",
                 "hybrid",
+                option,
+                value,
+            ],
+        )
+
+        output = unstyle(result.output)
+        assert result.exit_code == 2
+        assert "No such option" in output
+        assert option in output
+
+
+def test_agent_run_does_not_accept_provider_or_model_overrides() -> None:
+    for option, value in (("--provider", "other"), ("--model", "other-model")):
+        result = runner.invoke(
+            app,
+            [
+                "agent-run",
+                "examples/issues.json",
+                "--repo",
+                "examples/demo_repository",
+                "--llm",
                 option,
                 value,
             ],
@@ -175,18 +196,17 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
         def __init__(
             self,
             api_key,
-            model,
             max_output_tokens,
             timeout_seconds,
-            reasoning_effort,
         ):
             assert api_key == "test-key"
-            assert reasoning_effort == "low"
-            self.model = model
+            assert max_output_tokens == 4_096
+            assert timeout_seconds == 60
+            self.model = "deepseek-v4-flash-free"
 
         def analyze(self, issue, report, evidence):
             return LLMAnalysisResult(
-                provider="groq",
+                provider="opencode",
                 model=self.model,
                 request_id="cli-request",
                 input_tokens=100,
@@ -224,9 +244,9 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
         def close(self):
             return None
 
-    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("OPENCODE_API_KEY", "test-key")
     monkeypatch.setattr(
-        "repo_issue_intelligence.cli.GroqIssueAnalyzer",
+        "repo_issue_intelligence.cli.OpenCodeIssueAnalyzer",
         FakeAnalyzer,
     )
     output = tmp_path / "agent-run-llm.json"

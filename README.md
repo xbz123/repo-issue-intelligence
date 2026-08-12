@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenAI-compatible analysis step can inspect bounded code evidence for Top-K issues through Groq or OpenCode while preserving the offline baseline.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect bounded code evidence for Top-K issues while preserving the offline baseline.
 
 ## What it does
 
@@ -15,8 +15,8 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
-- Optionally calls Groq-hosted GPT-OSS with strict JSON Schema output or OpenCode-hosted
-  DeepSeek V4 Flash with JSON-object output plus local Pydantic validation.
+- Optionally calls OpenCode-hosted DeepSeek V4 Flash with JSON-object output plus local
+  Pydantic validation.
 - Requires one support/contradiction/neutral observation per repository evidence ID.
 - Validates every LLM hypothesis against repository evidence IDs and named missing artifacts.
 - Persists Agent runs, node traces, retries, latency, and snapshots in SQLite.
@@ -84,29 +84,7 @@ uv run rii agent-review <run-id> \
 
 The workflow is synchronous in this version. Approval records a decision but does not execute the generated reproduction plan.
 
-Enable optional Groq analysis for the selected Top-K issues:
-
-```bash
-export GROQ_API_KEY="..."
-
-uv run rii agent-run examples/issues.json \
-  --repo examples/demo_repository \
-  --top-k 1 \
-  --llm \
-  --model openai/gpt-oss-20b \
-  --database data/agent-runs.sqlite3 \
-  --output reports/agent-run-llm.json
-```
-
-`--llm` is explicit: without it the workflow remains offline and makes no model requests.
-The API key is read from the environment and is never added to run state or traces. Evidence
-collection rejects paths outside the repository, skips sensitive filenames, numbers source
-lines, and applies a configurable character budget before sending content. GPT-OSS defaults to
-low reasoning effort and a bounded output budget so strict structured generation fits within the
-free-tier token limits; both values can be changed through `.env`.
-
-OpenCode uses the same OpenAI-compatible chat-completions protocol with a different provider
-configuration:
+Enable optional OpenCode DeepSeek V4 Flash analysis for the selected Top-K issues:
 
 ```bash
 export OPENCODE_API_KEY="..."
@@ -115,15 +93,19 @@ uv run rii agent-run examples/issues.json \
   --repo examples/demo_repository \
   --top-k 1 \
   --llm \
-  --provider opencode \
-  --model deepseek-v4-flash-free \
   --database data/agent-runs.sqlite3 \
   --output reports/agent-run-opencode.json
 ```
 
+`--llm` is explicit: without it the workflow remains offline and makes no model requests. The
+runtime does not accept provider or model overrides: all external analysis uses OpenCode
+`deepseek-v4-flash-free`. The API key is read from the environment and is never added to run state
+or traces. Evidence collection rejects paths outside the repository, skips sensitive filenames,
+numbers source lines, and applies a configurable character budget before sending content.
+
 The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
 DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
-It uses `json_object` mode followed by the same local schema and evidence-ID validation as Groq.
+It uses `json_object` mode followed by local Pydantic schema and evidence-ID validation.
 Only public repository evidence should be sent to free models: OpenCode states that data collected
 during the free period may be used to improve those models; see the
 [OpenCode Zen documentation](https://opencode.ai/docs/zen).
@@ -155,8 +137,9 @@ the completion budget is bounded at 256 tokens with one 1,024-token truncation r
 are capped at 2,000 characters, and each evidence snippet is capped at 300 characters under the
 existing 16,000-character total budget. Current manifest version 8 embeds 50 complete Issue
 snapshots across 21 repositories, corrected pre-fix SHAs, and 39 manually reviewed symbol targets
-across 33 cases. Older manifests and provider artifacts remain committed as historical provenance,
-but the current benchmark runtime supports only deterministic and DeepSeek rank variants.
+across 33 cases. Older deterministic and DeepSeek artifacts remain committed as historical
+provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
+variants.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
 reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
 network request.
@@ -253,7 +236,7 @@ src/repo_issue_intelligence/
   github_client.py       paginated GitHub REST synchronization
   investigator.py        file/symbol ranking and hypothesis generation
   evidence.py            bounded repository source evidence collection
-  llm_client.py           OpenAI-compatible Groq/OpenCode analysis
+  llm_client.py           OpenCode DeepSeek analysis and reranking
   models.py              typed domain models
   repository_index.py    repository map and Python AST index
   scoring.py             severity, urgency, priority rules
@@ -301,15 +284,11 @@ or root-cause-accuracy claim.
 The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
 2026, and only 11 of 50 cases have multi-file production ground truth. Five cases still miss at
 least one reviewed file at Top-20, so hybrid reranking cannot recover them. Superseded manifests
-and older paired model runs remain committed for provenance but must not be mixed with current
+and older DeepSeek runs remain committed for provenance but must not be mixed with current
 manifest-v8 quality metrics.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.
-
-Historical fixed-seed GPT-OSS 20B/120B and free-model screens are retained to document provider
-integration behavior. Because they used superseded benchmark inputs, they do not establish a
-current localization-quality or production-routing conclusion.
 
 ## Safety and scope
 

@@ -1,6 +1,6 @@
 # LLM Evaluation Protocol
 
-Every optional provider path must be compared with the existing deterministic baseline before any
+Every OpenCode model path must be compared with the existing deterministic baseline before any
 quality improvement is claimed.
 
 ## Variants
@@ -39,7 +39,7 @@ Do not include API keys, private repository content, or unreviewed generated lab
 versions 2 and 3 are retained for provenance but are superseded because their pre-fix SHAs were
 not derived correctly. Manifest version 5 is retained as
 `benchmarks/cases-v0.10-corrected-20-cases.json` because it is the frozen input for the corrected
-Groq/OpenCode comparison. Manifest version 6 is retained as
+20-case DeepSeek run. Manifest version 6 is retained as
 `benchmarks/cases-v0.11-32-cases.json` for the pre-qualified-symbol baseline, and manifest version
 7 is retained as `benchmarks/cases-v0.12-qualified-symbols-32-cases.json`.
 
@@ -63,21 +63,6 @@ Machine-readable results are saved under `benchmarks/results/`; the reviewed res
 
 ## Current smoke result
 
-On 2026-07-29, the synthetic issue `#184` and `examples/demo_repository` completed one hybrid
-Groq run with `openai/gpt-oss-20b`:
-
-- one request, no retry;
-- 1,242 input tokens and 552 output tokens;
-- 1,145 ms model-request latency;
-- strict structured output accepted;
-- `E1` correctly marked `contradicts_issue` because the supplied code catches
-  `ExpiredSignatureError` and returns HTTP 401 while the Issue reports HTTP 500;
-- hypotheses were limited to unverified routing/middleware and deployment-version mismatches;
-- the generated report, traces, and snapshots contained no API key.
-
-This is an integration and grounding smoke test over one synthetic case. The real-project
-localization benchmark is reported separately in `docs/benchmark-results.md`.
-
 On 2026-07-30, the same synthetic path also completed through OpenCode
 `deepseek-v4-flash-free` with the full investigation schema:
 
@@ -88,9 +73,8 @@ On 2026-07-30, the same synthetic path also completed through OpenCode
 - the Agent stopped at `awaiting_review`;
 - the persisted report and trace identified provider `opencode` and contained no API key field.
 
-The real-project report also contains a fixed-seed GPT-OSS 20B/120B comparison and a separate
-three-case full-schema stability smoke test, both on the historical nine-case suite. Model-size
-conclusions must not mix datasets or the localization and schema-reliability endpoints.
+This is an integration and grounding smoke test over one synthetic case. The real-project
+localization benchmark is reported separately in `docs/benchmark-results.md`.
 
 ## Current manifest-v8 paired result
 
@@ -156,20 +140,16 @@ rank-20 tail difference from the earlier artifact, so exact long-tail candidate 
 not claimed. The reviewed artifact is
 `benchmarks/results/hybrid-deepseek-v4-flash-v0.12-manifest-v7-32-cases.json`.
 
-The retained corrected manifest-v5 snapshot also received paired real-provider reruns:
+The retained corrected manifest-v5 snapshot also received a real OpenCode rerun:
 
 - OpenCode DeepSeek V4 Flash completed 20/20 valid reranks with no fallback. File Recall@1 was
   `0.4417`, Recall@5 `0.8583`, Recall@10 `0.9250`, Recall@20 `1.0000`, and MRR `0.7257`.
   Average successful model latency was `17.5 s`; the run used 102,925 input and 38,376 output
   tokens.
-- Groq GPT-OSS 20B produced 17/20 valid reranks. Three cases exhausted retries with HTTP 429 and
-  used the deterministic fallback. File Recall@1 was `0.3917`, Recall@5 `0.8583`, Recall@10
-  `0.9250`, Recall@20 `1.0000`, and MRR `0.6794`. Average successful model latency was `870 ms`;
-  successful final calls used 82,329 input and 2,763 output tokens.
 
-These are paired localization results on manifest v5, not manifest v7. They support an ordering
-improvement over the same v5 deterministic candidate pool, while Recall@20 remains bounded by
-deterministic retrieval. A separate three-real-case OpenCode full-schema run succeeded on two
+This is a localization result on manifest v5, not manifest v7. It supports an ordering improvement
+over the same v5 deterministic candidate pool, while Recall@20 remains bounded by deterministic
+retrieval. A separate three-real-case OpenCode full-schema run succeeded on two
 cases; the Typer case exhausted two invalid structured responses and used fallback. The compact
 rerank schema is therefore more reliable than the full hypothesis schema.
 

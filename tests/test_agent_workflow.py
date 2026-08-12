@@ -38,13 +38,14 @@ def create_repository(root: Path) -> Path:
 
 
 class FakeAnalyzer:
-    model = "openai/gpt-oss-20b"
+    provider = "opencode"
+    model = "deepseek-v4-flash-free"
 
     def analyze(self, issue, report, evidence):
         assert issue.number == report.issue.number
         assert evidence[0].id == "E1"
         return LLMAnalysisResult(
-            provider="groq",
+            provider=self.provider,
             model=self.model,
             request_id="request-test",
             input_tokens=250,
@@ -166,7 +167,7 @@ def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) ->
 
     assert run.status is AgentRunStatus.AWAITING_REVIEW
     assert run.llm_enabled is True
-    assert run.llm_model == "openai/gpt-oss-20b"
+    assert run.llm_model == "deepseek-v4-flash-free"
     assert [trace.node_name for trace in run.traces] == [
         "rank_issues",
         "route_top_k",

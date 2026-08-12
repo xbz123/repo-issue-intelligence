@@ -33,11 +33,8 @@ from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import (
-    OPENCODE_DEFAULT_MODEL,
     OPENCODE_RERANK_TIMEOUT_SECONDS,
-    GroqIssueAnalyzer,
     IssueAnalyzer,
-    LLMProvider,
     OpenCodeIssueAnalyzer,
 )
 from .models import IssueRecord, ReviewDecision
@@ -50,36 +47,22 @@ console = Console()
 
 def _build_issue_analyzer(
     settings: Settings,
-    provider: LLMProvider,
-    model: str | None,
     temperature: float | None = None,
     seed: int | None = None,
 ) -> IssueAnalyzer:
-    common = {
-        "max_output_tokens": settings.llm_max_output_tokens,
-        "timeout_seconds": settings.llm_timeout_seconds,
+    if settings.opencode_api_key is None:
+        raise typer.BadParameter("OPENCODE_API_KEY is required when --llm is enabled")
+    options = {
+        "max_output_tokens": settings.opencode_max_output_tokens,
+        "timeout_seconds": settings.opencode_timeout_seconds,
     }
     if temperature is not None:
-        common["temperature"] = temperature
+        options["temperature"] = temperature
     if seed is not None:
-        common["seed"] = seed
-    if provider is LLMProvider.GROQ:
-        if settings.groq_api_key is None:
-            raise typer.BadParameter("GROQ_API_KEY is required for the Groq provider")
-        return GroqIssueAnalyzer(
-            api_key=settings.groq_api_key.get_secret_value(),
-            model=model or settings.llm_model,
-            reasoning_effort=settings.llm_reasoning_effort,
-            **common,
-        )
-    if settings.opencode_api_key is None:
-        raise typer.BadParameter("OPENCODE_API_KEY is required for the OpenCode provider")
-    common["max_output_tokens"] = settings.opencode_max_output_tokens
-    common["timeout_seconds"] = settings.opencode_timeout_seconds
+        options["seed"] = seed
     return OpenCodeIssueAnalyzer(
         api_key=settings.opencode_api_key.get_secret_value(),
-        model=model or settings.opencode_model,
-        **common,
+        **options,
     )
 
 
@@ -92,7 +75,6 @@ def _build_benchmark_reranker(
         raise typer.BadParameter("OPENCODE_API_KEY is required for the hybrid benchmark")
     return OpenCodeIssueAnalyzer(
         api_key=settings.opencode_api_key.get_secret_value(),
-        model=OPENCODE_DEFAULT_MODEL,
         max_output_tokens=settings.opencode_max_output_tokens,
         timeout_seconds=max(
             settings.opencode_timeout_seconds,
@@ -195,14 +177,6 @@ def agent_run_command(
         bool,
         typer.Option("--llm", help="Enable evidence-grounded model analysis."),
     ] = False,
-    provider: Annotated[
-        LLMProvider,
-        typer.Option("--provider", help="OpenAI-compatible inference provider."),
-    ] = LLMProvider.GROQ,
-    model: Annotated[
-        str | None,
-        typer.Option("--model", help="Provider model ID used when --llm is enabled."),
-    ] = None,
     output: Path = Path("reports/agent-run.json"),
 ) -> None:
     """Run the synchronous LangGraph workflow up to human review."""
@@ -210,7 +184,7 @@ def agent_run_command(
     database = database or settings.agent_db_path
     analyzer = None
     if llm:
-        analyzer = _build_issue_analyzer(settings, provider, model)
+        analyzer = _build_issue_analyzer(settings)
     try:
         run = run_agent(
             _load(issues_file),

@@ -7,8 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from repo_issue_intelligence.llm_client import (
-    GroqAPIError,
-    GroqIssueAnalyzer,
+    LLMProviderError,
     OpenCodeIssueAnalyzer,
 )
 from repo_issue_intelligence.models import (
@@ -99,7 +98,7 @@ def structured_payload(evidence_id: str = "E1") -> dict:
     }
 
 
-def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
+def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     captured_request = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -121,10 +120,10 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer(
+    analyzer = OpenCodeIssueAnalyzer(
         "test-key",
         temperature=0.1,
         seed=1337,
@@ -139,13 +138,17 @@ def test_groq_analyzer_requests_strict_schema_and_parses_usage() -> None:
     assert result.output_tokens == 120
     assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
-    assert captured_request["response_format"]["json_schema"]["strict"] is True
-    assert captured_request["reasoning_effort"] == "low"
+    assert result.provider == "opencode"
+    assert result.model == "deepseek-v4-flash-free"
+    assert captured_request["response_format"] == {"type": "json_object"}
+    assert captured_request["max_tokens"] == 4_096
+    assert "max_completion_tokens" not in captured_request
+    assert "reasoning_effort" not in captured_request
     assert captured_request["temperature"] == 0.1
     assert captured_request["seed"] == 1337
-    schema = captured_request["response_format"]["json_schema"]["schema"]
-    assert schema["additionalProperties"] is False
-    assert schema["properties"]["hypotheses"]["maxItems"] == 2
+    system_prompt = captured_request["messages"][0]["content"]
+    assert '"additionalProperties":false' in system_prompt
+    assert '"maxItems":2' in system_prompt
 
 
 def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
@@ -263,7 +266,7 @@ def test_opencode_deepseek_rerank_rejects_invalid_rank_lines(
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match=message) as error:
+    with pytest.raises(LLMProviderError, match=message) as error:
         analyzer.rerank(issue(), evidence())
 
     assert error.value.retryable is False
@@ -285,7 +288,7 @@ def test_opencode_deepseek_rerank_rejects_unknown_evidence_id() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="unknown evidence IDs: E999"):
+    with pytest.raises(LLMProviderError, match="unknown evidence IDs: E999"):
         analyzer.rerank(issue(), evidence())
 
 
@@ -317,7 +320,7 @@ def test_opencode_deepseek_rerank_rejects_more_than_three_ids() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="more than three") as error:
+    with pytest.raises(LLMProviderError, match="more than three") as error:
         analyzer.rerank(issue(), snippets)
 
     assert error.value.category == "invalid_rank"
@@ -335,9 +338,7 @@ def test_opencode_deepseek_rerank_classifies_output_truncation() -> None:
             200,
             json={
                 "id": "truncated-rerank-request",
-                "choices": [
-                    {"finish_reason": "length", "message": {"content": ""}}
-                ],
+                "choices": [{"finish_reason": "length", "message": {"content": ""}}],
                 "usage": {"prompt_tokens": 10, "completion_tokens": budget},
             },
         )
@@ -348,7 +349,7 @@ def test_opencode_deepseek_rerank_classifies_output_truncation() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="exhausted both rank output budgets") as error:
+    with pytest.raises(LLMProviderError, match="exhausted both rank output budgets") as error:
         analyzer.rerank(issue(), evidence())
 
     assert error.value.retryable is False
@@ -371,9 +372,7 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
                 200,
                 json={
                     "id": "truncated-request",
-                    "choices": [
-                        {"finish_reason": "length", "message": {"content": ""}}
-                    ],
+                    "choices": [{"finish_reason": "length", "message": {"content": ""}}],
                     "usage": {"prompt_tokens": 80, "completion_tokens": 256},
                 },
             )
@@ -381,9 +380,7 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
             200,
             json={
                 "id": "successful-request",
-                "choices": [
-                    {"finish_reason": "stop", "message": {"content": "RANK: E1"}}
-                ],
+                "choices": [{"finish_reason": "stop", "message": {"content": "RANK: E1"}}],
                 "usage": {"prompt_tokens": 80, "completion_tokens": 100},
             },
         )
@@ -401,15 +398,6 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
     assert result.attempts == 2
     assert result.input_tokens == 160
     assert result.output_tokens == 356
-
-
-def test_opencode_rerank_rejects_other_models() -> None:
-    analyzer = OpenCodeIssueAnalyzer("test-key", model="other-model")
-
-    with pytest.raises(ValueError, match="only supports deepseek-v4-flash-free"):
-        analyzer.rerank(issue(), evidence())
-
-    analyzer.close()
 
 
 def test_opencode_deepseek_rerank_marks_grammar_400_non_retryable() -> None:
@@ -433,7 +421,7 @@ def test_opencode_deepseek_rerank_marks_grammar_400_non_retryable() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="HTTP 400") as error:
+    with pytest.raises(LLMProviderError, match="HTTP 400") as error:
         analyzer.rerank(issue(), evidence())
 
     assert "response_format" not in captured_request
@@ -451,7 +439,7 @@ def test_opencode_deepseek_rerank_marks_429_retryable() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="HTTP 429") as error:
+    with pytest.raises(LLMProviderError, match="HTTP 429") as error:
         analyzer.rerank(issue(), evidence())
 
     assert error.value.retryable is True
@@ -469,7 +457,7 @@ def test_opencode_deepseek_rerank_marks_5xx_retryable() -> None:
     )
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
 
-    with pytest.raises(GroqAPIError, match="HTTP 503") as error:
+    with pytest.raises(LLMProviderError, match="HTTP 503") as error:
         analyzer.rerank(issue(), evidence())
 
     assert error.value.retryable is True
@@ -487,7 +475,7 @@ def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
         LLMAnalysisResponse.model_validate(payload)
 
 
-def test_groq_analyzer_rejects_unknown_evidence_id() -> None:
+def test_opencode_analyzer_rejects_unknown_evidence_id() -> None:
     response_payload = structured_payload()
     response_payload["reranked_evidence_ids"] = ["E999"]
     response_payload["hypotheses"][0]["evidence_ids"] = ["E999"]
@@ -508,17 +496,17 @@ def test_groq_analyzer_rejects_unknown_evidence_id() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(GroqAPIError, match="unknown evidence IDs: E999"):
+    with pytest.raises(LLMProviderError, match="unknown evidence IDs: E999"):
         analyzer.analyze(record, report(record), evidence())
 
 
-def test_groq_analyzer_requires_one_observation_per_evidence() -> None:
+def test_opencode_analyzer_requires_one_observation_per_evidence() -> None:
     response_payload = structured_payload()
     response_payload["evidence_observations"] = []
 
@@ -538,17 +526,17 @@ def test_groq_analyzer_requires_one_observation_per_evidence() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(GroqAPIError, match="exactly one observation"):
+    with pytest.raises(LLMProviderError, match="exactly one observation"):
         analyzer.analyze(record, report(record), evidence())
 
 
-def test_groq_analyzer_derives_contradiction_from_evidence_alignment() -> None:
+def test_opencode_analyzer_derives_contradiction_from_evidence_alignment() -> None:
     response_payload = structured_payload()
     response_payload["evidence_observations"][0]["alignment"] = "contradicts_issue"
 
@@ -568,20 +556,18 @@ def test_groq_analyzer_derives_contradiction_from_evidence_alignment() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
     result = analyzer.analyze(record, report(record), evidence())
 
-    assert result.analysis.contradictions == [
-        "E1: The refresh path calls token validation."
-    ]
+    assert result.analysis.contradictions == ["E1: The refresh path calls token validation."]
 
 
-def test_groq_analyzer_requires_named_missing_evidence() -> None:
+def test_opencode_analyzer_requires_named_missing_evidence() -> None:
     response_payload = structured_payload()
     response_payload["hypotheses"][0]["missing_evidence"] = []
 
@@ -601,17 +587,17 @@ def test_groq_analyzer_requires_named_missing_evidence() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(GroqAPIError, match="without naming a missing artifact"):
+    with pytest.raises(LLMProviderError, match="without naming a missing artifact"):
         analyzer.analyze(record, report(record), evidence())
 
 
-def test_groq_analyzer_exposes_retry_after_without_response_body() -> None:
+def test_opencode_analyzer_exposes_retry_after_without_response_body() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             429,
@@ -620,20 +606,20 @@ def test_groq_analyzer_exposes_retry_after_without_response_body() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(GroqAPIError, match="HTTP 429") as error:
+    with pytest.raises(LLMProviderError, match="HTTP 429") as error:
         analyzer.analyze(record, report(record), evidence())
 
     assert error.value.retry_after == 2
     assert "request content" not in str(error.value)
 
 
-def test_groq_analyzer_reports_bounded_structured_error_detail() -> None:
+def test_opencode_analyzer_reports_bounded_structured_error_detail() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             400,
@@ -646,36 +632,38 @@ def test_groq_analyzer_reports_bounded_structured_error_detail() -> None:
         )
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
     with pytest.raises(
-        GroqAPIError,
+        LLMProviderError,
         match="HTTP 400: json_validate_failed - Schema generation failed",
     ):
         analyzer.analyze(record, report(record), evidence())
 
 
-def test_groq_analyzer_wraps_transport_error_without_request_details() -> None:
+def test_opencode_analyzer_wraps_transport_error_without_request_details() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("secret upstream detail", request=request)
 
     client = httpx.Client(
-        base_url="https://api.groq.com/openai/v1",
+        base_url="https://opencode.ai/zen/v1",
         transport=httpx.MockTransport(handler),
     )
-    analyzer = GroqIssueAnalyzer("test-key", client=client)
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(GroqAPIError, match="Groq request failed: ConnectError") as error:
+    with pytest.raises(LLMProviderError, match="OpenCode request failed: ConnectError") as error:
         analyzer.analyze(record, report(record), evidence())
 
     assert "secret upstream detail" not in str(error.value)
 
 
-def test_groq_analyzer_rejects_invalid_reasoning_effort() -> None:
-    with pytest.raises(ValueError, match="reasoning_effort must be"):
-        GroqIssueAnalyzer("test-key", reasoning_effort="none")
+def test_opencode_analyzer_uses_fixed_deepseek_model() -> None:
+    analyzer = OpenCodeIssueAnalyzer("test-key")
+
+    assert analyzer.model == "deepseek-v4-flash-free"
+    analyzer.close()
