@@ -137,7 +137,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run1.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -276,17 +276,25 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.18 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.19 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
-Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9700`, and MRR `0.6027`. Symbol Recall@1 is
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9900`, and MRR `0.6038`. Symbol Recall@1 is
 `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5606`, and symbol MRR `0.3342`.
 
-v0.18 records qualified calls rooted at unshadowed module imports, including aliases, but uses
-them for cross-file expansion only when the Issue explicitly references both the full call and a
-seed caller, the call occurs in two or three production files, and the caller identity is unique
-or has a single non-overload implementation. This added `scrapy/utils/decorators.py` at rank 18
-with `_warn_spider_arg`; the other 49 case outputs were unchanged. The relation reserves only a
-bounded tail expansion slot and contributes no reranking bonus.
+v0.19 adds a bounded reverse-import expansion inside title-matching subsystems. The imported
+production module must contain at least two functions sharing the same non-path title term and
+have one to three in-scope importers; package roots and auxiliary paths cannot supply scope. This
+recovered `celery/worker/pidbox.py` at rank 19 without regressing an earlier Top-20 ground-truth
+match. The relation can consume a bounded tail expansion slot but cannot rerank files already in
+the shortlist.
+
+The retained v0.18 baseline records qualified calls rooted at unshadowed module imports, including
+aliases, but uses them for cross-file expansion only when the Issue explicitly references both the
+full call and a seed caller, the call occurs in two or three production files, and the caller
+identity is unique or has a single non-overload implementation. This added
+`scrapy/utils/decorators.py` at rank 18 with `_warn_spider_arg`; the other 49 case outputs were
+unchanged. The relation reserves only a bounded tail expansion slot and contributes no reranking
+bonus.
 
 The retained v0.17 baseline conservatively resolves unshadowed leading function-local `from` imports and records those
 calls separately from module-level edges. A bounded constructor-aware second hop recovered
@@ -325,13 +333,14 @@ and only 485/491 output tokens. Average model latency was `4.13 s` and `4.96 s`.
 The two runs retained the same deterministic 20-file set for every case but changed the order in
 14/50 cases; only `pydantic-safe-annotations-metaclass` changed expected-file reciprocal rank.
 Fixed seed is therefore best effort rather than deterministic model output. Because later
-deterministic releases changed candidate membership through v0.18, these runs remain historical paired evidence and
-have not yet been repeated against the new pool. They support a bounded ordering-gain and
-protocol-reliability claim, not a production-reliability or root-cause-accuracy claim.
+deterministic releases changed candidate membership through v0.19, these runs remain historical
+paired evidence and have not yet been repeated against the new pool. They support a bounded
+ordering-gain and protocol-reliability claim, not a production-reliability or root-cause-accuracy
+claim.
 
 The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
-2026, and only 11 of 50 cases have multi-file production ground truth. Two cases still miss at
-least one reviewed file at Top-20, so hybrid reranking cannot recover them. Superseded manifests
+2026, and only 11 of 50 cases have multi-file production ground truth. One case still misses a
+reviewed file at Top-20, so hybrid reranking cannot recover it. Superseded manifests
 and older DeepSeek runs remain committed for provenance but must not be mixed with current
 manifest-v8 quality metrics.
 

@@ -234,7 +234,8 @@ the reproducible input for the corrected 20-case DeepSeek run; version 6 is the 
 expansion, version 7 is the qualified-symbol suite, and version 8 is the current 50-case expansion.
 LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
-resolved calls, shared qualified external-call evidence, qualified class/function ownership, and a single-best-symbol selector, but not
+resolved calls, shared qualified external-call evidence, title-scoped expansion-only reverse-import
+evidence, qualified class/function ownership, and a single-best-symbol selector, but not
 general cross-file control-flow beyond bounded resolved-name/shared-call relations, receiver/type resolution, runtime/backend
 dispatch, a cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a
 vector index.

@@ -116,6 +116,7 @@ FUNCTION_LOCAL_TWO_HOP_PREFIX = (
 )
 SHARED_QUALIFIED_CALL_PREFIX = "Shares issue-referenced qualified call "
 SHARED_QUALIFIED_CALL_MAX_FILES = 3
+REVERSE_IMPORT_RELATION_PREFIX = "Imports title-matching source module "
 AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
@@ -153,6 +154,7 @@ ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS = {"$", "\u200c", "\u200d"}
 class IssueSignals:
     terms: frozenset[str]
     content_terms: frozenset[str]
+    title_terms: frozenset[str]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
@@ -299,6 +301,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     return IssueSignals(
         terms=frozenset(_terms(text)),
         content_terms=frozenset(content_terms),
+        title_terms=frozenset(_terms(issue.title)),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
@@ -1038,6 +1041,7 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
             FUNCTION_LOCAL_RELATION_PREFIX,
             FUNCTION_LOCAL_TWO_HOP_PREFIX,
             SHARED_QUALIFIED_CALL_PREFIX,
+            REVERSE_IMPORT_RELATION_PREFIX,
         )
     ):
         return 0
@@ -1144,6 +1148,105 @@ def _graph_relations(
                 }
             )
         )
+
+    production_files = [
+        file
+        for file in repository_map.files
+        if not file.test_file
+        and Path(file.path).parts[0] not in {"t", "test", "tests"}
+        and not set(Path(file.path).parts) & AUXILIARY_PATH_PARTS
+    ]
+    repository_paths = {file.path for file in repository_map.files}
+    importers_by_path: dict[str, set[str]] = {}
+    for importer in production_files:
+        for imported_path in importer.local_imports:
+            if imported_path != importer.path:
+                importers_by_path.setdefault(imported_path, set()).add(
+                    importer.path
+                )
+
+    semantic_title_terms = _semantic_terms(signals.title_terms)
+    title_scope_terms_by_path: dict[str, set[str]] = {}
+
+    def title_scope_terms(path: str) -> set[str]:
+        if path in title_scope_terms_by_path:
+            return title_scope_terms_by_path[path]
+        parts = list(Path(path).parts)
+        package_root_index = next(
+            (
+                index
+                for index in range(len(parts) - 1)
+                if str(Path(*parts[: index + 1], "__init__.py"))
+                in repository_paths
+            ),
+            None,
+        )
+        if package_root_index is not None:
+            parts = parts[package_root_index + 1 :]
+        else:
+            if parts and parts[0] in {"src", "lib"}:
+                parts.pop(0)
+            if len(parts) > 1:
+                parts.pop(0)
+        scoped_path = "/".join([*parts[:-1], Path(parts[-1]).stem])
+        scoped_terms = {
+            term
+            for term in (
+                _semantic_terms(_terms(scoped_path)) & semantic_title_terms
+            )
+            if len(term) >= 5
+        }
+        title_scope_terms_by_path[path] = scoped_terms
+        return scoped_terms
+
+    for source in production_files:
+        if source.path not in base_scores:
+            continue
+        source_scope = title_scope_terms(source.path)
+        if not source_scope:
+            continue
+        symbols_by_term: dict[str, set[str]] = {}
+        for symbol in source.symbols:
+            if symbol.kind != "function":
+                continue
+            identity = _symbol_identity(symbol)
+            matching_terms = (
+                _semantic_terms(_terms(symbol.name)) & semantic_title_terms
+            ) - source_scope
+            for term in matching_terms:
+                if len(term) >= 5:
+                    symbols_by_term.setdefault(term, set()).add(identity)
+        repeated_symbol_terms = {
+            term: identities
+            for term, identities in symbols_by_term.items()
+            if len(identities) >= 2
+        }
+        if not repeated_symbol_terms:
+            continue
+        matching_symbols = sorted(
+            set().union(*repeated_symbol_terms.values())
+        )
+        importers = {
+            path
+            for path in importers_by_path.get(source.path, set())
+            if title_scope_terms(path) & source_scope
+        }
+        if not 1 <= len(importers) <= 3:
+            continue
+        bonus = GRAPH_EXPANSION_MIN_BONUS + min(
+            2.0,
+            0.5 * (len(matching_symbols) - 2),
+        )
+        displayed_symbols = ", ".join(matching_symbols[:3])
+        if len(matching_symbols) > 3:
+            displayed_symbols += f" (+{len(matching_symbols) - 3} more)"
+        for importer_path in sorted(importers):
+            add_relation(
+                importer_path,
+                bonus,
+                REVERSE_IMPORT_RELATION_PREFIX
+                + f"{source.path}: {displayed_symbols}",
+            )
 
     for seed_path in seed_paths:
         seed = files_by_path[seed_path]
@@ -1746,11 +1849,18 @@ def locate_candidates(
             for _, evidence in graph_relations[path]
         )
 
+    def reverse_import_expansion(path: str) -> bool:
+        return any(
+            evidence.startswith(REVERSE_IMPORT_RELATION_PREFIX)
+            for _, evidence in graph_relations[path]
+        )
+
     expansion_paths = sorted(
         expansion_candidates,
         key=lambda path: (
             not strong_expansion(path),
             not shared_qualified_expansion(path),
+            not reverse_import_expansion(path),
             -max(bonus for bonus, _ in graph_relations[path]),
             -final_scores[path],
             auxiliary_files[path],

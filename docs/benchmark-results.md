@@ -8,26 +8,35 @@ symbol targets across 33 cases. Every case embeds the complete Issue snapshot, m
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.18 runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic v0.19 runs finished 50/50 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9700 | 0.6027 | 5,134 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9706 | 0.6159 | 7,880 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,022 ms |
-| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 0.9545 | 0.6347 | 4,569 ms |
+| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9900 | 0.6038 | 5,065 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9706 | 0.6159 | 7,756 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,009 ms |
+| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,515 ms |
 
 The latency column is the mean of the three in-process analysis measurements. It starts after
 repository preparation and does not include clone, fetch, checkout, or Issue retrieval time.
 
-v0.18 indexes qualified calls rooted at unshadowed module imports and canonicalizes import aliases.
-It permits tail-only peer expansion when the Issue explicitly references the full call and a seed
-caller, the call occurs in two or three production files, and caller identity is unambiguous or has
-one non-overload implementation. The relation contributes no reranking bonus and cannot receive
-strong Top-10 promotion. It recovered `scrapy/utils/decorators.py::_warn_spider_arg` at rank 18 for
-`scrapy-pep649-signature`; the other 49 case outputs were unchanged. Across the 33 labeled cases,
-Symbol Recall@1/5/10/20 is `0.2273/0.4242/0.4545/0.5606`, with MRR `0.3342`.
+v0.19 adds a bounded reverse-import expansion for production files inside a title-matching
+subsystem. The imported source module must contain at least two functions sharing the same
+non-path title term, and it must have one to three in-scope importers. Package roots, tests, docs,
+examples, and scripts cannot supply scope. This recovered `celery/worker/pidbox.py` at rank 19 for
+`celery-pidbox-reset-fd-leak`, raising File Recall@20 from `0.9700` to `0.9900`; no earlier
+Top-20 ground-truth match regressed. The relation can consume a bounded tail expansion slot but
+cannot rerank files already in the shortlist. Symbol metrics remained unchanged.
+
+The retained v0.18 baseline indexes qualified calls rooted at unshadowed module imports and
+canonicalizes import aliases. It permits tail-only peer expansion when the Issue explicitly
+references the full call and a seed caller, the call occurs in two or three production files, and
+caller identity is unambiguous or has one non-overload implementation. The relation contributes no
+reranking bonus and cannot receive strong Top-10 promotion. It recovered
+`scrapy/utils/decorators.py::_warn_spider_arg` at rank 18 for `scrapy-pep649-signature`; the other 49
+case outputs were unchanged. Across the 33 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2273/0.4242/0.4545/0.5606`, with MRR `0.3342`.
 
 The retained v0.17 baseline resolves only unshadowed leading function-local `from` imports and stores those calls as a
 separate edge type. Direct edges neither rerank nor qualify as expansions by themselves. A bounded
@@ -52,7 +61,7 @@ lists remained unchanged.
 Two authorized OpenCode `deepseek-v4-flash-free` runs reranked the earlier v0.13 deterministic
 Top-20 candidate pool. The protocol sends no grammar-constrained response format and accepts
 exactly one plain `RANK:` line containing at most three known evidence IDs. All cases, including
-any fallback, remain in the metric denominator. These results are not yet paired with v0.18.
+any fallback, remain in the metric denominator. These results are not yet paired with v0.19.
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid ranks |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -77,6 +86,9 @@ On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run1.json`
+- `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run2.json`
+- `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run3.json`
 - `benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run3.json`
@@ -91,9 +103,8 @@ Machine-readable artifacts:
 
 ## Candidate-generation failures
 
-Two cases still miss at least one reviewed production file at Top-20:
+One case still misses a reviewed production file at Top-20:
 
-- Celery: `worker/pidbox.py`
 - Poetry: `utils/env/python/manager.py`
 
 Reranking cannot recover files outside the deterministic candidate pool. These misses should be
@@ -119,7 +130,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 - The suite is not a balanced population sample: 16 of the 18 newest Issues are from 2026.
 - Only 11/50 cases have multi-file production ground truth.
-- File Recall@20 remains bounded at `0.9700`; two cases contain unretrieved fix files.
+- File Recall@20 remains bounded at `0.9900`; one case contains an unretrieved fix file.
 - Symbol Recall@20 is `0.5606`, so within-file localization remains a major bottleneck.
 - DeepSeek changed ordering in 14/50 repeated cases despite a fixed best-effort seed.
 - Full hypothesis generation has less real-project reliability evidence than rank-only reranking.
@@ -128,7 +139,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Diagnose the two remaining Top-20 misses individually before expanding prompts.
+3. Diagnose Poetry's remaining Top-20 miss before expanding prompts.
 4. Expand to older and multi-file Issue/Fix-PR cases while preserving manual ground-truth review.
 5. Repeat the 50-case rank-only run after retrieval changes and report mean, variation, fallback
    taxonomy, valid-response MRR, and overall MRR.

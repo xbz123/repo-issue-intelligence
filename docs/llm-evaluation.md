@@ -130,13 +130,15 @@ Machine-readable artifacts:
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
-Manifest v8 deterministic v0.18 completed three 50-case runs with structurally identical candidates,
+Manifest v8 deterministic v0.19 completed three 50-case runs with structurally identical candidates,
 symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
-`0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9700`, and MRR `0.6027`. On 33
+`0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9900`, and MRR `0.6038`. On 33
 symbol-labeled cases, Symbol Recall@1 was `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`,
 Recall@20 `0.5606`, and symbol MRR `0.3342`. The v0.17 function-local import edge recovered
 `rich/highlighter.py` at rank 18. v0.18 added bounded shared qualified-call evidence and recovered
-`scrapy/utils/decorators.py::_warn_spider_arg` at rank 18. The other 49 case outputs were unchanged.
+`scrapy/utils/decorators.py::_warn_spider_arg` at rank 18. v0.19 added bounded reverse-import
+evidence and recovered `celery/worker/pidbox.py` at rank 19. No earlier Top-20 ground-truth match
+regressed.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs used the same 50 deterministic
 v0.13 candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks
@@ -156,11 +158,11 @@ orders changed between repeats. Only `pydantic-safe-annotations-metaclass` chang
 reciprocal rank, from rank 2 to rank 1. Seed 1337 is therefore best effort. The reviewed artifacts
 are `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
 `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`.
-They have not yet been rerun against the changed v0.18 candidate pool. The current deterministic
+They have not yet been rerun against the changed v0.19 candidate pool. The current deterministic
 artifacts are
-`benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run1.json`,
-`benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run2.json`, and
-`benchmarks/results/deterministic-v0.18-shared-qualified-calls-50-cases-run3.json`.
+`benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run1.json`,
+`benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run2.json`, and
+`benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run3.json`.
 
 The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
 Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
