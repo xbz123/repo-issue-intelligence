@@ -113,6 +113,9 @@ Every snippet must receive one support/contradiction/neutral observation, and ev
 must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
 provide a deterministic fallback when the model omits the free-form contradiction list. If the
 model requests more evidence, at least one hypothesis must name the missing artifact.
+An Issue with no readable deterministic evidence skips the provider request, retains its
+deterministic investigation with `llm_analysis=null`, records the Issue number in
+`skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
 OpenCode uses a 4,096-token budget and 60-second timeout because reasoning tokens share the
 completion budget and observed valid responses can exceed 30 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.

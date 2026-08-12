@@ -161,16 +161,25 @@ def _llm_analyze_node(
 ) -> dict[str, Any]:
     updated_reports: list[InvestigationReport] = []
     results = []
+    analyzed_issue_numbers: list[int] = []
+    skipped_no_evidence_issue_numbers: list[int] = []
     for report in state["investigations"]:
         evidence = state["evidence_by_issue"].get(report.issue.number, [])
+        if not evidence:
+            skipped_no_evidence_issue_numbers.append(report.issue.number)
+            updated_reports.append(report)
+            continue
         result = analyzer.analyze(report.issue, report, evidence)
         results.append(result)
+        analyzed_issue_numbers.append(report.issue.number)
         updated_reports.append(report.model_copy(update={"llm_analysis": result}))
     return {
         "investigations": updated_reports,
         "_trace_metadata": {
             "provider": results[0].provider if results else analyzer.provider,
             "models": sorted({result.model for result in results}),
+            "analyzed_issue_numbers": analyzed_issue_numbers,
+            "skipped_no_evidence_issue_numbers": skipped_no_evidence_issue_numbers,
             "request_ids": [
                 result.request_id for result in results if result.request_id is not None
             ],

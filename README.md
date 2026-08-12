@@ -106,6 +106,8 @@ numbers source lines, and applies a configurable character budget before sending
 The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
 DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
 It uses `json_object` mode followed by local Pydantic schema and evidence-ID validation.
+If deterministic localization yields no readable repository evidence for an Issue, that Issue
+skips the model call, records the skip in node trace metadata, and still reaches human review.
 Only public repository evidence should be sent to free models: OpenCode states that data collected
 during the free period may be used to improve those models; see the
 [OpenCode Zen documentation](https://opencode.ai/docs/zen).

@@ -84,6 +84,14 @@ class FakeAnalyzer:
         return None
 
 
+class FailIfCalledAnalyzer:
+    provider = "opencode"
+    model = "deepseek-v4-flash-free"
+
+    def analyze(self, issue, report, evidence):
+        raise AssertionError("analyzer must not be called without evidence")
+
+
 def test_agent_run_persists_state_traces_snapshots_and_review(tmp_path: Path) -> None:
     repository = create_repository(tmp_path)
     store = AgentStore(tmp_path / "agent.sqlite3")
@@ -192,6 +200,76 @@ def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) ->
     restored_analysis = restored.investigations[0].llm_analysis
     assert restored_analysis is not None
     assert len(restored_analysis.analysis.hypotheses) == 3
+
+
+def test_agent_run_skips_llm_when_repository_evidence_is_empty(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    (repository / "pyproject.toml").write_text(
+        "[project]\nname='empty-demo'\n",
+        encoding="utf-8",
+    )
+    store = AgentStore(tmp_path / "agent.sqlite3")
+
+    run = run_agent(
+        [issue(1, "Unknown runtime failure", "No source location is available.")],
+        repository,
+        top_k=1,
+        store=store,
+        llm_analyzer=FailIfCalledAnalyzer(),
+    )
+
+    assert run.status is AgentRunStatus.AWAITING_REVIEW
+    assert run.llm_enabled is True
+    assert run.investigations[0].llm_analysis is None
+    llm_trace = next(trace for trace in run.traces if trace.node_name == "llm_analyze")
+    assert llm_trace.status == "completed"
+    assert llm_trace.attempt == 1
+    assert llm_trace.metadata["analyzed_issue_numbers"] == []
+    assert llm_trace.metadata["skipped_no_evidence_issue_numbers"] == [1]
+    assert llm_trace.metadata["input_tokens"] == 0
+    assert llm_trace.metadata["output_tokens"] == 0
+
+
+def test_agent_run_analyzes_only_issues_with_repository_evidence(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    from repo_issue_intelligence import agent_workflow
+
+    original_collect_evidence = agent_workflow.collect_evidence
+
+    def selective_collect_evidence(report, max_total_chars):
+        if report.issue.number == 2:
+            return []
+        return original_collect_evidence(report, max_total_chars=max_total_chars)
+
+    monkeypatch.setattr(
+        agent_workflow,
+        "collect_evidence",
+        selective_collect_evidence,
+    )
+
+    run = run_agent(
+        [
+            issue(1, "Data loss in persistence layer", "persist_data loses data."),
+            issue(2, "Unknown runtime failure", "No source location is available."),
+        ],
+        repository,
+        top_k=2,
+        store=store,
+        llm_analyzer=FakeAnalyzer(),
+    )
+
+    reports = {report.issue.number: report for report in run.investigations}
+    assert reports[1].llm_analysis is not None
+    assert reports[2].llm_analysis is None
+    llm_trace = next(trace for trace in run.traces if trace.node_name == "llm_analyze")
+    assert llm_trace.metadata["analyzed_issue_numbers"] == [1]
+    assert llm_trace.metadata["skipped_no_evidence_issue_numbers"] == [2]
+    assert llm_trace.metadata["input_tokens"] == 250
 
 
 def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypatch) -> None:
