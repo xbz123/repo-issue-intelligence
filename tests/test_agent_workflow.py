@@ -6,6 +6,7 @@ import pytest
 
 from repo_issue_intelligence.agent_store import AgentStore
 from repo_issue_intelligence.agent_workflow import run_agent
+from repo_issue_intelligence.llm_client import LLMProviderError
 from repo_issue_intelligence.models import (
     AgentRunStatus,
     IssueRecord,
@@ -90,6 +91,40 @@ class FailIfCalledAnalyzer:
 
     def analyze(self, issue, report, evidence):
         raise AssertionError("analyzer must not be called without evidence")
+
+
+class InvalidResponseAnalyzer:
+    provider = "opencode"
+    model = "deepseek-v4-flash-free"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def analyze(self, issue, report, evidence):
+        self.calls += 1
+        raise LLMProviderError(
+            "invalid structured response",
+            retryable=False,
+            category="invalid_response",
+        )
+
+
+class RateLimitedAnalyzer(FakeAnalyzer):
+    def __init__(self, failures: int, retry_after: float | None = None) -> None:
+        self.failures = failures
+        self.retry_after = retry_after
+        self.calls = 0
+
+    def analyze(self, issue, report, evidence):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise LLMProviderError(
+                "rate limited",
+                retryable=True,
+                retry_after=self.retry_after,
+                category="rate_limit",
+            )
+        return super().analyze(issue, report, evidence)
 
 
 def test_agent_run_persists_state_traces_snapshots_and_review(tmp_path: Path) -> None:
@@ -270,6 +305,73 @@ def test_agent_run_analyzes_only_issues_with_repository_evidence(
     assert llm_trace.metadata["analyzed_issue_numbers"] == [1]
     assert llm_trace.metadata["skipped_no_evidence_issue_numbers"] == [2]
     assert llm_trace.metadata["input_tokens"] == 250
+
+
+def test_agent_does_not_retry_non_retryable_provider_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    analyzer = InvalidResponseAnalyzer()
+    run_id = "ac36f97b-535f-44f3-b638-452285d5119c"
+    from repo_issue_intelligence import agent_workflow
+
+    monkeypatch.setattr(agent_workflow, "uuid4", lambda: UUID(run_id))
+
+    with pytest.raises(LLMProviderError, match="invalid structured response"):
+        run_agent(
+            [issue(1, "Data persistence failure", "persist_data loses data")],
+            repository,
+            top_k=1,
+            store=store,
+            llm_analyzer=analyzer,
+            max_attempts=3,
+        )
+
+    assert analyzer.calls == 1
+    failed_run = store.get_run(run_id)
+    assert failed_run is not None
+    llm_traces = [trace for trace in failed_run.traces if trace.node_name == "llm_analyze"]
+    assert [(trace.status, trace.attempt) for trace in llm_traces] == [("failed", 1)]
+
+
+@pytest.mark.parametrize(
+    ("retry_after", "expected_delays"),
+    [(None, [1.0, 2.0]), (4.0, [4.0, 4.0])],
+)
+def test_agent_retries_rate_limit_with_bounded_backoff(
+    tmp_path: Path,
+    monkeypatch,
+    retry_after: float | None,
+    expected_delays: list[float],
+) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    analyzer = RateLimitedAnalyzer(failures=2, retry_after=retry_after)
+    delays: list[float] = []
+    from repo_issue_intelligence import agent_workflow
+
+    monkeypatch.setattr(agent_workflow, "sleep", delays.append)
+
+    run = run_agent(
+        [issue(1, "Data persistence failure", "persist_data loses data")],
+        repository,
+        top_k=1,
+        store=store,
+        llm_analyzer=analyzer,
+        max_attempts=3,
+    )
+
+    assert run.status is AgentRunStatus.AWAITING_REVIEW
+    assert analyzer.calls == 3
+    assert delays == expected_delays
+    llm_traces = [trace for trace in run.traces if trace.node_name == "llm_analyze"]
+    assert [(trace.status, trace.attempt) for trace in llm_traces] == [
+        ("failed", 1),
+        ("failed", 2),
+        ("completed", 3),
+    ]
 
 
 def test_agent_run_limits_repository_index_to_included_files(tmp_path: Path) -> None:

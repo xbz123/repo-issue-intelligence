@@ -96,8 +96,11 @@ During this run, an initial persistence check compared the in-memory strict resp
 the restored public base model and reported false despite identical serialized payloads. The
 evaluator now compares the public JSON payload and has a regression test using the real response
 subclass boundary. Structured-response and evidence-contract failures now preserve request, token,
-latency, and category telemetry across both Agent attempts. The next independent fix is to make
-Agent retry/backoff policy error-aware before repeating the external suite.
+latency, and category telemetry. They are non-retryable because repeating the same request does not
+repair an invalid contract. Transport, HTTP 429, and HTTP 5xx failures remain retryable with
+bounded exponential backoff and `retry-after` support. The next independent experiment is to make
+the full-analysis contract smaller before repeating the external suite after the provider limit
+resets.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
