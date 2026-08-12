@@ -545,6 +545,118 @@ def test_repository_map_records_local_imports_and_called_symbols(
     assert "parse_request" in api.references
 
 
+def test_repository_map_records_unshadowed_qualified_module_calls(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/signatures.py",
+        "import inspect as introspection\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return introspection.signature(func)\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    signatures = repository_map.files[0]
+
+    assert [
+        call.model_dump() for call in signatures.qualified_external_calls
+    ] == [
+        {
+            "caller": "get_func_args_dict",
+            "target": "inspect.signature",
+        }
+    ]
+
+
+def test_repository_map_skips_shadowed_qualified_module_calls(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/signatures.py",
+        "import inspect\n\n"
+        "def get_func_args_dict(inspect, func):\n"
+        "    return inspect.signature(func)\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert repository_map.files[0].qualified_external_calls == []
+
+
+def test_repository_map_skips_ambiguous_qualified_callers(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/signatures.py",
+        "import inspect\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert repository_map.files[0].qualified_external_calls == []
+
+
+def test_repository_map_keeps_single_overload_implementation_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/signatures.py",
+        "import inspect\n"
+        "from typing import overload\n\n"
+        "@overload\n"
+        "def get_func_args_dict(func: str) -> str: ...\n\n"
+        "@overload\n"
+        "def get_func_args_dict(func: int) -> int: ...\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        call.model_dump()
+        for call in repository_map.files[0].qualified_external_calls
+    ] == [
+        {
+            "caller": "get_func_args_dict",
+            "target": "inspect.signature",
+        }
+    ]
+
+
+def test_repository_map_does_not_trust_unrelated_overload_decorator(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/signatures.py",
+        "import custom\n"
+        "import inspect\n\n"
+        "@custom.overload\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert repository_map.files[0].qualified_external_calls == []
+
+
 def test_repository_map_resolves_leading_function_local_import_call(
     tmp_path: Path,
 ) -> None:
@@ -2067,6 +2179,232 @@ def test_graph_reranking_expands_strong_relations_into_the_candidate_pool(
 
     assert len(candidates) == 20
     assert any(candidate.file == "src/target.py" for candidate in candidates)
+
+
+def test_graph_expands_rare_issue_referenced_qualified_call_peer(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/python.py",
+        "import inspect\n\n"
+        "def get_func_args_dict(func):\n"
+        '    """Return callable arguments."""\n'
+        "    return inspect.signature(func)\n",
+    )
+    write_source(
+        repository,
+        "src/decorators.py",
+        "import inspect\n\n"
+        "def _warn_spider_arg(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/lazy_annotation_{index}.py",
+            "def get_func_args_dict_annotation():\n"
+            '    """Support lazy annotations safely."""\n'
+            "    return None\n",
+        )
+    record = issue(
+        "get_func_args_dict does not support lazy annotations",
+        "The crash occurs in `inspect.signature()`.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+    decorators = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/decorators.py"
+    )
+
+    assert candidates.index(decorators) >= 17
+    assert decorators.symbol == "_warn_spider_arg"
+    assert any(
+        evidence.startswith(
+            "Shares issue-referenced qualified call inspect.signature "
+        )
+        for evidence in decorators.evidence
+    )
+
+
+@pytest.mark.parametrize(
+    ("body", "peer_count"),
+    [
+        ("The crash occurs while inspecting a signature.", 1),
+        ("The crash occurs in `inspect.signature()`.", 3),
+    ],
+)
+def test_graph_skips_unscoped_or_common_qualified_call_peers(
+    tmp_path: Path,
+    body: str,
+    peer_count: int,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/python.py",
+        "import inspect\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    for index in range(peer_count):
+        write_source(
+            repository,
+            f"src/peer_{index}.py",
+            "import inspect\n\n"
+            "def unrelated(func):\n"
+            "    return inspect.signature(func)\n",
+        )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/lazy_annotation_{index}.py",
+            "def get_func_args_dict_annotation():\n"
+            '    """Support lazy annotations safely."""\n'
+            "    return None\n",
+        )
+    record = issue(
+        "get_func_args_dict does not support lazy annotations",
+        body,
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+
+    assert all(
+        not any(
+            evidence.startswith(
+                "Shares issue-referenced qualified call "
+            )
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+@pytest.mark.parametrize(
+    "seed_path",
+    ["tests/test_signatures.py", "examples/signatures.py"],
+)
+def test_graph_skips_qualified_call_propagation_from_auxiliary_seed(
+    tmp_path: Path,
+    seed_path: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        seed_path,
+        "import inspect\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    for index in range(2):
+        write_source(
+            repository,
+            f"src/peer_{index}.py",
+            "import inspect\n\n"
+            "def unrelated(func):\n"
+            "    return inspect.signature(func)\n",
+        )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/lazy_annotation_{index}.py",
+            "def get_func_args_dict_annotation():\n"
+            '    """Support lazy annotations safely."""\n'
+            "    return None\n",
+        )
+    record = issue(
+        "get_func_args_dict does not support lazy annotations",
+        "The crash occurs in `inspect.signature()`.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+
+    assert all(
+        not any(
+            evidence.startswith(
+                "Shares issue-referenced qualified call "
+            )
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+@pytest.mark.parametrize(
+    ("caller", "add_duplicate"),
+    [("get_func_args_dict", True), ("run", False)],
+)
+def test_graph_skips_unsafe_bare_qualified_call_caller(
+    tmp_path: Path,
+    caller: str,
+    add_duplicate: bool,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/python.py",
+        "import inspect\n\n"
+        f"def {caller}(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    if add_duplicate:
+        write_source(
+            repository,
+            "src/duplicate.py",
+            f"def {caller}(func):\n"
+            "    return func\n",
+        )
+    write_source(
+        repository,
+        "src/decorators.py",
+        "import inspect\n\n"
+        "def _warn_spider_arg(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/lazy_annotation_{index}.py",
+            f"def {caller}_annotation():\n"
+            '    """Support lazy annotations safely."""\n'
+            "    return None\n",
+        )
+    record = issue(
+        f"{caller} does not support lazy annotations",
+        f"The `{caller}` path crashes in `inspect.signature()`.",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+
+    assert all(
+        not any(
+            evidence.startswith(
+                "Shares issue-referenced qualified call "
+            )
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
 
 
 def test_graph_reranking_promotes_bounded_two_hop_call_chain(

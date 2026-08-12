@@ -114,6 +114,11 @@ class ResolvedCall(BaseModel):
     target_symbol: str
 
 
+class QualifiedExternalCall(BaseModel):
+    caller: str | None = None
+    target: str
+
+
 class FileRecord(BaseModel):
     path: str
     language: str
@@ -127,6 +132,9 @@ class FileRecord(BaseModel):
     qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     resolved_calls: list[ResolvedCall] = Field(default_factory=list)
     function_local_import_calls: list[ResolvedCall] = Field(default_factory=list)
+    qualified_external_calls: list[QualifiedExternalCall] = Field(
+        default_factory=list
+    )
     resolved_import_references: dict[str, list[str]] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)
     test_file: bool = False

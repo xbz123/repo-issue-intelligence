@@ -9,7 +9,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .models import FileRecord, RepositoryMap, ResolvedCall, SymbolRecord
+from .models import (
+    FileRecord,
+    QualifiedExternalCall,
+    RepositoryMap,
+    ResolvedCall,
+    SymbolRecord,
+)
 
 SKIP_DIRS = {
     ".git",
@@ -80,6 +86,9 @@ class _PythonMetadata:
     symbol_calls: dict[str, list[str]] = field(default_factory=dict)
     references: list[str] = field(default_factory=list)
     resolved_calls: list[ResolvedCall] = field(default_factory=list)
+    qualified_external_calls: list[QualifiedExternalCall] = field(
+        default_factory=list
+    )
     pending_import_calls: list[_PendingImportUse] = field(default_factory=list)
     pending_import_references: list[_PendingImportUse] = field(default_factory=list)
 
@@ -243,6 +252,24 @@ def _module_bindings(
             for definition_node in _definition_time_nodes(statement):
                 collector.visit(definition_node)
             unsafe_names.update(collector.names - {statement.name})
+        elif isinstance(statement, ast.Import):
+            for alias in statement.names:
+                local_name = (
+                    alias.asname
+                    or alias.name.split(".", maxsplit=1)[0]
+                )
+                target = (
+                    alias.name
+                    if alias.asname
+                    else alias.name.split(".", maxsplit=1)[0]
+                )
+                candidates.setdefault(local_name, []).append(
+                    _ModuleBinding(
+                        kind="module",
+                        target=target,
+                        target_symbol=target,
+                    )
+                )
         elif isinstance(statement, ast.ImportFrom):
             for local_name, binding in _import_from_bindings(statement):
                 candidates.setdefault(local_name, []).append(binding)
@@ -390,6 +417,7 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
         self.function_bindings = function_bindings
         self.caller = caller
         self.calls: set[tuple[str, _ModuleBinding]] = set()
+        self.qualified_external_calls: set[str] = set()
         self.import_references: set[tuple[str, _ModuleBinding]] = set()
 
     def visit_Call(self, node: ast.Call) -> None:
@@ -400,8 +428,26 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
                 self.module_bindings,
                 self.function_bindings,
             )
-            if binding is not None:
+            if binding is not None and binding.kind != "module":
                 self.calls.add((node.func.id, binding))
+        elif isinstance(node.func, ast.Attribute):
+            attributes: list[str] = []
+            current: ast.expr = node.func
+            while isinstance(current, ast.Attribute):
+                attributes.append(current.attr)
+                current = current.value
+            if isinstance(current, ast.Name):
+                binding = _resolved_module_binding(
+                    self.table,
+                    current.id,
+                    self.module_bindings,
+                    self.function_bindings,
+                )
+                if binding is not None and binding.kind == "module":
+                    target = ".".join(
+                        [binding.target, *reversed(attributes)]
+                    )
+                    self.qualified_external_calls.add(target)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> None:
@@ -475,6 +521,33 @@ def _qualified_symbol_name(
     return ".".join(reversed(names))
 
 
+def _is_overload_definition(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    module_bindings: dict[str, _ModuleBinding],
+) -> bool:
+    for decorator in node.decorator_list:
+        target = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if isinstance(target, ast.Name):
+            binding = module_bindings.get(target.id)
+            if binding is not None and binding.kind == "import" and binding.target in {
+                "typing.overload",
+                "typing_extensions.overload",
+            }:
+                return True
+        if (
+            isinstance(target, ast.Attribute)
+            and target.attr == "overload"
+            and isinstance(target.value, ast.Name)
+        ):
+            binding = module_bindings.get(target.value.id)
+            if binding is not None and binding.kind == "module" and binding.target in {
+                "typing",
+                "typing_extensions",
+            }:
+                return True
+    return False
+
+
 def _python_metadata(
     path: Path,
     relative_path: str,
@@ -488,6 +561,7 @@ def _python_metadata(
     metadata = _PythonMetadata()
     legacy_symbol_calls: dict[str, set[str]] = {}
     resolved_calls: set[tuple[str | None, str, str, str]] = set()
+    qualified_external_calls: set[tuple[str | None, str]] = set()
     pending_import_calls: set[_PendingImportUse] = set()
     pending_import_references: set[_PendingImportUse] = set()
     parents = {
@@ -497,8 +571,29 @@ def _python_metadata(
     }
     module_bindings = _module_bindings(tree, root_table)
     tables = _symbol_tables(root_table)
+    function_definitions: Counter[str] = Counter()
+    non_overload_definitions: Counter[str] = Counter()
+    for function_node in ast.walk(tree):
+        if not isinstance(
+            function_node,
+            (ast.FunctionDef, ast.AsyncFunctionDef),
+        ):
+            continue
+        identity = _qualified_symbol_name(function_node, parents)
+        function_definitions[identity] += 1
+        if not _is_overload_definition(function_node, module_bindings):
+            non_overload_definitions[identity] += 1
+    safe_qualified_callers = {
+        identity
+        for identity, count in function_definitions.items()
+        if count == 1 or non_overload_definitions[identity] == 1
+    }
 
     def collect_resolved_uses(collector: _ResolvedNameUseCollector) -> None:
+        qualified_external_calls.update(
+            (collector.caller, target)
+            for target in collector.qualified_external_calls
+        )
         for local_name, binding in collector.calls:
             if binding.kind == "local":
                 resolved_calls.add(
@@ -634,6 +729,14 @@ def _python_metadata(
             key=lambda item: (item[0] or "", *item[1:]),
         )
         if caller is None or caller in unambiguous_callers
+    ]
+    metadata.qualified_external_calls = [
+        QualifiedExternalCall(caller=caller, target=target)
+        for caller, target in sorted(
+            qualified_external_calls,
+            key=lambda item: (item[0] or "", item[1]),
+        )
+        if caller is None or caller in safe_qualified_callers
     ]
     metadata.pending_import_calls = sorted(
         (
@@ -977,6 +1080,7 @@ def build_repository_map(
                 calls=metadata.calls,
                 symbol_calls=metadata.symbol_calls,
                 resolved_calls=metadata.resolved_calls,
+                qualified_external_calls=metadata.qualified_external_calls,
                 references=metadata.references,
                 test_file="test" in filename.lower() or "tests" in relative.parts,
             )

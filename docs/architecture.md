@@ -79,7 +79,13 @@ docstring in the function's initial import block and the imported name is not a 
 nonlocal, assignment target, later import, or other local binding. These calls are stored separately:
 their direct relation cannot rerank or qualify as a candidate expansion by itself. A single
 constructor-aware second hop may add a tail candidate, but it cannot receive strong Top-10 promotion
-and propagation stops before a second function-local import. Other bounded two-hop propagation
+and propagation stops before a second function-local import. Calls rooted at an unshadowed module
+import retain their complete qualified target, including canonicalized aliases. The investigator
+may use a shared target in the bounded tail expansion only when the Issue explicitly references the
+full call and seed caller, two or three production files contain that call, and caller identity is
+unambiguous or has exactly one non-overload implementation. Test seeds, common calls, shadowed
+module roots, duplicate implementations, and unresolved attribute receivers cannot trigger this
+relation. Shared-call evidence contributes no reranking score or strong Top-10 promotion. Other bounded two-hop propagation
 follows the exact target function and only that function's resolved external calls. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
@@ -228,8 +234,8 @@ the reproducible input for the corrected 20-case DeepSeek run; version 6 is the 
 expansion, version 7 is the qualified-symbol suite, and version 8 is the current 50-case expansion.
 LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
-resolved calls, qualified class/function ownership, and a single-best-symbol selector, but not
-cross-file control-flow beyond bounded two-hop resolved-name calls, receiver/type resolution, runtime/backend
+resolved calls, shared qualified external-call evidence, qualified class/function ownership, and a single-best-symbol selector, but not
+general cross-file control-flow beyond bounded resolved-name/shared-call relations, receiver/type resolution, runtime/backend
 dispatch, a cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a
 vector index.
 
