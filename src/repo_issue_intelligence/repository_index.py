@@ -60,6 +60,7 @@ class _ModuleBinding:
     kind: str
     target: str
     target_symbol: str
+    function_local: bool = False
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ class _PendingImportUse:
     local_name: str
     target: str
     target_symbol: str
+    function_local: bool = False
 
 
 @dataclass
@@ -198,6 +200,12 @@ class _UnsafeModuleBindingCollector(ast.NodeVisitor):
             self.names.add(node.rest)
         self.generic_visit(node)
 
+    def visit_Global(self, node: ast.Global) -> None:
+        self.names.update(node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
+        self.names.update(node.names)
+
 
 def _global_mutations(root: symtable.SymbolTable) -> set[str]:
     mutations: set[str] = set()
@@ -254,6 +262,74 @@ def _module_bindings(
     }
 
 
+def _leading_function_import_bindings(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, _ModuleBinding]:
+    """Return unshadowed ``from`` imports from a function's leading block.
+
+    Function-local imports are common for breaking import cycles. Restricting
+    inference to the leading import block keeps the binding independent of
+    control flow and statement ordering. Names rebound anywhere else in the
+    function are rejected conservatively.
+    """
+
+    arguments = [
+        *node.args.posonlyargs,
+        *node.args.args,
+        *node.args.kwonlyargs,
+    ]
+    if node.args.vararg is not None:
+        arguments.append(node.args.vararg)
+    if node.args.kwarg is not None:
+        arguments.append(node.args.kwarg)
+    unsafe_names = {argument.arg for argument in arguments}
+
+    statements = list(node.body)
+    start = 0
+    if (
+        statements
+        and isinstance(statements[0], ast.Expr)
+        and isinstance(statements[0].value, ast.Constant)
+        and isinstance(statements[0].value.value, str)
+    ):
+        start = 1
+
+    candidates: dict[str, list[_ModuleBinding]] = {}
+    import_indexes: set[int] = set()
+    for index in range(start, len(statements)):
+        statement = statements[index]
+        if isinstance(statement, ast.Import):
+            import_indexes.add(index)
+            unsafe_names.update(
+                alias.asname or alias.name.split(".", maxsplit=1)[0]
+                for alias in statement.names
+            )
+            continue
+        if not isinstance(statement, ast.ImportFrom):
+            break
+        import_indexes.add(index)
+        for local_name, binding in _import_from_bindings(statement):
+            candidates.setdefault(local_name, []).append(
+                _ModuleBinding(
+                    kind=binding.kind,
+                    target=binding.target,
+                    target_symbol=binding.target_symbol,
+                    function_local=True,
+                )
+            )
+
+    collector = _UnsafeModuleBindingCollector()
+    for index, statement in enumerate(statements):
+        if index not in import_indexes:
+            collector.visit(statement)
+    unsafe_names.update(collector.names)
+    return {
+        name: values[0]
+        for name, values in candidates.items()
+        if len(values) == 1 and name not in unsafe_names
+    }
+
+
 def _symbol_tables(
     root: symtable.SymbolTable,
 ) -> dict[tuple[str, str, int], symtable.SymbolTable]:
@@ -272,12 +348,22 @@ def _resolved_module_binding(
     table: symtable.SymbolTable,
     name: str,
     module_bindings: dict[str, _ModuleBinding],
+    function_bindings: dict[str, _ModuleBinding] | None = None,
 ) -> _ModuleBinding | None:
     if table.get_type() != "module":
         try:
             symbol = table.lookup(name)
         except KeyError:
             return None
+        if (
+            function_bindings
+            and name in function_bindings
+            and symbol.is_imported()
+            and symbol.is_local()
+            and not symbol.is_declared_global()
+            and not symbol.is_nonlocal()
+        ):
+            return function_bindings[name]
         if (
             symbol.is_local()
             or symbol.is_parameter()
@@ -297,9 +383,11 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
         table: symtable.SymbolTable,
         module_bindings: dict[str, _ModuleBinding],
         caller: str | None,
+        function_bindings: dict[str, _ModuleBinding] | None = None,
     ) -> None:
         self.table = table
         self.module_bindings = module_bindings
+        self.function_bindings = function_bindings
         self.caller = caller
         self.calls: set[tuple[str, _ModuleBinding]] = set()
         self.import_references: set[tuple[str, _ModuleBinding]] = set()
@@ -310,6 +398,7 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
                 self.table,
                 node.func.id,
                 self.module_bindings,
+                self.function_bindings,
             )
             if binding is not None:
                 self.calls.add((node.func.id, binding))
@@ -321,6 +410,7 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
                 self.table,
                 node.id,
                 self.module_bindings,
+                self.function_bindings,
             )
             if binding is not None and binding.kind == "import":
                 self.import_references.add((node.id, binding))
@@ -426,15 +516,19 @@ def _python_metadata(
                         local_name=local_name,
                         target=binding.target,
                         target_symbol=binding.target_symbol,
+                        function_local=binding.function_local,
                     )
                 )
         for local_name, binding in collector.import_references:
+            if binding.function_local:
+                continue
             pending_import_references.add(
                 _PendingImportUse(
                     caller=collector.caller,
                     local_name=local_name,
                     target=binding.target,
                     target_symbol=binding.target_symbol,
+                    function_local=binding.function_local,
                 )
             )
 
@@ -470,6 +564,7 @@ def _python_metadata(
                     table,
                     module_bindings,
                     caller=qualified_name,
+                    function_bindings=_leading_function_import_bindings(node),
                 )
                 for statement in node.body:
                     resolved_collector.visit(statement)
@@ -551,6 +646,7 @@ def _python_metadata(
             item.local_name,
             item.target,
             item.target_symbol,
+            item.function_local,
         ),
     )
     metadata.pending_import_references = sorted(
@@ -564,6 +660,7 @@ def _python_metadata(
             item.local_name,
             item.target,
             item.target_symbol,
+            item.function_local,
         ),
     )
     return metadata
@@ -740,6 +837,15 @@ def _resolve_python_local_imports(
             )
             for call in file.resolved_calls
         }
+        function_local_call_keys = {
+            (
+                call.caller,
+                call.local_name,
+                call.target_file,
+                call.target_symbol,
+            )
+            for call in file.function_local_import_calls
+        }
         resolved_reference_symbols: dict[str, set[str]] = {}
 
         for use in pending_calls.get(file.path, []):
@@ -760,6 +866,15 @@ def _resolve_python_local_imports(
                     target_symbol,
                 )
             )
+            if use.function_local:
+                function_local_call_keys.add(
+                    (
+                        use.caller,
+                        use.local_name,
+                        target_path,
+                        target_symbol,
+                    )
+                )
         for use in pending_references.get(file.path, []):
             target = _resolve_pending_import(
                 use,
@@ -784,6 +899,18 @@ def _resolve_python_local_imports(
             )
             for caller, local_name, target_file, target_symbol in sorted(
                 resolved_call_keys,
+                key=lambda item: (item[0] or "", *item[1:]),
+            )
+        ]
+        file.function_local_import_calls = [
+            ResolvedCall(
+                caller=caller,
+                local_name=local_name,
+                target_file=target_file,
+                target_symbol=target_symbol,
+            )
+            for caller, local_name, target_file, target_symbol in sorted(
+                function_local_call_keys,
                 key=lambda item: (item[0] or "", *item[1:]),
             )
         ]

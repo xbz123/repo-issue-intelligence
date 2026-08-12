@@ -137,7 +137,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.16-symbol-mentions-50-cases.json
+  --output benchmarks/results/deterministic-v0.17-function-local-imports-50-cases-run1.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -276,16 +276,22 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.16 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.17 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
-Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. Symbol Recall@1 is
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9600`, and MRR `0.6027`. Symbol Recall@1 is
 `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5455`, and symbol MRR `0.3342`.
 
+v0.17 conservatively resolves unshadowed leading function-local `from` imports and records those
+calls separately from module-level edges. A bounded constructor-aware second hop recovered
+`rich/highlighter.py` at rank 18 for the JSON highlighting case. The other 49 per-case metrics and
+all previously selected candidate symbols were unchanged. Direct function-local edges cannot rerank
+or expand a candidate by themselves, do not receive strong Top-10 promotion, and are not followed
+through another function-local import.
+
 v0.16 preserves exact identifier mention frequency outside fenced reproduction blocks when choosing
-among safely scoped direct symbol references. It recovered four reviewed symbols without changing
-any file candidate list or losing a previously matched symbol. Short bare names still need owner or
-path scope; a candidate-unique name needs at least five non-underscore characters before it can
-override semantic ranking.
+among safely scoped direct symbol references. Short bare names still need owner or path scope; a
+candidate-unique name needs at least five non-underscore characters before it can override semantic
+ranking.
 
 The v0.15 retrieval policy reserves at most one additional non-auxiliary shortlist slot for an
 exact path, specific title-to-path match, path identifier, or primary symbol match. This recovered
@@ -312,13 +318,13 @@ and only 485/491 output tokens. Average model latency was `4.13 s` and `4.96 s`.
 
 The two runs retained the same deterministic 20-file set for every case but changed the order in
 14/50 cases; only `pydantic-safe-annotations-metaclass` changed expected-file reciprocal rank.
-Fixed seed is therefore best effort rather than deterministic model output. Because v0.15 changes
-candidate membership, these runs remain historical paired evidence and have not yet been repeated
-against the new pool. They support a bounded ordering-gain and protocol-reliability claim, not a
-production-reliability or root-cause-accuracy claim.
+Fixed seed is therefore best effort rather than deterministic model output. Because v0.15 changed
+candidate membership and v0.17 changes it again, these runs remain historical paired evidence and
+have not yet been repeated against the new pool. They support a bounded ordering-gain and
+protocol-reliability claim, not a production-reliability or root-cause-accuracy claim.
 
 The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
-2026, and only 11 of 50 cases have multi-file production ground truth. Four cases still miss at
+2026, and only 11 of 50 cases have multi-file production ground truth. Three cases still miss at
 least one reviewed file at Top-20, so hybrid reranking cannot recover them. Superseded manifests
 and older DeepSeek runs remain committed for provenance but must not be mixed with current
 manifest-v8 quality metrics.

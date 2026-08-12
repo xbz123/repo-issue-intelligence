@@ -126,6 +126,7 @@ class FileRecord(BaseModel):
     symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     resolved_calls: list[ResolvedCall] = Field(default_factory=list)
+    function_local_import_calls: list[ResolvedCall] = Field(default_factory=list)
     resolved_import_references: dict[str, list[str]] = Field(default_factory=dict)
     references: list[str] = Field(default_factory=list)
     test_file: bool = False
