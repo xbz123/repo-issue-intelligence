@@ -8,6 +8,7 @@ from repo_issue_intelligence.investigator import (
     _content_matches_identifier,
     _identifier_variants,
     _merge_tail_expansions,
+    _reserve_protected_paths,
     extract_issue_signals,
     investigate,
     locate_candidates,
@@ -324,6 +325,50 @@ def test_tail_expansions_do_not_evict_directly_supported_base_path() -> None:
     )
 
     assert merged == ["first.py", "direct.py", "expanded.py"]
+
+
+def test_directly_supported_path_enters_base_shortlist() -> None:
+    selected = _reserve_protected_paths(
+        ["first.py", "second.py", "third.py", "publish.py", "other.py"],
+        ["publish.py", "other.py"],
+        limit=3,
+        reservation_slots=1,
+    )
+
+    assert selected == ["first.py", "second.py", "publish.py"]
+
+
+def test_source_path_reservation_ignores_auxiliary_traceback_paths(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/publish.py",
+        "class PublishCommand:\n    pass\n",
+    )
+    traceback_lines: list[str] = []
+    for index in range(4):
+        relative_path = f"tests/noisy_{index}.py"
+        write_source(
+            repository,
+            relative_path,
+            f"def failing_case_{index}():\n    pass\n",
+        )
+        traceback_lines.append(f'File "{relative_path}", line 1')
+
+    candidates = locate_candidates(
+        issue(
+            "Publish command ignores no interaction",
+            "\n".join(traceback_lines),
+        ),
+        build_repository_map(repository),
+        limit=3,
+    )
+
+    assert "src/package/publish.py" in {
+        candidate.file for candidate in candidates
+    }
 
 
 def test_locate_candidates_uses_source_content_identifiers(tmp_path: Path) -> None:

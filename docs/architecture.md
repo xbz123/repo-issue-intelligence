@@ -48,9 +48,10 @@ caller-specific two-hop relations, matching-test imports, and bounded prior Git 
 graph evidence. Graph weights still rerank inside fixed Top-10 bands; up to three expansion
 candidates may enter the Top-20. One Top-10 diversity slot is reserved for a two-hop call candidate
 only when both hops are exact resolved edges, the first symbol matches a specific title term, and
-the path is concrete rather than an abstract/protocol or auxiliary layer. Candidates with an exact
-path, specific title-to-path match, path identifier, or primary symbol match cannot be evicted by a
-weaker tail expansion. Git evidence uses at most 50 prior commits from 100 fetched ancestors,
+the path is concrete rather than an abstract/protocol or auxiliary layer. At most one additional
+non-auxiliary base-shortlist slot is reserved for an exact path, specific title-to-path match, path
+identifier, or primary symbol match. Once selected, those candidates cannot be evicted by a weaker
+tail expansion. Git evidence uses at most 50 prior commits from 100 fetched ancestors,
 blames at most five lines for each of two seed candidates, and ignores broad commits. File scoring
 and symbol selection are separate: file scores retain the lexical/graph/history contract, while functions
 inside each file are selected using source-scoped direct identifier references and normalized
