@@ -111,10 +111,18 @@ class InvalidAnalyzer:
     temperature = 0.1
     seed = 1337
 
+    def __init__(self) -> None:
+        self.calls = 0
+
     def analyze(self, issue, report, evidence):
+        self.calls += 1
         raise LLMProviderError(
             "OpenCode returned invalid JSON",
             category="invalid_response",
+            input_tokens=100 + self.calls,
+            output_tokens=50 + self.calls,
+            elapsed_ms=10 + self.calls,
+            request_id=f"request-invalid-{self.calls}",
         )
 
     def close(self):
@@ -179,6 +187,10 @@ def test_agent_analysis_evaluation_records_failure_after_retries(
     assert result.agent_status == "failed"
     assert result.persistence_verified is True
     assert result.llm_attempts == 2
+    assert result.request_ids == ["request-invalid-1", "request-invalid-2"]
+    assert result.input_tokens == 203
+    assert result.output_tokens == 103
+    assert result.llm_elapsed_ms == 23
     assert result.error_category == "invalid_response"
     assert result.error == "LLMProviderError: OpenCode returned invalid JSON"
     assert run.overall.failures == 1

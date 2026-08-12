@@ -492,6 +492,7 @@ def test_opencode_analyzer_rejects_unknown_evidence_id() -> None:
                         }
                     }
                 ],
+                "usage": {"prompt_tokens": 301, "completion_tokens": 121},
             },
         )
 
@@ -502,8 +503,14 @@ def test_opencode_analyzer_rejects_unknown_evidence_id() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(LLMProviderError, match="unknown evidence IDs: E999"):
+    with pytest.raises(LLMProviderError, match="unknown evidence IDs: E999") as error:
         analyzer.analyze(record, report(record), evidence())
+
+    assert error.value.category == "unknown_evidence_id"
+    assert error.value.request_id == "request-2"
+    assert error.value.input_tokens == 301
+    assert error.value.output_tokens == 121
+    assert error.value.elapsed_ms >= 0
 
 
 def test_opencode_analyzer_requires_one_observation_per_evidence() -> None:
@@ -522,6 +529,7 @@ def test_opencode_analyzer_requires_one_observation_per_evidence() -> None:
                         }
                     }
                 ],
+                "usage": {"prompt_tokens": 302, "completion_tokens": 122},
             },
         )
 
@@ -532,8 +540,13 @@ def test_opencode_analyzer_requires_one_observation_per_evidence() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(LLMProviderError, match="exactly one observation"):
+    with pytest.raises(LLMProviderError, match="exactly one observation") as error:
         analyzer.analyze(record, report(record), evidence())
+
+    assert error.value.category == "evidence_observation_coverage"
+    assert error.value.request_id == "request-coverage"
+    assert error.value.input_tokens == 302
+    assert error.value.output_tokens == 122
 
 
 def test_opencode_analyzer_derives_contradiction_from_evidence_alignment() -> None:
@@ -583,6 +596,7 @@ def test_opencode_analyzer_requires_named_missing_evidence() -> None:
                         }
                     }
                 ],
+                "usage": {"prompt_tokens": 303, "completion_tokens": 123},
             },
         )
 
@@ -593,8 +607,43 @@ def test_opencode_analyzer_requires_named_missing_evidence() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(LLMProviderError, match="without naming a missing artifact"):
+    with pytest.raises(LLMProviderError, match="without naming a missing artifact") as error:
         analyzer.analyze(record, report(record), evidence())
+
+    assert error.value.category == "missing_evidence_contract"
+    assert error.value.request_id == "request-missing-evidence"
+    assert error.value.input_tokens == 303
+    assert error.value.output_tokens == 123
+
+
+def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-invalid-json",
+                "system_fingerprint": "fingerprint-invalid-json",
+                "choices": [{"message": {"content": '{"summary":'}}],
+                "usage": {"prompt_tokens": 304, "completion_tokens": 124},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+    record = issue()
+
+    with pytest.raises(LLMProviderError, match="invalid structured response") as error:
+        analyzer.analyze(record, report(record), evidence())
+
+    assert error.value.category == "invalid_response"
+    assert error.value.request_id == "request-invalid-json"
+    assert error.value.system_fingerprint == "fingerprint-invalid-json"
+    assert error.value.input_tokens == 304
+    assert error.value.output_tokens == 124
+    assert error.value.elapsed_ms >= 0
 
 
 def test_opencode_analyzer_exposes_retry_after_without_response_body() -> None:

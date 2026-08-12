@@ -82,16 +82,40 @@ class _TrackingAnalyzer:
         self.provider = analyzer.provider
         self.model = analyzer.model
         self.calls = 0
-        self.results: list[LLMAnalysisResult] = []
+        self.outcomes: list[LLMAnalysisResult | Exception] = []
 
     def analyze(self, issue, report, evidence) -> LLMAnalysisResult:
         self.calls += 1
-        result = self._analyzer.analyze(issue, report, evidence)
-        self.results.append(result)
+        try:
+            result = self._analyzer.analyze(issue, report, evidence)
+        except Exception as error:
+            self.outcomes.append(error)
+            raise
+        self.outcomes.append(result)
         return result
 
     def close(self) -> None:
         return None
+
+    def telemetry(self) -> dict[str, object]:
+        provider_outcomes = [
+            outcome
+            for outcome in self.outcomes
+            if isinstance(outcome, (LLMAnalysisResult, LLMProviderError))
+        ]
+        return {
+            "request_ids": [
+                outcome.request_id
+                for outcome in provider_outcomes
+                if outcome.request_id is not None
+            ],
+            "input_tokens": sum(outcome.input_tokens for outcome in provider_outcomes),
+            "output_tokens": sum(outcome.output_tokens for outcome in provider_outcomes),
+            "llm_elapsed_ms": round(
+                sum(outcome.elapsed_ms for outcome in provider_outcomes),
+                3,
+            ),
+        }
 
 
 class _CapturingAgentStore(AgentStore):
@@ -174,6 +198,7 @@ def _evaluate_case(
                 if store.last_run_id is not None
                 else None
             )
+            telemetry = tracking_analyzer.telemetry()
             return AgentAnalysisCaseResult(
                 case_id=case.id,
                 tier=case.tier,
@@ -187,6 +212,7 @@ def _evaluate_case(
                     and restored.error == error_text
                 ),
                 llm_attempts=tracking_analyzer.calls,
+                **telemetry,
                 error_category=category,
                 error=error_text,
             )
@@ -197,6 +223,7 @@ def _evaluate_case(
         )
         report = run.investigations[0]
         analysis_result = report.llm_analysis
+        telemetry = tracking_analyzer.telemetry()
         persistence_verified = (
             restored is not None
             and restored.model_dump(mode="json") == run.model_dump(mode="json")
@@ -220,17 +247,7 @@ def _evaluate_case(
             skipped_no_evidence=skipped,
             persistence_verified=persistence_verified,
             llm_attempts=tracking_analyzer.calls,
-            request_ids=[
-                result.request_id
-                for result in tracking_analyzer.results
-                if result.request_id is not None
-            ],
-            input_tokens=sum(result.input_tokens for result in tracking_analyzer.results),
-            output_tokens=sum(result.output_tokens for result in tracking_analyzer.results),
-            llm_elapsed_ms=round(
-                sum(result.elapsed_ms for result in tracking_analyzer.results),
-                3,
-            ),
+            **telemetry,
             evidence_observations=(
                 len(analysis_result.analysis.evidence_observations)
                 if analysis_result is not None
