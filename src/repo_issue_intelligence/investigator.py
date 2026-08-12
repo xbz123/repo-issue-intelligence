@@ -12,6 +12,7 @@ from .models import (
     Hypothesis,
     InvestigationReport,
     IssueRecord,
+    QualifiedExternalCall,
     RepositoryMap,
     ReproductionPlan,
     ResolvedCall,
@@ -113,6 +114,9 @@ FUNCTION_LOCAL_RELATION_PREFIX = (
 FUNCTION_LOCAL_TWO_HOP_PREFIX = (
     "Two-hop function-local import chain calls symbols defined here: "
 )
+SHARED_QUALIFIED_CALL_PREFIX = "Shares issue-referenced qualified call "
+SHARED_QUALIFIED_CALL_MAX_FILES = 3
+AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
 HISTORY_COMMIT_LIMIT = 50
@@ -612,6 +616,35 @@ def _related_symbol_callers(
     }
 
 
+def _shared_qualified_call_match(
+    matches: list[SymbolMatch],
+    qualified_calls: list[QualifiedExternalCall],
+    relations: list[tuple[float, str]],
+) -> SymbolMatch | None:
+    related_callers = {
+        call.caller
+        for call in qualified_calls
+        if call.caller is not None
+        and any(
+            evidence.startswith(
+                f"{SHARED_QUALIFIED_CALL_PREFIX}{call.target} "
+            )
+            for _, evidence in relations
+        )
+    }
+    if len(related_callers) != 1:
+        return None
+    caller = next(iter(related_callers))
+    return next(
+        (
+            match
+            for match in matches
+            if _symbol_identity(match.symbol) == caller
+        ),
+        None,
+    )
+
+
 def _symbol_evidence(
     match: SymbolMatch | None,
     related_callers: dict[str, tuple[str, ...]],
@@ -1001,7 +1034,11 @@ def _blame_relations(
 
 def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
     if evidence.startswith(
-        (FUNCTION_LOCAL_RELATION_PREFIX, FUNCTION_LOCAL_TWO_HOP_PREFIX)
+        (
+            FUNCTION_LOCAL_RELATION_PREFIX,
+            FUNCTION_LOCAL_TWO_HOP_PREFIX,
+            SHARED_QUALIFIED_CALL_PREFIX,
+        )
     ):
         return 0
     if evidence.startswith("Changed with lexical seed files"):
@@ -1033,6 +1070,18 @@ def _graph_relations(
 ) -> dict[str, list[tuple[float, str]]]:
     files_by_path = {file.path: file for file in repository_map.files}
     seed_paths = _graph_seed_paths(base_scores, auxiliary_files)
+    qualified_call_files: dict[str, set[str]] = {}
+    qualified_caller_files: dict[str, set[str]] = {}
+    for file in repository_map.files:
+        if file.test_file or set(Path(file.path).parts) & AUXILIARY_PATH_PARTS:
+            continue
+        for symbol in file.symbols:
+            if symbol.kind == "function":
+                qualified_caller_files.setdefault(
+                    _symbol_identity(symbol), set()
+                ).add(file.path)
+        for call in file.qualified_external_calls:
+            qualified_call_files.setdefault(call.target, set()).add(file.path)
 
     relations: dict[str, list[tuple[float, str]]] = {}
 
@@ -1053,6 +1102,24 @@ def _graph_relations(
             and (related in primary or primary in related)
             for related in _terms(value)
             for primary in signals.primary_terms
+        )
+
+    issue_identifiers = (
+        signals.explicit_identifiers | signals.primary_identifiers
+    )
+
+    def issue_references_caller(identity: str) -> bool:
+        if len(qualified_caller_files.get(identity, set())) != 1:
+            return False
+        if "." not in identity:
+            return (
+                len(identity.replace("_", ""))
+                >= DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH
+                and identity in issue_identifiers
+            )
+        return any(
+            _matches_qualified_identity(identity, identifier)
+            for identifier in issue_identifiers
         )
 
     def add_relation(target: str, bonus: float, evidence: str) -> None:
@@ -1080,6 +1147,39 @@ def _graph_relations(
 
     for seed_path in seed_paths:
         seed = files_by_path[seed_path]
+        seed_is_auxiliary = (
+            seed.test_file
+            or bool(set(Path(seed.path).parts) & AUXILIARY_PATH_PARTS)
+        )
+        for call in (
+            seed.qualified_external_calls if not seed_is_auxiliary else []
+        ):
+            if call.caller is None or call.target not in signals.explicit_identifiers:
+                continue
+            if not issue_references_caller(call.caller):
+                continue
+            related_files = qualified_call_files.get(call.target, set())
+            if not 2 <= len(related_files) <= SHARED_QUALIFIED_CALL_MAX_FILES:
+                continue
+            for related_path in sorted(related_files - {seed_path}):
+                related = files_by_path[related_path]
+                related_callers = sorted(
+                    {
+                        candidate.caller
+                        for candidate in related.qualified_external_calls
+                        if candidate.target == call.target
+                        and candidate.caller is not None
+                    }
+                )
+                if not related_callers:
+                    continue
+                add_relation(
+                    related_path,
+                    GRAPH_EXPANSION_MIN_BONUS,
+                    f"{SHARED_QUALIFIED_CALL_PREFIX}{call.target} with "
+                    f"{call.caller} in {seed_path}: "
+                    + ", ".join(related_callers),
+                )
         function_local_calls = {
             (
                 call.caller,
@@ -1357,9 +1457,7 @@ def locate_candidates(
     )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
-        auxiliary_file = file.test_file or bool(
-            path_parts & {"docs", "docs_src", "examples", "scripts"}
-        )
+        auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
         path_terms = _terms(file.path)
         path_overlap = keywords & path_terms
         primary_path_overlap = {
@@ -1553,8 +1651,30 @@ def locate_candidates(
             ),
             None,
         )
+        shared_qualified_relation = next(
+            (
+                relation
+                for relation in unique_relations
+                if relation[1].startswith(SHARED_QUALIFIED_CALL_PREFIX)
+            ),
+            None,
+        )
         if strong_relation and strong_relation not in displayed_relations:
             displayed_relations = [*displayed_relations[:1], strong_relation]
+        if (
+            shared_qualified_relation
+            and shared_qualified_relation not in displayed_relations
+        ):
+            if strong_relation and strong_relation in displayed_relations:
+                displayed_relations = [
+                    strong_relation,
+                    shared_qualified_relation,
+                ]
+            else:
+                displayed_relations = [
+                    *displayed_relations[:1],
+                    shared_qualified_relation,
+                ]
         final_scores[path] += graph_bonus
         candidates[path].confidence = round(
             min(0.98, 0.2 + final_scores[path] / 30),
@@ -1620,10 +1740,17 @@ def locate_candidates(
             for _, evidence in graph_relations[path]
         )
 
+    def shared_qualified_expansion(path: str) -> bool:
+        return any(
+            evidence.startswith(SHARED_QUALIFIED_CALL_PREFIX)
+            for _, evidence in graph_relations[path]
+        )
+
     expansion_paths = sorted(
         expansion_candidates,
         key=lambda path: (
             not strong_expansion(path),
+            not shared_qualified_expansion(path),
             -max(bonus for bonus, _ in graph_relations[path]),
             -final_scores[path],
             auxiliary_files[path],
@@ -1692,7 +1819,11 @@ def locate_candidates(
             file.resolved_calls,
             file.path,
         )
-        selected_match = _select_symbol(
+        selected_match = _shared_qualified_call_match(
+            symbol_matches,
+            file.qualified_external_calls,
+            graph_relations.get(path, []),
+        ) or _select_symbol(
             symbol_matches,
             signals,
             related_symbol_callers,
