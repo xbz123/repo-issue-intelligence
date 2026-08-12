@@ -8,27 +8,35 @@ symbol targets across 33 cases. Every case embeds the complete Issue snapshot, m
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic v0.16 runs finished 50/50 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9500 | 0.6027 | 4,843 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9706 | 0.6159 | 7,470 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 0.9545 | 0.5183 | 1,930 ms |
-| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 0.9318 | 0.6347 | 4,270 ms |
+| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9500 | 0.6027 | 4,780 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9706 | 0.6159 | 7,409 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 0.9545 | 0.5183 | 1,896 ms |
+| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 0.9318 | 0.6347 | 4,192 ms |
 
-v0.15 reserves at most one extra non-auxiliary shortlist slot for direct path or symbol support.
+The retained v0.15 file policy reserves at most one extra non-auxiliary shortlist slot for direct
+path or symbol support.
 It recovered `src/poetry/console/commands/publish.py`, raising candidate-pool recall from `0.9300`
 to `0.9500`. No previously retrieved ground-truth file left Top-20; the pip parser boundary moved
 from rank 19 to rank 20.
+
+v0.16 improves within-file selection by preserving exact identifier mention counts outside fenced
+reproduction blocks. Candidate-unique bare names must contain at least five non-underscore
+characters unless an owner or uniquely resolved path supplies scope. Symbol Recall@1/5/10/20 is
+`0.2273/0.4242/0.4545/0.5455`, with MRR `0.3342`. Four cases were recovered (`Pydantic`,
+`Werkzeug`, `Celery`, and `pip`), no previously matched symbol regressed, and all 50 file candidate
+lists remained unchanged.
 
 ## Retained DeepSeek V4 Flash rank-only result
 
 Two authorized OpenCode `deepseek-v4-flash-free` runs reranked the earlier v0.13 deterministic
 Top-20 candidate pool. The protocol sends no grammar-constrained response format and accepts
 exactly one plain `RANK:` line containing at most three known evidence IDs. All cases, including
-any fallback, remain in the metric denominator. These results are not yet paired with v0.15.
+any fallback, remain in the metric denominator. These results are not yet paired with v0.16.
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid ranks |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -53,6 +61,7 @@ On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.16-symbol-mentions-50-cases.json`
 - `benchmarks/results/deterministic-v0.15-protected-paths-50-cases.json`
 - `benchmarks/results/deterministic-v0.13-expanded-50-cases.json`
 - `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json`
@@ -91,7 +100,8 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 - The suite is not a balanced population sample: 16 of the 18 newest Issues are from 2026.
 - Only 11/50 cases have multi-file production ground truth.
 - File Recall@20 remains bounded at `0.9500`; four cases contain unretrieved fix files.
-- Symbol Recall@20 is `0.4242`, so within-file localization remains a major bottleneck.
+- Symbol Recall@20 is `0.5455`, so within-file localization remains a major bottleneck despite the
+  12.13-point improvement.
 - DeepSeek changed ordering in 14/50 repeated cases despite a fixed best-effort seed.
 - Full hypothesis generation has less real-project reliability evidence than rank-only reranking.
 

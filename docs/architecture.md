@@ -54,12 +54,13 @@ identifier, or primary symbol match. Once selected, those candidates cannot be e
 tail expansion. Git evidence uses at most 50 prior commits from 100 fetched ancestors,
 blames at most five lines for each of two seed candidates, and ignores broad commits. File scoring
 and symbol selection are separate: file scores retain the lexical/graph/history contract, while functions
-inside each file are selected using source-scoped direct identifier references and normalized
-title-term rarity, with the original lexical match as a fallback. Direct references come from
+inside each file are selected using source-scoped direct identifier references, exact non-fenced
+mention frequency, and normalized title-term rarity, with the original lexical match as a fallback. Direct references come from
 inline code, fenced examples, tracebacks, and title identifiers; non-call qualified identities are
 retained with their original case and dot boundaries. Bare names are direct only when unique in the
-final candidate range, constrained by an exact owner, or scoped by a path that resolves to exactly
-one repository file. Loose suffix matching remains available for file retrieval, but an ambiguous
+final candidate range and at least five non-underscore characters long, constrained by an exact
+owner, or scoped by a path that resolves to exactly one repository file. Fenced reproduction code
+can contribute direct candidates but does not add repeated-mention votes. Loose suffix matching remains available for file retrieval, but an ambiguous
 basename cannot scope a direct symbol reference. A dotted value is direct only when its complete,
 case-preserving qualified identity matches; source-content retrieval applies full identifier
 boundaries to bare names and the same full-token boundary to dotted values, without reusing dotted

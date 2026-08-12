@@ -30,10 +30,12 @@ PR commit. All reviewed production files exist at that commit.
 | Poetry | 3 | #10760 / #10769, #10770 / #10784, #10830 / #10917 |
 | Scrapy | 2 | #7759 / #7763, #7796 / #7818 |
 
-Three complete deterministic v0.15 evaluations produced identical candidates, symbols, and metrics
+Three complete deterministic v0.16 evaluations produced identical candidates, symbols, and metrics
 after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`, Recall@5 `0.6900`,
 Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. The 33 labeled cases
-reach Symbol Recall@1 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and MRR `0.2866`.
+reach Symbol Recall@1 `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5455`, and
+MRR `0.3342`. Exact non-fenced identifier mention frequency recovered four reviewed symbols while
+preserving all file candidate lists and every prior symbol hit.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs completed all 50 cases and kept
 every case in the denominator. Both returned 50/50 valid ranks with no fallback. File Recall@1 was
