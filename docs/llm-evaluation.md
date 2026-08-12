@@ -107,6 +107,27 @@ three frozen cases, removing the duplicate candidate list reduced serialized use
 be described as improving model success until the external three-case suite is repeated after the
 provider limit resets.
 
+## Compact-contract external follow-up
+
+On 2026-08-12, the same Starlette, Typer, and Textual suite was run three times against the compact
+provider contract, with a 30-second delay between cases. All nine case-runs remain in the reported
+denominator. The provider rejected every request with HTTP 429 before inference: 0/9 analyses were
+valid, all nine failures were categorized as `rate_limit`, and no input or output tokens were
+reported. Each case performed the configured two retryable attempts, for 18 provider attempts in
+total. The accumulated provider-call latency was 8,825.983 ms, or 980.665 ms per failed case-run.
+
+All nine failed Agent runs persisted the terminal status and error and passed the SQLite public-JSON
+round-trip check. This validates the error-aware retry, telemetry, and failure-persistence path, but
+does not measure the compact contract's structured-output reliability because no request reached
+model inference. Additional schema or prompt changes are not justified by this result. The same
+suite should be repeated only after the provider/account limit resets.
+
+Machine-readable artifacts:
+
+- `benchmarks/results/agent-analysis-compact-v0.21-run1.json`
+- `benchmarks/results/agent-analysis-compact-v0.21-run2.json`
+- `benchmarks/results/agent-analysis-compact-v0.21-run3.json`
+
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
 Manifest v8 deterministic v0.16 completed three 50-case runs with structurally identical candidates,
