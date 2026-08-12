@@ -78,11 +78,12 @@ localization benchmark is reported separately in `docs/benchmark-results.md`.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
-Manifest v8 deterministic v0.15 completed three 50-case runs with structurally identical candidates,
+Manifest v8 deterministic v0.16 completed three 50-case runs with structurally identical candidates,
 symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
 `0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. On 33
-symbol-labeled cases, Symbol Recall@1 was `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`,
-and symbol MRR `0.2866`.
+symbol-labeled cases, Symbol Recall@1 was `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`,
+Recall@20 `0.5455`, and symbol MRR `0.3342`. Four cases gained a reviewed symbol hit, none lost
+one, and all file candidate lists remained unchanged.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs used the same 50 deterministic
 v0.13 candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks
@@ -102,8 +103,9 @@ orders changed between repeats. Only `pydantic-safe-annotations-metaclass` chang
 reciprocal rank, from rank 2 to rank 1. Seed 1337 is therefore best effort. The reviewed artifacts
 are `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
 `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`.
-They have not yet been rerun against the changed v0.15 candidate pool. The current deterministic
-artifact is `benchmarks/results/deterministic-v0.15-protected-paths-50-cases.json`.
+They have not yet been rerun against the changed v0.16 symbol-selection policy. The current
+deterministic artifact is
+`benchmarks/results/deterministic-v0.16-symbol-mentions-50-cases.json`.
 
 The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
 Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.

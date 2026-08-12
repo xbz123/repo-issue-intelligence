@@ -108,6 +108,7 @@ PROTECTED_BASE_RESERVATION_SLOTS = 1
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
 SPECIFIC_PATH_TERM_MAX_FILES = 3
+DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
 HISTORY_COMMIT_LIMIT = 50
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
@@ -146,6 +147,7 @@ class IssueSignals:
     identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
     explicit_identifiers: frozenset[str]
+    identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
 
 
@@ -156,6 +158,8 @@ class SymbolMatch:
     local_overlap: frozenset[str]
     primary_identifier_match: bool
     exact_identifier_match: bool
+    identifier_mention_count: int
+    scoped_identifier_match: bool
     explicit_identifier_match: bool
     unscoped_explicit_identifier_match: bool
     unscoped_dotted_identifier_match: bool
@@ -250,6 +254,19 @@ def _extract_identifiers(text: str) -> set[str]:
     return identifiers
 
 
+def _extract_identifier_mentions(text: str) -> tuple[str, ...]:
+    text_without_fenced_code = FENCED_CODE_PATTERN.sub(" ", text)
+    mentions = [
+        match.group(0)
+        for match in IDENTIFIER_PATTERN.finditer(text_without_fenced_code)
+    ]
+    for match in CALLED_IDENTIFIER_PATTERN.finditer(text_without_fenced_code):
+        identifier = match.group(1)
+        if "." in identifier:
+            mentions.append(identifier.rsplit(".", maxsplit=1)[-1])
+    return tuple(mentions)
+
+
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
@@ -276,6 +293,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         identifiers=frozenset(_extract_identifiers(text)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         explicit_identifiers=frozenset(explicit_identifiers),
+        identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
     )
 
@@ -333,6 +351,7 @@ def _match_symbol(
         symbol_variants & _identifier_variants(identifier)
         for identifier in local_identifiers
     )
+    exact_local_identifier_match = symbol.name in local_identifiers
     qualified_identifier_match = identity != symbol.name and any(
         _matches_qualified_identity(identity, identifier)
         for identifier in source_scoped_identifiers
@@ -368,6 +387,14 @@ def _match_symbol(
         or exact_owner_match
         or class_owner_match
     )
+    contextual_symbol_scope = path_scoped or exact_owner_match or class_owner_match
+    scoped_identifier_match = exact_local_identifier_match and (
+        contextual_symbol_scope
+        or (
+            len(symbol.name.strip("_")) >= DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH
+            and symbol.name in unique_symbol_names
+        )
+    )
     unscoped_dotted_identifier_match = (
         not qualified_identifier_match
         and not local_identifier_match
@@ -395,6 +422,10 @@ def _match_symbol(
             for identifier in signals.primary_identifiers
         ),
         exact_identifier_match=local_identifier_match,
+        identifier_mention_count=sum(
+            mention == symbol.name for mention in signals.identifier_mentions
+        ),
+        scoped_identifier_match=scoped_identifier_match,
         explicit_identifier_match=scoped_bare_explicit_match,
         unscoped_explicit_identifier_match=(
             bare_explicit_match and not scoped_bare_explicit_match
@@ -424,14 +455,16 @@ def _select_symbol(
     directly_referenced = [
         match
         for match in functions
-        if match.explicit_identifier_match or match.qualified_identifier_match
+        if match.scoped_identifier_match or match.qualified_identifier_match
     ]
     if directly_referenced:
         return max(
             directly_referenced,
             key=lambda match: (
                 match.qualified_identifier_match,
+                match.identifier_mention_count,
                 match.explicit_identifier_match,
+                match.scoped_identifier_match,
                 match.primary_identifier_match,
                 len(match.local_overlap),
                 match.qualified_component_match,

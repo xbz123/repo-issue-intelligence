@@ -1384,6 +1384,83 @@ def test_explicit_local_symbol_reference_ranks_before_owner_match(
     assert candidates[0].qualified_symbol is None
 
 
+def test_unique_body_symbol_reference_ranks_before_title_semantics(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "download.py",
+        "class Downloader:\n"
+        "    def _process_response(self):\n"
+        "        return None\n\n"
+        "    def _attempt_resumes_or_redownloads(self):\n"
+        '        """Resume a failed download."""\n'
+        "        return None\n",
+    )
+    record = issue(
+        "Incomplete download resumption fails",
+        "The exception is raised from _process_response before retrying. "
+        "`_attempt_resumes_or_redownloads` is downstream; "
+        "_process_response must hand the failure to it.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "Downloader._process_response"
+
+
+def test_short_api_identifier_does_not_override_symbol_semantics(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "pipeline.py",
+        "def _apply_constraint():\n"
+        '    """Build a constraint schema."""\n'
+        "    return None\n\n"
+        "def ge():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Constraint schema generation fails",
+        "The `ge` constraint produces an invalid schema.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_apply_constraint"
+
+
+def test_fenced_example_mentions_do_not_override_issue_reference(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "pipeline.py",
+        "def _apply_constraint():\n"
+        '    """Build a constraint schema."""\n'
+        "    return None\n\n"
+        "def _check_func():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Constraint schema generation fails",
+        "The affected function is `_apply_constraint`.\n\n"
+        "```python\n"
+        "def _check_func():\n"
+        "    return None\n\n"
+        "_check_func()\n"
+        "```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].symbol == "_apply_constraint"
+
+
 def test_duplicate_local_symbol_reference_is_scoped_to_its_owner(
     tmp_path: Path,
 ) -> None:

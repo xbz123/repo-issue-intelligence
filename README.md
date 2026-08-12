@@ -115,7 +115,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.15-protected-paths-50-cases.json
+  --output benchmarks/results/deterministic-v0.16-symbol-mentions-50-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -254,10 +254,16 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.15 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.16 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
 Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. Symbol Recall@1 is
-`0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and symbol MRR `0.2866`.
+`0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5455`, and symbol MRR `0.3342`.
+
+v0.16 preserves exact identifier mention frequency outside fenced reproduction blocks when choosing
+among safely scoped direct symbol references. It recovered four reviewed symbols without changing
+any file candidate list or losing a previously matched symbol. Short bare names still need owner or
+path scope; a candidate-unique name needs at least five non-underscore characters before it can
+override semantic ranking.
 
 The v0.15 retrieval policy reserves at most one additional non-auxiliary shortlist slot for an
 exact path, specific title-to-path match, path identifier, or primary symbol match. This recovered
@@ -266,7 +272,8 @@ lists to displace production candidates.
 
 Qualified AST identities distinguish repeated local names while the public unqualified `symbol`
 field remains compatible. Bare identifiers require identifier boundaries and only receive direct
-priority when unique or constrained by an owner or uniquely resolved repository path. Inference
+priority when sufficiently specific and candidate-unique, or when constrained by an owner or
+uniquely resolved repository path. Inference
 consumes only lexically scope-resolved direct calls; unresolved receiver calls, shadowed names,
 ambiguous definitions, and legacy broad call maps cannot fabricate strong graph evidence. Real
 top-level `src` and `lib` modules/packages retain their importable names, while layout directories
