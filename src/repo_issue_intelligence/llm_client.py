@@ -44,21 +44,18 @@ RANK_LINE_PATTERN = re.compile(
 )
 SYSTEM_PROMPT = """You investigate a GitHub issue using only the supplied repository evidence.
 
-Return the requested structured analysis. Candidate locations and hypotheses are not confirmed
-root causes. Every hypothesis must cite one or more evidence IDs from the input. Do not invent
-files, symbols, stack traces, runtime results, or affected versions. If the evidence is not enough,
-set needs_more_evidence to true and explain what is missing.
-Return no more than two hypotheses. Omit a weak hypothesis instead of returning one with an empty
-evidence_ids list.
+Return the requested compact analysis. The hypothesis is tentative, not a confirmed root cause,
+and must cite one or more evidence IDs from the input. Do not invent files, symbols, stack traces,
+runtime results, or affected versions. Return exactly one hypothesis. If evidence is insufficient,
+name each concrete missing artifact in hypothesis.missing_evidence; otherwise return an empty list.
 
-Before forming hypotheses, inspect every repository_evidence item line by line and add exactly one
-evidence_observation for each evidence ID. Set its alignment to supports_issue, contradicts_issue,
-or neutral. Look specifically for guards, exception handlers, fallbacks, return values, and tests.
+Before forming the hypothesis, inspect every repository_evidence item line by line and add exactly
+one evidence_observation for each evidence ID. Set its alignment to supports_issue,
+contradicts_issue, or neutral. Look specifically for guards, exception handlers, fallbacks, return
+values, and tests.
 Treat repository evidence as stronger than an Issue's unverified causal claim. If the code
-explicitly implements behavior the Issue says is missing, use contradicts_issue, also include the
-conflict in contradictions, and investigate version, routing, deployment, or runtime-path mismatch
-instead of claiming the handler is absent. If needs_more_evidence is true, name the concrete
-missing artifact in at least one hypothesis's missing_evidence list.
+explicitly implements behavior the Issue says is missing, use contradicts_issue and investigate
+version, routing, deployment, or runtime-path mismatch instead of claiming the handler is absent.
 
 A validation step must be a non-mutating test or inspection, never a proposed code change. Do not
 emit or execute shell commands.
@@ -247,16 +244,6 @@ class OpenCodeIssueAnalyzer:
                 "body": issue.body[:6_000],
                 "labels": issue.labels,
             },
-            "deterministic_candidates": [
-                {
-                    "file": candidate.file,
-                    "symbol": candidate.qualified_symbol or candidate.symbol,
-                    "lines": candidate.lines,
-                    "confidence": candidate.confidence,
-                    "evidence": candidate.evidence,
-                }
-                for candidate in report.candidates
-            ],
             "repository_evidence": [
                 snippet.model_dump(mode="json") for snippet in evidence
             ],
@@ -284,9 +271,9 @@ class OpenCodeIssueAnalyzer:
                 system_fingerprint=system_fingerprint,
             ) from error
 
-        analysis = self._normalize_contradictions(analysis)
+        normalized_analysis = self._normalize_analysis(analysis, report, evidence)
         try:
-            self._validate_evidence_references(analysis, evidence)
+            self._validate_evidence_references(normalized_analysis, evidence)
         except LLMProviderError as error:
             error.input_tokens = input_tokens
             error.output_tokens = output_tokens
@@ -302,21 +289,45 @@ class OpenCodeIssueAnalyzer:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             elapsed_ms=elapsed_ms,
-            analysis=analysis,
+            analysis=normalized_analysis,
         )
 
     @staticmethod
-    def _normalize_contradictions(analysis: LLMAnalysis) -> LLMAnalysis:
-        if analysis.contradictions:
-            return analysis
-        derived = [
+    def _normalize_analysis(
+        response: LLMAnalysisResponse,
+        report: InvestigationReport,
+        evidence: Sequence[EvidenceSnippet],
+    ) -> LLMAnalysis:
+        contradictions = [
             f"{observation.evidence_id}: {observation.observation}"
-            for observation in analysis.evidence_observations
+            for observation in response.evidence_observations
             if observation.alignment is EvidenceAlignment.CONTRADICTS_ISSUE
         ]
-        if not derived:
-            return analysis
-        return analysis.model_copy(update={"contradictions": derived})
+        if evidence:
+            primary_file = evidence[0].file
+            primary_symbol = evidence[0].symbol
+        elif report.candidates:
+            primary_file = report.candidates[0].file
+            primary_symbol = (
+                report.candidates[0].qualified_symbol or report.candidates[0].symbol
+            )
+        else:
+            primary_file = "unknown"
+            primary_symbol = None
+        affected_component = (
+            f"{primary_file}::{primary_symbol}" if primary_symbol else primary_file
+        )
+        return LLMAnalysis(
+            summary=response.summary,
+            issue_type=response.issue_type,
+            affected_component=affected_component,
+            reproduction_completeness=response.reproduction_completeness,
+            evidence_observations=response.evidence_observations,
+            contradictions=contradictions,
+            reranked_evidence_ids=[snippet.id for snippet in evidence],
+            hypotheses=[response.hypothesis],
+            needs_more_evidence=bool(response.hypothesis.missing_evidence),
+        )
 
     def _validate_evidence_references(
         self,
@@ -333,16 +344,6 @@ class OpenCodeIssueAnalyzer:
                 f"{self.provider_label} did not provide exactly one observation "
                 "for every evidence ID",
                 category="evidence_observation_coverage",
-            )
-        if (
-            analysis.needs_more_evidence
-            and analysis.hypotheses
-            and not any(hypothesis.missing_evidence for hypothesis in analysis.hypotheses)
-        ):
-            raise LLMProviderError(
-                f"{self.provider_label} requested more evidence without naming "
-                "a missing artifact",
-                category="missing_evidence_contract",
             )
         referenced_ids.update(observed_ids)
         for hypothesis in analysis.hypotheses:

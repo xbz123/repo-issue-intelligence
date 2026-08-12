@@ -112,11 +112,16 @@ rank_issues
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
 budget. `llm_analyze` calls OpenCode DeepSeek V4 Flash through `/chat/completions` using `json_object`, an
-explicit schema prompt, and local Pydantic validation.
-Every snippet must receive one support/contradiction/neutral observation, and every hypothesis
-must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
-provide a deterministic fallback when the model omits the free-form contradiction list. If the
-model requests more evidence, at least one hypothesis must name the missing artifact.
+explicit compact schema prompt, and local Pydantic validation. The provider returns five fields:
+summary, Issue type, reproduction completeness, one observation per snippet, and exactly one
+evidence-grounded hypothesis. The request omits the duplicate deterministic-candidate list because
+the bounded snippets already carry file, symbol, line, and source content. Every snippet must
+receive one support/contradiction/neutral observation, and the hypothesis must cite a supplied
+evidence ID; missing or unknown IDs fail the node. The client derives the affected component from
+the first deterministic snippet, contradictions from observation alignment, retained evidence
+order from the supplied IDs, and the more-evidence flag from the hypothesis's named artifacts.
+The normalized result still uses the full persisted `LLMAnalysis` model, so historical runs remain
+readable.
 An Issue with no readable deterministic evidence skips the provider request, retains its
 deterministic investigation with `llm_analysis=null`, records the Issue number in
 `skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
@@ -136,8 +141,8 @@ This reliability suite is deliberately separate from rank-only localization metr
 When an HTTP-success response fails JSON/schema or evidence-contract validation, the exception
 retains its request ID, system fingerprint, input/output tokens, and provider latency. The
 evaluator accumulates this telemetry across failed retries instead of reporting zero usage.
-Failure categories distinguish invalid JSON/schema, incomplete observation coverage, unnamed
-missing evidence, and unknown evidence IDs.
+Failure categories distinguish invalid JSON/schema, incomplete observation coverage, and unknown
+evidence IDs.
 
 Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete

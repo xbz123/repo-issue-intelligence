@@ -74,7 +74,6 @@ def structured_payload(evidence_id: str = "E1") -> dict:
     return {
         "summary": "Token validation may propagate an exception.",
         "issue_type": "bug",
-        "affected_component": "authentication",
         "reproduction_completeness": "partial",
         "evidence_observations": [
             {
@@ -83,18 +82,13 @@ def structured_payload(evidence_id: str = "E1") -> dict:
                 "observation": "The refresh path calls token validation.",
             }
         ],
-        "contradictions": [],
-        "reranked_evidence_ids": [evidence_id],
-        "hypotheses": [
-            {
-                "description": "The refresh path may not translate validation errors.",
-                "confidence": 0.72,
-                "evidence_ids": [evidence_id],
-                "missing_evidence": ["Runtime stack trace"],
-                "validation_step": "Run the existing refresh-token test and inspect the error.",
-            }
-        ],
-        "needs_more_evidence": True,
+        "hypothesis": {
+            "description": "The refresh path may not translate validation errors.",
+            "confidence": 0.72,
+            "evidence_ids": [evidence_id],
+            "missing_evidence": ["Runtime stack trace"],
+            "validation_step": "Run the existing refresh-token test and inspect the error.",
+        },
     }
 
 
@@ -138,6 +132,9 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert result.output_tokens == 120
     assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
+    assert result.analysis.affected_component == "auth_service.py::refresh_token"
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+    assert result.analysis.needs_more_evidence is True
     assert result.provider == "opencode"
     assert result.model == "deepseek-v4-flash-free"
     assert captured_request["response_format"] == {"type": "json_object"}
@@ -148,7 +145,12 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert captured_request["seed"] == 1337
     system_prompt = captured_request["messages"][0]["content"]
     assert '"additionalProperties":false' in system_prompt
-    assert '"maxItems":2' in system_prompt
+    assert '"hypothesis"' in system_prompt
+    assert '"affected_component"' not in system_prompt
+    assert '"reranked_evidence_ids"' not in system_prompt
+    user_payload = json.loads(captured_request["messages"][1]["content"])
+    assert "deterministic_candidates" not in user_payload
+    assert user_payload["repository_evidence"][0]["id"] == "E1"
 
 
 def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
@@ -465,8 +467,17 @@ def test_opencode_deepseek_rerank_marks_5xx_retryable() -> None:
 
 
 def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
-    payload = structured_payload()
-    payload["hypotheses"] = payload["hypotheses"] * 3
+    response = structured_payload()
+    hypothesis = response["hypothesis"]
+    payload = {
+        **response,
+        "affected_component": "authentication",
+        "contradictions": [],
+        "reranked_evidence_ids": ["E1"],
+        "hypotheses": [hypothesis] * 3,
+        "needs_more_evidence": True,
+    }
+    payload.pop("hypothesis")
 
     historical = LLMAnalysis.model_validate(payload)
 
@@ -477,8 +488,7 @@ def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
 
 def test_opencode_analyzer_rejects_unknown_evidence_id() -> None:
     response_payload = structured_payload()
-    response_payload["reranked_evidence_ids"] = ["E999"]
-    response_payload["hypotheses"][0]["evidence_ids"] = ["E999"]
+    response_payload["hypothesis"]["evidence_ids"] = ["E999"]
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -580,9 +590,9 @@ def test_opencode_analyzer_derives_contradiction_from_evidence_alignment() -> No
     assert result.analysis.contradictions == ["E1: The refresh path calls token validation."]
 
 
-def test_opencode_analyzer_requires_named_missing_evidence() -> None:
+def test_opencode_analyzer_derives_needs_more_evidence() -> None:
     response_payload = structured_payload()
-    response_payload["hypotheses"][0]["missing_evidence"] = []
+    response_payload["hypothesis"]["missing_evidence"] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -607,13 +617,10 @@ def test_opencode_analyzer_requires_named_missing_evidence() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
     record = issue()
 
-    with pytest.raises(LLMProviderError, match="without naming a missing artifact") as error:
-        analyzer.analyze(record, report(record), evidence())
+    result = analyzer.analyze(record, report(record), evidence())
 
-    assert error.value.category == "missing_evidence_contract"
-    assert error.value.request_id == "request-missing-evidence"
-    assert error.value.input_tokens == 303
-    assert error.value.output_tokens == 123
+    assert result.analysis.needs_more_evidence is False
+    assert result.analysis.hypotheses[0].missing_evidence == []
 
 
 def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:

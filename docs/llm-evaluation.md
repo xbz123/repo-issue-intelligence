@@ -98,9 +98,14 @@ evaluator now compares the public JSON payload and has a regression test using t
 subclass boundary. Structured-response and evidence-contract failures now preserve request, token,
 latency, and category telemetry. They are non-retryable because repeating the same request does not
 repair an invalid contract. Transport, HTTP 429, and HTTP 5xx failures remain retryable with
-bounded exponential backoff and `retry-after` support. The next independent experiment is to make
-the full-analysis contract smaller before repeating the external suite after the provider limit
-resets.
+bounded exponential backoff and `retry-after` support. The provider contract now contains five
+fields and one hypothesis; duplicate deterministic-candidate metadata and four derivable response
+fields were removed while the persisted public model remains compatible. This change has local
+contract coverage. The minified response schema fell from 2,376 to 1,905 characters. On the same
+three frozen cases, removing the duplicate candidate list reduced serialized user-request size by
+37.9% to 42.4%. These are payload-size measurements, not reliability results; the change must not
+be described as improving model success until the external three-case suite is repeated after the
+provider limit resets.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
