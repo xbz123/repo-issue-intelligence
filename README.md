@@ -115,7 +115,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.13-expanded-50-cases.json
+  --output benchmarks/results/deterministic-v0.15-protected-paths-50-cases.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -254,10 +254,15 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Two manifest-v8 deterministic runs completed 50/50 cases and produced identical candidates,
+Two manifest-v8 deterministic v0.15 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
-Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. Symbol Recall@1 is
+Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. Symbol Recall@1 is
 `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`, and symbol MRR `0.2866`.
+
+The v0.15 retrieval policy reserves at most one additional non-auxiliary shortlist slot for an
+exact path, specific title-to-path match, path identifier, or primary symbol match. This recovered
+Poetry's directly named `console/commands/publish.py` without allowing long traceback test-file
+lists to displace production candidates.
 
 Qualified AST identities distinguish repeated local names while the public unqualified `symbol`
 field remains compatible. Bare identifiers require identifier boundaries and only receive direct
@@ -267,9 +272,10 @@ ambiguous definitions, and legacy broad call maps cannot fabricate strong graph 
 top-level `src` and `lib` modules/packages retain their importable names, while layout directories
 are stripped only when they are actual source roots.
 
-Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs kept all 50 cases in the
-denominator. Both produced 50/50 valid ranks with no fallback, grammar error, invalid rank, or
-unknown evidence ID. File Recall@1 was `0.6567` and `0.6767`, Recall@5/10/20 was
+Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs over the earlier deterministic
+v0.13 candidate pool kept all 50 cases in the denominator. Both produced 50/50 valid ranks with no
+fallback, grammar error, invalid rank, or unknown evidence ID. File Recall@1 was `0.6567` and
+`0.6767`, Recall@5/10/20 was
 `0.8200/0.8600/0.9300` in both runs, and MRR was `0.8226` and `0.8326`. The run-level mean and
 population standard deviation were Recall@1 `0.6667 +/- 0.0100` and MRR
 `0.8276 +/- 0.0050`. All requests completed in one attempt, with 170,521 input tokens in each run
@@ -277,12 +283,13 @@ and only 485/491 output tokens. Average model latency was `4.13 s` and `4.96 s`.
 
 The two runs retained the same deterministic 20-file set for every case but changed the order in
 14/50 cases; only `pydantic-safe-annotations-metaclass` changed expected-file reciprocal rank.
-Fixed seed is therefore best effort rather than deterministic model output. This supports a
-bounded ordering-gain and protocol-reliability claim for these two runs, not a production-reliability
-or root-cause-accuracy claim.
+Fixed seed is therefore best effort rather than deterministic model output. Because v0.15 changes
+candidate membership, these runs remain historical paired evidence and have not yet been repeated
+against the new pool. They support a bounded ordering-gain and protocol-reliability claim, not a
+production-reliability or root-cause-accuracy claim.
 
 The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
-2026, and only 11 of 50 cases have multi-file production ground truth. Five cases still miss at
+2026, and only 11 of 50 cases have multi-file production ground truth. Four cases still miss at
 least one reviewed file at Top-20, so hybrid reranking cannot recover them. Superseded manifests
 and older DeepSeek runs remain committed for provenance but must not be mixed with current
 manifest-v8 quality metrics.

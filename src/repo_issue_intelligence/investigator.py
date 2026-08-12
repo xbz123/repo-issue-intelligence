@@ -104,6 +104,7 @@ GRAPH_RERANK_BAND_SIZE = 10
 GRAPH_EXPANSION_MIN_BONUS = 5.0
 GRAPH_EXPANSION_SLOTS = 3
 GRAPH_STRONG_EXPANSION_SLOTS = 1
+PROTECTED_BASE_RESERVATION_SLOTS = 1
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
 SPECIFIC_PATH_TERM_MAX_FILES = 3
@@ -1175,6 +1176,38 @@ def _merge_tail_expansions(
     return [*retained, *accepted_expansions][:limit]
 
 
+def _reserve_protected_paths(
+    ranked_paths: list[str],
+    protected_paths: list[str],
+    limit: int,
+    reservation_slots: int,
+) -> list[str]:
+    selected = ranked_paths[:limit]
+    selected_set = set(selected)
+    protected_set = set(protected_paths)
+    reserved = 0
+    for path in protected_paths:
+        if reserved >= reservation_slots:
+            break
+        if path in selected_set:
+            continue
+        replace_index = next(
+            (
+                index
+                for index in range(len(selected) - 1, -1, -1)
+                if selected[index] not in protected_set
+            ),
+            None,
+        )
+        if replace_index is None:
+            break
+        selected_set.remove(selected[replace_index])
+        selected[replace_index] = path
+        selected_set.add(path)
+        reserved += 1
+    return selected
+
+
 def locate_candidates(
     issue: IssueRecord, repository_map: RepositoryMap, limit: int = 20
 ) -> list[CandidateLocation]:
@@ -1422,7 +1455,17 @@ def locate_candidates(
             path,
         ),
     )
-    base_shortlist = base_order[:limit]
+    reservation_order = [
+        path
+        for path in base_order
+        if path in protected_base_paths and not auxiliary_files[path]
+    ]
+    base_shortlist = _reserve_protected_paths(
+        base_order,
+        reservation_order,
+        limit,
+        PROTECTED_BASE_RESERVATION_SLOTS,
+    )
     reranked_base: list[str] = []
     for start in range(0, len(base_shortlist), GRAPH_RERANK_BAND_SIZE):
         band = base_shortlist[start : start + GRAPH_RERANK_BAND_SIZE]
@@ -1492,9 +1535,7 @@ def locate_candidates(
         *reranked_base[first_band_size:],
     ]
     protected_order = [
-        path
-        for path in reranked_base
-        if path in protected_base_paths
+        path for path in reranked_base if path in protected_base_paths
     ]
     reranked_paths = _merge_tail_expansions(
         base_with_promotions,

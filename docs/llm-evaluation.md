@@ -76,17 +76,17 @@ On 2026-07-30, the same synthetic path also completed through OpenCode
 This is an integration and grounding smoke test over one synthetic case. The real-project
 localization benchmark is reported separately in `docs/benchmark-results.md`.
 
-## Current manifest-v8 paired result
+## Current manifest-v8 deterministic result and retained paired LLM result
 
-Manifest v8 completed two deterministic 50-case runs with structurally identical candidates,
+Manifest v8 deterministic v0.15 completed two 50-case runs with structurally identical candidates,
 symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
-`0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9300`, and MRR `0.6016`. On 33
+`0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `0.9500`, and MRR `0.6027`. On 33
 symbol-labeled cases, Symbol Recall@1 was `0.1970`, Recall@5/10 `0.3636`, Recall@20 `0.4242`,
 and symbol MRR `0.2866`.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs used the same 50 deterministic
-candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks with
-no fallback. Run 1 File Recall@1/5/10/20 was `0.6567/0.8200/0.8600/0.9300` with MRR `0.8226`;
+v0.13 candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks
+with no fallback. Run 1 File Recall@1/5/10/20 was `0.6567/0.8200/0.8600/0.9300` with MRR `0.8226`;
 run 2 was `0.6767/0.8200/0.8600/0.9300` with MRR `0.8326`. The two-run mean and population
 standard deviation were Recall@1 `0.6667 +/- 0.0100` and MRR `0.8276 +/- 0.0050`.
 
@@ -102,6 +102,8 @@ orders changed between repeats. Only `pydantic-safe-annotations-metaclass` chang
 reciprocal rank, from rank 2 to rank 1. Seed 1337 is therefore best effort. The reviewed artifacts
 are `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
 `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`.
+They have not yet been rerun against the changed v0.15 candidate pool. The current deterministic
+artifact is `benchmarks/results/deterministic-v0.15-protected-paths-50-cases.json`.
 
 The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
 Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
