@@ -91,8 +91,7 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. A failed node is retried once before the run is marked failed.
 
-When an operator explicitly enables an OpenAI-compatible provider, two nodes are inserted before
-review:
+When an operator explicitly enables OpenCode analysis, two nodes are inserted before review:
 
 ```text
 rank_issues
@@ -106,30 +105,30 @@ rank_issues
 
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
-budget. `llm_analyze` can call GPT-OSS through Groq or DeepSeek V4 Flash through OpenCode.
-Both providers use `/chat/completions`; only their base URL, credential, model, and structured
-output capability differ. Groq uses strict JSON Schema output. OpenCode uses `json_object` plus
-an explicit schema/example prompt and the same local Pydantic validation.
+budget. `llm_analyze` calls OpenCode DeepSeek V4 Flash through `/chat/completions` using `json_object`, an
+explicit schema prompt, and local Pydantic validation.
 Every snippet must receive one support/contradiction/neutral observation, and every hypothesis
 must cite a supplied evidence ID; missing or unknown IDs fail the node. Contradicting observations
 provide a deterministic fallback when the model omits the free-form contradiction list. If the
 model requests more evidence, at least one hypothesis must name the missing artifact.
-GPT-OSS uses low reasoning effort and a 1,600-token completion budget by default. OpenCode uses a
-4,096-token budget and 60-second timeout because reasoning tokens share the completion budget and
-observed valid responses can exceed 30 seconds.
+OpenCode uses a 4,096-token budget and 60-second timeout because reasoning tokens share the
+completion budget and observed valid responses can exceed 30 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
-Settings may load a primary and fallback Groq credential as `SecretStr` values, but automatic
-credential failover is not enabled; operators must select the intended credential explicitly.
-The OpenCode credential is also stored as `SecretStr` and selected explicitly with
-`--provider opencode`.
+Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
+selection; `--llm` always uses `deepseek-v4-flash-free`.
 
-Localization evaluation uses a separate, smaller LLM contract. `benchmark.py` checks out each
+Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
 files exist, and indexes only paths returned by `git ls-files`. It runs deterministic retrieval
-and optionally asks the selected provider only to rerank bounded evidence IDs. Root-cause
-hypotheses are intentionally excluded from this benchmark contract so their schema reliability
-does not contaminate localization metrics. Retrieval normalizes paths and identifiers, rejects
+and optionally asks OpenCode `deepseek-v4-flash-free` to rerank bounded evidence IDs. The benchmark
+does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
+receives a plain chat-completions request without `response_format`; the response contract is one
+unique `RANK:` line containing at most three evidence IDs. Reasoning is disabled, output starts at
+256 tokens and expands once to 1,024 only after truncation, the Issue body is capped at 2,000
+characters, and each evidence item is capped at 300 characters. Root-cause hypotheses are
+intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
+normalizes paths and identifiers, rejects
 dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
 and applies bounded graph/history evidence. Compound identifier variants preserve source term
@@ -138,6 +137,13 @@ breadth before LLM reranking. Python AST symbols retain both their local name an
 class/function ownership. Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.
+
+The runner retries only transport failures, HTTP 429, and HTTP 5xx responses. Other HTTP errors,
+missing or multiple `RANK:` lines, empty ranks, and unknown evidence IDs immediately use the
+deterministic fallback. Aggregate output keeps fallback cases in the denominator and records
+protocol success rate, successful-rerank MRR, overall MRR, and fallback reasons separately.
+Provider attempts, including failed attempts and the truncation retry, contribute to stored token
+and latency totals.
 
 ### Benchmark candidate pipeline
 
@@ -180,15 +186,15 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 ## Current boundaries
 
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
-deterministic and offline; the CLI can optionally add a bounded Groq or OpenCode analysis step. It does
+deterministic and offline; the CLI can optionally add a bounded OpenCode DeepSeek analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
 The current benchmark contains 50 cases across 21 repositories and 39 manually reviewed symbol
 targets across 33 cases. This is materially stronger for error analysis but still not statistically
 strong enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. Manifest version 5 is retained as
-the reproducible input for the corrected 20-case Groq and OpenCode comparison; version 6 is the
-retained 32-case expansion, version 7 is the qualified-symbol suite, and version 8 is the current
-50-case expansion. LLM hypotheses are
+the reproducible input for the corrected 20-case DeepSeek run; version 6 is the retained 32-case
+expansion, version 7 is the qualified-symbol suite, and version 8 is the current 50-case expansion.
+LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
 resolved calls, qualified class/function ownership, and a single-best-symbol selector, but not
 cross-file control-flow beyond bounded two-hop resolved-name calls, receiver/type resolution, runtime/backend

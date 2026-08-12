@@ -9,7 +9,7 @@ from enum import StrEnum
 from pathlib import Path
 from statistics import fmean
 from time import perf_counter, sleep
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -20,13 +20,12 @@ from .llm_client import LLMProviderError
 from .models import (
     EvidenceRerankResult,
     EvidenceSnippet,
-    InvestigationReport,
     IssueRecord,
-    LLMAnalysisResult,
 )
 from .repository_index import build_repository_map
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+RERANK_MAX_CHARS_PER_SNIPPET = 300
 
 
 class BenchmarkTier(StrEnum):
@@ -38,7 +37,6 @@ class BenchmarkTier(StrEnum):
 class BenchmarkVariant(StrEnum):
     DETERMINISTIC = "deterministic"
     HYBRID = "hybrid"
-    HYBRID_FULL = "hybrid-full"
 
 
 class EvidenceReranker(Protocol):
@@ -50,13 +48,6 @@ class EvidenceReranker(Protocol):
         issue: IssueRecord,
         evidence: Sequence[EvidenceSnippet],
     ) -> EvidenceRerankResult: ...
-
-    def analyze(
-        self,
-        issue: IssueRecord,
-        report: InvestigationReport,
-        evidence: Sequence[EvidenceSnippet],
-    ) -> LLMAnalysisResult: ...
 
 
 class BenchmarkSymbolTarget(BaseModel):
@@ -153,6 +144,7 @@ class BenchmarkCaseResult(BaseModel):
     analysis_elapsed_ms: float = 0
     llm_attempts: int = 0
     llm_fallback_used: bool = False
+    llm_fallback_reason: str | None = None
     llm_request_id: str | None = None
     llm_system_fingerprint: str | None = None
     llm_input_tokens: int = 0
@@ -177,7 +169,10 @@ class BenchmarkAggregate(BaseModel):
     llm_cases: int = 0
     llm_successes: int = 0
     llm_fallbacks: int = 0
+    llm_fallback_reasons: dict[str, int] = Field(default_factory=dict)
+    llm_success_mean_reciprocal_rank: float | None = None
     average_llm_elapsed_ms: float | None = None
+    average_llm_success_elapsed_ms: float | None = None
     llm_input_tokens: int = 0
     llm_output_tokens: int = 0
     symbol_cases: int = 0
@@ -191,13 +186,16 @@ class BenchmarkAggregate(BaseModel):
 class BenchmarkRun(BaseModel):
     manifest_name: str
     manifest_version: int
-    variant: BenchmarkVariant
+    variant: BenchmarkVariant | Literal["hybrid-full"]
     provider: str | None = None
     model: str | None = None
     max_evidence_chars: int | None = None
+    max_chars_per_evidence: int | None = None
+    initial_output_tokens: int | None = None
     max_output_tokens: int | None = None
     max_llm_attempts: int | None = None
     llm_delay_seconds: float | None = None
+    timeout_seconds: float | None = None
     reasoning_effort: str | None = None
     temperature: float | None = None
     seed: int | None = None
@@ -283,50 +281,88 @@ def _hybrid_candidate_files(
     max_evidence_chars: int,
     max_attempts: int,
     retry_delay_seconds: float,
-    full_analysis: bool,
-) -> tuple[list[str], EvidenceRerankResult | LLMAnalysisResult, int]:
+) -> tuple[list[str], EvidenceRerankResult, int]:
     evidence = collect_evidence(
         report,
         max_total_chars=max_evidence_chars,
         max_lines_per_snippet=20,
         context_lines=4,
-        max_chars_per_snippet=600,
+        max_chars_per_snippet=RERANK_MAX_CHARS_PER_SNIPPET,
     )
     if not evidence:
-        raise LLMProviderError("No repository evidence was available for hybrid reranking")
-    last_error: Exception | None = None
+        error = LLMProviderError(
+            "No repository evidence was available for hybrid reranking",
+            category="no_evidence",
+        )
+        error.attempts = 0
+        raise error
+    last_error: LLMProviderError | None = None
+    request_attempts = 0
+    failed_input_tokens = 0
+    failed_output_tokens = 0
+    failed_elapsed_ms = 0.0
     for attempt in range(1, max_attempts + 1):
         try:
-            if full_analysis:
-                analysis = analyzer.analyze(issue, report, evidence)
-            else:
-                analysis = analyzer.rerank(issue, evidence)
+            analysis = analyzer.rerank(issue, evidence)
+            request_attempts += analysis.attempts
             evidence_files = {snippet.id: snippet.file for snippet in evidence}
             reranked_ids = analysis.analysis.reranked_evidence_ids
             if not reranked_ids:
-                raise LLMProviderError("Reranker returned no evidence IDs")
+                error = LLMProviderError(
+                    "Reranker returned no evidence IDs",
+                    category="invalid_rank",
+                )
+                error.attempts = 0
+                error.input_tokens = analysis.input_tokens
+                error.output_tokens = analysis.output_tokens
+                error.elapsed_ms = analysis.elapsed_ms
+                error.request_id = analysis.request_id
+                error.system_fingerprint = analysis.system_fingerprint
+                raise error
             unknown_ids = set(reranked_ids) - evidence_files.keys()
             if unknown_ids:
-                raise LLMProviderError(
+                error = LLMProviderError(
                     "Reranker returned unknown evidence IDs: "
-                    + ", ".join(sorted(unknown_ids))
+                    + ", ".join(sorted(unknown_ids)),
+                    category="unknown_evidence_id",
                 )
+                error.attempts = 0
+                error.input_tokens = analysis.input_tokens
+                error.output_tokens = analysis.output_tokens
+                error.elapsed_ms = analysis.elapsed_ms
+                error.request_id = analysis.request_id
+                error.system_fingerprint = analysis.system_fingerprint
+                raise error
             reranked = [
                 evidence_files[evidence_id]
                 for evidence_id in reranked_ids
             ]
             remaining = [candidate.file for candidate in report.candidates]
-            return _unique_files([*reranked, *remaining]), analysis, attempt
+            analysis = analysis.model_copy(
+                update={
+                    "input_tokens": analysis.input_tokens + failed_input_tokens,
+                    "output_tokens": analysis.output_tokens + failed_output_tokens,
+                    "elapsed_ms": round(analysis.elapsed_ms + failed_elapsed_ms, 3),
+                }
+            )
+            return _unique_files([*reranked, *remaining]), analysis, request_attempts
         except LLMProviderError as error:
             last_error = error
-            if attempt == max_attempts:
+            request_attempts += error.attempts
+            failed_input_tokens += error.input_tokens
+            failed_output_tokens += error.output_tokens
+            failed_elapsed_ms += error.elapsed_ms
+            error.attempts = request_attempts
+            error.input_tokens = failed_input_tokens
+            error.output_tokens = failed_output_tokens
+            error.elapsed_ms = round(failed_elapsed_ms, 3)
+            if not error.retryable or attempt == max_attempts:
                 break
             retry_after = error.retry_after
-            delay = retry_delay_seconds
+            delay = max(retry_delay_seconds, 1.0) * (2 ** (attempt - 1))
             if isinstance(retry_after, (int, float)) and retry_after > 0:
                 delay = max(delay, float(retry_after))
-            if delay > 0:
-                sleep(min(delay, 60.0))
+            sleep(min(delay, 60.0))
     assert last_error is not None
     raise last_error
 
@@ -355,8 +391,10 @@ def evaluate_case(
     candidate_locations = {candidate.file: candidate for candidate in report.candidates}
     candidate_files = _unique_files([candidate.file for candidate in report.candidates])
     llm_result = None
+    llm_failure = None
     llm_attempts = 0
     fallback_used = False
+    fallback_reason = None
     error = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
         try:
@@ -367,11 +405,12 @@ def evaluate_case(
                 max_evidence_chars,
                 max_llm_attempts,
                 llm_retry_delay_seconds,
-                variant is BenchmarkVariant.HYBRID_FULL,
             )
         except LLMProviderError as llm_error:
+            llm_failure = llm_error
             fallback_used = True
-            llm_attempts = max_llm_attempts
+            fallback_reason = llm_error.category
+            llm_attempts = llm_error.attempts
             error = f"{type(llm_error).__name__}: {llm_error}"
 
     expected = set(case.expected_files)
@@ -464,13 +503,42 @@ def evaluate_case(
         analysis_elapsed_ms=round((perf_counter() - started) * 1000, 3),
         llm_attempts=llm_attempts,
         llm_fallback_used=fallback_used,
-        llm_request_id=llm_result.request_id if llm_result else None,
-        llm_system_fingerprint=(
-            llm_result.system_fingerprint if llm_result else None
+        llm_fallback_reason=fallback_reason,
+        llm_request_id=(
+            llm_result.request_id
+            if llm_result
+            else llm_failure.request_id
+            if llm_failure
+            else None
         ),
-        llm_input_tokens=llm_result.input_tokens if llm_result else 0,
-        llm_output_tokens=llm_result.output_tokens if llm_result else 0,
-        llm_elapsed_ms=llm_result.elapsed_ms if llm_result else 0,
+        llm_system_fingerprint=(
+            llm_result.system_fingerprint
+            if llm_result
+            else llm_failure.system_fingerprint
+            if llm_failure
+            else None
+        ),
+        llm_input_tokens=(
+            llm_result.input_tokens
+            if llm_result
+            else llm_failure.input_tokens
+            if llm_failure
+            else 0
+        ),
+        llm_output_tokens=(
+            llm_result.output_tokens
+            if llm_result
+            else llm_failure.output_tokens
+            if llm_failure
+            else 0
+        ),
+        llm_elapsed_ms=(
+            llm_result.elapsed_ms
+            if llm_result
+            else llm_failure.elapsed_ms
+            if llm_failure
+            else 0
+        ),
         error=error,
     )
 
@@ -478,10 +546,24 @@ def evaluate_case(
 def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
     completed = [result for result in results if result.execution_succeeded]
     symbol_results = [result for result in completed if result.expected_symbols]
-    llm_results = [result for result in completed if result.llm_attempts]
+    llm_results = [
+        result
+        for result in completed
+        if result.llm_attempts or result.llm_fallback_used
+    ]
     successful_llm_results = [
         result for result in llm_results if not result.llm_fallback_used
     ]
+    fallback_reasons = {
+        reason: sum(result.llm_fallback_reason == reason for result in llm_results)
+        for reason in sorted(
+            {
+                result.llm_fallback_reason
+                for result in llm_results
+                if result.llm_fallback_reason is not None
+            }
+        )
+    }
     return BenchmarkAggregate(
         cases=len(results),
         completed=len(completed),
@@ -521,7 +603,19 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         llm_cases=len(llm_results),
         llm_successes=len(successful_llm_results),
         llm_fallbacks=len(llm_results) - len(successful_llm_results),
+        llm_fallback_reasons=fallback_reasons,
+        llm_success_mean_reciprocal_rank=round(
+            fmean(result.reciprocal_rank for result in successful_llm_results),
+            4,
+        )
+        if successful_llm_results
+        else None,
         average_llm_elapsed_ms=round(
+            fmean(result.llm_elapsed_ms for result in llm_results), 3
+        )
+        if llm_results
+        else None,
+        average_llm_success_elapsed_ms=round(
             fmean(result.llm_elapsed_ms for result in successful_llm_results), 3
         )
         if successful_llm_results
@@ -654,10 +748,25 @@ def run_benchmark(
         provider=getattr(analyzer, "provider", None),
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,
-        max_output_tokens=getattr(analyzer, "max_output_tokens", None),
+        max_chars_per_evidence=RERANK_MAX_CHARS_PER_SNIPPET if analyzer else None,
+        initial_output_tokens=getattr(
+            analyzer,
+            "rerank_initial_output_tokens",
+            None,
+        ),
+        max_output_tokens=getattr(
+            analyzer,
+            "rerank_max_output_tokens",
+            getattr(analyzer, "max_output_tokens", None),
+        ),
         max_llm_attempts=max_llm_attempts if analyzer else None,
         llm_delay_seconds=llm_delay_seconds if analyzer else None,
-        reasoning_effort=getattr(analyzer, "reasoning_effort", None),
+        timeout_seconds=getattr(analyzer, "timeout_seconds", None),
+        reasoning_effort=getattr(
+            analyzer,
+            "rerank_reasoning_effort",
+            getattr(analyzer, "reasoning_effort", None),
+        ),
         temperature=getattr(analyzer, "temperature", None),
         seed=getattr(analyzer, "seed", None),
         created_at=datetime.now(UTC),
