@@ -266,23 +266,41 @@ class OpenCodeIssueAnalyzer:
             user_payload,
             LLMAnalysisResponse.model_json_schema(),
         )
+        usage = response_payload.get("usage") or {}
+        input_tokens = int(usage.get("prompt_tokens") or 0)
+        output_tokens = int(usage.get("completion_tokens") or 0)
+        request_id = response_payload.get("id")
+        system_fingerprint = response_payload.get("system_fingerprint")
         try:
             analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:
             raise LLMProviderError(
-                f"{self.provider_label} returned an invalid structured response"
+                f"{self.provider_label} returned an invalid structured response",
+                category="invalid_response",
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                elapsed_ms=elapsed_ms,
+                request_id=request_id,
+                system_fingerprint=system_fingerprint,
             ) from error
 
         analysis = self._normalize_contradictions(analysis)
-        self._validate_evidence_references(analysis, evidence)
-        usage = response_payload.get("usage") or {}
+        try:
+            self._validate_evidence_references(analysis, evidence)
+        except LLMProviderError as error:
+            error.input_tokens = input_tokens
+            error.output_tokens = output_tokens
+            error.elapsed_ms = elapsed_ms
+            error.request_id = request_id
+            error.system_fingerprint = system_fingerprint
+            raise
         return LLMAnalysisResult(
             provider=self.provider,
             model=self.model,
-            request_id=response_payload.get("id"),
-            system_fingerprint=response_payload.get("system_fingerprint"),
-            input_tokens=int(usage.get("prompt_tokens") or 0),
-            output_tokens=int(usage.get("completion_tokens") or 0),
+            request_id=request_id,
+            system_fingerprint=system_fingerprint,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             elapsed_ms=elapsed_ms,
             analysis=analysis,
         )
@@ -313,7 +331,8 @@ class OpenCodeIssueAnalyzer:
         if observed_ids != valid_ids or len(analysis.evidence_observations) != len(evidence):
             raise LLMProviderError(
                 f"{self.provider_label} did not provide exactly one observation "
-                "for every evidence ID"
+                "for every evidence ID",
+                category="evidence_observation_coverage",
             )
         if (
             analysis.needs_more_evidence
@@ -322,7 +341,8 @@ class OpenCodeIssueAnalyzer:
         ):
             raise LLMProviderError(
                 f"{self.provider_label} requested more evidence without naming "
-                "a missing artifact"
+                "a missing artifact",
+                category="missing_evidence_contract",
             )
         referenced_ids.update(observed_ids)
         for hypothesis in analysis.hypotheses:
@@ -331,7 +351,8 @@ class OpenCodeIssueAnalyzer:
         if unknown_ids:
             unknown = ", ".join(sorted(unknown_ids))
             raise LLMProviderError(
-                f"{self.provider_label} cited unknown evidence IDs: {unknown}"
+                f"{self.provider_label} cited unknown evidence IDs: {unknown}",
+                category="unknown_evidence_id",
             )
 
     def rerank(

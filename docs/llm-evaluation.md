@@ -95,8 +95,9 @@ cases do not overcome the current account/provider limit.
 During this run, an initial persistence check compared the in-memory strict response subclass with
 the restored public base model and reported false despite identical serialized payloads. The
 evaluator now compares the public JSON payload and has a regression test using the real response
-subclass boundary. The next independent fixes are to preserve structured-response failure
-telemetry and to make Agent retry/backoff policy error-aware before repeating the external suite.
+subclass boundary. Structured-response and evidence-contract failures now preserve request, token,
+latency, and category telemetry across both Agent attempts. The next independent fix is to make
+Agent retry/backoff policy error-aware before repeating the external suite.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 

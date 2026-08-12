@@ -129,6 +129,11 @@ contract pass, the graph reaches `awaiting_review`, and the final public Agent p
 SQLite JSON round-trip. The result keeps full validated analysis content plus request attempts,
 tokens, latency, skip state, and failure category; failures remain in the aggregate denominator.
 This reliability suite is deliberately separate from rank-only localization metrics.
+When an HTTP-success response fails JSON/schema or evidence-contract validation, the exception
+retains its request ID, system fingerprint, input/output tokens, and provider latency. The
+evaluator accumulates this telemetry across failed retries instead of reporting zero usage.
+Failure categories distinguish invalid JSON/schema, incomplete observation coverage, unnamed
+missing evidence, and unknown evidence IDs.
 
 Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
