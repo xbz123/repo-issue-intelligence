@@ -14,7 +14,7 @@ from repo_issue_intelligence.benchmark import (
 from repo_issue_intelligence.llm_client import LLMProviderError
 from repo_issue_intelligence.models import (
     IssueRecord,
-    LLMAnalysisResponse,
+    LLMAnalysis,
     LLMAnalysisResult,
 )
 
@@ -73,7 +73,7 @@ class ValidAnalyzer:
             input_tokens=120,
             output_tokens=60,
             elapsed_ms=8.5,
-            analysis=LLMAnalysisResponse(
+            analysis=LLMAnalysis(
                 summary="The persistence path is relevant.",
                 issue_type="bug",
                 affected_component="data_store",

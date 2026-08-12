@@ -184,10 +184,14 @@ class LLMAnalysis(StrictOutputModel):
     needs_more_evidence: bool
 
 
-class LLMAnalysisResponse(LLMAnalysis):
-    """Strict contract for new provider responses; persisted analyses remain compatible."""
+class LLMAnalysisResponse(StrictOutputModel):
+    """Compact provider contract; persisted analyses retain the public full schema."""
 
-    hypotheses: list[LLMHypothesis] = Field(max_length=2)
+    summary: str
+    issue_type: IssueType
+    reproduction_completeness: ReproductionCompleteness
+    evidence_observations: list[LLMEvidenceObservation]
+    hypothesis: LLMHypothesis
 
 
 class LLMAnalysisResult(BaseModel):
