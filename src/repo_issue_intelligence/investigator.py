@@ -7,7 +7,7 @@ import subprocess
 import tokenize
 import unicodedata
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .models import (
@@ -159,6 +159,21 @@ GENERIC_SUBSYSTEM_TERMS = {"common", "core", "shared", "util", "utils"}
 AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
+GENERIC_QUALIFIED_TITLE_METHOD_TERMS = {
+    "build",
+    "call",
+    "creat",
+    "get",
+    "handl",
+    "init",
+    "is",
+    "main",
+    "make",
+    "new",
+    "proces",
+    "run",
+    "set",
+}
 HISTORY_COMMIT_LIMIT = 50
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
@@ -167,6 +182,7 @@ SYMBOL_EVIDENCE_PREFIXES = (
     "Symbol ",
     "Issue references symbol ",
     "Issue title and code call constructor ",
+    "Issue title matches owner and method ",
     "Traceback frame points to symbol ",
     "Issue source line points to symbol ",
     "Issue source snippet matches symbol ",
@@ -211,6 +227,8 @@ class IssueSignals:
     terms: frozenset[str]
     content_terms: frozenset[str]
     title_terms: frozenset[str]
+    raw_title_terms: frozenset[str]
+    raw_title_term_sequence: tuple[str, ...]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
     title_identifiers: frozenset[str]
@@ -238,6 +256,8 @@ class SymbolMatch:
     unscoped_dotted_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
+    qualified_title_semantic_match: bool
+    qualified_title_semantic_strength: float
     constructor_call_index: int | None
     traceback_frame_index: int | None
     source_line_reference_index: int | None
@@ -485,6 +505,8 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         terms=frozenset(_terms(text)),
         content_terms=frozenset(content_terms),
         title_terms=frozenset(_terms(issue.title)),
+        raw_title_terms=frozenset(_raw_semantic_terms(issue.title)),
+        raw_title_term_sequence=_raw_semantic_term_sequence(issue.title),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
         title_identifiers=frozenset(_extract_identifiers(issue.title)),
@@ -521,6 +543,30 @@ def _semantic_terms(terms: frozenset[str] | set[str]) -> set[str]:
     return {_semantic_term(term) for term in terms}
 
 
+def _raw_semantic_terms(value: str) -> set[str]:
+    return set(_raw_semantic_term_sequence(value))
+
+
+def _raw_semantic_term_sequence(value: str) -> tuple[str, ...]:
+    value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
+    return tuple(
+        _semantic_term(term)
+        for term in re.findall(r"[a-z][a-z0-9]{1,}", value.lower())
+    )
+
+
+def _is_test_source_path(path: str) -> bool:
+    parts = tuple(part.casefold() for part in Path(path).parts)
+    filename = parts[-1] if parts else ""
+    return (
+        any(part in {"t", "test", "testing", "tests"} for part in parts[:-1])
+        or filename == "conftest.py"
+        or filename.startswith("test_")
+        or filename.endswith("_test.py")
+    )
+
+
 def _matches_qualified_identity(identity: str, identifier: str) -> bool:
     candidate = identifier.strip("`'\"()[]{}:,")
     return candidate == identity or candidate.endswith(f".{identity}")
@@ -531,6 +577,7 @@ def _match_symbol(
     signals: IssueSignals,
     unique_symbol_names: frozenset[str],
     path_scoped: bool,
+    test_file: bool = False,
     constructor_call_index: int | None = None,
     traceback_frame_index: int | None = None,
     source_line_reference_index: int | None = None,
@@ -544,6 +591,31 @@ def _match_symbol(
     identity_parts = identity.split(".")
     owner_identity = ".".join(identity_parts[:-1])
     owner_compact_variants = _compact_identifier_variants(owner_identity)
+    owner_semantic_terms = _semantic_terms(_terms(owner_identity))
+    owner_title_overlap = owner_semantic_terms & set(signals.raw_title_terms)
+    method_semantic_terms = (
+        _raw_semantic_terms(symbol.name)
+        - GENERIC_QUALIFIED_TITLE_METHOD_TERMS
+        - owner_semantic_terms
+    )
+    method_title_overlap = method_semantic_terms & set(signals.raw_title_terms)
+    owner_method_phrase_match = any(
+        owner_term in owner_semantic_terms
+        and method_term in method_title_overlap
+        for owner_term, method_term in zip(
+            signals.raw_title_term_sequence,
+            signals.raw_title_term_sequence[1:],
+            strict=False,
+        )
+    )
+    qualified_title_semantic_match = (
+        bool(owner_identity)
+        and not test_file
+        and len(owner_semantic_terms) >= 2
+        and bool(owner_title_overlap)
+        and bool(method_title_overlap)
+        and owner_method_phrase_match
+    )
     source_scoped_identifiers = (
         signals.explicit_identifiers | signals.primary_identifiers
     )
@@ -643,6 +715,12 @@ def _match_symbol(
             for identifier in source_scoped_identifiers
         ),
         qualified_identifier_match=qualified_identifier_match,
+        qualified_title_semantic_match=qualified_title_semantic_match,
+        qualified_title_semantic_strength=(
+            len(method_title_overlap) / len(method_semantic_terms)
+            if qualified_title_semantic_match and method_semantic_terms
+            else 0
+        ),
         constructor_call_index=constructor_call_index,
         traceback_frame_index=traceback_frame_index,
         source_line_reference_index=source_line_reference_index,
@@ -660,9 +738,55 @@ def _select_symbol(
     use_source_line_references: bool = True,
     use_source_snippets: bool = True,
     use_constructor_calls: bool = True,
+    use_qualified_title_semantics: bool = True,
 ) -> SymbolMatch | None:
     if not matches:
         return None
+
+    qualified_title_matches = (
+        [
+            match
+            for match in matches
+            if match.symbol.kind == "function"
+            and match.qualified_title_semantic_match
+        ]
+        if use_qualified_title_semantics
+        else []
+    )
+    if qualified_title_matches:
+        strongest_title_match = max(
+            match.qualified_title_semantic_strength
+            for match in qualified_title_matches
+        )
+        strongest_title_matches = [
+            match
+            for match in qualified_title_matches
+            if match.qualified_title_semantic_strength
+            == strongest_title_match
+        ]
+    else:
+        strongest_title_matches = []
+    if len(strongest_title_matches) != 1:
+        strongest_title_matches = []
+    strongest_title_identities = {
+        _symbol_identity(match.symbol) for match in strongest_title_matches
+    }
+    if qualified_title_matches or not use_qualified_title_semantics:
+        matches = [
+            replace(
+                match,
+                qualified_title_semantic_match=False,
+                qualified_title_semantic_strength=0,
+            )
+            if match.qualified_title_semantic_match
+            and (
+                not use_qualified_title_semantics
+                or _symbol_identity(match.symbol)
+                not in strongest_title_identities
+            )
+            else match
+            for match in matches
+        ]
 
     functions = [match for match in matches if match.symbol.kind == "function"]
 
@@ -757,13 +881,14 @@ def _select_symbol(
 
     def semantic_score(
         match: SymbolMatch,
-    ) -> tuple[int, float, float, bool, bool, bool, int, int]:
+    ) -> tuple[int, float, float, float, bool, bool, bool, int, int]:
         overlap = primary_terms & match.semantic_terms
         if match.unscoped_dotted_identifier_match:
             overlap -= _semantic_terms(_terms(match.symbol.name))
         rarity = [1 / term_frequency[term] for term in overlap]
         return (
             relation_scores.get(_symbol_identity(match.symbol), 0),
+            match.qualified_title_semantic_strength,
             max(rarity, default=0),
             sum(rarity),
             match.unscoped_explicit_identifier_match,
@@ -773,8 +898,9 @@ def _select_symbol(
             len(match.local_overlap),
         )
 
-    if functions and max(semantic_score(match)[:3] for match in functions) > (
+    if functions and max(semantic_score(match)[:4] for match in functions) > (
         0,
+        0.0,
         0,
         0,
     ):
@@ -912,6 +1038,8 @@ def _symbol_evidence(
         evidence.append(f"Issue references symbol {label}")
     if match.constructor_call_index is not None:
         evidence.append(f"Issue title and code call constructor {label}")
+    if match.qualified_title_semantic_match:
+        evidence.append(f"Issue title matches owner and method {label}")
     if match.traceback_frame_index is not None:
         evidence.append(f"Traceback frame points to symbol {label}")
     if match.source_line_reference_index is not None:
@@ -2424,6 +2552,7 @@ def locate_candidates(
                 signals,
                 unique_symbol_names,
                 file.path in symbol_scoped_paths,
+                test_file=_is_test_source_path(file.path),
                 constructor_call_index=constructor_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),
@@ -2466,6 +2595,7 @@ def locate_candidates(
             use_source_line_references=False,
             use_source_snippets=False,
             use_constructor_calls=False,
+            use_qualified_title_semantics=False,
         )
         selected_match = _select_symbol(
             symbol_matches,
@@ -2833,6 +2963,7 @@ def locate_candidates(
                 signals,
                 candidate_unique_symbol_names,
                 path in symbol_scoped_paths,
+                test_file=_is_test_source_path(file.path),
                 constructor_call_index=constructor_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),

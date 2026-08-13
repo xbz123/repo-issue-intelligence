@@ -2518,6 +2518,168 @@ def test_owner_terms_do_not_change_title_semantic_ranking(
     assert candidates[0].qualified_symbol is None
 
 
+def test_title_owner_and_method_terms_select_qualified_method(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "parser.py",
+        "class ConfigOptionParser:\n"
+        "    def error(self, message):\n"
+        "        raise ValueError(message)\n\n"
+        "    def print_help(self):\n"
+        "        return None\n\n"
+        "class CustomOptionParser:\n"
+        "    def insert_option_group(self):\n"
+        "        return None\n\n"
+        "class RichPipStreamHandler:\n"
+        "    def handle_error(self):\n"
+        "        return None\n\n"
+        "class PrettyHelpFormatter:\n"
+        "    def format_option(self):\n"
+        '        """Render Rich usage markup."""\n'
+        "        return None\n",
+    )
+    write_source(
+        repository,
+        "tests/test_parser.py",
+        "class TestOptionParser:\n"
+        "    def error(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "Option errors print usage with Rich markup unrendered",
+        "Normal help output is unaffected.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "ConfigOptionParser.error"
+    assert (
+        "Issue title matches owner and method ConfigOptionParser.error"
+        in candidates[0].evidence
+    )
+    test_candidate = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "tests/test_parser.py"
+    )
+    assert not any(
+        evidence.startswith("Issue title matches owner and method ")
+        for evidence in test_candidate.evidence
+    )
+
+    plural_candidates = locate_candidates(
+        issue(
+            "Options errors print usage with Rich markup unrendered",
+            "Normal help output is unaffected.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert plural_candidates[0].qualified_symbol == "ConfigOptionParser.error"
+
+
+def test_production_test_prefixed_class_can_use_title_method_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/testclient.py",
+        "class TestOptionParser:\n"
+        "    def error(self, message):\n"
+        "        raise ValueError(message)\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Option errors print the wrong output",
+            "Normal parsing is unaffected.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert candidates[0].qualified_symbol == "TestOptionParser.error"
+    assert (
+        "Issue title matches owner and method TestOptionParser.error"
+        in candidates[0].evidence
+    )
+
+
+def test_ambiguous_title_owner_and_method_terms_are_not_direct_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "parser.py",
+        "class ConfigOptionParser:\n"
+        "    def error(self, message):\n"
+        '        """Report a configuration option error."""\n'
+        "        raise ValueError(message)\n\n"
+        "class RuntimeOptionParser:\n"
+        "    def error(self, message):\n"
+        '        """Report a runtime option error."""\n'
+        "        raise ValueError(message)\n",
+    )
+    record = issue(
+        "Option parser error",
+        "The parser reports the wrong message.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue title matches owner and method ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_generic_method_term_does_not_create_qualified_title_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "parser.py",
+        "class OptionParser:\n"
+        "    def handle(self):\n"
+        "        return None\n\n"
+        "class SystemEnv:\n"
+        "    def is_venv(self):\n"
+        "        return False\n",
+    )
+    record = issue(
+        "Option parser handle fails",
+        "The parser does not complete.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue title matches owner and method ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+    env_candidates = locate_candidates(
+        issue(
+            "Poetry thinks Conda env is active",
+            "The environment was deactivated.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith("Issue title matches owner and method ")
+        for candidate in env_candidates
+        for evidence in candidate.evidence
+    )
+
+
 def test_protocol_event_does_not_match_python_qualified_symbol(
     tmp_path: Path,
 ) -> None:
