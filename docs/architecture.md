@@ -93,6 +93,10 @@ a non-generic package subsystem. Unused, conditional, shadowed, ambiguous, auxil
 cross-subsystem routes are skipped. Re-export evidence is
 expansion-only and tail-protected, so it cannot rerank an existing shortlist. Other bounded two-hop propagation
 follows the exact target function and only that function's resolved external calls. The
+investigator also preserves ordered Python traceback frames. A frame can influence within-file
+symbol selection only when its path resolves to one repository file and its function resolves to
+one symbol in that file; the deepest such frame wins. Installed paths can omit a confirmed
+`src`/`lib` layout prefix, but real top-level packages and ambiguous suffixes are not stripped. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 

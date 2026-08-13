@@ -137,7 +137,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.20-package-reexports-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.21-traceback-symbols-50-cases-run1.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -276,15 +276,22 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.20 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.21 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
 Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. Symbol Recall@1 is
-`0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5606`, and symbol MRR `0.3342`.
+`0.2576`, Recall@5 `0.4545`, Recall@10 `0.4848`, Recall@20 `0.5909`, and symbol MRR `0.3645`.
 
-v0.20 follows a single safe package re-export hop from an Issue-referenced source path. Both files
-must be production files in the same package subsystem, the facade must be `__init__.py`, and the
-source must actually read the imported name while the module-level binding and target definition
-must each resolve uniquely. The relation is
+v0.21 parses canonical Python and compact numbered traceback frames, resolves each frame path to
+one repository file, and selects the deepest uniquely resolved function in that file. Installed
+package paths may map through a confirmed `src` or `lib` layout only when the stripped suffix is
+unique; real top-level `src` and `lib` packages remain intact. This recovered
+`Executor._create_directory_url_reference` for `poetry-relative-directory-url`. All 50 candidate
+file lists were unchanged; 47/50 symbol lists were unchanged, and no labeled symbol regressed.
+
+The retained v0.20 policy follows a single safe package re-export hop from an Issue-referenced
+source path. Both files must be production files in the same package subsystem, the facade must be
+`__init__.py`, and the source must actually read the imported name while the module-level binding
+and target definition must each resolve uniquely. The relation is
 expansion-only and tail-protected, so it cannot rerank an existing shortlist. This recovered
 `src/poetry/utils/env/python/manager.py` at rank 17; the other 49 candidate and symbol lists were
 unchanged.

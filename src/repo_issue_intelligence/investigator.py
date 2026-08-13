@@ -98,6 +98,18 @@ CALLED_IDENTIFIER_PATTERN = re.compile(
 TRACEBACK_IDENTIFIER_PATTERN = re.compile(
     r"\bin\s+((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\b"
 )
+CANONICAL_TRACEBACK_FRAME_PATTERN = re.compile(
+    r'^\s*File\s+["\'](?P<path>.+?\.py)["\'],\s+line\s+\d+,\s+in\s+'
+    r"(?P<symbol>(?:[A-Za-z_][A-Za-z0-9_]*\.)*"
+    r"[A-Za-z_][A-Za-z0-9_]*)\s*$",
+    re.MULTILINE,
+)
+COMPACT_TRACEBACK_FRAME_PATTERN = re.compile(
+    r"^\s*(?:(?:\d+|at)\s+)?(?P<path>.+?\.py):\d+\s+in\s+"
+    r"(?P<symbol>(?:[A-Za-z_][A-Za-z0-9_]*\.)*"
+    r"[A-Za-z_][A-Za-z0-9_]*)\s*$",
+    re.MULTILINE,
+)
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
 GRAPH_BONUS_LIMIT = 10.0
@@ -131,6 +143,7 @@ BLAME_FILE_LIMIT = 20
 SYMBOL_EVIDENCE_PREFIXES = (
     "Symbol ",
     "Issue references symbol ",
+    "Traceback frame points to symbol ",
     "Issue title strongly matches symbol ",
     "Issue references owning symbol ",
     "Issue-matching symbols call ",
@@ -155,6 +168,12 @@ ECMASCRIPT_IDENTIFIER_CONTINUATION_EXTRAS = {"$", "\u200c", "\u200d"}
 
 
 @dataclass(frozen=True)
+class TracebackFrame:
+    path: str
+    symbol: str
+
+
+@dataclass(frozen=True)
 class IssueSignals:
     terms: frozenset[str]
     content_terms: frozenset[str]
@@ -165,6 +184,7 @@ class IssueSignals:
     explicit_identifiers: frozenset[str]
     identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
+    traceback_frames: tuple[TracebackFrame, ...]
 
 
 @dataclass(frozen=True)
@@ -181,6 +201,7 @@ class SymbolMatch:
     unscoped_dotted_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
+    traceback_frame_index: int | None
     semantic_terms: frozenset[str]
 
 
@@ -283,6 +304,30 @@ def _extract_identifier_mentions(text: str) -> tuple[str, ...]:
     return tuple(mentions)
 
 
+def _extract_traceback_frames(text: str) -> tuple[TracebackFrame, ...]:
+    positioned_frames = [
+        (
+            match.start(),
+            TracebackFrame(
+                path=match.group("path").replace("\\", "/"),
+                symbol=match.group("symbol"),
+            ),
+        )
+        for pattern in (
+            CANONICAL_TRACEBACK_FRAME_PATTERN,
+            COMPACT_TRACEBACK_FRAME_PATTERN,
+        )
+        for match in pattern.finditer(text)
+    ]
+    return tuple(
+        frame
+        for _, frame in sorted(
+            positioned_frames,
+            key=lambda positioned: positioned[0],
+        )
+    )
+
+
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
@@ -312,6 +357,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         explicit_identifiers=frozenset(explicit_identifiers),
         identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
+        traceback_frames=_extract_traceback_frames(issue.body),
     )
 
 
@@ -347,6 +393,7 @@ def _match_symbol(
     signals: IssueSignals,
     unique_symbol_names: frozenset[str],
     path_scoped: bool,
+    traceback_frame_index: int | None = None,
 ) -> SymbolMatch:
     identity = symbol.qualified_name or symbol.name
     local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
@@ -455,6 +502,7 @@ def _match_symbol(
             for identifier in source_scoped_identifiers
         ),
         qualified_identifier_match=qualified_identifier_match,
+        traceback_frame_index=traceback_frame_index,
         semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
@@ -463,6 +511,8 @@ def _select_symbol(
     matches: list[SymbolMatch],
     signals: IssueSignals,
     related_callers: dict[str, tuple[str, ...]],
+    *,
+    use_traceback_frames: bool = True,
 ) -> SymbolMatch | None:
     if not matches:
         return None
@@ -472,12 +522,24 @@ def _select_symbol(
     directly_referenced = [
         match
         for match in functions
-        if match.scoped_identifier_match or match.qualified_identifier_match
+        if match.scoped_identifier_match
+        or match.qualified_identifier_match
+        or (
+            use_traceback_frames
+            and match.traceback_frame_index is not None
+        )
     ]
     if directly_referenced:
         return max(
             directly_referenced,
             key=lambda match: (
+                use_traceback_frames
+                and match.traceback_frame_index is not None,
+                (
+                    match.traceback_frame_index or -1
+                    if use_traceback_frames
+                    else -1
+                ),
                 match.qualified_identifier_match,
                 match.identifier_mention_count,
                 match.explicit_identifier_match,
@@ -672,6 +734,8 @@ def _symbol_evidence(
         and not match.unscoped_explicit_identifier_match
     ):
         evidence.append(f"Issue references symbol {label}")
+    if match.traceback_frame_index is not None:
+        evidence.append(f"Traceback frame points to symbol {label}")
     if match.primary_identifier_match:
         evidence.append(f"Issue title strongly matches symbol {label}")
     if match.qualified_component_match:
@@ -745,6 +809,79 @@ def _symbol_scoped_paths(
         if len(suffix_matches) == 1:
             scoped_paths.update(suffix_matches)
     return frozenset(scoped_paths)
+
+
+def _scoped_traceback_frames(
+    file_paths: list[str],
+    frames: tuple[TracebackFrame, ...],
+) -> dict[str, tuple[tuple[int, str], ...]]:
+    python_path_parts = [
+        Path(path).parts
+        for path in file_paths
+        if Path(path).suffix.lower() == ".py"
+    ]
+    source_roots = {
+        root
+        for root in {"src", "lib"}
+        if any(
+            len(parts) > 1 and parts[0] == root
+            for parts in python_path_parts
+        )
+        and (root, "__init__.py") not in python_path_parts
+    }
+    frames_by_path: dict[str, list[tuple[int, str]]] = {}
+    for index, frame in enumerate(frames, start=1):
+        scoped_paths = _symbol_scoped_paths(
+            file_paths,
+            frozenset({frame.path}),
+        )
+        if not scoped_paths and source_roots:
+            normalized_frame_path = _normalize_path_reference(frame.path)
+            layout_matches = {
+                path
+                for path in file_paths
+                if Path(path).suffix.lower() == ".py"
+                and Path(path).parts[0] in source_roots
+                and normalized_frame_path.endswith(
+                    "/"
+                    + "/".join(Path(path).parts[1:]).lower()
+                )
+            }
+            if len(layout_matches) == 1:
+                scoped_paths = frozenset(layout_matches)
+        if len(scoped_paths) != 1:
+            continue
+        path = next(iter(scoped_paths))
+        frames_by_path.setdefault(path, []).append((index, frame.symbol))
+    return {
+        path: tuple(positioned_symbols)
+        for path, positioned_symbols in frames_by_path.items()
+    }
+
+
+def _traceback_symbol_positions(
+    symbols: list[SymbolRecord],
+    frames: tuple[tuple[int, str], ...],
+) -> dict[str, int]:
+    positions: dict[str, int] = {}
+    for index, frame_symbol in frames:
+        matching_identities = {
+            symbol.qualified_name or symbol.name
+            for symbol in symbols
+            if (
+                frame_symbol == symbol.name
+                if "." not in frame_symbol
+                else _matches_qualified_identity(
+                    symbol.qualified_name or symbol.name,
+                    frame_symbol,
+                )
+            )
+        }
+        if len(matching_identities) != 1:
+            continue
+        identity = next(iter(matching_identities))
+        positions[identity] = index
+    return positions
 
 
 def _source_content(
@@ -1665,9 +1802,14 @@ def locate_candidates(
         for term in _terms(file.path)
     )
     protected_base_paths: set[str] = set()
+    repository_file_paths = [file.path for file in repository_map.files]
     symbol_scoped_paths = _symbol_scoped_paths(
-        [file.path for file in repository_map.files],
+        repository_file_paths,
         signals.paths,
+    )
+    traceback_frames_by_path = _scoped_traceback_frames(
+        repository_file_paths,
+        signals.traceback_frames,
     )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
@@ -1691,12 +1833,19 @@ def locate_candidates(
                 for variant in _compact_identifier_variants(identifier)
             )
         }
+        traceback_symbol_positions = _traceback_symbol_positions(
+            file.symbols,
+            traceback_frames_by_path.get(file.path, ()),
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 unique_symbol_names,
                 file.path in symbol_scoped_paths,
+                traceback_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
+                ),
             )
             for symbol in file.symbols
         ]
@@ -1717,7 +1866,12 @@ def locate_candidates(
                 len(score_match.local_overlap) if score_match else 0,
             ):
                 score_match = match
-        blame_match = _select_symbol(symbol_matches, signals, {})
+        blame_match = _select_symbol(
+            symbol_matches,
+            signals,
+            {},
+            use_traceback_frames=False,
+        )
         selected_match = _select_symbol(
             symbol_matches,
             signals,
@@ -2062,12 +2216,19 @@ def locate_candidates(
     )
     for path in reranked_paths:
         file = files_by_path[path]
+        traceback_symbol_positions = _traceback_symbol_positions(
+            file.symbols,
+            traceback_frames_by_path.get(file.path, ()),
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 candidate_unique_symbol_names,
                 path in symbol_scoped_paths,
+                traceback_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
+                ),
             )
             for symbol in file.symbols
         ]
@@ -2076,15 +2237,20 @@ def locate_candidates(
             file.resolved_calls,
             file.path,
         )
-        selected_match = _shared_qualified_call_match(
-            symbol_matches,
-            file.qualified_external_calls,
-            graph_relations.get(path, []),
-        ) or _select_symbol(
+        selected_match = _select_symbol(
             symbol_matches,
             signals,
             related_symbol_callers,
         )
+        if (
+            selected_match is None
+            or selected_match.traceback_frame_index is None
+        ):
+            selected_match = _shared_qualified_call_match(
+                symbol_matches,
+                file.qualified_external_calls,
+                graph_relations.get(path, []),
+            ) or selected_match
         selected_symbol = selected_match.symbol if selected_match else None
         candidate = candidates[path]
         candidate.symbol = selected_symbol.name if selected_symbol else None
