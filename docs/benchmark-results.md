@@ -8,27 +8,36 @@ symbol targets across 33 cases. Every case embeds the complete Issue snapshot, m
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.21 runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic v0.22 runs finished 50/50 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 1.0000 | 0.6038 | 5,214 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6159 | 7,942 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,072 ms |
-| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,677 ms |
+| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 1.0000 | 0.6038 | 5,199 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6159 | 7,950 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,046 ms |
+| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,649 ms |
 
 The latency column is the mean of the three in-process analysis measurements. It starts after
 repository preparation and does not include clone, fetch, checkout, or Issue retrieval time.
 
-v0.21 parses canonical Python and compact numbered traceback frames while retaining their order.
+v0.22 resolves exact relative `path.py#L...` references and immutable GitHub
+`blob/<40-character-commit>/path.py#L...` links to their enclosing qualified symbols. Relative
+references use the indexed checkout. Immutable links load the referenced path from the local Git
+object and resolve the identity in that historical source before requiring the same identity in the
+frozen benchmark checkout. Mutable branch links, unavailable commits, ambiguous paths, and stale
+identities are skipped. This recovered `WebSocketsSansIOProtocol.handle_connect` for
+`uvicorn-nonascii-websocket-headers` and `EnvManager.get` for `poetry-empty-conda-prefix`. Across
+the 33 labeled cases, Symbol Recall@1/5/10/20 is `0.2879/0.4848/0.5152/0.6212`, with MRR `0.4252`.
+All 50 candidate-file lists were unchanged from v0.21; 47 symbol lists were unchanged, and no
+labeled symbol regressed.
+
+The retained v0.21 policy parses canonical Python and compact numbered traceback frames while
+retaining their order.
 A frame can select a function only when the path resolves to one repository file and the function
 name resolves to one symbol in that file; the deepest such frame wins. Installed paths may omit a
 confirmed `src`/`lib` layout prefix only when the stripped suffix is unique. This recovered
-`Executor._create_directory_url_reference` for `poetry-relative-directory-url`. Across the 33
-labeled cases, Symbol Recall@1/5/10/20 is `0.2576/0.4545/0.4848/0.5909`, with MRR `0.3645`.
-All 50 candidate-file lists were unchanged from v0.20; 47 symbol lists were unchanged, and no
-labeled symbol regressed.
+`Executor._create_directory_url_reference` for `poetry-relative-directory-url`.
 
 The retained v0.20 baseline records safe module-level import bindings and follows one unique
 package re-export hop from an Issue-referenced source path. The facade must be `__init__.py`; seed,
@@ -82,7 +91,7 @@ Two authorized OpenCode `deepseek-v4-flash-free` runs reranked the earlier v0.13
 Top-20 candidate pool. The protocol sends no grammar-constrained response format and accepts
 exactly one plain `RANK:` line containing at most three known evidence IDs. All cases, including
 any fallback, remain in the metric denominator. These results are not yet paired with the current
-v0.21 output.
+v0.22 output.
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid ranks |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -107,6 +116,9 @@ On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.22-source-lines-50-cases-run1.json`
+- `benchmarks/results/deterministic-v0.22-source-lines-50-cases-run2.json`
+- `benchmarks/results/deterministic-v0.22-source-lines-50-cases-run3.json`
 - `benchmarks/results/deterministic-v0.21-traceback-symbols-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.21-traceback-symbols-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.21-traceback-symbols-50-cases-run3.json`
@@ -154,7 +166,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 - The suite is not a balanced population sample: 16 of the 18 newest Issues are from 2026.
 - Only 11/50 cases have multi-file production ground truth.
 - File Recall@20 is `1.0000` on this frozen suite, whose size and case distribution remain limited.
-- Symbol Recall@20 is `0.5909`, so within-file localization remains a major bottleneck.
+- Symbol Recall@20 is `0.6212`, so within-file localization remains a major bottleneck.
 - DeepSeek changed ordering in 14/50 repeated cases despite a fixed best-effort seed.
 - Full hypothesis generation has less real-project reliability evidence than rank-only reranking.
 

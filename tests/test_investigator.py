@@ -115,6 +115,38 @@ def test_extract_issue_signals_records_ordered_traceback_frames() -> None:
     ]
 
 
+def test_extract_issue_signals_records_exact_source_line_references() -> None:
+    revision = "a" * 40
+    record = issue(
+        "Source regression",
+        f"See https://github.com/acme/repo/blob/{revision}/"
+        "src/package/api.py#L42-L45.\n"
+        "Ignore https://github.com/acme/repo/blob/main/src/package/api.py#L9.\n"
+        "Ignore ../private.py#L7.\n"
+        "The runtime entry point is main.py:8.",
+    )
+
+    references = extract_issue_signals(record).source_line_references
+
+    assert [(reference.path, reference.line) for reference in references] == [
+        ("src/package/api.py", 42)
+    ]
+    assert references[0].revision == revision
+
+
+def test_source_line_references_are_bounded() -> None:
+    body = "\n".join(
+        f"src/package/module_{index}.py#L1" for index in range(12)
+    )
+
+    references = extract_issue_signals(
+        issue("Many source links", body)
+    ).source_line_references
+
+    assert len(references) == 8
+    assert references[-1].path == "src/package/module_7.py"
+
+
 def test_identifier_variants_preserve_source_term_order() -> None:
     variants = _identifier_variants("is_alt_screen")
 
@@ -1964,6 +1996,89 @@ def test_deepest_repository_traceback_frame_selects_symbol(
     ) in candidates[0].evidence
 
 
+def test_source_line_reference_selects_innermost_symbol(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "class Handler:\n"
+        "    def helper(self):\n"
+        "        return None\n\n"
+        "    def process(self):\n"
+        "        raise RuntimeError('failed')\n",
+    )
+    record = issue(
+        "Source regression",
+        "See src/package/api.py#L6.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "src/package/api.py"
+    assert candidates[0].qualified_symbol == "Handler.process"
+    assert (
+        "Issue source line points to symbol Handler.process"
+        in candidates[0].evidence
+    )
+
+
+def test_immutable_source_line_uses_referenced_revision(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/api.py",
+        "class Handler:\n"
+        "    def process(self):\n"
+        "        raise RuntimeError('failed')\n",
+    )
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-qm", "referenced"],
+        check=True,
+    )
+    revision = subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    write_source(
+        repository,
+        "src/package/api.py",
+        "class Handler:\n"
+        "    def helper(self):\n"
+        "        return None\n\n"
+        "    def process(self):\n"
+        "        raise RuntimeError('failed')\n",
+    )
+    record = issue(
+        "Source regression",
+        f"See https://github.com/acme/repo/blob/{revision}/"
+        "src/package/api.py#L3.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "Handler.process"
+    assert (
+        "Issue source line points to symbol Handler.process"
+        in candidates[0].evidence
+    )
+
+
 def test_bare_traceback_frame_does_not_disambiguate_duplicate_methods(
     tmp_path: Path,
 ) -> None:
@@ -2589,8 +2704,24 @@ def test_graph_expands_rare_issue_referenced_qualified_call_peer(
     )
 
 
-def test_traceback_frame_overrides_shared_qualified_call_symbol(
+@pytest.mark.parametrize(
+    ("location", "location_evidence"),
+    [
+        (
+            '  File "/tmp/project/src/decorators.py", line 7, '
+            "in handle_traceback\n",
+            "Traceback frame points to symbol handle_traceback",
+        ),
+        (
+            "See src/decorators.py#L7\n",
+            "Issue source line points to symbol handle_traceback",
+        ),
+    ],
+)
+def test_structured_location_overrides_shared_qualified_call_symbol(
     tmp_path: Path,
+    location: str,
+    location_evidence: str,
 ) -> None:
     repository = tmp_path / "repository"
     write_source(
@@ -2618,9 +2749,7 @@ def test_traceback_frame_overrides_shared_qualified_call_symbol(
         )
     record = issue(
         "get_func_args_dict does not support lazy annotations",
-        "The crash occurs in `inspect.signature()`.\n"
-        '  File "/tmp/project/src/decorators.py", line 8, '
-        "in handle_traceback\n",
+        "The crash occurs in `inspect.signature()`.\n" + location,
     )
 
     candidates = locate_candidates(
@@ -2635,9 +2764,7 @@ def test_traceback_frame_overrides_shared_qualified_call_symbol(
     )
 
     assert decorators.symbol == "handle_traceback"
-    assert "Traceback frame points to symbol handle_traceback" in (
-        decorators.evidence
-    )
+    assert location_evidence in decorators.evidence
 
 
 @pytest.mark.parametrize(
