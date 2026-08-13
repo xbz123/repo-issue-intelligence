@@ -30,11 +30,11 @@ PR commit. All reviewed production files exist at that commit.
 | Poetry | 3 | #10760 / #10769, #10770 / #10784, #10830 / #10917 |
 | Scrapy | 2 | #7759 / #7763, #7796 / #7818 |
 
-Three complete deterministic v0.24 evaluations produced identical candidates, symbols, and metrics
+Three complete deterministic v0.25 evaluations produced identical candidates, symbols, and metrics
 after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`, Recall@5 `0.6900`,
 Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. The 33 labeled cases
-reach Symbol Recall@1 `0.3485`, Recall@5 `0.5455`, Recall@10 `0.5758`, Recall@20 `0.6818`, and
-MRR `0.4858`. v0.17's scope-safe function-local import edges recovered Rich's `highlighter.py` at
+reach Symbol Recall@1 `0.3485`, Recall@5 `0.5455`, Recall@10 `0.5758`, Recall@20 `0.7121`, and
+MRR `0.4873`. v0.17's scope-safe function-local import edges recovered Rich's `highlighter.py` at
 rank 18. v0.18's bounded shared qualified-call evidence recovered
 `scrapy/utils/decorators.py::_warn_spider_arg` at rank 18. v0.19's bounded reverse-import evidence
 recovered `celery/worker/pidbox.py` at rank 19 without regressing an earlier Top-20 match.
@@ -48,6 +48,10 @@ v0.23's bounded, path-constrained fenced source excerpt evidence recovered Click
 50 file lists and the other 49 symbol lists remained unchanged from v0.22.
 v0.24's uniquely resolved, title-and-code-grounded constructor evidence recovered Pydantic's
 `TypeAdapter.__init__`; all file lists and the other 49 symbol lists remained unchanged from v0.23.
+v0.25's bounded adjacent owner-to-method title phrase recovered pip's
+`ConfigOptionParser.error`; all file lists and the other 49 symbol lists remained unchanged from
+v0.24. Test-source symbols, generic method terms, ambiguous matches, and blame seeds do not consume
+this signal.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs completed all 50 cases and kept
 every case in the denominator. Both returned 50/50 valid ranks with no fallback. File Recall@1 was
@@ -214,7 +218,7 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted

@@ -120,6 +120,11 @@ by the constructor docstring. A title method name or complete qualified method r
 priority. Duplicate owners, label-only class names, unrelated setup calls, and ambiguous
 constructors are skipped. Constructor evidence affects only within-file symbol selection and is
 disabled for blame selection.
+The investigator can also use an adjacent owner-to-method phrase in the Issue title as qualified
+method evidence. The owner must contribute at least two semantic terms, the method must add a
+non-owner and non-generic term, and one strongest production method must resolve within the file.
+Test-source symbols, tied matches, and generic method terms are rejected. This evidence affects only
+within-file symbol selection and is disabled for file scoring and blame selection.
 The investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
