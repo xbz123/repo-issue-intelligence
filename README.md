@@ -137,7 +137,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.23-source-snippets-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run1.json
 
 LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
@@ -276,10 +276,18 @@ targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issu
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.23 runs completed 50/50 cases and produced identical candidates,
+Three manifest-v8 deterministic v0.24 runs completed 50/50 cases and produced identical candidates,
 symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
 Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. Symbol Recall@1 is
-`0.3182`, Recall@5 `0.5152`, Recall@10 `0.5455`, Recall@20 `0.6515`, and symbol MRR `0.4555`.
+`0.3485`, Recall@5 `0.5455`, Recall@10 `0.5758`, Recall@20 `0.6818`, and symbol MRR `0.4858`.
+
+v0.24 recognizes a title-scoped constructor call only when the called class resolves to one
+qualified `__init__` target and the title has explicit construction wording or concrete semantic
+support in that constructor's docstring. A title method reference and a complete qualified method
+reference remain stronger evidence; ambiguous owners, label-only class names, and generic setup
+calls are skipped. This recovered `TypeAdapter.__init__` for
+`pydantic-typeadapter-union-typing`. All 50 candidate-file lists and the other 49 symbol lists were
+unchanged from v0.23.
 
 v0.23 recognizes bounded multi-line source excerpts in fenced Issue blocks only after a path or
 basename narrows the eligible files. The excerpt must contain 3-12 non-empty lines and 60-2,000

@@ -61,6 +61,7 @@ def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:
     )
     assert {"send_denial_response", "RuntimeError"} <= signals.identifiers
     assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.primary_identifiers
+    assert {"StreamingResponse", "BaseHTTPMiddleware"} <= signals.title_identifiers
     assert "send_denial_response" in signals.explicit_identifiers
 
 
@@ -76,6 +77,7 @@ def test_extract_issue_signals_records_called_identifiers_from_code_blocks() -> 
     assert {"view.remove_children", "remove_children"} <= (
         signals.explicit_identifiers
     )
+    assert signals.called_identifiers == ("view.remove_children",)
     assert "compose" not in signals.explicit_identifiers
     assert "accept" not in signals.explicit_identifiers
     assert "accept" not in signals.content_terms
@@ -1743,6 +1745,225 @@ def test_unique_body_symbol_reference_ranks_before_title_semantics(
     candidates = locate_candidates(record, build_repository_map(repository))
 
     assert candidates[0].qualified_symbol == "Downloader._process_response"
+
+
+def test_title_scoped_class_call_selects_unique_constructor(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "type_adapter.py",
+        "class TypeAdapter:\n"
+        "    def __init__(self, value):\n"
+        '        """Initialize the type argument."""\n'
+        "        self.value = value\n\n"
+        "    def validate_python(self, value):\n"
+        "        return value\n",
+    )
+    record = issue(
+        "`TypeAdapter` infers an Any type argument",
+        "`adapter = TypeAdapter(str | int)` then "
+        "`adapter.validate_python('value')` returns Any.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "TypeAdapter.__init__"
+    assert (
+        "Issue title and code call constructor TypeAdapter.__init__"
+        in candidates[0].evidence
+    )
+
+
+def test_body_only_class_call_does_not_override_explicit_method(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "type_adapter.py",
+        "class TypeAdapter:\n"
+        "    def __init__(self, value):\n"
+        "        self.value = value\n\n"
+        "    def validate_python(self, value):\n"
+        "        return value\n",
+    )
+    record = issue(
+        "Validation returns the wrong value",
+        "`adapter = TypeAdapter(str)` then "
+        "`adapter.validate_python('value')` fails.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "TypeAdapter.validate_python"
+    assert not any(
+        evidence.startswith("Issue title and code call constructor ")
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_class_call_without_constructor_semantics_is_not_direct_evidence(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "client.py",
+        "class Client:\n"
+        "    def __init__(self):\n"
+        '        """Create the client."""\n'
+        "        self.ready = True\n\n"
+        "    def request(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "`Client` request returns the wrong response",
+        "The minimal setup is `client = Client()`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue title and code call constructor ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_title_method_reference_overrides_same_owner_constructor_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "routing.py",
+        "class APIRouter:\n"
+        "    def __init__(self):\n"
+        "        self.routes = []\n\n"
+        "    def include_router(self, router):\n"
+        "        self.routes.extend(router.routes)\n",
+    )
+    record = issue(
+        "`APIRouter` loses data through `include_router`",
+        "```python\n"
+        "router = APIRouter()\n"
+        "app.include_router(router)\n"
+        "```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "APIRouter.include_router"
+    assert not any(
+        evidence.startswith("Issue title and code call constructor ")
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_qualified_method_reference_overrides_inferred_constructor(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "type_adapter.py",
+        "class TypeAdapter:\n"
+        "    def __init__(self, value):\n"
+        "        self.value = value\n\n"
+        "    def validate_python(self, value):\n"
+        "        return value\n",
+    )
+    record = issue(
+        "`TypeAdapter` produces an invalid result",
+        "`TypeAdapter(str)` then "
+        "`TypeAdapter.validate_python(adapter, value)` fails.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "TypeAdapter.validate_python"
+
+
+def test_ambiguous_class_call_does_not_select_constructors(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    source = (
+        "class TypeAdapter:\n"
+        "    def __init__(self, value):\n"
+        "        self.value = value\n"
+    )
+    write_source(repository, "first.py", source)
+    write_source(repository, "second.py", source)
+    record = issue(
+        "`TypeAdapter` construction fails",
+        "The reproduction calls `TypeAdapter(value)`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue title and code call constructor ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_label_only_class_reference_does_not_select_constructor(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "type_adapter.py",
+        "class TypeAdapter:\n"
+        "    def __init__(self, value):\n"
+        "        self.value = value\n\n"
+        "    def validate_python(self, value):\n"
+        "        return value\n",
+    )
+    record = issue(
+        "Validation returns the wrong value",
+        "`adapter = TypeAdapter(str)` then "
+        "`adapter.validate_python('value')` fails.",
+    ).model_copy(update={"labels": ["TypeAdapter"]})
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "TypeAdapter.validate_python"
+    assert not any(
+        evidence.startswith("Issue title and code call constructor ")
+        for evidence in candidates[0].evidence
+    )
+
+
+def test_constructor_overloads_in_one_owner_resolve_as_one_target(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "type_adapter.py",
+        "class TypeAdapter:\n"
+        "    def __init__(self, value: str):\n"
+        "        self.value = value\n\n"
+        "    def __init__(self, value: int):\n"
+        "        self.value = value\n",
+    )
+    record = issue(
+        "`TypeAdapter` construction fails",
+        "The reproduction calls `TypeAdapter(value)`.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == "TypeAdapter.__init__"
+    assert (
+        "Issue title and code call constructor TypeAdapter.__init__"
+        in candidates[0].evidence
+    )
 
 
 def test_short_api_identifier_does_not_override_symbol_semantics(

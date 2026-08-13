@@ -166,6 +166,7 @@ BLAME_FILE_LIMIT = 20
 SYMBOL_EVIDENCE_PREFIXES = (
     "Symbol ",
     "Issue references symbol ",
+    "Issue title and code call constructor ",
     "Traceback frame points to symbol ",
     "Issue source line points to symbol ",
     "Issue source snippet matches symbol ",
@@ -212,8 +213,10 @@ class IssueSignals:
     title_terms: frozenset[str]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
+    title_identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
     explicit_identifiers: frozenset[str]
+    called_identifiers: tuple[str, ...]
     identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
     traceback_frames: tuple[TracebackFrame, ...]
@@ -235,6 +238,7 @@ class SymbolMatch:
     unscoped_dotted_identifier_match: bool
     qualified_component_match: bool
     qualified_identifier_match: bool
+    constructor_call_index: int | None
     traceback_frame_index: int | None
     source_line_reference_index: int | None
     source_snippet_index: int | None
@@ -309,6 +313,27 @@ def _extract_explicit_identifiers(text: str) -> set[str]:
         ):
             identifiers.add(identifier)
     return identifiers
+
+
+def _extract_called_identifiers(text: str) -> tuple[str, ...]:
+    positioned_regions = [
+        (match.start(1), match.group(1))
+        for pattern in (CODE_SPAN_PATTERN, FENCED_CODE_PATTERN)
+        for match in pattern.finditer(text)
+    ]
+    positioned_calls: list[tuple[int, str]] = []
+    for region_start, region in sorted(positioned_regions):
+        for match in CALLED_IDENTIFIER_PATTERN.finditer(region):
+            prefix = region[max(0, match.start() - 12) : match.start()]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            positioned_calls.append(
+                (region_start + match.start(), match.group(1))
+            )
+    return tuple(
+        identifier
+        for _, identifier in sorted(positioned_calls)
+    )
 
 
 def _extract_identifiers(text: str) -> set[str]:
@@ -462,8 +487,10 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         title_terms=frozenset(_terms(issue.title)),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
+        title_identifiers=frozenset(_extract_identifiers(issue.title)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         explicit_identifiers=frozenset(explicit_identifiers),
+        called_identifiers=_extract_called_identifiers(text),
         identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
         traceback_frames=_extract_traceback_frames(issue.body),
@@ -504,6 +531,7 @@ def _match_symbol(
     signals: IssueSignals,
     unique_symbol_names: frozenset[str],
     path_scoped: bool,
+    constructor_call_index: int | None = None,
     traceback_frame_index: int | None = None,
     source_line_reference_index: int | None = None,
     source_snippet_index: int | None = None,
@@ -615,6 +643,7 @@ def _match_symbol(
             for identifier in source_scoped_identifiers
         ),
         qualified_identifier_match=qualified_identifier_match,
+        constructor_call_index=constructor_call_index,
         traceback_frame_index=traceback_frame_index,
         source_line_reference_index=source_line_reference_index,
         source_snippet_index=source_snippet_index,
@@ -630,6 +659,7 @@ def _select_symbol(
     use_traceback_frames: bool = True,
     use_source_line_references: bool = True,
     use_source_snippets: bool = True,
+    use_constructor_calls: bool = True,
 ) -> SymbolMatch | None:
     if not matches:
         return None
@@ -650,6 +680,10 @@ def _select_symbol(
             and match.source_line_reference_index is not None
         )
         or (use_source_snippets and match.source_snippet_index is not None)
+        or (
+            use_constructor_calls
+            and match.constructor_call_index is not None
+        )
     ]
     if directly_referenced:
         return max(
@@ -676,6 +710,13 @@ def _select_symbol(
                     else -1_000_000
                 ),
                 match.qualified_identifier_match,
+                use_constructor_calls
+                and match.constructor_call_index is not None,
+                (
+                    -(match.constructor_call_index or 1_000_000)
+                    if use_constructor_calls
+                    else -1_000_000
+                ),
                 match.identifier_mention_count,
                 match.explicit_identifier_match,
                 match.scoped_identifier_match,
@@ -869,6 +910,8 @@ def _symbol_evidence(
         and not match.unscoped_explicit_identifier_match
     ):
         evidence.append(f"Issue references symbol {label}")
+    if match.constructor_call_index is not None:
+        evidence.append(f"Issue title and code call constructor {label}")
     if match.traceback_frame_index is not None:
         evidence.append(f"Traceback frame points to symbol {label}")
     if match.source_line_reference_index is not None:
@@ -1021,6 +1064,98 @@ def _traceback_symbol_positions(
         identity = next(iter(matching_identities))
         positions[identity] = index
     return positions
+
+
+def _title_constructor_positions_by_path(
+    files: list[FileRecord],
+    signals: IssueSignals,
+) -> dict[str, dict[str, int]]:
+    if not signals.called_identifiers or not signals.title_identifiers:
+        return {}
+
+    constructors: set[tuple[str, str, str]] = set()
+    constructor_terms: dict[tuple[str, str, str], set[str]] = {}
+    method_names_by_owner: dict[tuple[str, str], set[str]] = {}
+    for file in files:
+        for symbol in file.symbols:
+            identity = symbol.qualified_name or symbol.name
+            if (
+                symbol.kind != "function"
+                or "." not in identity
+            ):
+                continue
+            owner = identity.rsplit(".", maxsplit=1)[0]
+            method_names_by_owner.setdefault(
+                (file.path, owner),
+                set(),
+            ).add(symbol.name)
+            if symbol.name == "__init__":
+                target = (file.path, identity, owner)
+                constructors.add(target)
+                constructor_terms.setdefault(target, set()).update(
+                    _semantic_terms(_terms(symbol.docstring or ""))
+                )
+
+    primary_method_names = {
+        identifier
+        for identifier in signals.title_identifiers
+        if "." not in identifier
+    }
+
+    constructors = {
+        (path, identity, owner)
+        for path, identity, owner in constructors
+        if not (
+            primary_method_names
+            & (method_names_by_owner[(path, owner)] - {"__init__"})
+        )
+        if (
+            any(
+                term.startswith(("construct", "initializ", "instantiat"))
+                for term in (
+                    _semantic_terms(signals.title_terms)
+                    - _semantic_terms(_terms(owner))
+                )
+            )
+            or any(
+                len(term) >= 5
+                for term in (
+                    _semantic_terms(signals.title_terms)
+                    - _semantic_terms(_terms(owner))
+                )
+                & constructor_terms[(path, identity, owner)]
+            )
+        )
+    }
+
+    def matches_owner(owner: str, reference: str) -> bool:
+        candidate = reference.strip("`'\"()[]{}:,")
+        owner_name = owner.rsplit(".", maxsplit=1)[-1]
+        return (
+            _matches_qualified_identity(owner, candidate)
+            or candidate == owner_name
+            or candidate.endswith(f".{owner_name}")
+        )
+
+    positions_by_path: dict[str, dict[str, int]] = {}
+    for index, called_identifier in enumerate(
+        signals.called_identifiers,
+        start=1,
+    ):
+        matches = {
+            (path, identity)
+            for path, identity, owner in constructors
+            if matches_owner(owner, called_identifier)
+            and any(
+                matches_owner(owner, primary_identifier)
+                for primary_identifier in signals.title_identifiers
+            )
+        }
+        if len(matches) != 1:
+            continue
+        path, identity = next(iter(matches))
+        positions_by_path.setdefault(path, {}).setdefault(identity, index)
+    return positions_by_path
 
 
 def _source_line_symbol_positions(
@@ -2241,6 +2376,10 @@ def locate_candidates(
         signals.paths,
         signals.source_snippets,
     )
+    constructor_positions_by_path = _title_constructor_positions_by_path(
+        repository_map.files,
+        signals,
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
@@ -2275,12 +2414,19 @@ def locate_candidates(
             file.path,
             {},
         )
+        constructor_symbol_positions = constructor_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 unique_symbol_names,
                 file.path in symbol_scoped_paths,
+                constructor_call_index=constructor_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
+                ),
                 traceback_frame_index=traceback_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),
@@ -2319,6 +2465,7 @@ def locate_candidates(
             use_traceback_frames=False,
             use_source_line_references=False,
             use_source_snippets=False,
+            use_constructor_calls=False,
         )
         selected_match = _select_symbol(
             symbol_matches,
@@ -2676,12 +2823,19 @@ def locate_candidates(
             file.path,
             {},
         )
+        constructor_symbol_positions = constructor_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 candidate_unique_symbol_names,
                 path in symbol_scoped_paths,
+                constructor_call_index=constructor_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
+                ),
                 traceback_frame_index=traceback_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),
