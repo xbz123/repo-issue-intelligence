@@ -15,7 +15,7 @@ from repo_issue_intelligence.investigator import (
     investigate,
     locate_candidates,
 )
-from repo_issue_intelligence.models import IssueRecord
+from repo_issue_intelligence.models import FileRecord, IssueRecord
 from repo_issue_intelligence.repository_index import build_repository_map
 
 
@@ -529,6 +529,9 @@ def test_repository_map_records_local_imports_and_called_symbols(
     assert api.local_import_symbols == {
         "src/package/parser.py": ["parse_request"]
     }
+    assert api.module_import_symbols == {
+        "src/package/parser.py": ["parse_request"]
+    }
     assert "parse_request" in api.calls
     assert api.name_calls == ["parse_request"]
     assert api.symbol_calls == {"handle_request": ["parse_request"]}
@@ -547,6 +550,17 @@ def test_repository_map_records_local_imports_and_called_symbols(
         }
     ]
     assert "parse_request" in api.references
+
+
+def test_file_record_defaults_module_import_symbols_for_legacy_maps() -> None:
+    record = FileRecord.model_validate(
+        {
+            "path": "src/package/api.py",
+            "language": "Python",
+        }
+    )
+
+    assert record.module_import_symbols == {}
 
 
 def test_repository_map_records_unshadowed_qualified_module_calls(
@@ -730,6 +744,16 @@ def test_reverse_import_relation_can_expand_but_cannot_rerank() -> None:
 
     assert _rerank_relation_bonus(5.0, evidence) == 0
     assert _expansion_relation_bonus(5.0, evidence) == 5.0
+
+
+def test_reexport_relation_can_expand_but_cannot_rerank() -> None:
+    evidence = (
+        "Issue-referenced source imports re-exported symbols defined here: "
+        "RuntimeManager via src/package/facade/__init__.py"
+    )
+
+    assert _rerank_relation_bonus(7.0, evidence) == 0
+    assert _expansion_relation_bonus(7.0, evidence) == 7.0
 
 
 @pytest.mark.parametrize(
@@ -3103,6 +3127,251 @@ def test_locate_candidates_uses_non_call_import_references(tmp_path: Path) -> No
     assert (
         "Related source references imported symbols defined here: ResultType"
         in result.evidence
+    )
+
+
+def test_locate_candidates_follows_unique_package_reexport_from_referenced_path(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/runtime/reported.py",
+        "from package.runtime.facade import RuntimeManager\n\n"
+        "def load_runtime():\n"
+        "    return RuntimeManager.find_all()\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/__init__.py",
+        "from package.runtime.facade.manager import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/manager.py",
+        "class RuntimeManager:\n"
+        "    @classmethod\n"
+        "    def find_all(cls):\n"
+        "        return []\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Runtime remains active after deactivation",
+            "The failing check is in src/package/runtime/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+    manager = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/runtime/facade/manager.py"
+    )
+
+    assert (
+        "Issue-referenced source imports re-exported symbols defined here: "
+        "RuntimeManager via src/package/runtime/facade/__init__.py"
+        in manager.evidence
+    )
+
+
+def test_locate_candidates_skips_ambiguous_package_reexports(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/runtime/reported.py",
+        "from package.runtime.facade import RuntimeManager\n\n"
+        "manager = RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/__init__.py",
+        "from package.runtime.facade.first import RuntimeManager\n"
+        "from package.runtime.facade.second import RuntimeManager\n",
+    )
+    for module in ("first", "second"):
+        write_source(
+            repository,
+            f"src/package/runtime/facade/{module}.py",
+            "class RuntimeManager:\n    pass\n",
+        )
+
+    candidates = locate_candidates(
+        issue(
+            "Runtime remains active after deactivation",
+            "The failing check is in src/package/runtime/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith(
+            "Issue-referenced source imports re-exported symbols defined here: "
+        )
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_locate_candidates_skips_duplicate_reexport_target_definitions(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/runtime/reported.py",
+        "from package.runtime.facade import RuntimeManager\n\n"
+        "manager = RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/__init__.py",
+        "from package.runtime.facade.manager import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/manager.py",
+        "class RuntimeManager:\n    pass\n\n"
+        "class RuntimeManager:\n    pass\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Runtime remains active after deactivation",
+            "The failing check is in src/package/runtime/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith(
+            "Issue-referenced source imports re-exported symbols defined here: "
+        )
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_locate_candidates_skips_conditional_package_reexports(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/runtime/reported.py",
+        "from package.runtime.facade import RuntimeManager\n\n"
+        "manager = RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/__init__.py",
+        "from typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n"
+        "    from package.runtime.facade.manager import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/manager.py",
+        "class RuntimeManager:\n    pass\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Runtime remains active after deactivation",
+            "The failing check is in src/package/runtime/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith(
+            "Issue-referenced source imports re-exported symbols defined here: "
+        )
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_locate_candidates_skips_unused_package_reexports(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/runtime/reported.py",
+        "from package.runtime.facade import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/__init__.py",
+        "from package.runtime.facade.manager import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/facade/manager.py",
+        "class RuntimeManager:\n    pass\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Runtime remains active after deactivation",
+            "The failing check is in src/package/runtime/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith(
+            "Issue-referenced source imports re-exported symbols defined here: "
+        )
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_locate_candidates_skips_reexports_outside_referenced_subsystem(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/api/reported.py",
+        "from package.facade import RuntimeManager\n\n"
+        "manager = RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/facade/__init__.py",
+        "from package.runtime.manager import RuntimeManager\n",
+    )
+    write_source(
+        repository,
+        "src/package/runtime/manager.py",
+        "class RuntimeManager:\n    pass\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "API remains active after deactivation",
+            "The failing check is in src/package/api/reported.py.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert not any(
+        evidence.startswith(
+            "Issue-referenced source imports re-exported symbols defined here: "
+        )
+        for candidate in candidates
+        for evidence in candidate.evidence
     )
 
 

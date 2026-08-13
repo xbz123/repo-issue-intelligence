@@ -91,6 +91,7 @@ class _PythonMetadata:
     )
     pending_import_calls: list[_PendingImportUse] = field(default_factory=list)
     pending_import_references: list[_PendingImportUse] = field(default_factory=list)
+    module_import_bindings: list[_PendingImportUse] = field(default_factory=list)
 
 
 def _import_from_bindings(
@@ -570,6 +571,16 @@ def _python_metadata(
         for child in ast.iter_child_nodes(parent)
     }
     module_bindings = _module_bindings(tree, root_table)
+    metadata.module_import_bindings = [
+        _PendingImportUse(
+            caller=None,
+            local_name=local_name,
+            target=binding.target,
+            target_symbol=binding.target_symbol,
+        )
+        for local_name, binding in module_bindings.items()
+        if binding.kind == "import"
+    ]
     tables = _symbol_tables(root_table)
     function_definitions: Counter[str] = Counter()
     non_overload_definitions: Counter[str] = Counter()
@@ -894,6 +905,7 @@ def _resolve_python_local_imports(
     files: list[FileRecord],
     pending_calls: dict[str, list[_PendingImportUse]],
     pending_references: dict[str, list[_PendingImportUse]],
+    module_import_bindings: dict[str, list[_PendingImportUse]],
 ) -> None:
     module_paths: dict[str, set[str]] = {}
     module_by_path: dict[str, tuple[str, str]] = {}
@@ -929,6 +941,28 @@ def _resolve_python_local_imports(
             path: sorted(symbols)
             for path, symbols in sorted(imported_symbols.items())
             if path != file.path
+        }
+        safe_import_symbols: dict[str, set[str]] = {}
+        for binding in module_import_bindings.get(file.path, []):
+            target_paths, target_symbol = _resolve_python_import(
+                binding.target,
+                package,
+                module_paths,
+            )
+            if (
+                len(target_paths) != 1
+                or target_symbol is None
+                or target_symbol != binding.target_symbol
+            ):
+                continue
+            target_path = next(iter(target_paths))
+            if target_path != file.path:
+                safe_import_symbols.setdefault(target_path, set()).add(
+                    target_symbol
+                )
+        file.module_import_symbols = {
+            path: sorted(symbols)
+            for path, symbols in sorted(safe_import_symbols.items())
         }
 
         resolved_call_keys = {
@@ -1047,6 +1081,7 @@ def build_repository_map(
     test_directories: set[str] = set()
     pending_calls: dict[str, list[_PendingImportUse]] = {}
     pending_references: dict[str, list[_PendingImportUse]] = {}
+    module_import_bindings: dict[str, list[_PendingImportUse]] = {}
     for path, relative in _repository_files(root, included_files):
         filename = path.name
         for index, part in enumerate(relative.parts[:-1]):
@@ -1066,6 +1101,9 @@ def build_repository_map(
             pending_calls[str(relative)] = metadata.pending_import_calls
             pending_references[str(relative)] = (
                 metadata.pending_import_references
+            )
+            module_import_bindings[str(relative)] = (
+                metadata.module_import_bindings
             )
             for imported in metadata.imports:
                 framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
@@ -1089,6 +1127,7 @@ def build_repository_map(
         files,
         pending_calls,
         pending_references,
+        module_import_bindings,
     )
     return RepositoryMap(
         root=str(root),

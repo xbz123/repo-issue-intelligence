@@ -8,21 +8,31 @@ symbol targets across 33 cases. Every case embeds the complete Issue snapshot, m
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.19 runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic v0.20 runs finished 50/50 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9900 | 0.6038 | 5,065 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 0.9706 | 0.6159 | 7,756 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,009 ms |
-| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,515 ms |
+| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 1.0000 | 0.6038 | 5,194 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6159 | 7,942 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,045 ms |
+| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,646 ms |
 
 The latency column is the mean of the three in-process analysis measurements. It starts after
 repository preparation and does not include clone, fetch, checkout, or Issue retrieval time.
 
-v0.19 adds a bounded reverse-import expansion for production files inside a title-matching
-subsystem. The imported source module must contain at least two functions sharing the same
+v0.20 records safe module-level import bindings and follows one unique package re-export hop from
+an Issue-referenced source path. The facade must be `__init__.py`; seed, facade, and target must be
+production files; seed and target must share a non-generic package subsystem; and both the binding
+and target definition must resolve uniquely. The seed must actually read the imported name. Unused,
+conditional, shadowed, ambiguous, auxiliary, and cross-subsystem routes are skipped. The relation
+can expand and protect a tail candidate but cannot
+rerank an existing shortlist. It recovered `src/poetry/utils/env/python/manager.py` at rank 17 for
+`poetry-empty-conda-prefix`, raising File Recall@20 and candidate-pool recall from `0.9900` to
+`1.0000`. The other 49 candidate and symbol lists were unchanged, and no earlier cutoff regressed.
+
+The retained v0.19 baseline adds a bounded reverse-import expansion for production files inside a
+title-matching subsystem. The imported source module must contain at least two functions sharing the same
 non-path title term, and it must have one to three in-scope importers. Package roots, tests, docs,
 examples, and scripts cannot supply scope. This recovered `celery/worker/pidbox.py` at rank 19 for
 `celery-pidbox-reset-fd-leak`, raising File Recall@20 from `0.9700` to `0.9900`; no earlier
@@ -61,7 +71,7 @@ lists remained unchanged.
 Two authorized OpenCode `deepseek-v4-flash-free` runs reranked the earlier v0.13 deterministic
 Top-20 candidate pool. The protocol sends no grammar-constrained response format and accepts
 exactly one plain `RANK:` line containing at most three known evidence IDs. All cases, including
-any fallback, remain in the metric denominator. These results are not yet paired with v0.19.
+any fallback, remain in the metric denominator. These results are not yet paired with v0.20.
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid ranks |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -86,6 +96,9 @@ On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.20-package-reexports-50-cases-run1.json`
+- `benchmarks/results/deterministic-v0.20-package-reexports-50-cases-run2.json`
+- `benchmarks/results/deterministic-v0.20-package-reexports-50-cases-run3.json`
 - `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.19-bounded-reverse-imports-50-cases-run3.json`
@@ -101,14 +114,10 @@ Machine-readable artifacts:
 - `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json`
 - `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`
 
-## Candidate-generation failures
+## Candidate-generation coverage
 
-One case still misses a reviewed production file at Top-20:
-
-- Poetry: `utils/env/python/manager.py`
-
-Reranking cannot recover files outside the deterministic candidate pool. These misses should be
-addressed with retrieval evidence rather than prompt changes.
+All 62 reviewed production-file targets appear in the deterministic Top-20 for this frozen suite.
+This is benchmark coverage, not proof that unseen repositories or issues have perfect recall.
 
 ## Previous 32-case deterministic result
 
@@ -130,7 +139,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 - The suite is not a balanced population sample: 16 of the 18 newest Issues are from 2026.
 - Only 11/50 cases have multi-file production ground truth.
-- File Recall@20 remains bounded at `0.9900`; one case contains an unretrieved fix file.
+- File Recall@20 is `1.0000` on this frozen suite, whose size and case distribution remain limited.
 - Symbol Recall@20 is `0.5606`, so within-file localization remains a major bottleneck.
 - DeepSeek changed ordering in 14/50 repeated cases despite a fixed best-effort seed.
 - Full hypothesis generation has less real-project reliability evidence than rank-only reranking.
@@ -139,7 +148,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Diagnose Poetry's remaining Top-20 miss before expanding prompts.
+3. Expand multi-file and older-issue coverage before treating Top-20 saturation as general evidence.
 4. Expand to older and multi-file Issue/Fix-PR cases while preserving manual ground-truth review.
 5. Repeat the 50-case rank-only run after retrieval changes and report mean, variation, fallback
    taxonomy, valid-response MRR, and overall MRR.
