@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import ast
+import io
 import re
 import subprocess
+import tokenize
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
@@ -126,6 +128,11 @@ PLAIN_SOURCE_LINE_REFERENCE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SOURCE_LINE_REFERENCE_LIMIT = 8
+SOURCE_SNIPPET_LIMIT = 4
+SOURCE_SNIPPET_MIN_NONEMPTY_LINES = 3
+SOURCE_SNIPPET_MAX_NONEMPTY_LINES = 12
+SOURCE_SNIPPET_MIN_CHARACTERS = 60
+SOURCE_SNIPPET_MAX_CHARACTERS = 2_000
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
 GRAPH_BONUS_LIMIT = 10.0
@@ -161,6 +168,7 @@ SYMBOL_EVIDENCE_PREFIXES = (
     "Issue references symbol ",
     "Traceback frame points to symbol ",
     "Issue source line points to symbol ",
+    "Issue source snippet matches symbol ",
     "Issue title strongly matches symbol ",
     "Issue references owning symbol ",
     "Issue-matching symbols call ",
@@ -210,6 +218,7 @@ class IssueSignals:
     paths: frozenset[str]
     traceback_frames: tuple[TracebackFrame, ...]
     source_line_references: tuple[SourceLineReference, ...]
+    source_snippets: tuple[tuple[str, ...], ...]
 
 
 @dataclass(frozen=True)
@@ -228,6 +237,7 @@ class SymbolMatch:
     qualified_identifier_match: bool
     traceback_frame_index: int | None
     source_line_reference_index: int | None
+    source_snippet_index: int | None
     semantic_terms: frozenset[str]
 
 
@@ -402,6 +412,31 @@ def _safe_source_line_path(path: str) -> bool:
     return bool(parts) and all(part not in {".", ".."} for part in parts)
 
 
+def _extract_source_snippets(text: str) -> tuple[tuple[str, ...], ...]:
+    snippets: list[tuple[str, ...]] = []
+    for region in FENCED_CODE_PATTERN.findall(text):
+        lines = [line.strip() for line in region.splitlines()]
+        while lines and not lines[0]:
+            lines.pop(0)
+        while lines and not lines[-1]:
+            lines.pop()
+        nonempty_lines = [line for line in lines if line]
+        character_count = sum(len(line) for line in nonempty_lines)
+        if not (
+            SOURCE_SNIPPET_MIN_NONEMPTY_LINES
+            <= len(nonempty_lines)
+            <= SOURCE_SNIPPET_MAX_NONEMPTY_LINES
+            and SOURCE_SNIPPET_MIN_CHARACTERS
+            <= character_count
+            <= SOURCE_SNIPPET_MAX_CHARACTERS
+        ):
+            continue
+        snippets.append(tuple(lines))
+        if len(snippets) == SOURCE_SNIPPET_LIMIT:
+            break
+    return tuple(snippets)
+
+
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
@@ -433,6 +468,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         paths=frozenset(paths),
         traceback_frames=_extract_traceback_frames(issue.body),
         source_line_references=_extract_source_line_references(issue.body),
+        source_snippets=_extract_source_snippets(issue.body),
     )
 
 
@@ -470,6 +506,7 @@ def _match_symbol(
     path_scoped: bool,
     traceback_frame_index: int | None = None,
     source_line_reference_index: int | None = None,
+    source_snippet_index: int | None = None,
 ) -> SymbolMatch:
     identity = symbol.qualified_name or symbol.name
     local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
@@ -580,6 +617,7 @@ def _match_symbol(
         qualified_identifier_match=qualified_identifier_match,
         traceback_frame_index=traceback_frame_index,
         source_line_reference_index=source_line_reference_index,
+        source_snippet_index=source_snippet_index,
         semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
@@ -591,6 +629,7 @@ def _select_symbol(
     *,
     use_traceback_frames: bool = True,
     use_source_line_references: bool = True,
+    use_source_snippets: bool = True,
 ) -> SymbolMatch | None:
     if not matches:
         return None
@@ -610,6 +649,7 @@ def _select_symbol(
             use_source_line_references
             and match.source_line_reference_index is not None
         )
+        or (use_source_snippets and match.source_snippet_index is not None)
     ]
     if directly_referenced:
         return max(
@@ -627,6 +667,12 @@ def _select_symbol(
                 (
                     -(match.source_line_reference_index or 1_000_000)
                     if use_source_line_references
+                    else -1_000_000
+                ),
+                use_source_snippets and match.source_snippet_index is not None,
+                (
+                    -(match.source_snippet_index or 1_000_000)
+                    if use_source_snippets
                     else -1_000_000
                 ),
                 match.qualified_identifier_match,
@@ -827,6 +873,8 @@ def _symbol_evidence(
         evidence.append(f"Traceback frame points to symbol {label}")
     if match.source_line_reference_index is not None:
         evidence.append(f"Issue source line points to symbol {label}")
+    if match.source_snippet_index is not None:
+        evidence.append(f"Issue source snippet matches symbol {label}")
     if match.primary_identifier_match:
         evidence.append(f"Issue title strongly matches symbol {label}")
     if match.qualified_component_match:
@@ -1113,6 +1161,145 @@ def _source_line_positions_by_path(
         path_positions = positions_by_path.setdefault(path, {})
         for identity, position in positions.items():
             path_positions.setdefault(identity, position)
+    return positions_by_path
+
+
+def _source_snippet_ranges(
+    root: Path,
+    relative_path: str,
+    snippets: tuple[tuple[str, ...], ...],
+) -> tuple[tuple[int, int, int], ...]:
+    path = (root / relative_path).resolve()
+    if not path.is_relative_to(root) or not path.is_file():
+        return ()
+    try:
+        source = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ()
+    if "\x00" in source or len(source) > 1_000_000:
+        return ()
+
+    source_lines = _normalize_source_snippet_lines(source.splitlines())
+    ranges: list[tuple[int, int, int]] = []
+    for index, snippet in enumerate(snippets, start=1):
+        normalized_snippet = _normalize_source_snippet_lines(snippet)
+        nonempty_lines = [line for line in normalized_snippet if line]
+        if (
+            len(nonempty_lines) < SOURCE_SNIPPET_MIN_NONEMPTY_LINES
+            or sum(len(line) for line in nonempty_lines)
+            < SOURCE_SNIPPET_MIN_CHARACTERS
+            or len(normalized_snippet) > len(source_lines)
+        ):
+            continue
+        starts = [
+            start
+            for start in range(len(source_lines) - len(normalized_snippet) + 1)
+            if source_lines[start : start + len(normalized_snippet)]
+            == normalized_snippet
+        ]
+        if len(starts) != 1:
+            continue
+        start = starts[0] + 1
+        ranges.append((index, start, start + len(normalized_snippet) - 1))
+    return tuple(ranges)
+
+
+def _normalize_source_snippet_lines(
+    lines: tuple[str, ...] | list[str],
+) -> tuple[str, ...]:
+    raw_lines = tuple(lines)
+    comment_columns: dict[int, int] = {}
+    tokens = tokenize.generate_tokens(
+        io.StringIO("\n".join(raw_lines) + "\n").readline
+    )
+    try:
+        for token in tokens:
+            if token.type == tokenize.COMMENT:
+                comment_columns.setdefault(token.start[0], token.start[1])
+    except (IndentationError, tokenize.TokenError):
+        pass
+    return tuple(
+        (
+            line[: comment_columns[index]].strip()
+            if index in comment_columns
+            else line.strip()
+        )
+        for index, line in enumerate(raw_lines, start=1)
+    )
+
+
+def _source_snippet_symbol_positions(
+    symbols: list[SymbolRecord],
+    ranges: tuple[tuple[int, int, int], ...],
+) -> dict[str, int]:
+    positions: dict[str, int] = {}
+    for index, start, end in ranges:
+        containing_symbols = [
+            symbol
+            for symbol in symbols
+            if symbol.end_line is not None
+            and symbol.line <= start
+            and end <= symbol.end_line
+        ]
+        if not containing_symbols:
+            continue
+        smallest_span = min(
+            (symbol.end_line or symbol.line) - symbol.line
+            for symbol in containing_symbols
+        )
+        matching_symbols = [
+            symbol
+            for symbol in containing_symbols
+            if (symbol.end_line or symbol.line) - symbol.line == smallest_span
+        ]
+        if len(matching_symbols) != 1:
+            continue
+        identity = (
+            matching_symbols[0].qualified_name or matching_symbols[0].name
+        )
+        if (
+            sum(
+                (symbol.qualified_name or symbol.name) == identity
+                for symbol in symbols
+            )
+            != 1
+        ):
+            continue
+        positions.setdefault(identity, index)
+    return positions
+
+
+def _source_snippet_positions_by_path(
+    root: Path,
+    files: list[FileRecord],
+    references: frozenset[str],
+    snippets: tuple[tuple[str, ...], ...],
+) -> dict[str, dict[str, int]]:
+    if not snippets or not references:
+        return {}
+    referenced_files = [
+        file for file in files if _path_is_referenced(file.path, references)
+    ]
+    ranges_by_snippet: dict[int, list[tuple[FileRecord, int, int]]] = {}
+    for file in referenced_files:
+        for index, start, end in _source_snippet_ranges(
+            root, file.path, snippets
+        ):
+            ranges_by_snippet.setdefault(index, []).append(
+                (file, start, end)
+            )
+
+    positions_by_path: dict[str, dict[str, int]] = {}
+    for index, matches in ranges_by_snippet.items():
+        if len(matches) != 1:
+            continue
+        file, start, end = matches[0]
+        positions = _source_snippet_symbol_positions(
+            file.symbols,
+            ((index, start, end),),
+        )
+        if positions:
+            positions_by_path[file.path] = positions
     return positions_by_path
 
 
@@ -2048,6 +2235,12 @@ def locate_candidates(
         repository_map.files,
         signals.source_line_references,
     )
+    source_snippet_positions_by_path = _source_snippet_positions_by_path(
+        root,
+        repository_map.files,
+        signals.paths,
+        signals.source_snippets,
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
@@ -2078,6 +2271,10 @@ def locate_candidates(
             file.path,
             {},
         )
+        source_snippet_symbol_positions = source_snippet_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
@@ -2091,6 +2288,9 @@ def locate_candidates(
                     source_line_symbol_positions.get(
                         symbol.qualified_name or symbol.name
                     )
+                ),
+                source_snippet_index=source_snippet_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
                 ),
             )
             for symbol in file.symbols
@@ -2118,6 +2318,7 @@ def locate_candidates(
             {},
             use_traceback_frames=False,
             use_source_line_references=False,
+            use_source_snippets=False,
         )
         selected_match = _select_symbol(
             symbol_matches,
@@ -2471,6 +2672,10 @@ def locate_candidates(
             file.path,
             {},
         )
+        source_snippet_symbol_positions = source_snippet_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
@@ -2484,6 +2689,9 @@ def locate_candidates(
                     source_line_symbol_positions.get(
                         symbol.qualified_name or symbol.name
                     )
+                ),
+                source_snippet_index=source_snippet_symbol_positions.get(
+                    symbol.qualified_name or symbol.name
                 ),
             )
             for symbol in file.symbols
@@ -2503,6 +2711,7 @@ def locate_candidates(
             or (
                 selected_match.traceback_frame_index is None
                 and selected_match.source_line_reference_index is None
+                and selected_match.source_snippet_index is None
             )
         ):
             selected_match = _shared_qualified_call_match(

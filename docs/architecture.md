@@ -105,7 +105,15 @@ indexed file. Mutable branch links, unavailable revisions, ambiguous paths, unpa
 source, traversal-style paths, and identities absent from the indexed checkout are skipped. At most
 the first eight valid references are evaluated. Source-line evidence affects only within-file
 symbol selection and cannot override a resolved traceback frame or change file scores. The
-investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
+investigator also accepts at most four bounded fenced source excerpts with 3-12 non-empty lines
+and 60-2,000 characters. It evaluates them only in files matching an Issue path or basename,
+ignores Python trailing-comment differences, and requires the excerpt to occur once in exactly one
+eligible file and resolve to one smallest enclosing symbol. Repeated excerpts within a file or
+across same-basename files are skipped. The source file must remain inside the repository, be valid
+UTF-8 without NUL bytes, and be at most 1 MB. Traceback and exact source-line evidence retain higher
+priority, while shared-call inference cannot override an accepted excerpt. Excerpts affect only
+within-file symbol selection, not file scores, Git history, or blame.
+The investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 
 ### Agent runtime

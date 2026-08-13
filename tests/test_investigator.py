@@ -147,6 +147,32 @@ def test_source_line_references_are_bounded() -> None:
     assert references[-1].path == "src/package/module_7.py"
 
 
+def test_extract_issue_signals_records_only_bounded_source_snippets() -> None:
+    matching_snippet = (
+        "except UsageError as e:",
+        "if hide_input:",
+        'echo(_("Error: The value you entered was invalid."), err=err)',
+        "else:",
+        'echo(_("Error: {e.message}").format(e=e), err=err)',
+        "continue",
+    )
+    oversized_snippet = "\n".join(
+        f"value_{index} = callback_{index}()" for index in range(13)
+    )
+    record = issue(
+        "Prompt error",
+        "```python\n"
+        + "\n".join(matching_snippet)
+        + "\n```\n```python\n"
+        + oversized_snippet
+        + "\n```",
+    )
+
+    snippets = extract_issue_signals(record).source_snippets
+
+    assert snippets == (matching_snippet,)
+
+
 def test_identifier_variants_preserve_source_term_order() -> None:
     variants = _identifier_variants("is_alt_screen")
 
@@ -2024,6 +2050,118 @@ def test_source_line_reference_selects_innermost_symbol(
     )
 
 
+def test_path_scoped_source_snippet_selects_enclosing_symbol(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/click/termui.py",
+        "def _build_prompt(text):\n"
+        "    return text\n\n"
+        "def prompt(text, hide_input=False, err=False):\n"
+        "    while True:\n"
+        "        try:\n"
+        "            return text\n"
+        "        except UsageError as e:\n"
+        "            if hide_input:\n"
+        '                echo(_("Error: The value you entered was invalid."), err=err)\n'
+        "            else:\n"
+        '                echo(_("Error: {e.message}").format(e=e), err=err)\n'
+        "            continue\n",
+    )
+    record = issue(
+        "Hidden prompt error",
+        "The standard message comes from termui.py.\n"
+        "```python\n"
+        "except UsageError as e:\n"
+        "    if hide_input:\n"
+        '        echo(_("Error: The value you entered was invalid."), err=err)\n'
+        "    else:\n"
+        '        echo(_("Error: {e.message}").format(e=e), err=err)  # noqa: B306\n'
+        "    continue\n"
+        "```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "src/click/termui.py"
+    assert candidates[0].symbol == "prompt"
+    assert (
+        "Issue source snippet matches symbol prompt"
+        in candidates[0].evidence
+    )
+
+
+def test_ambiguous_path_does_not_scope_source_snippet(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    snippet = (
+        "message = 'The value you entered was invalid.'\n"
+        "rendered = format_error_message(message)\n"
+        "reported_error = rendered or message\n"
+    )
+    source = (
+        "def process_hidden_error():\n"
+        + "".join(f"    {line}\n" for line in snippet.splitlines())
+    )
+    write_source(repository, "src/termui.py", source)
+    write_source(repository, "tests/termui.py", snippet)
+    record = issue(
+        "Hidden prompt error",
+        "The failure occurs in termui.py.\n"
+        "```python\n"
+        "    message = 'The value you entered was invalid.'\n"
+        "    rendered = format_error_message(message)\n"
+        "    reported_error = rendered or message\n"
+        "```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue source snippet matches symbol ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_duplicate_symbol_identity_rejects_source_snippet(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/termui.py",
+        "def process_hidden_error():\n"
+        "    initial = 'first implementation keeps the legacy error'\n"
+        "    return initial\n\n"
+        "def process_hidden_error():\n"
+        "    message = 'The value you entered was invalid.'\n"
+        "    rendered = format_error_message(message)\n"
+        "    return rendered\n",
+    )
+    record = issue(
+        "Hidden prompt error",
+        "The failure occurs in src/termui.py.\n"
+        "```python\n"
+        "def process_hidden_error():\n"
+        "    message = 'The value you entered was invalid.'\n"
+        "    rendered = format_error_message(message)\n"
+        "    return rendered\n"
+        "```",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Issue source snippet matches symbol ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
 def test_immutable_source_line_uses_referenced_revision(
     tmp_path: Path,
 ) -> None:
@@ -2708,13 +2846,22 @@ def test_graph_expands_rare_issue_referenced_qualified_call_peer(
     ("location", "location_evidence"),
     [
         (
-            '  File "/tmp/project/src/decorators.py", line 7, '
+            '  File "/tmp/project/src/decorators.py", line 8, '
             "in handle_traceback\n",
             "Traceback frame points to symbol handle_traceback",
         ),
         (
-            "See src/decorators.py#L7\n",
+            "See src/decorators.py#L8\n",
             "Issue source line points to symbol handle_traceback",
+        ),
+        (
+            "See src/decorators.py.\n"
+            "```python\n"
+            "def handle_traceback():\n"
+            '    message = "failed while inspecting the decorated function"\n'
+            "    raise RuntimeError(message)\n"
+            "```\n",
+            "Issue source snippet matches symbol handle_traceback",
         ),
     ],
 )
@@ -2738,7 +2885,8 @@ def test_structured_location_overrides_shared_qualified_call_symbol(
         "def _warn_spider_arg(func):\n"
         "    return inspect.signature(func)\n\n"
         "def handle_traceback():\n"
-        "    raise RuntimeError('failed')\n",
+        '    message = "failed while inspecting the decorated function"\n'
+        "    raise RuntimeError(message)\n",
     )
     for index in range(25):
         write_source(
