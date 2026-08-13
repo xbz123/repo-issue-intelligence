@@ -97,6 +97,14 @@ investigator also preserves ordered Python traceback frames. A frame can influen
 symbol selection only when its path resolves to one repository file and its function resolves to
 one symbol in that file; the deepest such frame wins. Installed paths can omit a confirmed
 `src`/`lib` layout prefix, but real top-level packages and ambiguous suffixes are not stripped. The
+investigator also recognizes exact relative `path.py#L...` source references and immutable GitHub
+`blob/<40-character-commit>/path.py#L...` links. Relative references use the indexed checkout;
+immutable links load that path from the referenced local Git object, resolve the enclosing
+qualified symbol in that historical source, and require the identity to remain present in the
+indexed file. Mutable branch links, unavailable revisions, ambiguous paths, unparsable historical
+source, traversal-style paths, and identities absent from the indexed checkout are skipped. At most
+the first eight valid references are evaluated. Source-line evidence affects only within-file
+symbol selection and cannot override a resolved traceback frame or change file scores. The
 investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 

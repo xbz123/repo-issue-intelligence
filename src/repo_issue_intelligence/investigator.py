@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import unicodedata
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from .models import (
     CandidateLocation,
+    FileRecord,
     Hypothesis,
     InvestigationReport,
     IssueRecord,
@@ -110,6 +112,20 @@ COMPACT_TRACEBACK_FRAME_PATTERN = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*)\s*$",
     re.MULTILINE,
 )
+IMMUTABLE_SOURCE_LINE_REFERENCE_PATTERN = re.compile(
+    r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/blob/"
+    r"(?P<revision>[0-9a-f]{40})/"
+    r"(?P<path>[A-Za-z0-9_.~%+/-]+\.py)#L(?P<line>[1-9][0-9]*)"
+    r"(?:-L[1-9][0-9]*)?",
+    re.IGNORECASE,
+)
+PLAIN_SOURCE_LINE_REFERENCE_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_./:\\-])"
+    r"(?P<path>(?:[A-Za-z0-9_.-]+[\\/])*[A-Za-z0-9_.-]+\.py)"
+    r"#L(?P<line>[1-9][0-9]*)(?:-L[1-9][0-9]*)?",
+    re.IGNORECASE,
+)
+SOURCE_LINE_REFERENCE_LIMIT = 8
 GRAPH_SEED_LIMIT = 8
 GRAPH_SEED_MIN_SCORE = 4.0
 GRAPH_BONUS_LIMIT = 10.0
@@ -144,6 +160,7 @@ SYMBOL_EVIDENCE_PREFIXES = (
     "Symbol ",
     "Issue references symbol ",
     "Traceback frame points to symbol ",
+    "Issue source line points to symbol ",
     "Issue title strongly matches symbol ",
     "Issue references owning symbol ",
     "Issue-matching symbols call ",
@@ -174,6 +191,13 @@ class TracebackFrame:
 
 
 @dataclass(frozen=True)
+class SourceLineReference:
+    path: str
+    line: int
+    revision: str | None = None
+
+
+@dataclass(frozen=True)
 class IssueSignals:
     terms: frozenset[str]
     content_terms: frozenset[str]
@@ -185,6 +209,7 @@ class IssueSignals:
     identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
     traceback_frames: tuple[TracebackFrame, ...]
+    source_line_references: tuple[SourceLineReference, ...]
 
 
 @dataclass(frozen=True)
@@ -202,6 +227,7 @@ class SymbolMatch:
     qualified_component_match: bool
     qualified_identifier_match: bool
     traceback_frame_index: int | None
+    source_line_reference_index: int | None
     semantic_terms: frozenset[str]
 
 
@@ -328,6 +354,54 @@ def _extract_traceback_frames(text: str) -> tuple[TracebackFrame, ...]:
     )
 
 
+def _extract_source_line_references(
+    text: str,
+) -> tuple[SourceLineReference, ...]:
+    immutable_matches = list(
+        IMMUTABLE_SOURCE_LINE_REFERENCE_PATTERN.finditer(text)
+    )
+    positioned_references = [
+        (
+            match.start(),
+            SourceLineReference(
+                path=match.group("path").replace("\\", "/"),
+                line=int(match.group("line")),
+                revision=match.group("revision").lower(),
+            ),
+        )
+        for match in immutable_matches
+        if _safe_source_line_path(match.group("path"))
+    ]
+    immutable_spans = [match.span() for match in immutable_matches]
+    positioned_references.extend(
+        (
+            match.start(),
+            SourceLineReference(
+                path=match.group("path").replace("\\", "/"),
+                line=int(match.group("line")),
+            ),
+        )
+        for match in PLAIN_SOURCE_LINE_REFERENCE_PATTERN.finditer(text)
+        if _safe_source_line_path(match.group("path"))
+        if not any(
+            start <= match.start() < end
+            for start, end in immutable_spans
+        )
+    )
+    return tuple(
+        reference
+        for _, reference in sorted(
+            positioned_references,
+            key=lambda positioned: positioned[0],
+        )[:SOURCE_LINE_REFERENCE_LIMIT]
+    )
+
+
+def _safe_source_line_path(path: str) -> bool:
+    parts = Path(path.replace("\\", "/")).parts
+    return bool(parts) and all(part not in {".", ".."} for part in parts)
+
+
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
@@ -358,6 +432,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
         traceback_frames=_extract_traceback_frames(issue.body),
+        source_line_references=_extract_source_line_references(issue.body),
     )
 
 
@@ -394,6 +469,7 @@ def _match_symbol(
     unique_symbol_names: frozenset[str],
     path_scoped: bool,
     traceback_frame_index: int | None = None,
+    source_line_reference_index: int | None = None,
 ) -> SymbolMatch:
     identity = symbol.qualified_name or symbol.name
     local_terms = _terms(symbol.name) | _terms(symbol.docstring or "")
@@ -503,6 +579,7 @@ def _match_symbol(
         ),
         qualified_identifier_match=qualified_identifier_match,
         traceback_frame_index=traceback_frame_index,
+        source_line_reference_index=source_line_reference_index,
         semantic_terms=frozenset(_semantic_terms(local_terms)),
     )
 
@@ -513,6 +590,7 @@ def _select_symbol(
     related_callers: dict[str, tuple[str, ...]],
     *,
     use_traceback_frames: bool = True,
+    use_source_line_references: bool = True,
 ) -> SymbolMatch | None:
     if not matches:
         return None
@@ -528,6 +606,10 @@ def _select_symbol(
             use_traceback_frames
             and match.traceback_frame_index is not None
         )
+        or (
+            use_source_line_references
+            and match.source_line_reference_index is not None
+        )
     ]
     if directly_referenced:
         return max(
@@ -539,6 +621,13 @@ def _select_symbol(
                     match.traceback_frame_index or -1
                     if use_traceback_frames
                     else -1
+                ),
+                use_source_line_references
+                and match.source_line_reference_index is not None,
+                (
+                    -(match.source_line_reference_index or 1_000_000)
+                    if use_source_line_references
+                    else -1_000_000
                 ),
                 match.qualified_identifier_match,
                 match.identifier_mention_count,
@@ -736,6 +825,8 @@ def _symbol_evidence(
         evidence.append(f"Issue references symbol {label}")
     if match.traceback_frame_index is not None:
         evidence.append(f"Traceback frame points to symbol {label}")
+    if match.source_line_reference_index is not None:
+        evidence.append(f"Issue source line points to symbol {label}")
     if match.primary_identifier_match:
         evidence.append(f"Issue title strongly matches symbol {label}")
     if match.qualified_component_match:
@@ -882,6 +973,147 @@ def _traceback_symbol_positions(
         identity = next(iter(matching_identities))
         positions[identity] = index
     return positions
+
+
+def _source_line_symbol_positions(
+    symbols: list[SymbolRecord],
+    references: tuple[tuple[int, int], ...],
+) -> dict[str, int]:
+    positions: dict[str, int] = {}
+    for index, line in references:
+        containing_symbols = [
+            symbol
+            for symbol in symbols
+            if symbol.end_line is not None
+            and symbol.line <= line <= symbol.end_line
+        ]
+        if not containing_symbols:
+            continue
+        smallest_span = min(
+            (symbol.end_line or symbol.line) - symbol.line
+            for symbol in containing_symbols
+        )
+        matching_identities = {
+            symbol.qualified_name or symbol.name
+            for symbol in containing_symbols
+            if (symbol.end_line or symbol.line) - symbol.line
+            == smallest_span
+        }
+        if len(matching_identities) != 1:
+            continue
+        positions.setdefault(next(iter(matching_identities)), index)
+    return positions
+
+
+def _symbol_identity_at_source_line(source: str, line: int) -> str | None:
+    try:
+        tree = ast.parse(source)
+    except (SyntaxError, ValueError):
+        return None
+    parents = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
+    containing_nodes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.end_lineno is not None
+        and node.lineno <= line <= node.end_lineno
+    ]
+    if not containing_nodes:
+        return None
+    smallest_span = min(
+        (node.end_lineno or node.lineno) - node.lineno
+        for node in containing_nodes
+    )
+    matching_nodes = [
+        node
+        for node in containing_nodes
+        if (node.end_lineno or node.lineno) - node.lineno == smallest_span
+    ]
+    if len(matching_nodes) != 1:
+        return None
+    node = matching_nodes[0]
+    names = [node.name]
+    parent = parents.get(node)
+    while parent is not None:
+        if isinstance(parent, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            names.append(parent.name)
+        parent = parents.get(parent)
+    return ".".join(reversed(names))
+
+
+def _source_at_revision(
+    root: Path,
+    revision: str,
+    relative_path: str,
+) -> str | None:
+    if not (root / ".git").exists():
+        return None
+    try:
+        completed = subprocess.run(
+            ["git", "show", f"{revision}:{relative_path}"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError):
+        return None
+    if completed.returncode:
+        return None
+    return completed.stdout
+
+
+def _source_line_positions_by_path(
+    root: Path,
+    files: list[FileRecord],
+    references: tuple[SourceLineReference, ...],
+) -> dict[str, dict[str, int]]:
+    file_paths = [file.path for file in files]
+    files_by_path = {file.path: file for file in files}
+    positions_by_path: dict[str, dict[str, int]] = {}
+    for index, reference in enumerate(references, start=1):
+        scoped_paths = _symbol_scoped_paths(
+            file_paths,
+            frozenset({reference.path}),
+        )
+        if len(scoped_paths) != 1:
+            continue
+        path = next(iter(scoped_paths))
+        file = files_by_path[path]
+        if reference.revision is None:
+            positions = _source_line_symbol_positions(
+                file.symbols,
+                ((index, reference.line),),
+            )
+        else:
+            source = _source_at_revision(
+                root,
+                reference.revision,
+                reference.path,
+            )
+            identity = (
+                _symbol_identity_at_source_line(source, reference.line)
+                if source is not None
+                else None
+            )
+            current_identities = {
+                symbol.qualified_name or symbol.name
+                for symbol in file.symbols
+            }
+            positions = (
+                {identity: index}
+                if identity is not None and identity in current_identities
+                else {}
+            )
+        path_positions = positions_by_path.setdefault(path, {})
+        for identity, position in positions.items():
+            path_positions.setdefault(identity, position)
+    return positions_by_path
 
 
 def _source_content(
@@ -1811,6 +2043,11 @@ def locate_candidates(
         repository_file_paths,
         signals.traceback_frames,
     )
+    source_line_positions_by_path = _source_line_positions_by_path(
+        root,
+        repository_map.files,
+        signals.source_line_references,
+    )
     for file in repository_map.files:
         path_parts = set(Path(file.path).parts)
         auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
@@ -1837,14 +2074,23 @@ def locate_candidates(
             file.symbols,
             traceback_frames_by_path.get(file.path, ()),
         )
+        source_line_symbol_positions = source_line_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 unique_symbol_names,
                 file.path in symbol_scoped_paths,
-                traceback_symbol_positions.get(
+                traceback_frame_index=traceback_symbol_positions.get(
                     symbol.qualified_name or symbol.name
+                ),
+                source_line_reference_index=(
+                    source_line_symbol_positions.get(
+                        symbol.qualified_name or symbol.name
+                    )
                 ),
             )
             for symbol in file.symbols
@@ -1871,6 +2117,7 @@ def locate_candidates(
             signals,
             {},
             use_traceback_frames=False,
+            use_source_line_references=False,
         )
         selected_match = _select_symbol(
             symbol_matches,
@@ -2220,14 +2467,23 @@ def locate_candidates(
             file.symbols,
             traceback_frames_by_path.get(file.path, ()),
         )
+        source_line_symbol_positions = source_line_positions_by_path.get(
+            file.path,
+            {},
+        )
         symbol_matches = [
             _match_symbol(
                 symbol,
                 signals,
                 candidate_unique_symbol_names,
                 path in symbol_scoped_paths,
-                traceback_symbol_positions.get(
+                traceback_frame_index=traceback_symbol_positions.get(
                     symbol.qualified_name or symbol.name
+                ),
+                source_line_reference_index=(
+                    source_line_symbol_positions.get(
+                        symbol.qualified_name or symbol.name
+                    )
                 ),
             )
             for symbol in file.symbols
@@ -2244,7 +2500,10 @@ def locate_candidates(
         )
         if (
             selected_match is None
-            or selected_match.traceback_frame_index is None
+            or (
+                selected_match.traceback_frame_index is None
+                and selected_match.source_line_reference_index is None
+            )
         ):
             selected_match = _shared_qualified_call_match(
                 symbol_matches,
