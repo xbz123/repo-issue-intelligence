@@ -113,6 +113,13 @@ across same-basename files are skipped. The source file must remain inside the r
 UTF-8 without NUL bytes, and be at most 1 MB. Traceback and exact source-line evidence retain higher
 priority, while shared-call inference cannot override an accepted excerpt. Excerpts affect only
 within-file symbol selection, not file scores, Git history, or blame.
+The investigator can also map a syntactic class call from inline or fenced Issue code to a
+constructor when the class is named in the title, its qualified `__init__` identity resolves to one
+file, and either the title explicitly describes construction or its non-owner terms are supported
+by the constructor docstring. A title method name or complete qualified method reference takes
+priority. Duplicate owners, label-only class names, unrelated setup calls, and ambiguous
+constructors are skipped. Constructor evidence affects only within-file symbol selection and is
+disabled for blame selection.
 The investigator emits confirmed facts, confidence-scored hypotheses, missing evidence, and a
 non-executed reproduction plan. Candidate locations are not presented as confirmed root causes.
 

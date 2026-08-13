@@ -130,11 +130,11 @@ Machine-readable artifacts:
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
-Manifest v8 deterministic v0.23 completed three 50-case runs with structurally identical candidates,
+Manifest v8 deterministic v0.24 completed three 50-case runs with structurally identical candidates,
 symbols, and metrics after timestamps and elapsed fields were excluded. File Recall@1 was
 `0.4067`, Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. On 33
-symbol-labeled cases, Symbol Recall@1 was `0.3182`, Recall@5 `0.5152`, Recall@10 `0.5455`,
-Recall@20 `0.6515`, and symbol MRR `0.4555`. The v0.17 function-local import edge recovered
+symbol-labeled cases, Symbol Recall@1 was `0.3485`, Recall@5 `0.5455`, Recall@10 `0.5758`,
+Recall@20 `0.6818`, and symbol MRR `0.4858`. The v0.17 function-local import edge recovered
 `rich/highlighter.py` at rank 18. v0.18 added bounded shared qualified-call evidence and recovered
 `scrapy/utils/decorators.py::_warn_spider_arg` at rank 18. v0.19 added bounded reverse-import
 evidence and recovered `celery/worker/pidbox.py` at rank 19. v0.20 added a unique,
@@ -147,6 +147,10 @@ named by the Issue. It recovered `WebSocketsSansIOProtocol.handle_connect` and `
 v0.23 adds bounded fenced source excerpt evidence constrained by Issue path candidates and unique
 file/symbol resolution. It recovered Click's `prompt`. All 50 file lists and the other 49 symbol
 lists were unchanged from v0.22, and no labeled symbol regressed.
+v0.24 adds uniquely resolved constructor evidence only when a title class and syntactic code call
+are backed by construction wording or constructor-docstring semantics. Explicit method evidence
+remains stronger. It recovered Pydantic's `TypeAdapter.__init__`; all file lists and the other 49
+symbol lists were unchanged from v0.23.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs used the same 50 deterministic
 v0.13 candidate pools and retained all cases in the denominator. Both returned 50/50 valid ranks
@@ -166,11 +170,11 @@ orders changed between repeats. Only `pydantic-safe-annotations-metaclass` chang
 reciprocal rank, from rank 2 to rank 1. Seed 1337 is therefore best effort. The reviewed artifacts
 are `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json` and
 `benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run2.json`.
-They have not yet been rerun against the current v0.23 output. The current deterministic
+They have not yet been rerun against the current v0.24 output. The current deterministic
 artifacts are
-`benchmarks/results/deterministic-v0.23-source-snippets-50-cases-run1.json`,
-`benchmarks/results/deterministic-v0.23-source-snippets-50-cases-run2.json`, and
-`benchmarks/results/deterministic-v0.23-source-snippets-50-cases-run3.json`.
+`benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run1.json`,
+`benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run2.json`, and
+`benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run3.json`.
 
 The retained manifest-v7 v0.12 baseline completed 32/32 cases with File Recall@1 `0.4479`,
 Recall@5 `0.7812`, Recall@10 `0.8906`, Recall@20 `0.9844`, and MRR `0.6428`.
