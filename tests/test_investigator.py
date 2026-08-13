@@ -97,6 +97,24 @@ def test_extract_issue_signals_records_non_call_qualified_identifiers() -> None:
     assert "__init__" not in signals.explicit_identifiers
 
 
+def test_extract_issue_signals_records_ordered_traceback_frames() -> None:
+    record = issue(
+        "Nested failure",
+        '  File "/tmp/project/src/package/api.py", line 8, in outer\n'
+        "    inner()\n"
+        "  1  /tmp/project/src/package/api.py:12 in inner\n"
+        "  at /usr/lib/python3.11/pathlib.py:900 in resolve\n",
+    )
+
+    frames = extract_issue_signals(record).traceback_frames
+
+    assert [(frame.path, frame.symbol) for frame in frames] == [
+        ("/tmp/project/src/package/api.py", "outer"),
+        ("/tmp/project/src/package/api.py", "inner"),
+        ("/usr/lib/python3.11/pathlib.py", "resolve"),
+    ]
+
+
 def test_identifier_variants_preserve_source_term_order() -> None:
     variants = _identifier_variants("is_alt_screen")
 
@@ -1912,6 +1930,95 @@ def test_fenced_qualified_symbol_reference_disambiguates_methods(
     assert candidates[0].qualified_symbol == "WorkerThread.__init__"
 
 
+def test_deepest_repository_traceback_frame_selects_symbol(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/poetry/installation/executor.py",
+        "class Executor:\n"
+        "    def _save_url_reference(self):\n"
+        "        return self._create_directory_url_reference()\n\n"
+        "    def _create_directory_url_reference(self):\n"
+        "        raise ValueError('relative path')\n",
+    )
+    record = issue(
+        "Relative path cannot be expressed as a file URI",
+        "The update calls `_save_url_reference` before failing.\n"
+        "  2  /tmp/venv/site-packages/poetry/installation/executor.py:3 "
+        "in _save_url_reference\n"
+        "  1  /tmp/venv/site-packages/poetry/installation/executor.py:6 "
+        "in _create_directory_url_reference\n"
+        "ValueError: relative path",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].qualified_symbol == (
+        "Executor._create_directory_url_reference"
+    )
+    assert (
+        "Traceback frame points to symbol "
+        "Executor._create_directory_url_reference"
+    ) in candidates[0].evidence
+
+
+def test_bare_traceback_frame_does_not_disambiguate_duplicate_methods(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Primary:\n"
+        "    def reset(self):\n"
+        "        return None\n\n"
+        "class Secondary:\n"
+        "    def reset(self):\n"
+        "        return None\n",
+    )
+    record = issue(
+        "Worker crashes",
+        '  File "/tmp/project/src/package/worker.py", line 3, in reset\n'
+        "RuntimeError: crashed",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Traceback frame points to symbol ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
+def test_traceback_frame_preserves_real_lib_package_prefix(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "lib/__init__.py", "")
+    write_source(
+        repository,
+        "lib/executor.py",
+        "def run():\n"
+        "    return None\n",
+    )
+    record = issue(
+        "Executor crash",
+        '  File "/tmp/venv/site-packages/executor.py", line 2, in run\n'
+        "RuntimeError: crashed",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert not any(
+        evidence.startswith("Traceback frame points to symbol ")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
 def test_owner_terms_do_not_change_title_semantic_ranking(
     tmp_path: Path,
 ) -> None:
@@ -2479,6 +2586,57 @@ def test_graph_expands_rare_issue_referenced_qualified_call_peer(
             "Shares issue-referenced qualified call inspect.signature "
         )
         for evidence in decorators.evidence
+    )
+
+
+def test_traceback_frame_overrides_shared_qualified_call_symbol(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/python.py",
+        "import inspect\n\n"
+        "def get_func_args_dict(func):\n"
+        "    return inspect.signature(func)\n",
+    )
+    write_source(
+        repository,
+        "src/decorators.py",
+        "import inspect\n\n"
+        "def _warn_spider_arg(func):\n"
+        "    return inspect.signature(func)\n\n"
+        "def handle_traceback():\n"
+        "    raise RuntimeError('failed')\n",
+    )
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/lazy_annotation_{index}.py",
+            "def get_func_args_dict_annotation():\n"
+            "    return None\n",
+        )
+    record = issue(
+        "get_func_args_dict does not support lazy annotations",
+        "The crash occurs in `inspect.signature()`.\n"
+        '  File "/tmp/project/src/decorators.py", line 8, '
+        "in handle_traceback\n",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=20,
+    )
+    decorators = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/decorators.py"
+    )
+
+    assert decorators.symbol == "handle_traceback"
+    assert "Traceback frame points to symbol handle_traceback" in (
+        decorators.evidence
     )
 
 

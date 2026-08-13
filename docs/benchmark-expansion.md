@@ -30,17 +30,18 @@ PR commit. All reviewed production files exist at that commit.
 | Poetry | 3 | #10760 / #10769, #10770 / #10784, #10830 / #10917 |
 | Scrapy | 2 | #7759 / #7763, #7796 / #7818 |
 
-Three complete deterministic v0.20 evaluations produced identical candidates, symbols, and metrics
+Three complete deterministic v0.21 evaluations produced identical candidates, symbols, and metrics
 after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`, Recall@5 `0.6900`,
 Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. The 33 labeled cases
-reach Symbol Recall@1 `0.2273`, Recall@5 `0.4242`, Recall@10 `0.4545`, Recall@20 `0.5606`, and
-MRR `0.3342`. v0.17's scope-safe function-local import edges recovered Rich's `highlighter.py` at
+reach Symbol Recall@1 `0.2576`, Recall@5 `0.4545`, Recall@10 `0.4848`, Recall@20 `0.5909`, and
+MRR `0.3645`. v0.17's scope-safe function-local import edges recovered Rich's `highlighter.py` at
 rank 18. v0.18's bounded shared qualified-call evidence recovered
 `scrapy/utils/decorators.py::_warn_spider_arg` at rank 18. v0.19's bounded reverse-import evidence
 recovered `celery/worker/pidbox.py` at rank 19 without regressing an earlier Top-20 match.
 v0.20's same-subsystem package re-export evidence recovered Poetry's
-`src/poetry/utils/env/python/manager.py` at rank 17; the other 49 candidate and symbol lists were
-unchanged.
+`src/poetry/utils/env/python/manager.py` at rank 17. v0.21's path-scoped ordered traceback evidence
+recovered `Executor._create_directory_url_reference`; all 50 candidate-file lists remained
+unchanged from v0.20, 47 symbol lists were unchanged, and no labeled symbol regressed.
 
 Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs completed all 50 cases and kept
 every case in the denominator. Both returned 50/50 valid ranks with no fallback. File Recall@1 was
@@ -207,7 +208,7 @@ rii benchmark-curate \
 
 rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.20-package-reexports-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.21-traceback-symbols-50-cases-run1.json
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
