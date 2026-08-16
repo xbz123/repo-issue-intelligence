@@ -8,13 +8,26 @@ quality improvement is claimed.
 1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
    bounded static-graph reranking inside fixed Top-10 bands.
 2. `hybrid`: deterministic retrieval followed only by OpenCode
-   `deepseek-v4-flash-free` evidence-ID reranking.
+   `deepseek-v4-flash` evidence-ID reranking.
 
 An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
 outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
 plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
-disables reasoning, asks for at most three IDs, starts with a 256-token output budget, and retries
-once at 1,024 tokens only if the first completion is truncated.
+disables reasoning, asks for at most three IDs, starts with an 8,192-token output budget, and retries
+once at 20,000 tokens only if the first completion is truncated. The complete frozen Issue is sent,
+while selected deterministic repository evidence defaults to at most 200 source lines per snippet
+and 100,000 characters in total. The provider context window remains an additional request-size
+limit.
+
+The full Agent analysis path also disables model reasoning before requesting its strict JSON
+object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
+than allowing hidden reasoning to exhaust the response budget before valid JSON is produced.
+Normal Agent runs and evaluation both use temperature `0.1` and a 180-second timeout. A structured
+analysis response ending with `finish_reason=length` is classified as non-retryable
+`output_truncated` instead of being retried with the same exhausted ceiling.
+`agent-evaluate --omit-max-tokens` is a diagnostic-only mode that omits the request field and
+records `max_output_tokens=null`; it delegates the ceiling to the provider rather than creating a
+truly unlimited response.
 
 ## Dataset
 
@@ -96,9 +109,10 @@ During this run, an initial persistence check compared the in-memory strict resp
 the restored public base model and reported false despite identical serialized payloads. The
 evaluator now compares the public JSON payload and has a regression test using the real response
 subclass boundary. Structured-response and evidence-contract failures now preserve request, token,
-latency, and category telemetry. They are non-retryable because repeating the same request does not
-repair an invalid contract. Transport, HTTP 429, and HTTP 5xx failures remain retryable with
-bounded exponential backoff and `retry-after` support. The provider contract now contains five
+latency, and category telemetry. They now receive one bounded strict retry because repeated live
+runs demonstrated that the fixed-seed service can return valid JSON for the same input after an
+invalid response. Transport, HTTP 429, and HTTP 5xx failures remain retryable with bounded
+exponential backoff and `retry-after` support. The provider contract now contains five
 fields and one hypothesis; duplicate deterministic-candidate metadata and four derivable response
 fields were removed while the persisted public model remains compatible. This change has local
 contract coverage. The minified response schema fell from 2,376 to 1,905 characters. On the same
@@ -127,6 +141,224 @@ Machine-readable artifacts:
 - `benchmarks/results/agent-analysis-compact-v0.21-run1.json`
 - `benchmarks/results/agent-analysis-compact-v0.21-run2.json`
 - `benchmarks/results/agent-analysis-compact-v0.21-run3.json`
+
+## DeepSeek V4 Flash readiness attempt
+
+On 2026-08-16, the runtime model was changed from the historical
+`deepseek-v4-flash-free` endpoint to `deepseek-v4-flash`, local Issue/evidence character
+truncation was removed, and the same frozen Starlette, Typer, and Textual full-analysis suite was
+run with zero delay between cases. The original `https://opencode.ai/zen/v1/chat/completions`
+route returned HTTP 401 before inference for both configured workspaces. Those three failed Agent
+runs persisted correctly and remain in the denominator in
+`benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-unbounded-run1.json`.
+
+The runtime was then moved to OpenCode's Go-compatible route,
+`https://opencode.ai/zen/go/v1/chat/completions`. A minimal rank request succeeded with 279 input
+tokens, 31 output tokens, and 2.17 seconds of provider latency. The first three-case full-analysis
+diagnostic used a 4,096-token completion budget and produced one valid result; the two failures
+both consumed exactly 4,096 output tokens before failing local JSON validation. At an 8,192-token
+budget, the two retained runs completed 3/3 and 2/3 cases. The remaining invalid response again
+consumed exactly the full 8,192-token budget, while a separate transport timeout recovered on its
+second attempt. These diagnostics are retained in
+`agent-analysis-v0.25-deepseek-v4-flash-go-run1.json` and the two
+`agent-analysis-v0.25-deepseek-v4-flash-go-8192-run*.json` artifacts.
+
+An intermediate 16,384-token configuration completed three independent zero-delay runs with 9/9
+valid analyses, 9/9 first-attempt responses, and 9/9 payloads restored from SQLite. Those runs used
+115,827 input tokens and 29,657 output tokens in total. Mean provider latency was 67.14 seconds per
+case (population standard deviation 19.15 seconds; range 38.62--104.40 seconds). The retained
+artifacts are the three `agent-analysis-v0.25-deepseek-v4-flash-go-16384-run*.json` files.
+
+The requested final 20,000-token configuration was then evaluated with the same fixed cases,
+temperature 0.1, seed 1337, and zero delay. Across three runs it produced 8/9 valid analyses, 6/9
+first-attempt successes, and 9/9 payloads restored from SQLite. The single failed Typer case
+exhausted both attempts with provider `ReadTimeout`; two other cases recovered from one read timeout
+on their second attempt. The runs made 12 attempts, used 104,475 input tokens and 27,229 output
+tokens, and recorded a mean per-case LLM elapsed time of 164.39 seconds including the failed case
+(population standard deviation 117.59 seconds; range 41.62--360.25 seconds). The largest valid
+response used 4,928 output tokens, so none approached the 20,000-token ceiling. Every valid
+response contained observations for all 20 supplied evidence snippets and exactly one
+evidence-grounded hypothesis. The reviewed artifacts are the three
+`agent-analysis-v0.25-deepseek-v4-flash-go-20000-run*.json` files.
+
+Fixed seed 1337 remains best effort: every successfully repeated case produced a different
+normalized analysis. The 20,000-token result therefore supports endpoint availability and an 8/9
+contract-valid rate on this small public three-case suite, while also exposing provider read-timeout
+instability. It does not establish deterministic generation or production reliability. Provider
+URLs are redacted from structured provider-error messages before artifacts are persisted. Strict
+JSON, observation-coverage, and evidence-ID validation failures receive at most one additional
+request because the live service is nondeterministic even with a fixed seed; the second response
+must pass the unchanged schema and evidence checks in full. No malformed JSON is repaired or
+accepted locally.
+
+## Current manifest-v8 rank-only reliability result
+
+The first Go-endpoint full run retained the historical 256/1,024-token rank budget and produced
+only 6/50 valid ranks; all 44 fallbacks were `output_truncated`. Raising the two budgets to
+4,096/8,192 improved a five-case diagnostic, but an 8,192-token full run still produced only 35/50
+valid ranks and 15 truncation fallbacks. These failures remained in the aggregate metrics rather
+than being excluded.
+
+The final protocol starts at 8,192 tokens and retries once at 20,000 only after a truncated
+completion. Three complete manifest-v8 runs then produced 150/150 valid known-ID ranks with zero
+fallback. Their mean File Recall@1/5/10/20 was `0.7367/0.8600/0.9000/1.0000`, with mean MRR
+`0.8894`; all three symbol runs produced Recall@1/5/10/20 of
+`0.6667/0.6970/0.6970/0.7121` with MRR `0.7424`. The runs made 57, 50, and 50 requests and used
+2,500,818 input plus 163,383 output tokens in total.
+
+Despite the fixed seed and disabled reasoning request, only 29/50 full candidate orders were
+identical across all repeats. Run 1 also recorded 162,491 output tokens and 28.53 seconds mean LLM
+latency, while runs 2 and 3 each recorded 446 output tokens and 1.62/1.46 seconds. The plain rank
+contract is therefore reliable on this suite, but hosted token accounting, latency, and exact
+ordering remain nondeterministic.
+
+Reviewed artifacts:
+
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run1.json`
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run2.json`
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run3.json`
+
+## Manifest-v8 full-Agent reliability result
+
+On 2026-08-16, the final 20,000-token protocol was run three times over all 50 frozen manifest-v8
+cases with temperature 0.1, seed 1337, no inter-case delay, and at most two strict attempts. All
+150 case-runs stayed in the denominator and all 150 terminal Agent payloads passed the SQLite
+public-JSON round trip.
+
+| Run | Final valid | First-attempt valid | Attempts | Input tokens | Output tokens | Mean successful LLM latency |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 47/50 | 43/50 | 57 | 1,077,464 | 369,658 | 57.90 s |
+| 2 | 50/50 | 46/50 | 54 | 1,055,474 | 306,181 | 58.30 s |
+| 3 | 43/50 | 34/50 | 66 | 1,294,740 | 62,128 | 10.51 s |
+| Combined | 140/150 | 123/150 | 177 | 3,427,678 | 737,967 | - |
+
+The bounded second request recovered 17 case-runs that failed their first strict contract, raising
+aggregate success from 82.00% to 93.33%. Ten case-runs still failed after both attempts: seven
+ended in invalid JSON/schema responses, two omitted the required one-to-one evidence-observation
+coverage, and one ended in an HTTP 5xx response. Forty of the 50 cases succeeded in all three
+runs; the union of failed case IDs contains ten cases. Valid responses contained 19 or 20 evidence
+observations because one frozen case supplies 19 readable snippets; every valid response contained
+exactly one evidence-linked hypothesis.
+
+The run-level final success range of 86%--100%, first-attempt range of 68%--92%, and large token and
+latency shifts show that the fixed seed does not stabilize the hosted service. The retry improves
+availability, but also repeats the entire strict request and therefore increases latency and token
+use. These results validate the implemented contract, retry telemetry, failure denominator, and
+persistence path. They do not score hypothesis correctness and must not be reported as a 93.33%
+root-cause accuracy result.
+
+Reviewed artifacts:
+
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-strict-retry-manifest-v8-50-cases-run1.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-strict-retry-manifest-v8-50-cases-run2.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-strict-retry-manifest-v8-50-cases-run3.json`
+
+### Provider-default output-limit comparison
+
+The same client was also tested without sending `max_tokens`. This does not remove the model or
+provider context ceiling; it delegates the completion default to the hosted service and makes that
+default subject to provider changes. Three repeated five-case diagnostics produced 5/5, 3/5, and
+4/5 valid final analyses, or 12/15 combined. The first diagnostic also incurred two near-timeout
+retries and a mean successful LLM latency of 125.61 seconds, while the other two averaged 9.25 and
+8.45 seconds.
+
+An authorized full manifest-v8 run then evaluated all 50 cases through the reproducible
+`--omit-max-tokens` path. It produced 38/50 valid final analyses, 31/50 first-attempt successes,
+69 total attempts, and 50/50 persisted terminal payloads. All 12 final failures were categorized as
+invalid structured responses after two attempts. The run recorded 1,409,072 input tokens, 63,612
+output tokens, and 9.92 seconds mean successful LLM latency. Its immediately preceding explicit
+20,000-token run produced 43/50 final and 34/50 first-attempt successes under the same manifest,
+temperature, seed, retry count, and zero-delay settings.
+
+This single full comparison plus the three small repeats provides no evidence that omitting the
+field improves contract reliability. The project therefore retains 20,000 as the normal explicit
+default for auditability and provider-default stability. It does not claim that 20,000 is an
+intrinsically optimal model limit, because the hosted service remained nondeterministic and the two
+full protocols were run sequentially rather than as simultaneous paired requests.
+
+Artifacts:
+
+- `benchmarks/results/agent-analysis-v0.25-server-default-output-diagnostic-5-cases-run1.json`
+- `benchmarks/results/agent-analysis-v0.25-server-default-output-diagnostic-5-cases-run2.json`
+- `benchmarks/results/agent-analysis-v0.25-server-default-output-diagnostic-5-cases-run3.json`
+- `benchmarks/results/agent-analysis-v0.25-server-default-output-manifest-v8-50-cases-run1.json`
+
+## Client-derived validation-step contract result
+
+The recurring low-token `invalid_response` failures were next classified without storing model
+response content. Pydantic validation types and field paths are now retained as bounded error
+metadata, separating invalid JSON from schema validation while excluding response values. A
+seven-case reproduction selected the cases that repeatedly failed in both the explicit-20,000 and
+provider-default runs. Five of seven failed after two attempts, and every failure was the same
+schema violation: `hypothesis.validation_step=missing`. The two successful cases passed on their
+first attempt.
+
+`validation_step` is a safety-sensitive but deterministic workflow instruction rather than a
+model judgment. It was therefore removed from the provider hypothesis contract and is now derived
+locally from the first model-cited evidence location. The generated instruction asks for
+inspection plus the smallest existing relevant test without modifying files. The persisted public
+`LLMHypothesis` schema remains unchanged. Strict JSON parsing, all other provider fields,
+one-observation-per-evidence coverage, evidence-ID validation, and the one-hypothesis limit remain
+enforced. No malformed JSON or schema-invalid response is repaired or accepted.
+
+The same seven cases then completed 7/7 on their first attempt. Three independent zero-delay runs
+subsequently evaluated all 50 frozen manifest-v8 cases:
+
+| Run | Final valid | First-attempt valid | Attempts | Persisted | Input tokens | Output tokens | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 44,408 | 8.05 s |
+| 2 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 43,986 | 7.38 s |
+| 3 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 44,345 | 7.14 s |
+| Combined | 150/150 | 150/150 | 150 | 150/150 | 3,007,488 | 132,739 | 7.52 s |
+
+Every valid response retained exactly one hypothesis and one observation for each of the 19 or 20
+readable evidence snippets supplied by its case. Combined provider latency had a population
+standard deviation of 1.23 seconds and ranged from 4.91 to 11.38 seconds. The result establishes
+contract reliability on this frozen public suite across these three sequential runs. It does not
+score hypothesis correctness, prove reliability on private or unseen repositories, or make the
+hosted model deterministic.
+
+Reviewed artifacts:
+
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run1.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run2.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run3.json`
+
+## Bounded-input production-default result
+
+After the contract-valid runs above, the normal Agent and benchmark paths were given explicit
+production defaults: at most 200 numbered source lines per evidence snippet, 100,000 repository
+evidence characters per request, temperature `0.1`, and a 180-second timeout. Issue snapshots remain
+complete. Structured analysis now classifies `finish_reason=length` as non-retryable
+`output_truncated`, because repeating the same exhausted 20,000-token budget cannot recover it.
+
+Three independent zero-delay 50-case Agent runs produced:
+
+| Run | Final valid | First-attempt valid | Attempts | Persisted | Input tokens | Output tokens | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 50/50 | 49/50 | 51 | 50/50 | 882,486 | 43,972 | 7.54 s |
+| 2 | 50/50 | 50/50 | 50 | 50/50 | 882,486 | 44,143 | 6.95 s |
+| 3 | 50/50 | 49/50 | 51 | 50/50 | 882,486 | 45,185 | 11.39 s |
+| Combined | 150/150 | 148/150 | 152 | 150/150 | 2,647,458 | 133,300 | - |
+
+The two recovered retries were `werkzeug-duplicate-100-continue` and `typer-option-envvar`. The
+latter accumulated 187.57 seconds across a failed first request and successful retry, which confirms
+that the old 60-second production timeout was not aligned with the evaluated recovery path. Relative
+to the preceding three pre-guard runs, combined input fell 11.97% and the maximum single-case input
+fell from 68,407 to 33,408 tokens (51.16%).
+
+The same bounded inputs were then used for three rank-only hybrid runs. All three completed 50/50
+model requests with zero fallback, 688,370 input tokens, and 446 output tokens. Every run reported
+File Recall@1/5/10/20 of `0.7467/0.8600/0.9000/1.0000`, MRR `0.8983`, and Symbol
+Recall@1/5/10/20 of `0.6667/0.6970/0.6970/0.7121` with MRR `0.7424` on 33 labeled
+cases. Six of 50 cases nevertheless changed their complete candidate ordering in at least one run,
+so seed 1337 remains best effort rather than deterministic generation.
+
+Only the compact aggregate is committed at
+`benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json`; the six raw run files were
+kept outside Git to avoid further repository growth. These results validate provider contracts,
+fallback accounting, and persistence on the frozen public suite. They do not measure hypothesis
+correctness or establish behavior on private or unseen repositories.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
@@ -234,7 +466,7 @@ rerank schema is therefore more reliable than the full hypothesis schema.
 
 The historical shortlist is deliberately small:
 
-- `deepseek-v4-flash-free` remains the only current benchmark reranker. Its plain rank-only
+- `deepseek-v4-flash-free` was the historical benchmark reranker. Its plain rank-only
   protocol returned 50/50 valid ranks in each of two v8 runs and raised paired MRR substantially.
   Fixed-seed ordering still changed in 14/50 cases, so deterministic fallback and protocol
   telemetry remain required even though neither run used fallback.

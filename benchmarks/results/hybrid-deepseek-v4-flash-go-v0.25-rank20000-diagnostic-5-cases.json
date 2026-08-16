@@ -1,0 +1,1095 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "variant": "hybrid",
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_chars_per_evidence": null,
+  "initial_output_tokens": 8192,
+  "max_output_tokens": 20000,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "timeout_seconds": 180.0,
+  "reasoning_effort": "none",
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T03:26:10.741072Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "issue_url": "https://github.com/encode/starlette/issues/3048",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/3189",
+      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
+      "issue_updated_at": "2026-03-15T11:59:17Z",
+      "expected_files": [
+        "starlette/responses.py"
+      ],
+      "expected_symbols": [],
+      "candidate_files": [
+        "starlette/responses.py",
+        "starlette/websockets.py",
+        "starlette/middleware/base.py",
+        "starlette/routing.py",
+        "starlette/requests.py",
+        "starlette/_exception_handler.py",
+        "starlette/testclient.py",
+        "starlette/endpoints.py",
+        "tests/middleware/test_base.py",
+        "starlette/middleware/errors.py",
+        "starlette/_utils.py",
+        "starlette/applications.py",
+        "starlette/middleware/exceptions.py",
+        "starlette/staticfiles.py",
+        "tests/test_applications.py",
+        "tests/test_responses.py",
+        "tests/test_websockets.py",
+        "starlette/formparsers.py",
+        "starlette/datastructures.py",
+        "starlette/templating.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "starlette/responses.py",
+          "symbol": "__call__",
+          "qualified_symbol": "Response.__call__",
+          "rank": 1
+        },
+        {
+          "file": "starlette/websockets.py",
+          "symbol": "send_denial_response",
+          "qualified_symbol": "WebSocket.send_denial_response",
+          "rank": 2
+        },
+        {
+          "file": "starlette/middleware/base.py",
+          "symbol": "_StreamingResponse",
+          "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "starlette/routing.py",
+          "symbol": "request_response",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "starlette/requests.py",
+          "symbol": "HTTPConnection",
+          "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "starlette/_exception_handler.py",
+          "symbol": "wrap_app_handling_exceptions",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "starlette/testclient.py",
+          "symbol": "_run",
+          "qualified_symbol": "WebSocketTestSession._run",
+          "rank": 7
+        },
+        {
+          "file": "starlette/endpoints.py",
+          "symbol": "on_receive",
+          "qualified_symbol": "WebSocketEndpoint.on_receive",
+          "rank": 8
+        },
+        {
+          "file": "tests/middleware/test_base.py",
+          "symbol": "test_exception_can_be_caught",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "starlette/middleware/errors.py",
+          "symbol": "_send",
+          "qualified_symbol": "ServerErrorMiddleware.__call__._send",
+          "rank": 10
+        },
+        {
+          "file": "starlette/_utils.py",
+          "symbol": "SupportsAsyncClose",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "starlette/applications.py",
+          "symbol": "__init__",
+          "qualified_symbol": "Starlette.__init__",
+          "rank": 12
+        },
+        {
+          "file": "starlette/middleware/exceptions.py",
+          "symbol": "add_exception_handler",
+          "qualified_symbol": "ExceptionMiddleware.add_exception_handler",
+          "rank": 13
+        },
+        {
+          "file": "starlette/staticfiles.py",
+          "symbol": "check_config",
+          "qualified_symbol": "StaticFiles.check_config",
+          "rank": 14
+        },
+        {
+          "file": "tests/test_applications.py",
+          "symbol": "runtime_error",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "tests/test_responses.py",
+          "symbol": "test_file_response_on_head_method",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "tests/test_websockets.py",
+          "symbol": "test_websocket_scope_interface",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "starlette/formparsers.py",
+          "symbol": "FormMessage",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "starlette/datastructures.py",
+          "symbol": "content_type",
+          "qualified_symbol": "UploadFile.content_type",
+          "rank": 19
+        },
+        {
+          "file": "starlette/templating.py",
+          "symbol": "TemplateResponse",
+          "qualified_symbol": "Jinja2Templates.TemplateResponse",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "starlette/responses.py"
+      ],
+      "matched_files_at_10": [
+        "starlette/responses.py"
+      ],
+      "matched_files_at_20": [
+        "starlette/responses.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": null,
+      "symbol_recall_at_5": null,
+      "symbol_recall_at_10": null,
+      "symbol_recall_at_20": null,
+      "symbol_reciprocal_rank": null,
+      "analysis_elapsed_ms": 22616.307,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "3c914b04c99f4d3282bbf4db874558bc",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 9194,
+      "llm_output_tokens": 2967,
+      "llm_elapsed_ms": 21107.385,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "anyio-freethreading-runvar",
+      "tier": "generalization",
+      "repository": "agronholm/anyio",
+      "issue_number": 1220,
+      "issue_url": "https://github.com/agronholm/anyio/issues/1220",
+      "fix_pr_url": "https://github.com/agronholm/anyio/pull/1224",
+      "pre_fix_sha": "c384f99687c64c59ed8a11c3a0f11a2d57daff71",
+      "issue_updated_at": "2026-07-19T20:30:02Z",
+      "expected_files": [
+        "src/anyio/_backends/_asyncio.py",
+        "src/anyio/from_thread.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/anyio/from_thread.py",
+          "symbol": "start_blocking_portal"
+        }
+      ],
+      "candidate_files": [
+        "src/anyio/from_thread.py",
+        "src/anyio/_core/_eventloop.py",
+        "tests/test_to_thread.py",
+        "tests/test_sockets.py",
+        "src/anyio/_core/_sockets.py",
+        "tests/streams/test_memory.py",
+        "tests/test_from_thread.py",
+        "src/anyio/_core/_subprocesses.py",
+        "tests/test_pytest_plugin.py",
+        "tests/test_subprocesses.py",
+        "tests/test_taskgroups.py",
+        "tests/test_fileio.py",
+        "tests/test_synchronization.py",
+        "tests/streams/test_tls.py",
+        "tests/test_eventloop.py",
+        "tests/test_to_process.py",
+        "tests/test_functools.py",
+        "src/anyio/_backends/_asyncio.py",
+        "src/anyio/_backends/_trio.py",
+        "src/anyio/streams/tls.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "src/anyio/from_thread.py",
+          "symbol": "start_blocking_portal",
+          "qualified_symbol": null,
+          "rank": 1
+        },
+        {
+          "file": "src/anyio/_core/_eventloop.py",
+          "symbol": "get_async_backend",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "tests/test_to_thread.py",
+          "symbol": "test_run_sync_worker_cyclic_references",
+          "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "tests/test_sockets.py",
+          "symbol": "test_aclose_waits_for_fd_release",
+          "qualified_symbol": "TestUDPSocket.test_aclose_waits_for_fd_release",
+          "rank": 4
+        },
+        {
+          "file": "src/anyio/_core/_sockets.py",
+          "symbol": "getaddrinfo",
+          "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "tests/streams/test_memory.py",
+          "symbol": "test_invalid_max_buffer",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "tests/test_from_thread.py",
+          "symbol": "test_from_async",
+          "qualified_symbol": "TestBlockingPortal.test_from_async",
+          "rank": 7
+        },
+        {
+          "file": "src/anyio/_core/_subprocesses.py",
+          "symbol": "run_process",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "tests/test_pytest_plugin.py",
+          "symbol": "test_plugin",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "tests/test_subprocesses.py",
+          "symbol": "test_run_process",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "tests/test_taskgroups.py",
+          "symbol": "test_already_closed",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "tests/test_fileio.py",
+          "symbol": "test_open_close",
+          "qualified_symbol": "TestAsyncFile.test_open_close",
+          "rank": 12
+        },
+        {
+          "file": "tests/test_synchronization.py",
+          "symbol": "test_contextmanager",
+          "qualified_symbol": "TestLock.test_contextmanager",
+          "rank": 13
+        },
+        {
+          "file": "tests/streams/test_tls.py",
+          "symbol": "test_send_receive",
+          "qualified_symbol": "TestTLSStream.test_send_receive",
+          "rank": 14
+        },
+        {
+          "file": "tests/test_eventloop.py",
+          "symbol": "test_sleep_until",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "tests/test_to_process.py",
+          "symbol": "test_run_sync_in_process_pool",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "tests/test_functools.py",
+          "symbol": "test_wrap_sync_callable",
+          "qualified_symbol": "TestCache.test_wrap_sync_callable",
+          "rank": 17
+        },
+        {
+          "file": "src/anyio/_backends/_asyncio.py",
+          "symbol": "find_root_task",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "src/anyio/_backends/_trio.py",
+          "symbol": "run_test",
+          "qualified_symbol": "TestRunner.run_test",
+          "rank": 19
+        },
+        {
+          "file": "src/anyio/streams/tls.py",
+          "symbol": "wrap",
+          "qualified_symbol": "TLSStream.wrap",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "src/anyio/from_thread.py"
+      ],
+      "matched_files_at_10": [
+        "src/anyio/from_thread.py"
+      ],
+      "matched_files_at_20": [
+        "src/anyio/_backends/_asyncio.py",
+        "src/anyio/from_thread.py"
+      ],
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "file_recall_at_10": 0.5,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 215575.692,
+      "llm_attempts": 2,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "e3b96399e9aa4d25a968d78758dde25d",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 28948,
+      "llm_output_tokens": 23334,
+      "llm_elapsed_ms": 212949.808,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "pydantic-typeadapter-union-typing",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 9532,
+      "issue_url": "https://github.com/pydantic/pydantic/issues/9532",
+      "fix_pr_url": "https://github.com/pydantic/pydantic/pull/9570",
+      "pre_fix_sha": "137d4d83936bf5077c4b6354c43314bca704c4f6",
+      "issue_updated_at": "2026-07-17T16:10:12Z",
+      "expected_files": [
+        "pydantic/type_adapter.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pydantic/type_adapter.py",
+          "symbol": "TypeAdapter.__init__"
+        }
+      ],
+      "candidate_files": [
+        "pydantic/type_adapter.py",
+        "pydantic/_internal/_typing_extra.py",
+        "pydantic/_internal/_generics.py",
+        "pydantic/fields.py",
+        "pydantic/v1/main.py",
+        "pydantic/_internal/_generate_schema.py",
+        "pydantic/main.py",
+        "pydantic/json_schema.py",
+        "tests/test_main.py",
+        "pydantic/functional_validators.py",
+        "pydantic/v1/schema.py",
+        "pydantic/v1/mypy.py",
+        "pydantic/functional_serializers.py",
+        "docs/plugins/main.py",
+        "pydantic/plugin/__init__.py",
+        "pydantic/_internal/_model_construction.py",
+        "pydantic/_internal/_discriminated_union.py",
+        "pydantic/root_model.py",
+        "pydantic/_internal/_core_utils.py",
+        "pydantic/_internal/_fields.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "pydantic/type_adapter.py",
+          "symbol": "__init__",
+          "qualified_symbol": "TypeAdapter.__init__",
+          "rank": 1
+        },
+        {
+          "file": "pydantic/_internal/_typing_extra.py",
+          "symbol": "eval_type_backport",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "pydantic/_internal/_generics.py",
+          "symbol": "get_args",
+          "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "pydantic/fields.py",
+          "symbol": "Field",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "pydantic/v1/main.py",
+          "symbol": "json",
+          "qualified_symbol": "BaseModel.json",
+          "rank": 5
+        },
+        {
+          "file": "pydantic/_internal/_generate_schema.py",
+          "symbol": "_add_custom_serialization_from_json_encoders",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "pydantic/main.py",
+          "symbol": "create_model",
+          "qualified_symbol": null,
+          "rank": 7
+        },
+        {
+          "file": "pydantic/json_schema.py",
+          "symbol": "_sort_json_schema",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "tests/test_main.py",
+          "symbol": "test_base_config_type_hinting",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "pydantic/functional_validators.py",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "pydantic/v1/schema.py",
+          "symbol": "get_flat_models_from_model",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "pydantic/v1/mypy.py",
+          "symbol": "add_method",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "pydantic/functional_serializers.py",
+          "symbol": "field_serializer",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "docs/plugins/main.py",
+          "symbol": "on_pre_build",
+          "qualified_symbol": null,
+          "rank": 14
+        },
+        {
+          "file": "pydantic/plugin/__init__.py",
+          "symbol": "new_schema_validator",
+          "qualified_symbol": "PydanticPluginProtocol.new_schema_validator",
+          "rank": 15
+        },
+        {
+          "file": "pydantic/_internal/_model_construction.py",
+          "symbol": "complete_model_class",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "pydantic/_internal/_discriminated_union.py",
+          "symbol": "apply_discriminator",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "pydantic/root_model.py",
+          "symbol": "model_dump",
+          "qualified_symbol": "RootModel.model_dump",
+          "rank": 18
+        },
+        {
+          "file": "pydantic/_internal/_core_utils.py",
+          "symbol": "get_type_ref",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "pydantic/_internal/_fields.py",
+          "symbol": "_update_fields_from_docstrings",
+          "qualified_symbol": null,
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "pydantic/type_adapter.py"
+      ],
+      "matched_files_at_10": [
+        "pydantic/type_adapter.py"
+      ],
+      "matched_files_at_20": [
+        "pydantic/type_adapter.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 72041.934,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "25962c510a6643f5802957dc46ec7881",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 17309,
+      "llm_output_tokens": 7028,
+      "llm_elapsed_ms": 64852.017,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "flask-secret-key-rotation",
+      "tier": "calibration",
+      "repository": "pallets/flask",
+      "issue_number": 5621,
+      "issue_url": "https://github.com/pallets/flask/issues/5621",
+      "fix_pr_url": "https://github.com/pallets/flask/pull/5632",
+      "pre_fix_sha": "7522c4bcdb10449dc919e0ffbdebb92fe66822b5",
+      "issue_updated_at": "2025-01-05T16:39:32Z",
+      "expected_files": [
+        "src/flask/app.py",
+        "src/flask/sessions.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/flask/app.py",
+          "symbol": "Flask"
+        },
+        {
+          "file": "src/flask/sessions.py",
+          "symbol": "SecureCookieSessionInterface.get_signing_serializer"
+        }
+      ],
+      "candidate_files": [
+        "src/flask/app.py",
+        "src/flask/sessions.py",
+        "src/flask/globals.py",
+        "src/flask/helpers.py",
+        "src/flask/ctx.py",
+        "src/flask/config.py",
+        "src/flask/sansio/scaffold.py",
+        "src/flask/sansio/app.py",
+        "src/flask/cli.py",
+        "src/flask/sansio/blueprints.py",
+        "src/flask/testing.py",
+        "src/flask/templating.py",
+        "src/flask/logging.py",
+        "src/flask/json/tag.py",
+        "src/flask/blueprints.py",
+        "src/flask/json/__init__.py",
+        "src/flask/wrappers.py",
+        "src/flask/json/provider.py",
+        "src/flask/views.py",
+        "src/flask/__init__.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "src/flask/app.py",
+          "symbol": "update_template_context",
+          "qualified_symbol": "Flask.update_template_context",
+          "rank": 1
+        },
+        {
+          "file": "src/flask/sessions.py",
+          "symbol": "permanent",
+          "qualified_symbol": "SessionMixin.permanent",
+          "rank": 2
+        },
+        {
+          "file": "src/flask/helpers.py",
+          "symbol": "_prepare_send_file_kwargs",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "src/flask/ctx.py",
+          "symbol": "pop",
+          "qualified_symbol": "_AppCtxGlobals.pop",
+          "rank": 5
+        },
+        {
+          "file": "src/flask/config.py",
+          "symbol": "from_prefixed_env",
+          "qualified_symbol": "Config.from_prefixed_env",
+          "rank": 6
+        },
+        {
+          "file": "src/flask/sansio/scaffold.py",
+          "symbol": "context_processor",
+          "qualified_symbol": "Scaffold.context_processor",
+          "rank": 7
+        },
+        {
+          "file": "src/flask/sansio/app.py",
+          "symbol": "debug",
+          "qualified_symbol": "App.debug",
+          "rank": 8
+        },
+        {
+          "file": "src/flask/cli.py",
+          "symbol": "load_dotenv",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "src/flask/sansio/blueprints.py",
+          "symbol": "Blueprint",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "src/flask/testing.py",
+          "symbol": "EnvironBuilder",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "src/flask/templating.py",
+          "symbol": "_stream",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "src/flask/logging.py",
+          "symbol": "create_logger",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "src/flask/json/tag.py",
+          "symbol": "register",
+          "qualified_symbol": "TaggedJSONSerializer.register",
+          "rank": 14
+        },
+        {
+          "file": "src/flask/blueprints.py",
+          "symbol": "get_send_file_max_age",
+          "qualified_symbol": "Blueprint.get_send_file_max_age",
+          "rank": 15
+        },
+        {
+          "file": "src/flask/json/__init__.py",
+          "symbol": "dumps",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "src/flask/wrappers.py",
+          "symbol": "max_cookie_size",
+          "qualified_symbol": "Response.max_cookie_size",
+          "rank": 17
+        },
+        {
+          "file": "src/flask/json/provider.py",
+          "symbol": "dumps",
+          "qualified_symbol": "DefaultJSONProvider.dumps",
+          "rank": 18
+        },
+        {
+          "file": "src/flask/views.py",
+          "symbol": "View",
+          "qualified_symbol": null,
+          "rank": 19
+        }
+      ],
+      "matched_files_at_5": [
+        "src/flask/app.py",
+        "src/flask/sessions.py"
+      ],
+      "matched_files_at_10": [
+        "src/flask/app.py",
+        "src/flask/sessions.py"
+      ],
+      "matched_files_at_20": [
+        "src/flask/app.py",
+        "src/flask/sessions.py"
+      ],
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 0.0,
+      "symbol_recall_at_5": 0.0,
+      "symbol_recall_at_10": 0.0,
+      "symbol_recall_at_20": 0.0,
+      "symbol_reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 21631.672,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "e4962a4e1ba449ad9013db592b1fd208",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 16897,
+      "llm_output_tokens": 3287,
+      "llm_elapsed_ms": 20694.385,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "mypy-frozen-dataclass-covariance",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21736,
+      "issue_url": "https://github.com/python/mypy/issues/21736",
+      "fix_pr_url": "https://github.com/python/mypy/pull/21737",
+      "pre_fix_sha": "82e8498c19494edebee08dd615470443ec53fffc",
+      "issue_updated_at": "2026-07-16T00:48:44Z",
+      "expected_files": [
+        "mypy/checker.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "mypy/checker.py",
+          "symbol": "TypeChecker.check_func_def"
+        }
+      ],
+      "candidate_files": [
+        "mypy/semanal_main.py",
+        "mypy/semanal.py",
+        "mypy/nodes.py",
+        "mypy/main.py",
+        "mypy/build.py",
+        "mypy/checker.py",
+        "mypyc/irbuild/main.py",
+        "mypy/messages.py",
+        "mypyc/build.py",
+        "mypyc/ir/class_ir.py",
+        "mypy/nativeparse.py",
+        "mypyc/ir/rtypes.py",
+        "mypy/typeops.py",
+        "mypy/plugin.py",
+        "mypy/checkmember.py",
+        "mypy/subtypes.py",
+        "mypyc/irbuild/builder.py",
+        "mypy/types.py",
+        "mypy/parse.py",
+        "mypyc/codegen/emitmodule.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "mypy/semanal_main.py",
+          "symbol": "check_type_arguments_in_targets",
+          "qualified_symbol": null,
+          "rank": 1
+        },
+        {
+          "file": "mypy/semanal.py",
+          "symbol": "is_active_symbol_in_class_body",
+          "qualified_symbol": "SemanticAnalyzer.is_active_symbol_in_class_body",
+          "rank": 2
+        },
+        {
+          "file": "mypy/nodes.py",
+          "symbol": "is_final_node",
+          "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "mypy/main.py",
+          "symbol": "fail",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "mypy/build.py",
+          "symbol": "get_cache_names",
+          "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "mypy/checker.py",
+          "symbol": "is_private",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "mypyc/irbuild/main.py",
+          "symbol": "build_ir",
+          "qualified_symbol": null,
+          "rank": 7
+        },
+        {
+          "file": "mypy/messages.py",
+          "symbol": "format_type",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "mypyc/build.py",
+          "symbol": "_extract_includes",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "mypyc/ir/class_ir.py",
+          "symbol": "is_final_attr",
+          "qualified_symbol": "ClassIR.is_final_attr",
+          "rank": 10
+        },
+        {
+          "file": "mypy/nativeparse.py",
+          "symbol": "native_parse",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "mypyc/ir/rtypes.py",
+          "symbol": "deserialize_type",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "mypy/typeops.py",
+          "symbol": "can_have_shared_disjoint_base",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "mypy/plugin.py",
+          "symbol": "report_config_data",
+          "qualified_symbol": "Plugin.report_config_data",
+          "rank": 14
+        },
+        {
+          "file": "mypy/checkmember.py",
+          "symbol": "bind_self_fast",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "mypy/subtypes.py",
+          "symbol": "is_proper_subtype",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "mypyc/irbuild/builder.py",
+          "symbol": "flatten_classes",
+          "qualified_symbol": "IRBuilder.flatten_classes",
+          "rank": 17
+        },
+        {
+          "file": "mypy/types.py",
+          "symbol": "RawExpressionType",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "mypy/parse.py",
+          "symbol": "parse",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "mypyc/codegen/emitmodule.py",
+          "symbol": "write_cache",
+          "qualified_symbol": null,
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [],
+      "matched_files_at_10": [
+        "mypy/checker.py"
+      ],
+      "matched_files_at_20": [
+        "mypy/checker.py"
+      ],
+      "file_recall_at_1": 0.0,
+      "file_recall_at_5": 0.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 0.1667,
+      "symbol_recall_at_1": 0.0,
+      "symbol_recall_at_5": 0.0,
+      "symbol_recall_at_10": 0.0,
+      "symbol_recall_at_20": 0.0,
+      "symbol_reciprocal_rank": 0.0,
+      "analysis_elapsed_ms": 149525.351,
+      "llm_attempts": 2,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "5a03f78badda450bb0b1d78cb6046adb",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 21476,
+      "llm_output_tokens": 20631,
+      "llm_elapsed_ms": 137894.334,
+      "error": null,
+      "execution_succeeded": true
+    }
+  ],
+  "overall": {
+    "cases": 5,
+    "completed": 5,
+    "failed": 0,
+    "file_recall_at_1": 0.6,
+    "file_recall_at_5": 0.7,
+    "file_recall_at_10": 0.9,
+    "file_recall_at_20": 1.0,
+    "candidate_pool_recall": 1.0,
+    "mean_reciprocal_rank": 0.8333,
+    "average_analysis_elapsed_ms": 96278.191,
+    "llm_success_rate": 1.0,
+    "llm_cases": 5,
+    "llm_successes": 5,
+    "llm_fallbacks": 0,
+    "llm_fallback_reasons": {},
+    "llm_success_mean_reciprocal_rank": 0.8333,
+    "average_llm_elapsed_ms": 91499.586,
+    "average_llm_success_elapsed_ms": 91499.586,
+    "llm_input_tokens": 93824,
+    "llm_output_tokens": 57247,
+    "symbol_cases": 4,
+    "symbol_recall_at_1": 0.5,
+    "symbol_recall_at_5": 0.5,
+    "symbol_recall_at_10": 0.5,
+    "symbol_recall_at_20": 0.5,
+    "mean_symbol_reciprocal_rank": 0.5
+  },
+  "by_tier": {
+    "main": {
+      "cases": 3,
+      "completed": 3,
+      "failed": 0,
+      "file_recall_at_1": 0.6667,
+      "file_recall_at_5": 0.6667,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 0.7222,
+      "average_analysis_elapsed_ms": 81394.531,
+      "llm_success_rate": 1.0,
+      "llm_cases": 3,
+      "llm_successes": 3,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 0.7222,
+      "average_llm_elapsed_ms": 74617.912,
+      "average_llm_success_elapsed_ms": 74617.912,
+      "llm_input_tokens": 47979,
+      "llm_output_tokens": 30626,
+      "symbol_cases": 2,
+      "symbol_recall_at_1": 0.5,
+      "symbol_recall_at_5": 0.5,
+      "symbol_recall_at_10": 0.5,
+      "symbol_recall_at_20": 0.5,
+      "mean_symbol_reciprocal_rank": 0.5
+    },
+    "calibration": {
+      "cases": 1,
+      "completed": 1,
+      "failed": 0,
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "average_analysis_elapsed_ms": 21631.672,
+      "llm_success_rate": 1.0,
+      "llm_cases": 1,
+      "llm_successes": 1,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 1.0,
+      "average_llm_elapsed_ms": 20694.385,
+      "average_llm_success_elapsed_ms": 20694.385,
+      "llm_input_tokens": 16897,
+      "llm_output_tokens": 3287,
+      "symbol_cases": 1,
+      "symbol_recall_at_1": 0.0,
+      "symbol_recall_at_5": 0.0,
+      "symbol_recall_at_10": 0.0,
+      "symbol_recall_at_20": 0.0,
+      "mean_symbol_reciprocal_rank": 0.0
+    },
+    "generalization": {
+      "cases": 1,
+      "completed": 1,
+      "failed": 0,
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "file_recall_at_10": 0.5,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "average_analysis_elapsed_ms": 215575.692,
+      "llm_success_rate": 1.0,
+      "llm_cases": 1,
+      "llm_successes": 1,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 1.0,
+      "average_llm_elapsed_ms": 212949.808,
+      "average_llm_success_elapsed_ms": 212949.808,
+      "llm_input_tokens": 28948,
+      "llm_output_tokens": 23334,
+      "symbol_cases": 1,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "mean_symbol_reciprocal_rank": 1.0
+    }
+  }
+}

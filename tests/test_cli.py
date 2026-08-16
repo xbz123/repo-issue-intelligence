@@ -208,8 +208,8 @@ def test_benchmark_reranker_uses_long_read_timeout() -> None:
     analyzer = _build_benchmark_reranker(settings, temperature=0.1, seed=1337)
 
     assert analyzer.timeout_seconds == 180
-    assert analyzer.rerank_initial_output_tokens == 256
-    assert analyzer.rerank_max_output_tokens == 1_024
+    assert analyzer.rerank_initial_output_tokens == 8_192
+    assert analyzer.rerank_max_output_tokens == 20_000
     assert analyzer.rerank_reasoning_effort == "none"
     analyzer.close()
 
@@ -224,7 +224,26 @@ def test_agent_evaluator_uses_long_read_timeout() -> None:
     analyzer = _build_analysis_evaluator(settings, temperature=0.1, seed=1337)
 
     assert analyzer.timeout_seconds == 180
-    assert analyzer.max_output_tokens == 4_096
+    assert analyzer.max_output_tokens == 20_000
+    analyzer.close()
+
+
+def test_agent_evaluator_can_omit_max_tokens() -> None:
+    settings = Settings(
+        opencode_api_key="test-key",
+        opencode_timeout_seconds=1,
+        _env_file=None,
+    )
+
+    analyzer = _build_analysis_evaluator(
+        settings,
+        temperature=0.1,
+        seed=1337,
+        omit_max_tokens=True,
+    )
+
+    assert analyzer.timeout_seconds == 180
+    assert analyzer.max_output_tokens is None
     analyzer.close()
 
 
@@ -235,11 +254,13 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
             api_key,
             max_output_tokens,
             timeout_seconds,
+            temperature,
         ):
             assert api_key == "test-key"
-            assert max_output_tokens == 4_096
-            assert timeout_seconds == 60
-            self.model = "deepseek-v4-flash-free"
+            assert max_output_tokens == 20_000
+            assert timeout_seconds == 180
+            assert temperature == 0.1
+            self.model = "deepseek-v4-flash"
 
         def analyze(self, issue, report, evidence):
             return LLMAnalysisResult(

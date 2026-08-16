@@ -19,16 +19,18 @@ from .models import (
     LLMAnalysis,
     LLMAnalysisResponse,
     LLMAnalysisResult,
+    LLMHypothesis,
 )
 
-OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
-OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash-free"
-OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
-OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 1_024
+OPENCODE_API_BASE_URL = "https://opencode.ai/zen/go/v1"
+OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
+OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 8_192
+OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 20_000
 OPENCODE_RERANK_REASONING_EFFORT = "none"
+OPENCODE_ANALYSIS_REASONING_EFFORT = "none"
 OPENCODE_RERANK_TIMEOUT_SECONDS = 180.0
 OPENCODE_ANALYSIS_TIMEOUT_SECONDS = 180.0
-OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS = 2_000
+OPENCODE_ANALYSIS_TEMPERATURE = 0.1
 OPENCODE_RERANK_MAX_IDS = 3
 DEEPSEEK_RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item
 is to contain the source location that must change to fix the GitHub issue. Select only the three
@@ -42,6 +44,47 @@ RANK_LINE_PATTERN = re.compile(
     r"^\s*RANK:\s*([A-Za-z0-9_-]+(?:\s*,\s*[A-Za-z0-9_-]+)*)\s*$",
     re.MULTILINE,
 )
+PROVIDER_URL_PATTERN = re.compile(r"https?://\S+")
+STRUCTURED_RESPONSE_FIELDS = frozenset(
+    {
+        "summary",
+        "issue_type",
+        "reproduction_completeness",
+        "evidence_observations",
+        "evidence_id",
+        "alignment",
+        "observation",
+        "hypothesis",
+        "description",
+        "confidence",
+        "evidence_ids",
+        "missing_evidence",
+    }
+)
+
+
+def _structured_validation_detail(error: Exception) -> tuple[str, str]:
+    """Classify validation failures without retaining provider response content."""
+    if not isinstance(error, ValidationError):
+        return "invalid_response", type(error).__name__
+    failures = error.errors(include_url=False, include_input=False)
+    category = (
+        "invalid_json"
+        if any(str(failure.get("type", "")).startswith("json_") for failure in failures)
+        else "schema_validation"
+    )
+    details: list[str] = []
+    for failure in failures[:5]:
+        location = ".".join(
+            str(part)
+            if isinstance(part, int) or part in STRUCTURED_RESPONSE_FIELDS
+            else "<unexpected-field>"
+            for part in failure.get("loc", ())
+        ) or "root"
+        details.append(f"{location}={failure.get('type', 'validation_error')}")
+    if len(failures) > 5:
+        details.append(f"+{len(failures) - 5} more")
+    return category, ", ".join(details)
 SYSTEM_PROMPT = """You investigate a GitHub issue using only the supplied repository evidence.
 
 Return the requested compact analysis. The hypothesis is tentative, not a confirmed root cause,
@@ -56,9 +99,6 @@ values, and tests.
 Treat repository evidence as stronger than an Issue's unverified causal claim. If the code
 explicitly implements behavior the Issue says is missing, use contradicts_issue and investigate
 version, routing, deployment, or runtime-path mismatch instead of claiming the handler is absent.
-
-A validation step must be a non-mutating test or inspection, never a proposed code change. Do not
-emit or execute shell commands.
 """
 
 
@@ -106,9 +146,9 @@ class OpenCodeIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
-        max_output_tokens: int = 4_096,
-        timeout_seconds: float = 60.0,
-        temperature: float = 1.0,
+        max_output_tokens: int | None = 20_000,
+        timeout_seconds: float = OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
+        temperature: float = OPENCODE_ANALYSIS_TEMPERATURE,
         seed: int | None = None,
         client: httpx.Client | None = None,
     ) -> None:
@@ -159,9 +199,11 @@ class OpenCodeIssueAnalyzer:
                 },
             ],
             "temperature": self.temperature,
+            "reasoning_effort": OPENCODE_ANALYSIS_REASONING_EFFORT,
             "response_format": {"type": "json_object"},
-            "max_tokens": self.max_output_tokens,
         }
+        if self.max_output_tokens is not None:
+            payload["max_tokens"] = self.max_output_tokens
         if self.seed is not None:
             payload["seed"] = self.seed
 
@@ -192,7 +234,10 @@ class OpenCodeIssueAnalyzer:
                 try:
                     error_payload = response.json().get("error") or {}
                     error_code = str(error_payload.get("code") or "").strip()
-                    error_message = str(error_payload.get("message") or "").strip()
+                    error_message = PROVIDER_URL_PATTERN.sub(
+                        "[URL redacted]",
+                        str(error_payload.get("message") or "").strip(),
+                    )
                 except (AttributeError, TypeError, ValueError):
                     error_code = ""
                     error_message = ""
@@ -226,6 +271,7 @@ class OpenCodeIssueAnalyzer:
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise LLMProviderError(
                 f"{self.provider_label} returned an invalid structured response",
+                retryable=True,
                 category="invalid_response",
                 elapsed_ms=elapsed_ms,
             ) from error
@@ -241,7 +287,7 @@ class OpenCodeIssueAnalyzer:
             "issue": {
                 "number": issue.number,
                 "title": issue.title,
-                "body": issue.body[:6_000],
+                "body": issue.body,
                 "labels": issue.labels,
             },
             "repository_evidence": [
@@ -258,12 +304,27 @@ class OpenCodeIssueAnalyzer:
         output_tokens = int(usage.get("completion_tokens") or 0)
         request_id = response_payload.get("id")
         system_fingerprint = response_payload.get("system_fingerprint")
+        choices = response_payload.get("choices") or []
+        finish_reason = choices[0].get("finish_reason") if choices else None
+        if finish_reason == "length":
+            raise LLMProviderError(
+                f"{self.provider_label} exhausted the analysis output budget",
+                retryable=False,
+                category="output_truncated",
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                elapsed_ms=elapsed_ms,
+                request_id=request_id,
+                system_fingerprint=system_fingerprint,
+            )
         try:
             analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:
+            category, detail = _structured_validation_detail(error)
             raise LLMProviderError(
-                f"{self.provider_label} returned an invalid structured response",
-                category="invalid_response",
+                f"{self.provider_label} returned an invalid structured response ({detail})",
+                retryable=True,
+                category=category,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 elapsed_ms=elapsed_ms,
@@ -317,6 +378,14 @@ class OpenCodeIssueAnalyzer:
         affected_component = (
             f"{primary_file}::{primary_symbol}" if primary_symbol else primary_file
         )
+        hypothesis = LLMHypothesis(
+            **response.hypothesis.model_dump(),
+            validation_step=OpenCodeIssueAnalyzer._validation_step(
+                report,
+                evidence,
+                response.hypothesis.evidence_ids,
+            ),
+        )
         return LLMAnalysis(
             summary=response.summary,
             issue_type=response.issue_type,
@@ -325,8 +394,38 @@ class OpenCodeIssueAnalyzer:
             evidence_observations=response.evidence_observations,
             contradictions=contradictions,
             reranked_evidence_ids=[snippet.id for snippet in evidence],
-            hypotheses=[response.hypothesis],
+            hypotheses=[hypothesis],
             needs_more_evidence=bool(response.hypothesis.missing_evidence),
+        )
+
+    @staticmethod
+    def _validation_step(
+        report: InvestigationReport,
+        evidence: Sequence[EvidenceSnippet],
+        cited_evidence_ids: Sequence[str],
+    ) -> str:
+        evidence_by_id = {snippet.id: snippet for snippet in evidence}
+        primary = next(
+            (
+                evidence_by_id[evidence_id]
+                for evidence_id in cited_evidence_ids
+                if evidence_id in evidence_by_id
+            ),
+            None,
+        )
+        if primary is not None:
+            location = (
+                f"{primary.file}::{primary.symbol}" if primary.symbol else primary.file
+            )
+        elif report.candidates:
+            candidate = report.candidates[0]
+            symbol = candidate.qualified_symbol or candidate.symbol
+            location = f"{candidate.file}::{symbol}" if symbol else candidate.file
+        else:
+            location = "the highest-ranked repository location"
+        return (
+            f"Inspect the cited behavior at {location}, then run the smallest existing "
+            "relevant test and compare the result with the Issue without modifying files."
         )
 
     def _validate_evidence_references(
@@ -343,6 +442,7 @@ class OpenCodeIssueAnalyzer:
             raise LLMProviderError(
                 f"{self.provider_label} did not provide exactly one observation "
                 "for every evidence ID",
+                retryable=True,
                 category="evidence_observation_coverage",
             )
         referenced_ids.update(observed_ids)
@@ -353,6 +453,7 @@ class OpenCodeIssueAnalyzer:
             unknown = ", ".join(sorted(unknown_ids))
             raise LLMProviderError(
                 f"{self.provider_label} cited unknown evidence IDs: {unknown}",
+                retryable=True,
                 category="unknown_evidence_id",
             )
 
@@ -365,7 +466,7 @@ class OpenCodeIssueAnalyzer:
             "issue": {
                 "number": issue.number,
                 "title": issue.title,
-                "body": issue.body[:OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS],
+                "body": issue.body,
                 "labels": issue.labels,
             },
             "repository_evidence": [

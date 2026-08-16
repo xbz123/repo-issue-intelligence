@@ -60,9 +60,10 @@ def _repository(tmp_path: Path) -> Path:
 
 class ValidAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
     temperature = 0.1
     seed = 1337
+    max_output_tokens = 20_000
 
     def analyze(self, issue, report, evidence):
         evidence_ids = [snippet.id for snippet in evidence]
@@ -107,7 +108,7 @@ class ValidAnalyzer:
 
 class InvalidAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
     temperature = 0.1
     seed = 1337
 
@@ -163,10 +164,17 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
     assert run.overall.analysis_success_rate == 1
     assert run.overall.first_attempt_success_rate == 1
     assert run.overall.persistence_verified == 1
+    assert run.max_output_tokens == 20_000
+    assert run.max_evidence_chars == 100_000
+    assert run.max_lines_per_evidence == 200
 
     output = tmp_path / "result.json"
     save_agent_analysis_run(run, output)
     assert AgentAnalysisRun.model_validate_json(output.read_text(encoding="utf-8")) == run
+
+    historical_payload = run.model_dump(mode="json")
+    historical_payload.pop("max_output_tokens")
+    assert AgentAnalysisRun.model_validate(historical_payload).max_output_tokens is None
 
 
 def test_agent_analysis_evaluation_records_non_retryable_failure(

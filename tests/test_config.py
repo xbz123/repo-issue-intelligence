@@ -21,6 +21,9 @@ def test_settings_keeps_opencode_key_secret(tmp_path, monkeypatch) -> None:
 
     assert settings.opencode_api_key is not None
     assert settings.opencode_api_key.get_secret_value() == "test-opencode-secret"
-    assert settings.opencode_max_output_tokens == 4_096
-    assert settings.opencode_timeout_seconds == 60
+    assert settings.opencode_max_output_tokens == 20_000
+    assert settings.opencode_timeout_seconds == 180
+    assert settings.opencode_temperature == 0.1
+    assert settings.opencode_max_evidence_chars == 100_000
+    assert settings.opencode_max_lines_per_evidence == 200
     assert "test-opencode-secret" not in repr(settings)

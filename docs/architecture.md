@@ -142,9 +142,11 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. Generic
 runtime failures retain one compatibility retry before the run is marked failed. Provider errors
-are error-aware: invalid JSON/schema and evidence-contract failures stop after the first attempt,
-while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
-`retry-after` value is used as the minimum delay, with every wait capped at 30 seconds.
+are error-aware: invalid JSON/schema and evidence-contract failures receive one additional strict
+attempt, while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
+`retry-after` value is used as the minimum delay, with every wait capped at 30 seconds. Retried
+contract output must pass the unchanged schema and evidence checks; malformed output is never
+repaired locally.
 
 When an operator explicitly enables OpenCode analysis, two nodes are inserted before review:
 
@@ -160,7 +162,10 @@ rank_issues
 
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
-budget. `llm_analyze` calls OpenCode DeepSeek V4 Flash through `/chat/completions` using `json_object`, an
+budget. The default limits are 200 numbered source lines per snippet and 100,000 repository-evidence
+characters per request; both are recorded in evaluation artifacts. Direct library callers must
+explicitly opt out to run a full-file public-repository diagnostic. `llm_analyze` calls OpenCode DeepSeek V4 Flash through
+`https://opencode.ai/zen/go/v1/chat/completions` using `json_object`, an
 explicit compact schema prompt, and local Pydantic validation. The provider returns five fields:
 summary, Issue type, reproduction completeness, one observation per snippet, and exactly one
 evidence-grounded hypothesis. The request omits the duplicate deterministic-candidate list because
@@ -174,18 +179,25 @@ readable.
 An Issue with no readable deterministic evidence skips the provider request, retains its
 deterministic investigation with `llm_analysis=null`, records the Issue number in
 `skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
-OpenCode uses a 4,096-token budget and 60-second timeout because reasoning tokens share the
-completion budget and observed valid responses can exceed 30 seconds.
+OpenCode disables reasoning and uses temperature `0.1`, a 20,000-token budget, and a 180-second
+timeout in both the normal runtime and reliability evaluator. An analysis completion that reports
+`finish_reason=length` fails as non-retryable `output_truncated`; the workflow does not repeat the
+same request with an already exhausted 20,000-token budget.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
-selection; `--llm` always uses `deepseek-v4-flash-free`.
+selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies are not locally truncated, while
+the evidence budgets, Top-K selection, tracked-file scope, and sensitive-file exclusion bound what
+repository content can enter a request. The provider context window remains a hard external limit.
 
 `agent-evaluate` exercises this complete path against selected frozen benchmark cases. Repository
 maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the
 Agent evidence. A case counts as successful only when the complete local schema and evidence-ID
 contract pass, the graph reaches `awaiting_review`, and the final public Agent payload survives a
-SQLite JSON round-trip. The result keeps full validated analysis content plus request attempts,
-tokens, latency, skip state, and failure category; failures remain in the aggregate denominator.
+SQLite JSON round-trip. The result keeps full validated analysis content plus the requested output
+ceiling, request attempts, tokens, latency, skip state, and failure category; failures remain in
+the aggregate denominator. `--omit-max-tokens` is a diagnostic-only switch that removes the
+`max_tokens` request field and records a null ceiling so the provider default can be compared with
+the explicit 20,000-token protocol.
 This reliability suite is deliberately separate from rank-only localization metrics.
 When an HTTP-success response fails JSON/schema or evidence-contract validation, the exception
 retains its request ID, system fingerprint, input/output tokens, and provider latency. The
@@ -197,19 +209,18 @@ Localization evaluation uses a separate rank-only model contract. `benchmark.py`
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
 files exist, and indexes only paths returned by `git ls-files`. It runs deterministic retrieval
-and optionally asks OpenCode `deepseek-v4-flash-free` to rerank bounded evidence IDs. The benchmark
+and optionally asks OpenCode `deepseek-v4-flash` to rerank selected evidence IDs. The benchmark
 does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
 receives a plain chat-completions request without `response_format`; the response contract is one
 unique `RANK:` line containing at most three evidence IDs. Reasoning is disabled, output starts at
-256 tokens and expands once to 1,024 only after truncation, the Issue body is capped at 2,000
-characters, and each evidence item is capped at 300 characters. Root-cause hypotheses are
+8,192 tokens and expands once to 20,000 only after truncation. Issue bodies and selected evidence
+items have no project-defined character cap. Root-cause hypotheses are
 intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
 normalizes paths and identifiers, rejects
 dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
 and applies bounded graph/history evidence. Compound identifier variants preserve source term
-order rather than depending on set iteration. Per-candidate evidence caps preserve candidate
-breadth before LLM reranking. Python AST symbols retain both their local name and qualified
+order rather than depending on set iteration. Python AST symbols retain both their local name and qualified
 class/function ownership. Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.

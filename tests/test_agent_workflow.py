@@ -40,7 +40,7 @@ def create_repository(root: Path) -> Path:
 
 class FakeAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def analyze(self, issue, report, evidence):
         assert issue.number == report.issue.number
@@ -87,7 +87,7 @@ class FakeAnalyzer:
 
 class FailIfCalledAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def analyze(self, issue, report, evidence):
         raise AssertionError("analyzer must not be called without evidence")
@@ -95,7 +95,7 @@ class FailIfCalledAnalyzer:
 
 class InvalidResponseAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def __init__(self) -> None:
         self.calls = 0
@@ -123,6 +123,21 @@ class RateLimitedAnalyzer(FakeAnalyzer):
                 retryable=True,
                 retry_after=self.retry_after,
                 category="rate_limit",
+            )
+        return super().analyze(issue, report, evidence)
+
+
+class RecoveringInvalidResponseAnalyzer(FakeAnalyzer):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def analyze(self, issue, report, evidence):
+        self.calls += 1
+        if self.calls == 1:
+            raise LLMProviderError(
+                "invalid structured response",
+                retryable=True,
+                category="invalid_response",
             )
         return super().analyze(issue, report, evidence)
 
@@ -210,7 +225,7 @@ def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) ->
 
     assert run.status is AgentRunStatus.AWAITING_REVIEW
     assert run.llm_enabled is True
-    assert run.llm_model == "deepseek-v4-flash-free"
+    assert run.llm_model == "deepseek-v4-flash"
     assert [trace.node_name for trace in run.traces] == [
         "rank_issues",
         "route_top_k",
@@ -276,10 +291,18 @@ def test_agent_run_analyzes_only_issues_with_repository_evidence(
 
     original_collect_evidence = agent_workflow.collect_evidence
 
-    def selective_collect_evidence(report, max_total_chars):
+    def selective_collect_evidence(
+        report,
+        max_total_chars,
+        max_lines_per_snippet,
+    ):
         if report.issue.number == 2:
             return []
-        return original_collect_evidence(report, max_total_chars=max_total_chars)
+        return original_collect_evidence(
+            report,
+            max_total_chars=max_total_chars,
+            max_lines_per_snippet=max_lines_per_snippet,
+        )
 
     monkeypatch.setattr(
         agent_workflow,
@@ -334,6 +357,37 @@ def test_agent_does_not_retry_non_retryable_provider_error(
     assert failed_run is not None
     llm_traces = [trace for trace in failed_run.traces if trace.node_name == "llm_analyze"]
     assert [(trace.status, trace.attempt) for trace in llm_traces] == [("failed", 1)]
+
+
+def test_agent_retries_strict_invalid_response_once(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+    analyzer = RecoveringInvalidResponseAnalyzer()
+    delays: list[float] = []
+    from repo_issue_intelligence import agent_workflow
+
+    monkeypatch.setattr(agent_workflow, "sleep", delays.append)
+
+    run = run_agent(
+        [issue(1, "Data persistence failure", "persist_data loses data")],
+        repository,
+        top_k=1,
+        store=store,
+        llm_analyzer=analyzer,
+        max_attempts=2,
+    )
+
+    assert run.status is AgentRunStatus.AWAITING_REVIEW
+    assert analyzer.calls == 2
+    assert delays == [1.0]
+    llm_traces = [trace for trace in run.traces if trace.node_name == "llm_analyze"]
+    assert [(trace.status, trace.attempt) for trace in llm_traces] == [
+        ("failed", 1),
+        ("completed", 2),
+    ]
 
 
 @pytest.mark.parametrize(

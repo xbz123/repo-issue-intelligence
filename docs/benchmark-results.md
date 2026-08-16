@@ -113,40 +113,47 @@ characters unless an owner or uniquely resolved path supplies scope. Symbol Reca
 `Werkzeug`, `Celery`, and `pip`), no previously matched symbol regressed, and all 50 file candidate
 lists remained unchanged.
 
-## Retained DeepSeek V4 Flash rank-only result
+## Current DeepSeek V4 Flash rank-only result
 
-Two authorized OpenCode `deepseek-v4-flash-free` runs reranked the earlier v0.13 deterministic
-Top-20 candidate pool. The protocol sends no grammar-constrained response format and accepts
-exactly one plain `RANK:` line containing at most three known evidence IDs. All cases, including
-any fallback, remain in the metric denominator. These results are not yet paired with the current
-v0.25 output.
+Three authorized OpenCode `deepseek-v4-flash` runs reranked the current v0.25 deterministic Top-20
+candidate pool. The protocol sends no grammar-constrained response format and accepts exactly one
+plain `RANK:` line containing at most three known evidence IDs. All cases, including any fallback,
+remain in the metric denominator. Reasoning is disabled, the first completion budget is 8,192
+tokens, and only a truncated response receives one 20,000-token retry.
 
 | Variant | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Valid ranks |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Deterministic v0.13 | 50/50 | 0.4067 | 0.6900 | 0.7800 | 0.9300 | 0.6016 | - |
-| DeepSeek run 1 | 50/50 | 0.6567 | 0.8200 | 0.8600 | 0.9300 | 0.8226 | 50/50 |
-| DeepSeek run 2 | 50/50 | 0.6767 | 0.8200 | 0.8600 | 0.9300 | 0.8326 | 50/50 |
-| Two-run mean | 50/50 | 0.6667 | 0.8200 | 0.8600 | 0.9300 | 0.8276 | 50/50 |
+| Deterministic v0.25 | 50/50 | 0.4067 | 0.6900 | 0.7800 | 1.0000 | 0.6038 | - |
+| DeepSeek run 1 | 50/50 | 0.7567 | 0.8600 | 0.9000 | 1.0000 | 0.8949 | 50/50 |
+| DeepSeek run 2 | 50/50 | 0.7267 | 0.8600 | 0.9000 | 1.0000 | 0.8883 | 50/50 |
+| DeepSeek run 3 | 50/50 | 0.7267 | 0.8600 | 0.9000 | 1.0000 | 0.8849 | 50/50 |
+| Three-run mean | 50/50 | 0.7367 | 0.8600 | 0.9000 | 1.0000 | 0.8894 | 50/50 |
 
-Both runs completed every request in one attempt. Fallback, invalid-rank, unknown-ID, and grammar
-error counts were zero. Each run recorded 170,521 input tokens; output was 485 and 491 tokens.
-Average model latency was `4.13 s` and `4.96 s`. Run-level population standard deviation was
-`0.0100` for Recall@1, `0.0050` for MRR, and `0.41 s` for latency.
+Protocol success was 150/150 with no fallback, invalid rank, unknown evidence ID, grammar error, or
+HTTP failure. The three runs made 57, 50, and 50 requests, recorded 2,500,818 input tokens and
+163,383 output tokens in total, and reported mean LLM latency of 28.53, 1.62, and 1.46 seconds per
+case. The first run's 162,491 output tokens account for nearly all completion usage even though all
+three requests set `reasoning_effort=none`; provider token accounting and latency are therefore not
+stable enough for a deterministic cost claim.
 
-Against deterministic retrieval, each run improved 18 expected-file reciprocal ranks, left 28
-unchanged, and worsened four. Candidate membership remained identical, but ordering changed in
-14/50 cases between repeats. Only `pydantic-safe-annotations-metaclass` changed expected-file
-rank, from rank 2 to rank 1. Seed 1337 is therefore best effort, not deterministic output.
+Only 29/50 full candidate orders were identical across all three repeats. Pairwise order changes
+were 21 cases between runs 1 and 2, five between runs 2 and 3, and 20 between runs 1 and 3. Fixed
+seed 1337 is best effort, not deterministic model output. Candidate membership remains the same
+deterministic Top-20 set, so the LLM cannot recover a file absent from that pool.
 
-On the 33 symbol-labeled cases, deterministic Symbol Recall@1/5/10/20 was
-`0.1970/0.3636/0.3636/0.4242` with MRR `0.2866`. Both DeepSeek runs produced
-`0.3636/0.4242/0.4242/0.4242` with MRR `0.4152`.
+On the 33 symbol-labeled cases, all three runs produced Symbol Recall@1/5/10/20 of
+`0.6667/0.6970/0.6970/0.7121` with MRR `0.7424`. Symbol Recall@20 is unchanged from deterministic
+v0.25 because the rank-only protocol reorders existing file/symbol evidence rather than discovering
+new symbols.
 
 Machine-readable artifacts:
 
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run3.json`
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run1.json`
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run2.json`
+- `benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-manifest-v8-50-cases-run3.json`
 - `benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.24-title-constructor-50-cases-run3.json`
@@ -204,8 +211,10 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 - Only 11/50 cases have multi-file production ground truth.
 - File Recall@20 is `1.0000` on this frozen suite, whose size and case distribution remain limited.
 - Symbol Recall@20 is `0.7121`, so within-file localization remains a major bottleneck.
-- DeepSeek changed ordering in 14/50 repeated cases despite a fixed best-effort seed.
-- Full hypothesis generation has less real-project reliability evidence than rank-only reranking.
+- DeepSeek changed at least one position in 21/50 cases across the three current repeated runs
+  despite a fixed best-effort seed.
+- Full hypothesis generation reached 140/150 valid final contracts in the current three-run
+  real-project evaluation, but run-level success still ranged from 86% to 100%.
 
 ## Next experiment
 

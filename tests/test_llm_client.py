@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from repo_issue_intelligence.llm_client import (
+    OPENCODE_API_BASE_URL,
     LLMProviderError,
     OpenCodeIssueAnalyzer,
 )
@@ -87,7 +88,6 @@ def structured_payload(evidence_id: str = "E1") -> dict:
             "confidence": 0.72,
             "evidence_ids": [evidence_id],
             "missing_evidence": ["Runtime stack trace"],
-            "validation_step": "Run the existing refresh-token test and inspect the error.",
         },
     }
 
@@ -123,7 +123,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
         seed=1337,
         client=client,
     )
-    record = issue()
+    record = issue().model_copy(update={"body": "x" * 7_000})
 
     result = analyzer.analyze(record, report(record), evidence())
 
@@ -132,15 +132,20 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert result.output_tokens == 120
     assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
+    assert result.analysis.hypotheses[0].validation_step == (
+        "Inspect the cited behavior at auth_service.py::refresh_token, then run the "
+        "smallest existing relevant test and compare the result with the Issue without "
+        "modifying files."
+    )
     assert result.analysis.affected_component == "auth_service.py::refresh_token"
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.analysis.needs_more_evidence is True
     assert result.provider == "opencode"
-    assert result.model == "deepseek-v4-flash-free"
+    assert result.model == "deepseek-v4-flash"
     assert captured_request["response_format"] == {"type": "json_object"}
-    assert captured_request["max_tokens"] == 4_096
+    assert captured_request["max_tokens"] == 20_000
     assert "max_completion_tokens" not in captured_request
-    assert "reasoning_effort" not in captured_request
+    assert captured_request["reasoning_effort"] == "none"
     assert captured_request["temperature"] == 0.1
     assert captured_request["seed"] == 1337
     system_prompt = captured_request["messages"][0]["content"]
@@ -150,7 +155,40 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert '"reranked_evidence_ids"' not in system_prompt
     user_payload = json.loads(captured_request["messages"][1]["content"])
     assert "deterministic_candidates" not in user_payload
+    assert len(user_payload["issue"]["body"]) == 7_000
     assert user_payload["repository_evidence"][0]["id"] == "E1"
+
+
+def test_opencode_analyzer_can_omit_max_tokens() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-server-default",
+                "choices": [
+                    {"message": {"content": json.dumps(structured_payload())}}
+                ],
+                "usage": {"prompt_tokens": 300, "completion_tokens": 120},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        max_output_tokens=None,
+        client=client,
+    )
+
+    result = analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert result.request_id == "request-server-default"
+    assert "max_tokens" not in captured_request
 
 
 def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
@@ -190,7 +228,7 @@ def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
     )
 
     assert "response_format" not in captured_request
-    assert captured_request["max_tokens"] == 256
+    assert captured_request["max_tokens"] == 8_192
     assert "max_completion_tokens" not in captured_request
     assert captured_request["reasoning_effort"] == "none"
     assert captured_request["seed"] == 1337
@@ -198,7 +236,7 @@ def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
     assert "three\nstrongest evidence IDs" in captured_request["messages"][0]["content"]
     assert "RANK: E3,E1,E2" in captured_request["messages"][0]["content"]
     user_payload = json.loads(captured_request["messages"][1]["content"])
-    assert len(user_payload["issue"]["body"]) == 2_000
+    assert len(user_payload["issue"]["body"]) == 2_100
     assert result.provider == "opencode"
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.input_tokens == 80
@@ -358,9 +396,9 @@ def test_opencode_deepseek_rerank_classifies_output_truncation() -> None:
     assert error.value.category == "output_truncated"
     assert error.value.attempts == 2
     assert error.value.input_tokens == 20
-    assert error.value.output_tokens == 1_280
+    assert error.value.output_tokens == 28_192
     assert error.value.elapsed_ms >= 0
-    assert requested_budgets == [256, 1_024]
+    assert requested_budgets == [8_192, 20_000]
 
 
 def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> None:
@@ -369,13 +407,13 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
     def handler(request: httpx.Request) -> httpx.Response:
         budget = json.loads(request.content)["max_tokens"]
         requested_budgets.append(budget)
-        if budget == 256:
+        if budget == 8_192:
             return httpx.Response(
                 200,
                 json={
                     "id": "truncated-request",
                     "choices": [{"finish_reason": "length", "message": {"content": ""}}],
-                    "usage": {"prompt_tokens": 80, "completion_tokens": 256},
+                    "usage": {"prompt_tokens": 80, "completion_tokens": 8_192},
                 },
             )
         return httpx.Response(
@@ -395,11 +433,11 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
 
     result = analyzer.rerank(issue(), evidence())
 
-    assert requested_budgets == [256, 1_024]
+    assert requested_budgets == [8_192, 20_000]
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.attempts == 2
     assert result.input_tokens == 160
-    assert result.output_tokens == 356
+    assert result.output_tokens == 8_292
 
 
 def test_opencode_deepseek_rerank_marks_grammar_400_non_retryable() -> None:
@@ -469,6 +507,7 @@ def test_opencode_deepseek_rerank_marks_5xx_retryable() -> None:
 def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
     response = structured_payload()
     hypothesis = response["hypothesis"]
+    hypothesis["validation_step"] = "Run the existing test and inspect the result."
     payload = {
         **response,
         "affected_component": "authentication",
@@ -623,6 +662,51 @@ def test_opencode_analyzer_derives_needs_more_evidence() -> None:
     assert result.analysis.hypotheses[0].missing_evidence == []
 
 
+def test_opencode_analyzer_derives_validation_from_cited_evidence() -> None:
+    snippets = [
+        *evidence(),
+        EvidenceSnippet(
+            id="E2",
+            file="validation.py",
+            symbol="validate_token",
+            lines="8-10",
+            content="8: def validate_token():\n9:     raise InvalidToken()",
+        ),
+    ]
+    response_payload = structured_payload("E2")
+    response_payload["evidence_observations"].insert(
+        0,
+        {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "The refresh path calls token validation.",
+        },
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-cited-validation",
+                "choices": [
+                    {"message": {"content": json.dumps(response_payload)}}
+                ],
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    result = analyzer.analyze(issue(), report(issue()), snippets)
+
+    assert result.analysis.hypotheses[0].validation_step.startswith(
+        "Inspect the cited behavior at validation.py::validate_token"
+    )
+
+
 def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -645,12 +729,81 @@ def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
     with pytest.raises(LLMProviderError, match="invalid structured response") as error:
         analyzer.analyze(record, report(record), evidence())
 
-    assert error.value.category == "invalid_response"
+    assert error.value.category == "invalid_json"
+    assert "root=json_invalid" in str(error.value)
+    assert error.value.retryable is True
     assert error.value.request_id == "request-invalid-json"
     assert error.value.system_fingerprint == "fingerprint-invalid-json"
     assert error.value.input_tokens == 304
     assert error.value.output_tokens == 124
     assert error.value.elapsed_ms >= 0
+
+
+def test_opencode_analyzer_reports_analysis_output_truncation_without_retry() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-truncated-analysis",
+                "system_fingerprint": "fingerprint-truncated-analysis",
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "message": {"content": '{"summary":'},
+                    }
+                ],
+                "usage": {"prompt_tokens": 504, "completion_tokens": 20_000},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match="exhausted") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert error.value.category == "output_truncated"
+    assert error.value.retryable is False
+    assert error.value.request_id == "request-truncated-analysis"
+    assert error.value.system_fingerprint == "fingerprint-truncated-analysis"
+    assert error.value.input_tokens == 504
+    assert error.value.output_tokens == 20_000
+
+
+def test_opencode_analyzer_reports_schema_validation_paths_without_content() -> None:
+    response_payload = structured_payload()
+    response_payload.pop("issue_type")
+    response_payload["unexpected_source_content"] = "must not be persisted"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-invalid-schema",
+                "choices": [
+                    {"message": {"content": json.dumps(response_payload)}}
+                ],
+                "usage": {"prompt_tokens": 305, "completion_tokens": 125},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match="invalid structured response") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert error.value.category == "schema_validation"
+    assert "issue_type=missing" in str(error.value)
+    assert "<unexpected-field>=extra_forbidden" in str(error.value)
+    assert "unexpected_source_content" not in str(error.value)
+    assert "must not be persisted" not in str(error.value)
 
 
 def test_opencode_analyzer_exposes_retry_after_without_response_body() -> None:
@@ -701,6 +854,32 @@ def test_opencode_analyzer_reports_bounded_structured_error_detail() -> None:
         analyzer.analyze(record, report(record), evidence())
 
 
+def test_opencode_analyzer_redacts_provider_urls_from_errors() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            json={
+                "error": {
+                    "message": (
+                        "Insufficient balance. Manage billing at "
+                        "https://opencode.ai/workspace/private-id/billing"
+                    )
+                }
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match=r"\[URL redacted\]") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert "private-id" not in str(error.value)
+
+
 def test_opencode_analyzer_wraps_transport_error_without_request_details() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("secret upstream detail", request=request)
@@ -721,5 +900,6 @@ def test_opencode_analyzer_wraps_transport_error_without_request_details() -> No
 def test_opencode_analyzer_uses_fixed_deepseek_model() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key")
 
-    assert analyzer.model == "deepseek-v4-flash-free"
+    assert OPENCODE_API_BASE_URL == "https://opencode.ai/zen/go/v1"
+    assert analyzer.model == "deepseek-v4-flash"
     analyzer.close()

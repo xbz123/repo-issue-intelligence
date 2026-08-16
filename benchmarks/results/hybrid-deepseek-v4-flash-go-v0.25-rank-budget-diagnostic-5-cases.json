@@ -1,0 +1,1097 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "variant": "hybrid",
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_chars_per_evidence": null,
+  "initial_output_tokens": 4096,
+  "max_output_tokens": 8192,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "timeout_seconds": 180.0,
+  "reasoning_effort": "none",
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T02:18:40.552444Z",
+  "results": [
+    {
+      "case_id": "starlette-session-cookie-refresh",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 2019,
+      "issue_url": "https://github.com/encode/starlette/issues/2019",
+      "fix_pr_url": "https://github.com/encode/starlette/pull/3166",
+      "pre_fix_sha": "fd53a8f20bb1560190868359fa39cf07fb776f42",
+      "issue_updated_at": "2026-03-01T20:30:20Z",
+      "expected_files": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ],
+      "expected_symbols": [],
+      "candidate_files": [
+        "starlette/middleware/sessions.py",
+        "tests/middleware/test_session.py",
+        "starlette/responses.py",
+        "starlette/requests.py",
+        "starlette/middleware/errors.py",
+        "starlette/templating.py",
+        "tests/middleware/test_base.py",
+        "tests/test_routing.py",
+        "tests/test_requests.py",
+        "tests/test_testclient.py",
+        "starlette/routing.py",
+        "starlette/applications.py",
+        "starlette/middleware/base.py",
+        "tests/middleware/test_errors.py",
+        "tests/test_exceptions.py",
+        "tests/middleware/test_https_redirect.py",
+        "tests/middleware/test_trusted_host.py",
+        "starlette/_utils.py",
+        "starlette/formparsers.py",
+        "starlette/datastructures.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "starlette/middleware/sessions.py",
+          "symbol": "send_wrapper",
+          "qualified_symbol": "SessionMiddleware.__call__.send_wrapper",
+          "rank": 1
+        },
+        {
+          "file": "tests/middleware/test_session.py",
+          "symbol": "test_session_cookie_subpath",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "starlette/responses.py",
+          "symbol": "set_cookie",
+          "qualified_symbol": "Response.set_cookie",
+          "rank": 3
+        },
+        {
+          "file": "starlette/requests.py",
+          "symbol": "cookie_parser",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "starlette/middleware/errors.py",
+          "symbol": "_send",
+          "qualified_symbol": "ServerErrorMiddleware.__call__._send",
+          "rank": 5
+        },
+        {
+          "file": "starlette/templating.py",
+          "symbol": "TemplateResponse",
+          "qualified_symbol": "Jinja2Templates.TemplateResponse",
+          "rank": 6
+        },
+        {
+          "file": "tests/middleware/test_base.py",
+          "symbol": "sleep_and_set",
+          "qualified_symbol": "test_run_background_tasks_even_if_client_disconnects.sleep_and_set",
+          "rank": 7
+        },
+        {
+          "file": "tests/test_routing.py",
+          "symbol": "modified_send",
+          "qualified_symbol": "AddHeadersMiddleware.__call__.modified_send",
+          "rank": 8
+        },
+        {
+          "file": "tests/test_requests.py",
+          "symbol": "test_cookies_invalid",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "tests/test_testclient.py",
+          "symbol": "test_domain_restricted_cookies",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "starlette/routing.py",
+          "symbol": "request_response",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "starlette/applications.py",
+          "symbol": "__init__",
+          "qualified_symbol": "Starlette.__init__",
+          "rank": 12
+        },
+        {
+          "file": "starlette/middleware/base.py",
+          "symbol": "send_no_error",
+          "qualified_symbol": "BaseHTTPMiddleware.__call__.call_next.send_no_error",
+          "rank": 13
+        },
+        {
+          "file": "tests/middleware/test_errors.py",
+          "symbol": "test_debug_after_response_sent",
+          "qualified_symbol": null,
+          "rank": 14
+        },
+        {
+          "file": "tests/test_exceptions.py",
+          "symbol": "test_request_in_app_and_handler_is_the_same_object",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "tests/middleware/test_https_redirect.py",
+          "symbol": "test_https_redirect_middleware",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "tests/middleware/test_trusted_host.py",
+          "symbol": "test_trusted_host_middleware",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "starlette/_utils.py",
+          "symbol": "get_route_path",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "starlette/formparsers.py",
+          "symbol": "on_end",
+          "qualified_symbol": "FormParser.on_end",
+          "rank": 19
+        },
+        {
+          "file": "starlette/datastructures.py",
+          "symbol": "__new__",
+          "qualified_symbol": "URLPath.__new__",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ],
+      "matched_files_at_10": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ],
+      "matched_files_at_20": [
+        "starlette/middleware/sessions.py",
+        "starlette/requests.py"
+      ],
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": null,
+      "symbol_recall_at_5": null,
+      "symbol_recall_at_10": null,
+      "symbol_recall_at_20": null,
+      "symbol_reciprocal_rank": null,
+      "analysis_elapsed_ms": 11414.885,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "71a000ea79fe407ca74bb3fc4fe8f826",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 8531,
+      "llm_output_tokens": 1286,
+      "llm_elapsed_ms": 9863.867,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "issue_url": "https://github.com/fastapi/typer/issues/1787",
+      "fix_pr_url": "https://github.com/fastapi/typer/pull/1788",
+      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
+      "issue_updated_at": "2026-05-26T17:51:15Z",
+      "expected_files": [
+        "typer/core.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "typer/core.py",
+          "symbol": "value_from_envvar"
+        }
+      ],
+      "candidate_files": [
+        "typer/core.py",
+        "typer/_click/decorators.py",
+        "typer/params.py",
+        "typer/models.py",
+        "typer/_click/utils.py",
+        "typer/main.py",
+        "typer/_click/shell_completion.py",
+        "typer/rich_utils.py",
+        "typer/_click/termui.py",
+        "typer/_click/parser.py",
+        "typer/_click/core.py",
+        "docs_src/options/help/tutorial001_an_py310.py",
+        "docs_src/options/help/tutorial002_an_py310.py",
+        "docs_src/one_file_per_command/app_py310/main.py",
+        "docs_src/first_steps/tutorial006_py310.py",
+        "docs_src/options/help/tutorial001_py310.py",
+        "docs_src/options/help/tutorial002_py310.py",
+        "typer/cli.py",
+        "typer/_completion_classes.py",
+        "typer/completion.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "typer/core.py",
+          "symbol": "value_from_envvar",
+          "qualified_symbol": "TyperOption.value_from_envvar",
+          "rank": 1
+        },
+        {
+          "file": "typer/_click/decorators.py",
+          "symbol": "option",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "typer/models.py",
+          "symbol": "shell_complete",
+          "qualified_symbol": "TyperPath.shell_complete",
+          "rank": 4
+        },
+        {
+          "file": "typer/_click/utils.py",
+          "symbol": "get_app_dir",
+          "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "typer/main.py",
+          "symbol": "command",
+          "qualified_symbol": "Typer.command",
+          "rank": 6
+        },
+        {
+          "file": "typer/_click/shell_completion.py",
+          "symbol": "get_completions",
+          "qualified_symbol": "ShellComplete.get_completions",
+          "rank": 7
+        },
+        {
+          "file": "typer/rich_utils.py",
+          "symbol": "_make_rich_text",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "typer/_click/termui.py",
+          "symbol": "_build_prompt",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "typer/_click/parser.py",
+          "symbol": "_Option",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "typer/_click/core.py",
+          "symbol": "augment_usage_errors",
+          "qualified_symbol": null,
+          "rank": 11
+        },
+        {
+          "file": "docs_src/options/help/tutorial001_an_py310.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "docs_src/options/help/tutorial002_an_py310.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "docs_src/first_steps/tutorial006_py310.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "docs_src/options/help/tutorial001_py310.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "docs_src/options/help/tutorial002_py310.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "typer/cli.py",
+          "symbol": "main",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "typer/_completion_classes.py",
+          "symbol": "_check_version",
+          "qualified_symbol": "BashComplete._check_version",
+          "rank": 19
+        },
+        {
+          "file": "typer/completion.py",
+          "symbol": "get_completion_inspect_parameters",
+          "qualified_symbol": null,
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "typer/core.py"
+      ],
+      "matched_files_at_10": [
+        "typer/core.py"
+      ],
+      "matched_files_at_20": [
+        "typer/core.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 16600.333,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "4ccb381cf7b04d0f8cc189931221c138",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 8130,
+      "llm_output_tokens": 2091,
+      "llm_elapsed_ms": 14110.049,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "issue_url": "https://github.com/Textualize/textual/issues/6205",
+      "fix_pr_url": "https://github.com/Textualize/textual/pull/6206",
+      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
+      "issue_updated_at": "2025-11-03T17:35:46Z",
+      "expected_files": [
+        "src/textual/_compositor.py",
+        "src/textual/widget.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/textual/_compositor.py",
+          "symbol": "_arrange_root"
+        },
+        {
+          "file": "src/textual/widget.py",
+          "symbol": "remove_children"
+        }
+      ],
+      "candidate_files": [
+        "src/textual/widget.py",
+        "src/textual/layouts/vertical.py",
+        "src/textual/layouts/stream.py",
+        "src/textual/compose.py",
+        "src/textual/screen.py",
+        "src/textual/getters.py",
+        "src/textual/app.py",
+        "src/textual/widgets/_select.py",
+        "src/textual/widgets/_progress_bar.py",
+        "src/textual/widgets/_static.py",
+        "src/textual/widgets/_text_area.py",
+        "src/textual/widgets/_footer.py",
+        "src/textual/widgets/_selection_list.py",
+        "src/textual/widgets/_radio_set.py",
+        "src/textual/widgets/_tabs.py",
+        "src/textual/dom.py",
+        "src/textual/widgets/_list_view.py",
+        "src/textual/lazy.py",
+        "src/textual/widgets/_input.py",
+        "src/textual/_compositor.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "src/textual/widget.py",
+          "symbol": "remove_children",
+          "qualified_symbol": "Widget.remove_children",
+          "rank": 1
+        },
+        {
+          "file": "src/textual/layouts/vertical.py",
+          "symbol": "VerticalLayout",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "src/textual/layouts/stream.py",
+          "symbol": "get_content_height",
+          "qualified_symbol": "StreamLayout.get_content_height",
+          "rank": 3
+        },
+        {
+          "file": "src/textual/compose.py",
+          "symbol": "compose",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "src/textual/screen.py",
+          "symbol": "scroll_to_center",
+          "qualified_symbol": "Screen.set_focus.scroll_to_center",
+          "rank": 5
+        },
+        {
+          "file": "src/textual/getters.py",
+          "symbol": "app",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "src/textual/app.py",
+          "symbol": "run_test",
+          "qualified_symbol": "App.run_test",
+          "rank": 7
+        },
+        {
+          "file": "src/textual/widgets/_select.py",
+          "symbol": "from_values",
+          "qualified_symbol": "Select.from_values",
+          "rank": 8
+        },
+        {
+          "file": "src/textual/widgets/_progress_bar.py",
+          "symbol": "__init__",
+          "qualified_symbol": "ProgressBar.__init__",
+          "rank": 9
+        },
+        {
+          "file": "src/textual/widgets/_static.py",
+          "symbol": "visual",
+          "qualified_symbol": "Static.visual",
+          "rank": 10
+        },
+        {
+          "file": "src/textual/widgets/_text_area.py",
+          "symbol": "_rewrap_and_refresh_virtual_size",
+          "qualified_symbol": "TextArea._rewrap_and_refresh_virtual_size",
+          "rank": 11
+        },
+        {
+          "file": "src/textual/widgets/_footer.py",
+          "symbol": "__init__",
+          "qualified_symbol": "Footer.__init__",
+          "rank": 12
+        },
+        {
+          "file": "src/textual/widgets/_selection_list.py",
+          "symbol": "SelectionToggled",
+          "qualified_symbol": "SelectionList.SelectionToggled",
+          "rank": 13
+        },
+        {
+          "file": "src/textual/widgets/_radio_set.py",
+          "symbol": "__init__",
+          "qualified_symbol": "RadioSet.__init__",
+          "rank": 14
+        },
+        {
+          "file": "src/textual/widgets/_tabs.py",
+          "symbol": "do_remove",
+          "qualified_symbol": "Tabs.remove_tab.do_remove",
+          "rank": 15
+        },
+        {
+          "file": "src/textual/dom.py",
+          "symbol": "check_identifiers",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "src/textual/widgets/_list_view.py",
+          "symbol": "_on_mount",
+          "qualified_symbol": "ListView._on_mount",
+          "rank": 17
+        },
+        {
+          "file": "src/textual/lazy.py",
+          "symbol": "__init__",
+          "qualified_symbol": "Lazy.__init__",
+          "rank": 18
+        },
+        {
+          "file": "src/textual/widgets/_input.py",
+          "symbol": "get_content_height",
+          "qualified_symbol": "Input.get_content_height",
+          "rank": 19
+        },
+        {
+          "file": "src/textual/_compositor.py",
+          "symbol": "__contains__",
+          "qualified_symbol": "Compositor.__contains__",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "src/textual/widget.py"
+      ],
+      "matched_files_at_10": [
+        "src/textual/widget.py"
+      ],
+      "matched_files_at_20": [
+        "src/textual/_compositor.py",
+        "src/textual/widget.py"
+      ],
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "file_recall_at_10": 0.5,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 0.5,
+      "symbol_recall_at_5": 0.5,
+      "symbol_recall_at_10": 0.5,
+      "symbol_recall_at_20": 0.5,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 23695.936,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "8c98076d6c0f42baa6a46e5b0c7b6d79",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 9953,
+      "llm_output_tokens": 2279,
+      "llm_elapsed_ms": 17844.725,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "pydantic-safe-annotations-metaclass",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13520,
+      "issue_url": "https://github.com/pydantic/pydantic/issues/13520",
+      "fix_pr_url": "https://github.com/pydantic/pydantic/pull/13521",
+      "pre_fix_sha": "a187a65467a588ccc00761d80f325b45381ca819",
+      "issue_updated_at": "2026-07-27T20:43:52Z",
+      "expected_files": [
+        "pydantic/_internal/_typing_extra.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pydantic/_internal/_typing_extra.py",
+          "symbol": "safe_get_annotations"
+        }
+      ],
+      "candidate_files": [
+        "pydantic/_internal/_typing_extra.py",
+        "pydantic/_internal/_fields.py",
+        "pydantic/fields.py",
+        "pydantic/type_adapter.py",
+        "pydantic/_internal/_namespace_utils.py",
+        "pydantic/_internal/_dataclasses.py",
+        "pydantic/main.py",
+        "pydantic/json_schema.py",
+        "pydantic/functional_validators.py",
+        "pydantic/_internal/_import_utils.py",
+        "pydantic/root_model.py",
+        "pydantic/errors.py",
+        "pydantic/_internal/_generics.py",
+        "pydantic/dataclasses.py",
+        "pydantic/networks.py",
+        "pydantic/_internal/_generate_schema.py",
+        "pydantic/functional_serializers.py",
+        "pydantic/_internal/_core_metadata.py",
+        "pydantic/v1/schema.py",
+        "pydantic/_internal/_model_construction.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "pydantic/_internal/_typing_extra.py",
+          "symbol": "safe_get_annotations",
+          "qualified_symbol": null,
+          "rank": 1
+        },
+        {
+          "file": "pydantic/_internal/_fields.py",
+          "symbol": "collect_model_fields",
+          "qualified_symbol": null,
+          "rank": 2
+        },
+        {
+          "file": "pydantic/fields.py",
+          "symbol": "from_annotation",
+          "qualified_symbol": "FieldInfo.from_annotation",
+          "rank": 3
+        },
+        {
+          "file": "pydantic/type_adapter.py",
+          "symbol": "validate_python",
+          "qualified_symbol": "TypeAdapter.validate_python",
+          "rank": 4
+        },
+        {
+          "file": "pydantic/_internal/_namespace_utils.py",
+          "symbol": "get_module_ns_of",
+          "qualified_symbol": null,
+          "rank": 5
+        },
+        {
+          "file": "pydantic/_internal/_dataclasses.py",
+          "symbol": "complete_dataclass",
+          "qualified_symbol": null,
+          "rank": 6
+        },
+        {
+          "file": "pydantic/main.py",
+          "symbol": "model_validate",
+          "qualified_symbol": "BaseModel.model_validate",
+          "rank": 7
+        },
+        {
+          "file": "pydantic/json_schema.py",
+          "symbol": "_deduplicate_schemas",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "pydantic/functional_validators.py",
+          "symbol": "field_validator",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "pydantic/_internal/_import_utils.py",
+          "symbol": "import_cached_base_model",
+          "qualified_symbol": null,
+          "rank": 10
+        },
+        {
+          "file": "pydantic/root_model.py",
+          "symbol": "model_dump",
+          "qualified_symbol": "RootModel.model_dump",
+          "rank": 11
+        },
+        {
+          "file": "pydantic/errors.py",
+          "symbol": "PydanticUndefinedAnnotation",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "pydantic/_internal/_generics.py",
+          "symbol": "get_args",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "pydantic/dataclasses.py",
+          "symbol": "dataclass",
+          "qualified_symbol": null,
+          "rank": 14
+        },
+        {
+          "file": "pydantic/networks.py",
+          "symbol": "import_email_validator",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "pydantic/_internal/_generate_schema.py",
+          "symbol": "_convert_to_aliases",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "pydantic/functional_serializers.py",
+          "symbol": "field_serializer",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "pydantic/_internal/_core_metadata.py",
+          "symbol": "CoreMetadata",
+          "qualified_symbol": null,
+          "rank": 18
+        },
+        {
+          "file": "pydantic/v1/schema.py",
+          "symbol": "_apply_modify_schema",
+          "qualified_symbol": null,
+          "rank": 19
+        },
+        {
+          "file": "pydantic/_internal/_model_construction.py",
+          "symbol": "__new__",
+          "qualified_symbol": "ModelMetaclass.__new__",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "pydantic/_internal/_typing_extra.py"
+      ],
+      "matched_files_at_10": [
+        "pydantic/_internal/_typing_extra.py"
+      ],
+      "matched_files_at_20": [
+        "pydantic/_internal/_typing_extra.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 26192.747,
+      "llm_attempts": 1,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "1538fc978d7243bd8931d2a475136ab4",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 22842,
+      "llm_output_tokens": 1696,
+      "llm_elapsed_ms": 14482.209,
+      "error": null,
+      "execution_succeeded": true
+    },
+    {
+      "case_id": "poetry-relative-directory-url",
+      "tier": "main",
+      "repository": "python-poetry/poetry",
+      "issue_number": 10830,
+      "issue_url": "https://github.com/python-poetry/poetry/issues/10830",
+      "fix_pr_url": "https://github.com/python-poetry/poetry/pull/10917",
+      "pre_fix_sha": "7f5d3bedd4f405a9715bae28d61d58e8d4cf7e07",
+      "issue_updated_at": "2026-07-21T00:48:09Z",
+      "expected_files": [
+        "src/poetry/installation/executor.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/poetry/installation/executor.py",
+          "symbol": "Executor._create_directory_url_reference"
+        }
+      ],
+      "candidate_files": [
+        "src/poetry/installation/executor.py",
+        "src/poetry/repositories/installed_repository.py",
+        "tests/installation/test_executor.py",
+        "tests/puzzle/test_solver.py",
+        "src/poetry/installation/chooser.py",
+        "src/poetry/mixology/version_solver.py",
+        "src/poetry/utils/env/env_manager.py",
+        "tests/installation/test_installer.py",
+        "tests/conftest.py",
+        "src/poetry/repositories/http_repository.py",
+        "src/poetry/console/application.py",
+        "src/poetry/utils/env/__init__.py",
+        "tests/console/commands/test_run.py",
+        "tests/utils/env/test_env_manager.py",
+        "src/poetry/utils/helpers.py",
+        "tests/repositories/test_http_repository.py",
+        "tests/repositories/test_installed_repository.py",
+        "src/poetry/puzzle/provider.py",
+        "src/poetry/installation/wheel_installer.py",
+        "src/poetry/utils/env/python/manager.py"
+      ],
+      "candidate_symbols": [
+        {
+          "file": "src/poetry/installation/executor.py",
+          "symbol": "_create_directory_url_reference",
+          "qualified_symbol": "Executor._create_directory_url_reference",
+          "rank": 1
+        },
+        {
+          "file": "src/poetry/repositories/installed_repository.py",
+          "symbol": "get_package_paths",
+          "qualified_symbol": "InstalledRepository.get_package_paths",
+          "rank": 2
+        },
+        {
+          "file": "tests/installation/test_executor.py",
+          "symbol": "verify_installed_distribution",
+          "qualified_symbol": null,
+          "rank": 3
+        },
+        {
+          "file": "tests/puzzle/test_solver.py",
+          "symbol": "check_solver_result",
+          "qualified_symbol": null,
+          "rank": 4
+        },
+        {
+          "file": "src/poetry/installation/chooser.py",
+          "symbol": "_sort_key",
+          "qualified_symbol": "Chooser._sort_key",
+          "rank": 5
+        },
+        {
+          "file": "src/poetry/mixology/version_solver.py",
+          "symbol": "solve",
+          "qualified_symbol": "VersionSolver.solve",
+          "rank": 6
+        },
+        {
+          "file": "src/poetry/utils/env/env_manager.py",
+          "symbol": "get_system_env",
+          "qualified_symbol": "EnvManager.get_system_env",
+          "rank": 7
+        },
+        {
+          "file": "tests/installation/test_installer.py",
+          "symbol": "fixture",
+          "qualified_symbol": null,
+          "rank": 8
+        },
+        {
+          "file": "tests/conftest.py",
+          "symbol": "git_mock",
+          "qualified_symbol": null,
+          "rank": 9
+        },
+        {
+          "file": "src/poetry/repositories/http_repository.py",
+          "symbol": "_is_version_too_recent",
+          "qualified_symbol": "HTTPRepository._is_version_too_recent",
+          "rank": 10
+        },
+        {
+          "file": "src/poetry/console/application.py",
+          "symbol": "_configure_global_options",
+          "qualified_symbol": "Application._configure_global_options",
+          "rank": 11
+        },
+        {
+          "file": "src/poetry/utils/env/__init__.py",
+          "symbol": "build_environment",
+          "qualified_symbol": null,
+          "rank": 12
+        },
+        {
+          "file": "tests/console/commands/test_run.py",
+          "symbol": "test_run_console_scripts_of_editable_dependencies_on_windows",
+          "qualified_symbol": null,
+          "rank": 13
+        },
+        {
+          "file": "tests/utils/env/test_env_manager.py",
+          "symbol": "check_output_wrapper",
+          "qualified_symbol": null,
+          "rank": 14
+        },
+        {
+          "file": "src/poetry/utils/helpers.py",
+          "symbol": "remove_directory",
+          "qualified_symbol": null,
+          "rank": 15
+        },
+        {
+          "file": "tests/repositories/test_http_repository.py",
+          "symbol": "test_get_info_from_wheel_state_sequence",
+          "qualified_symbol": null,
+          "rank": 16
+        },
+        {
+          "file": "tests/repositories/test_installed_repository.py",
+          "symbol": "get_package_from_repository",
+          "qualified_symbol": null,
+          "rank": 17
+        },
+        {
+          "file": "src/poetry/puzzle/provider.py",
+          "symbol": "incompatibilities_for",
+          "qualified_symbol": "Provider.incompatibilities_for",
+          "rank": 18
+        },
+        {
+          "file": "src/poetry/installation/wheel_installer.py",
+          "symbol": "install",
+          "qualified_symbol": "WheelInstaller.install",
+          "rank": 19
+        },
+        {
+          "file": "src/poetry/utils/env/python/manager.py",
+          "symbol": "get_active_python",
+          "qualified_symbol": "Python.get_active_python",
+          "rank": 20
+        }
+      ],
+      "matched_files_at_5": [
+        "src/poetry/installation/executor.py"
+      ],
+      "matched_files_at_10": [
+        "src/poetry/installation/executor.py"
+      ],
+      "matched_files_at_20": [
+        "src/poetry/installation/executor.py"
+      ],
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "symbol_reciprocal_rank": 1.0,
+      "analysis_elapsed_ms": 108090.281,
+      "llm_attempts": 2,
+      "llm_fallback_used": false,
+      "llm_fallback_reason": null,
+      "llm_request_id": "1061e13f2a6640bda5b4d57a655b88e4",
+      "llm_system_fingerprint": null,
+      "llm_input_tokens": 58310,
+      "llm_output_tokens": 6589,
+      "llm_elapsed_ms": 57693.944,
+      "error": null,
+      "execution_succeeded": true
+    }
+  ],
+  "overall": {
+    "cases": 5,
+    "completed": 5,
+    "failed": 0,
+    "file_recall_at_1": 0.8,
+    "file_recall_at_5": 0.9,
+    "file_recall_at_10": 0.9,
+    "file_recall_at_20": 1.0,
+    "candidate_pool_recall": 1.0,
+    "mean_reciprocal_rank": 1.0,
+    "average_analysis_elapsed_ms": 37198.836,
+    "llm_success_rate": 1.0,
+    "llm_cases": 5,
+    "llm_successes": 5,
+    "llm_fallbacks": 0,
+    "llm_fallback_reasons": {},
+    "llm_success_mean_reciprocal_rank": 1.0,
+    "average_llm_elapsed_ms": 22798.959,
+    "average_llm_success_elapsed_ms": 22798.959,
+    "llm_input_tokens": 107766,
+    "llm_output_tokens": 13941,
+    "symbol_cases": 4,
+    "symbol_recall_at_1": 0.875,
+    "symbol_recall_at_5": 0.875,
+    "symbol_recall_at_10": 0.875,
+    "symbol_recall_at_20": 0.875,
+    "mean_symbol_reciprocal_rank": 1.0
+  },
+  "by_tier": {
+    "main": {
+      "cases": 3,
+      "completed": 3,
+      "failed": 0,
+      "file_recall_at_1": 0.8333,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "average_analysis_elapsed_ms": 48565.971,
+      "llm_success_rate": 1.0,
+      "llm_cases": 3,
+      "llm_successes": 3,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 1.0,
+      "average_llm_elapsed_ms": 27346.673,
+      "average_llm_success_elapsed_ms": 27346.673,
+      "llm_input_tokens": 89683,
+      "llm_output_tokens": 9571,
+      "symbol_cases": 2,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "mean_symbol_reciprocal_rank": 1.0
+    },
+    "calibration": {
+      "cases": 1,
+      "completed": 1,
+      "failed": 0,
+      "file_recall_at_1": 1.0,
+      "file_recall_at_5": 1.0,
+      "file_recall_at_10": 1.0,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "average_analysis_elapsed_ms": 16600.333,
+      "llm_success_rate": 1.0,
+      "llm_cases": 1,
+      "llm_successes": 1,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 1.0,
+      "average_llm_elapsed_ms": 14110.049,
+      "average_llm_success_elapsed_ms": 14110.049,
+      "llm_input_tokens": 8130,
+      "llm_output_tokens": 2091,
+      "symbol_cases": 1,
+      "symbol_recall_at_1": 1.0,
+      "symbol_recall_at_5": 1.0,
+      "symbol_recall_at_10": 1.0,
+      "symbol_recall_at_20": 1.0,
+      "mean_symbol_reciprocal_rank": 1.0
+    },
+    "generalization": {
+      "cases": 1,
+      "completed": 1,
+      "failed": 0,
+      "file_recall_at_1": 0.5,
+      "file_recall_at_5": 0.5,
+      "file_recall_at_10": 0.5,
+      "file_recall_at_20": 1.0,
+      "candidate_pool_recall": 1.0,
+      "mean_reciprocal_rank": 1.0,
+      "average_analysis_elapsed_ms": 23695.936,
+      "llm_success_rate": 1.0,
+      "llm_cases": 1,
+      "llm_successes": 1,
+      "llm_fallbacks": 0,
+      "llm_fallback_reasons": {},
+      "llm_success_mean_reciprocal_rank": 1.0,
+      "average_llm_elapsed_ms": 17844.725,
+      "average_llm_success_elapsed_ms": 17844.725,
+      "llm_input_tokens": 9953,
+      "llm_output_tokens": 2279,
+      "symbol_cases": 1,
+      "symbol_recall_at_1": 0.5,
+      "symbol_recall_at_5": 0.5,
+      "symbol_recall_at_10": 0.5,
+      "symbol_recall_at_20": 0.5,
+      "mean_symbol_reciprocal_rank": 1.0
+    }
+  }
+}

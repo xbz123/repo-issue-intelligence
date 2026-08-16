@@ -1,0 +1,915 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_output_tokens": null,
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T08:09:53.735727Z",
+  "results": [
+    {
+      "case_id": "textual-kitty-keyboard-protocol",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6417,
+      "pre_fix_sha": "f1929043fc5a9346a7a13649c1c2bc6ac4199a3b",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "1aa6d210244949cc837e8fbac5b9ebe6"
+      ],
+      "input_tokens": 15919,
+      "output_tokens": 4810,
+      "llm_elapsed_ms": 35718.5,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The inspected code maps Kitty functional key codes and filters ignored keys, but no path decodes Kitty release event flags; the requested key-release support appears absent from these code paths.",
+        "issue_type": "feature",
+        "affected_component": "src/textual/_keyboard_protocol.py",
+        "reproduction_completeness": "insufficient",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "FUNCTIONAL_KEYS maps only plain Kitty CSI ...u codes (e.g. '27u'->escape) to key names; there are no entries for event-flag variants such as release, so release sequences are not represented."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "App._set_pointer_shape writes a Kitty pointer-shape escape sequence; unrelated to keyboard key release."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "dispatch_key dispatches events.Key by event.name and name_aliases only; no release-specific event or flag is consulted."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "supports_issue",
+            "observation": "on_key_token only filters Keys.Ignore and forwards events; reissue_sequence_as_keys handles unknown sequences, with no branch for a Kitty release event flag."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "LinuxDriver._request_terminal_sync_mode_support queries sync protocol support; unrelated to Kitty keyboard release."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "WindowsDriver.__init__ sets up output and event thread state; no keyboard protocol release handling."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Driver.no_automatic_restart manages auto-restart state; unrelated to key release."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "supports_issue",
+            "observation": "ANSI sequences include IGNORE_SEQUENCE entries and a pointer-shape helper, but no Kitty release event sequences are defined."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Pilot.click simulates mouse events; unrelated to Kitty keyboard release."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "DataTable.__init__ initializes table state; unrelated to key release."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "events.Load is an app lifecycle event; unrelated to key release."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Widget.process_layout returns placements; unrelated to key release."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "LinuxInlineDriver sync-mode query is unrelated to Kitty keyboard release."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "TextArea.register_language registers syntax languages; unrelated to key release."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "DOMNode.check_consume_key returns False as a key-consumption hook; no release handling."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "take_svg_screenshot runs an app and presses keys; unrelated to Kitty release protocol."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "EventApp.on_key only inspects event.key; it does not demonstrate any release event usage."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Screen.set_focus manages focus and blur; unrelated to key release."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "supports_issue",
+            "observation": "keys.py defines key aliases and display formatting but no release event or release key alias exists."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "HandlerArguments and extract_handler_actions are for event broker metadata; unrelated to key release."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "Textual's Kitty keyboard protocol support only decodes press-style CSI ...u / ...~ functional key sequences and has no path for the Kitty event flag (press/repeat/release); release sequences are therefore not surfaced as distinct key events, so apps cannot detect long-presses.",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "E1",
+              "E3",
+              "E4",
+              "E8",
+              "E19"
+            ],
+            "missing_evidence": [
+              "Full XTermParser.parse implementation showing how CSI ...u sequences are decoded",
+              "events.Key dataclass definition including any modifier/event-flag fields",
+              "Driver or terminal setup that enables Kitty keyboard protocol and requests event flags",
+              "Tests or fixtures covering Kitty release sequences"
+            ],
+            "validation_step": "Inspect the full XTermParser.parse method and events.Key definition to confirm whether a CSI ...u sequence with event flag 3 (release) is decoded into a distinct event or dropped; then run the existing parser unit tests with a release-sequence fixture."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "fastapi-sse-include-router",
+      "tier": "main",
+      "repository": "fastapi/fastapi",
+      "issue_number": 15401,
+      "pre_fix_sha": "a82e5f2fac102a8b12c0795da80b2cb1d2a8b016",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "4b0f8cb98b884b4589c783efa8ab4dd2"
+      ],
+      "input_tokens": 17016,
+      "output_tokens": 8828,
+      "llm_elapsed_ms": 76531.817,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Evidence shows the current include_router path stores the original router in an _IncludedRouter with an include_context instead of rebuilding APIRoute objects, and OpenAPI generation resolves the original APIRoute from that context; this contradicts the issue's proposed root cause and suggests the stream_item_type loss is version-specific or already avoided.",
+        "issue_type": "bug",
+        "affected_component": "fastapi/routing.py::APIRouter.include_router",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "contradicts_issue",
+            "observation": "APIRouter.include_router appends _IncludedRouter(original_router=router, include_context=include_context) and does not call add_api_route or copy response_model/stream_item_type, contradicting the issue's proposed add_api_route-based root cause."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "SSE module defines EventSourceResponse media_type and single-line/null validation helpers; no include_router propagation logic."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "FastAPI.include_router delegates to self.router.include_router, confirming APIRouter.include_router is the relevant path but adding no special stream handling."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "contradicts_issue",
+            "observation": "_get_api_route_for_openapi returns route_context when original_route is an APIRoute, so OpenAPI generation reads attributes from the original router route rather than a reconstructed route."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Deprecated UJSONResponse/ORJSONResponse code; unrelated to SSE stream_item_type propagation."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "get_stream_item_type extracts the first type argument from stream origins; it is the detection helper but does not address include_router propagation."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "BackgroundTasks implementation; unrelated."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Security parameter function; unrelated."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "OpenAPI model definitions; unrelated to stream_item_type propagation."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "JSON fast-path tests; unrelated."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Encoder helpers; unrelated."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "ReDoc HTML generation; unrelated."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "get_value_or_default resolves DefaultPlaceholder by priority; relevant to default handling but not shown in include_router."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "DefaultPlaceholder is a distinct wrapper class, supporting the premise that response_model can be a DefaultPlaceholder, but no propagation code is shown."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Include-context tests verify nested include_router prefixes reach endpoints and OpenAPI, consistent with lazy route-context preservation but not SSE-specific."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Response-model return-annotation tests; unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "SSE tests cover validation and encoding, not include_router stream_item_type propagation."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Compatibility re-exports; unrelated."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Parameter definitions imports; unrelated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Exception classes; unrelated."
+          }
+        ],
+        "contradictions": [
+          "E1: APIRouter.include_router appends _IncludedRouter(original_router=router, include_context=include_context) and does not call add_api_route or copy response_model/stream_item_type, contradicting the issue's proposed add_api_route-based root cause.",
+          "E4: _get_api_route_for_openapi returns route_context when original_route is an APIRoute, so OpenAPI generation reads attributes from the original router route rather than a reconstructed route."
+        ],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In the code shown, APIRouter.include_router no longer rebuilds each route via add_api_route; it stores the original router in an _IncludedRouter with an include_context, and OpenAPI generation (_get_api_route_for_openapi) resolves the original APIRoute from that context. Therefore stream_item_type set on the original router route should be preserved and the OpenAPI contentSchema should be emitted, contradicting the issue's proposed root cause. The reported behavior likely belongs to an older include_router implementation that copied routes with response_model=route.response_model; the current lazy include path avoids that loss.",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "E1",
+              "E4",
+              "E15"
+            ],
+            "missing_evidence": [
+              "fastapi/routing.py APIRoute.__init__ showing the stream_item_type assignment and DefaultPlaceholder branch",
+              "fastapi/routing.py _IncludedRouter and _RouterIncludeContext definitions showing how original_route is exposed",
+              "A test or reproduction run for an SSE route via include_router in this checkout verifying app_b.openapi() contains contentSchema"
+            ],
+            "validation_step": "Inspect app_b.routes[-1] after include_router in the current checkout: if it is an _IncludedRouter, read original_route.stream_item_type; then call app_b.openapi() and check responses.200.content['text/event-stream'].itemSchema.properties.data.contentSchema exists. No code changes."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "pydantic-pipeline-constraint-schema",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13507,
+      "pre_fix_sha": "a2a6577d4c329dd574a45dbb01a8feaa16b1ad3d",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "5c8986ed7f2940e08ef8d24edf008e97"
+      ],
+      "input_tokens": 24203,
+      "output_tokens": 4268,
+      "llm_elapsed_ms": 34371.506,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "The experimental pipeline's _apply_constraint wraps Ge/Lt/Le constraints in function-after validators even after setting native core-schema fields, so subsequent constraints see a non-numeric schema type and their native bounds are hidden from JSON schema generation.",
+        "issue_type": "bug",
+        "affected_component": "pydantic/type_adapter.py::TypeAdapter.validate_python",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TypeAdapter.validate_python delegates to self.validator.validate_python and does not affect JSON schema generation, consistent with validation remaining correct while the published schema is wrong."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "_deduplicate_schemas hashes JSON schemas for deduplication and is unrelated to pipeline constraint application."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "NsResolver handles annotation namespace resolution and has no relation to constraint chaining."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "_convert_to_aliases handles alias conversion and is unrelated to the experimental pipeline constraint logic."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "_check_annotated_type raises for invalid annotated types and is unrelated to constraint chaining."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "V1 schema _apply_modify_schema is unrelated to the experimental pipeline API."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "safe_get_annotations handles deferred annotations and is unrelated to constraint application."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Deprecated V1 validator decorator logic is unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "_dict_not_none is a generic core-schema helper and does not affect constraint chaining."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "complete_model_class builds model core schemas and validators but contains no pipeline constraint logic."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "get_args/get_origin for generics are unrelated to the reported schema-generation bug."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "CoreMetadata describes JSON schema metadata storage and is unrelated to _apply_constraint."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "update_field_from_config applies aliases and titles to fields and is unrelated to constraint chaining."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "V1 BaseModel.schema caching is unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "supports_issue",
+            "observation": "In _apply_constraint, the Ge, Lt, and Le branches set native ge/lt/le fields for int/float/decimal schemas but then unconditionally call _check_func, wrapping the schema in function-after; Gt's fallback is in an else branch. This exactly matches the issue's described mechanism and causes later constraints to see function-after instead of a numeric type."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Dataclass creation logic is unrelated to the experimental pipeline constraint bug."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "model_json_schema generates schemas from models but does not contain pipeline constraint logic."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "field_validator decorator logic is unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "supports_issue",
+            "observation": "Defines _FUNCTION_WITH_INNER_SCHEMA_TYPES including 'function-after', confirming function-after is a function schema wrapper type and consistent with the issue's claim that a chained constraint sees a non-numeric schema type."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "resolve_ref_schema resolves $refs in JSON schemas and is unrelated to constraint application."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In pydantic/experimental/pipeline.py:_apply_constraint, the Ge, Lt, and Le branches set the native core-schema field (ge/lt/le) when the current schema is int/float/decimal, but then unconditionally call _check_func, wrapping the schema in a function-after validator. The next constraint in the chain sees s['type'] == 'function-after', which is not in {'int','float','decimal'}, so it cannot set its own native field and is hidden inside an opaque function-after callable that JSON schema generation cannot read. Gt avoids this because its fallback is in an else branch, and Interval(ge=..., le=...) recursively hits Ge then Le, producing the same schema loss. Validation remains correct because the function validators still enforce the bounds.",
+            "confidence": 0.92,
+            "evidence_ids": [
+              "E15",
+              "E19"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Inspect the core schema produced for TypeAdapter(Annotated[int, validate_as(int).ge(1).le(100)]) and confirm it is nested function-after schemas with innermost {'type':'int','ge':1} and no 'le'; then call json_schema() and verify 'maximum' is absent while validate_python(200) raises a ValidationError."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "pydantic-safe-annotations-metaclass",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13520,
+      "pre_fix_sha": "a187a65467a588ccc00761d80f325b45381ca819",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [
+        "06733623c067416f964be78d1b3e0899"
+      ],
+      "input_tokens": 27248,
+      "output_tokens": 4745,
+      "llm_elapsed_ms": 237054.623,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "On CPython <=3.13, reading `__annotations__` on a metaclass (e.g. `ModelMetaclass`/`ABCMeta`) can plant a plain `{}` in the metaclass `__dict__`, shadowing the `type.__annotations__` data descriptor. `safe_get_annotations()` then uses `getattr(obj, '__annotations__', {})`, so for a freshly parametrized generic model it can return the origin's annotations instead of the new class's own empty dict. In `collect_model_fields()`, those leaked annotations make inherited fields look like current-class annotations, so the code takes the `FieldInfo.from_annotation()` branch instead of copying the parent `FieldInfo` and applying `typevars_map`, dropping defaults and leaving type variables unsubstituted.",
+        "issue_type": "bug",
+        "affected_component": "pydantic/type_adapter.py::TypeAdapter.validate_python",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TypeAdapter.validate_python only forwards arguments to self.validator.validate_python; it does not read __annotations__ or collect fields, so it is unrelated to the reported annotation leak."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "FieldInfo.from_annotation constructs a FieldInfo from the bare annotation (type_expr and metadata) and never carries a default, matching the issue's claim that the from_annotation branch drops field defaults."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "get_module_ns_of returns a module namespace dict and is not involved in __annotations__ lookup or field collection."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "supports_issue",
+            "observation": "collect_model_fields calls safe_get_annotations(cls) for cls_annotations (line 267) and, when assigned_value is PydanticUndefined and ann_name is in cls_annotations, builds FieldInfo.from_annotation(ann_type) instead of copying the parent FieldInfo and applying typevars_map via _recreate_field_info. This is exactly the branch where leaked parent annotations would suppress defaults and typevar substitution."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "complete_dataclass delegates to collect_dataclass_fields and schema generation; it does not directly show the annotation lookup path described in the issue."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "supports_issue",
+            "observation": "safe_get_annotations uses getattr(obj, '__annotations__', {}) on Python <3.14, which is the exact lookup the issue identifies as vulnerable to a plain dict planted on a metaclass shadowing the type.__annotations__ descriptor."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "BaseModel.model_validate delegates to cls.__pydantic_validator__.validate_python; it does not participate in field collection or annotation lookup."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "_deduplicate_schemas and _make_json_hashable are JSON-schema utilities unrelated to annotation lookup or generic field collection."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "field_validator is a decorator factory and does not touch __annotations__ or field collection."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "import_cached_base_model is a cached import helper and is unrelated to the annotation leak."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "RootModel.model_dump is serialization logic and does not affect annotation lookup or generic parametrization."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "PydanticUndefinedAnnotation is an error class; it does not bear on the reported field-default/typevar regression."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "get_args reads __pydantic_generic_metadata__ or typing args; it is not the source of the leaked annotations."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "supports_issue",
+            "observation": "The dataclass decorator calls safe_get_annotations(cls) at line 193 and then getattr(cls, field_name, None), showing another consumer that expects own-class annotations and would also observe leaked parent annotations under the reported CPython behavior."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "import_email_validator is an optional-dependency import helper and is unrelated to the issue."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "apply_model_validators and _convert_to_aliases are schema/validator utilities unrelated to annotation lookup."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "field_serializer is a decorator factory and does not affect annotation lookup or generic field collection."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "CoreMetadata is a TypedDict for schema metadata and is unrelated to the annotation leak."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "pydantic.v1 schema helpers are legacy V1 code and not part of the V2 generic model field collection path."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "ModelMetaclass.__new__ reads raw_annotations from namespace.get('__annotations__', {}) on <3.14 and later calls set_model_fields; class creation itself is not the leak, but it confirms the generic parametrization path that later invokes safe_get_annotations."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "On CPython <=3.13, reading `__annotations__` on a metaclass in a model's metatype MRO (e.g. `type(BaseModel).__annotations__` or `abc.ABCMeta.__annotations__`) auto-creates a plain `__annotations__ = {}` in that metaclass's `__dict__`. Because a plain dict is not a data descriptor, subsequent `getattr(new_generic_class, '__annotations__', {})` in `safe_get_annotations()` finds the metaclass dict before the `type.__annotations__` descriptor and then falls back to the class MRO, returning the origin's annotations for a freshly parametrized generic model. `collect_model_fields()` then sees those inherited names in `cls_annotations`, so for fields whose defaults were already `delattr`'d from the origin it takes the `FieldInfo.from_annotation()` branch instead of copying the parent `FieldInfo` and applying `typevars_map`; the result is required fields and unsubstituted `T` schemas.",
+            "confidence": 0.82,
+            "evidence_ids": [
+              "E6",
+              "E4",
+              "E2",
+              "E20",
+              "E14"
+            ],
+            "missing_evidence": [],
+            "validation_step": "In a fresh CPython 3.10-3.13 interpreter, inspect the behavior without changing repository sources: read `type(BaseModel).__annotations__`, define `G(BaseModel, Generic[T])` with `x: T` and `a: int = 5`, then compare `safe_get_annotations(G[str])` and `G[str].__pydantic_fields__` before and after the read, and call `G[str].model_validate({'x': 'hi'})` to confirm the missing default and unsubstituted type variable."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "mypy-generic-default-strict-optional",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21777,
+      "pre_fix_sha": "722047e369657c936851a349ebba6b4c5504b8e2",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [
+        "d23bf53f5b2b4850a36e136d2d68e684"
+      ],
+      "input_tokens": 15743,
+      "output_tokens": 7223,
+      "llm_elapsed_ms": 244372.26,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The supplied snippets do not include the typeshed stubs or index-checking code that directly emits the error, so the root cause cannot be confirmed. The most plausible mechanism is a mismatch between mypy's inferred slice type for `s[1:]` (`slice[int, None, None]`) and the `str.__getitem__` stub's expected `slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex]`, whose third parameter is not optional, causing false positives on ordinary string slices.",
+        "issue_type": "bug",
+        "affected_component": "mypyc/build.py::include_dir",
+        "reproduction_completeness": "insufficient",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "mypyc build helper for include_dir/group_name; unrelated to str slice indexing."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "TypeInfo.dump debug serialization; unrelated to index type checking."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "Cache file name computation; unrelated to the reported slice error."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Generic proper-subtype check; this is the kind of check that would reject slice[int,None,None] against the expected slice type, but no specific slice logic is shown."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Semantic analysis dummy_context helper; unrelated."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "mypyc IR for-loop builder; unrelated."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Private-name helper in checker; unrelated."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Member access dispatch: Instance types go to analyze_instance_member_access, the path that would resolve str.__getitem__; does not by itself show the slice mismatch."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Literal type helper; unrelated to slice index errors."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Test harness module parsing; unrelated."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Union simplification; the expected type is a union, but no incorrect simplification is evidenced here."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Error message formatting; would produce the quoted 'Invalid index type' text but not the cause."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Type meet logic; unrelated."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Serious-error fail path in main; unrelated."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "dmypy source tracking; unrelated."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "mypyc IR cache naming; unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Incremental checker subprocess helper; unrelated."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "TupleType.slice implements slicing only for tuple types; str slicing is not handled here, so it falls through to generic __getitem__ checking."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Type variable default recursion check; unrelated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "AST parsing wrapper; unrelated."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "Tentative root cause: mypy's slice-expression type inference represents `directive_name[1:]` as `slice[int, None, None]`, while the `str.__getitem__` signature accepts `SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex]`. The third slice parameter is not optional in the expected type, so the `None` step fails the subtype check performed by `is_proper_subtype` (E4) after `_analyze_member_access` resolves `__getitem__` on the `str` instance (E8). E18 shows mypy special-cases slicing only for TupleType, so str slicing falls through to generic `__getitem__` checking. This is a stub-signature/slice-inference mismatch rather than a Leo code error; it may appear version-independent if both 2.2 and 2.3 use the same typeshed signature or if the compiled mypy uses a cached/stale typeshed. The exact regression trigger cannot be confirmed from the supplied snippets.",
+            "confidence": 0.35,
+            "evidence_ids": [
+              "E4",
+              "E8",
+              "E18"
+            ],
+            "missing_evidence": [
+              "typeshed/builtins stubs for `str.__getitem__` and `slice` used by mypy 2.2/2.3",
+              "mypy source for index-expression checking (e.g. `visit_index_expr`/`check_index` in `mypy/checkexpr.py`) that emits the `Invalid index type` error",
+              "minimal repro file and exact mypy 2.2 vs 2.3 commit/stub diff"
+            ],
+            "validation_step": "Inspect the installed mypy's bundled typeshed `builtins.pyi` for `str.__getitem__` and `slice` type parameters, then run mypy on a minimal file `def f(s: str) -> str: return s[1:]` with `--python-version 3.14 --show-error-codes` and `reveal_type(s[1:])` to compare the inferred slice type with the stub's expected type; no code changes."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 5,
+    "analysis_successes": 5,
+    "skipped_no_evidence": 0,
+    "failures": 0,
+    "analysis_success_rate": 1.0,
+    "first_attempt_success_rate": 0.6,
+    "persistence_verified": 5,
+    "input_tokens": 100129,
+    "output_tokens": 29874,
+    "average_llm_elapsed_ms": 125609.741,
+    "error_categories": {}
+  },
+  "by_tier": {
+    "main": {
+      "cases": 4,
+      "analysis_successes": 4,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 0.5,
+      "persistence_verified": 4,
+      "input_tokens": 84210,
+      "output_tokens": 25064,
+      "average_llm_elapsed_ms": 148082.552,
+      "error_categories": {}
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 15919,
+      "output_tokens": 4810,
+      "average_llm_elapsed_ms": 35718.5,
+      "error_categories": {}
+    }
+  }
+}

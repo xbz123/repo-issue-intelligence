@@ -1,0 +1,1139 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T05:55:54.701283Z",
+  "results": [
+    {
+      "case_id": "pydantic-pipeline-constraint-schema",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13507,
+      "pre_fix_sha": "a2a6577d4c329dd574a45dbb01a8feaa16b1ad3d",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "0d52e08bc13743a483c9ec51527c1ea2"
+      ],
+      "input_tokens": 24203,
+      "output_tokens": 4764,
+      "llm_elapsed_ms": 37145.508,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "Confirmed bug in the experimental pipeline: in `_apply_constraint`, the `Ge`, `Lt`, and `Le` branches set native core-schema fields but then unconditionally wrap the schema with `_check_func` (`function-after`), so subsequent chained constraints can no longer set native fields and are invisible to JSON schema generation.",
+        "issue_type": "bug",
+        "affected_component": "pydantic/type_adapter.py::TypeAdapter.validate_python",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TypeAdapter.validate_python delegates to the core validator; it exercises validation but not JSON schema generation, so it does not directly address the reported schema omission."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "Schema deduplication helper unrelated to pipeline constraint application."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "Namespace resolution helper unrelated to pipeline constraint handling."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Alias conversion helper unrelated to the reported constraint bug."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Annotated-type compatibility check unrelated to pipeline constraints."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "V1 schema modify helper unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Annotation retrieval helper unrelated to constraint application."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Deprecated V1 validator decorator unrelated to the reported issue."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Core schema utility unrelated to pipeline constraint handling."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Model completion and schema generation path; contains no pipeline constraint logic."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Generic arguments helper unrelated to the reported bug."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Core metadata TypedDict for JSON schema functions; not specific to pipeline constraints."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Field config update helper unrelated to pipeline constraints."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "V1 BaseModel.schema unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "supports_issue",
+            "observation": "In `_apply_constraint`, the `Ge` branch (lines 503-517), `Lt` branch (518-532), and `Le` branch (533-547) set native `ge`/`lt`/`le` fields for int/float/decimal schemas but then unconditionally call `_check_func` outside the numeric branch, wrapping the schema as `function-after`. `Gt` (487-502) only wraps in an `else`, and `Interval` (615-623) delegates to these branches, so `Interval(ge=1, le=100)` is affected exactly as reported."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Dataclass construction logic unrelated to pipeline constraint handling."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "model_json_schema entry point; does not show pipeline constraint handling."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "field_validator decorator unrelated to the experimental pipeline."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "supports_issue",
+            "observation": "Defines `function-after` as a function-with-inner-schema type; confirms that after `_check_func` wraps a schema, its type is no longer `int`/`float`/`decimal`, so subsequent constraints cannot enter the native-field branches."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "JSON schema ref resolution helper unrelated to the reported constraint bug."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In `pydantic/experimental/pipeline.py`, `_apply_constraint` handles `Ge`, `Lt`, and `Le` by setting the native core-schema keyword when the current schema is `int`, `float`, or `decimal`, but then unconditionally wraps the schema with `_check_func` (producing `function-after`). The next constraint in the chain sees `s['type'] == 'function-after'`, fails the numeric-type check, and can only be encoded inside an opaque validator function that JSON schema generation cannot read. Validation still enforces the bound because the validator function runs, but the published JSON schema omits every later bound. `Gt` avoids this only because its fallback is in an `else` branch.",
+            "confidence": 0.95,
+            "evidence_ids": [
+              "E15",
+              "E19"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Inspect the core schema of `TypeAdapter(Annotated[int, validate_as(int).ge(1).le(100)])` via `__pydantic_core_schema__` and confirm it is a nested `function-after` whose inner schema is `{'type': 'int', 'ge': 1}` with no `le`; then call `json_schema()` and verify `maximum` is absent while `validate_python(200)` still raises."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "trio-thread-cache-context-leak",
+      "tier": "generalization",
+      "repository": "python-trio/trio",
+      "issue_number": 3472,
+      "pre_fix_sha": "976c11b5749db70559ffd81bfeddeed51b250dd0",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "80bd8af0e5d7406c9de83339c2f7d2db"
+      ],
+      "input_tokens": 30225,
+      "output_tokens": 4769,
+      "llm_elapsed_ms": 36048.641,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Issue reports that pooled ThreadCache WorkerThreads on free-threaded CPython retain the spawning thread's contextvars.Context. The visible start_thread_soon path reuses WorkerThreads without any contextvars reset/copy, and the thread-cache tests cover reuse but not context retention; the full worker loop and to_thread context propagation are not in the provided evidence.",
+        "issue_type": "bug",
+        "affected_component": "src/trio/_core/_run.py::current_task",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "current_task reads GLOBAL_RUN_CONTEXT.task and raises RuntimeError outside async context; unrelated to worker-thread contextvars retention."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "ThreadCache.start_thread_soon pops an idle worker or creates WorkerThread(self), assigns _job, and releases the lock; no contextvars.Context reset/copy is visible, so a reused worker can retain the context from its first spawn."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "open_process subprocess plumbing; unrelated to thread-cache contextvars retention."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "current_statistics accessor; unrelated."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "SSLStream implementation; unrelated."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "TrioToken.run_sync_soon schedules callbacks into Trio from external threads; no contextvars handling shown."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "wait_task_rescheduled low-level blocking primitive; mentions to_thread.run_sync only in docstring; no contextvars handling."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "open_tcp_stream happy-eyeballs connection logic; unrelated."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "DTLS SSL context option setup; unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Instrument ABC; unrelated."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "as_safe_channel cancellation-safe generator wrapper; unrelated."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Thread-cache tests verify LIFO reuse and idle timeout but contain no contextvars assertions, so they don't cover the reported leak."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "FdStream pipe/TTY stream implementation; unrelated."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "from_thread tests verify token/thread behavior but no contextvars retention checks."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Path wraps blocking methods via to_thread.run_sync; unrelated to context retention."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "open_tcp_listeners socket setup; unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "RunContext is a threading.local holding runner/task; it is Trio's own thread-local, not contextvars.Context, so it doesn't directly explain the reported contextvars leak."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "from_thread namespace re-exports functions; no implementation shown."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "to_thread namespace re-exports run_sync; no implementation shown."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Exception-group unwrapping helper; unrelated."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "On free-threaded CPython, a WorkerThread created by ThreadCache.start_thread_soon captures or inherits the contextvars.Context active in the thread that first spawns it, and because the visible thread-cache path reuses pooled workers without clearing/resetting contextvars, that Context (and objects it references) stays alive for the worker's lifetime. E2 shows the reuse path with no contextvars handling, and E12 confirms threads are intentionally reused, while no test covers context cleanup.",
+            "confidence": 0.55,
+            "evidence_ids": [
+              "E2",
+              "E12"
+            ],
+            "missing_evidence": [
+              "Full WorkerThread class and its run loop in src/trio/_core/_thread_cache.py (including thread creation and any contextvars handling)",
+              "src/trio/_threads.py to_thread_run_sync implementation showing how the caller's context is passed to start_thread_soon",
+              "Repository evidence of running the issue's repro under python3.14t",
+              "CPython free-threaded contextvars propagation semantics for the affected version"
+            ],
+            "validation_step": "Inspect the full WorkerThread.run loop and to_thread_run_sync implementation for contextvars.copy_context(), Context.run(), or reset() calls, then run the issue's repro under python3.14t and inspect gc.get_referrers after gc.collect(); no code changes."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "celery-dst-gap-make-aware",
+      "tier": "generalization",
+      "repository": "celery/celery",
+      "issue_number": 10322,
+      "pre_fix_sha": "be0e2de234324a06c61b5561fdd0ff18fabcea38",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "de68e040628446debbb6069301cd2e27"
+      ],
+      "input_tokens": 15577,
+      "output_tokens": 4745,
+      "llm_elapsed_ms": 26599.659,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "make_aware lacks a spring-forward DST-gap check; nonexistent local times are silently localized with the wrong UTC offset, which can skew crontab next-run estimates.",
+        "issue_type": "bug",
+        "affected_component": "celery/utils/time.py::make_aware",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "make_aware (lines 351-357) only calls _is_ambiguous and chooses min(fold=0, fold=1); there is no datetime_exists/nonexistent check, so a spring-forward gap datetime is returned with the pre-transition offset. The adjacent _is_ambiguous helper shows dateutil_tz is already used."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "Celery.bugreport is unrelated to timezone localization."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "crontab.remaining_estimate delegates to remaining(*remaining_delta), so an incorrect aware datetime from make_aware would propagate into the next-run estimate; no DST-gap guard is visible in this excerpt."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "assert_will_not_block is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Inspect.stats is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "safe_say is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "EventDispatcher.publish is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "start_filter is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Quorum queue QoS test helper is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "ignore_errno is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Scheduler.tick consumes is_due/next_time_to_run but contains no DST-gap handling; neutral to the make_aware defect."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "gen_task_name is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "asynpool schedule_writes is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Task.replace is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Redis list helper is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Prefetch count update is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "traceback_clear is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "test_annotate_decorator is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "getappattr is unrelated to DST handling."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "bugreport is unrelated to DST handling."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In celery/utils/time.py, make_aware only handles ambiguous fall-back datetimes via _is_ambiguous; it never checks dateutil_tz.datetime_exists, so a naive datetime inside a spring-forward DST gap is silently localized with the pre-transition UTC offset (fold=0). Because crontab.remaining_estimate derives next-run estimates from such aware datetimes, the beat scheduler can compute a next run one hour off or skip the scheduled time. The fix should detect nonexistent local times and advance to the post-transition instant (fold=1).",
+            "confidence": 0.88,
+            "evidence_ids": [
+              "E1",
+              "E3"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Run a focused unit test (without source changes) that calls make_aware(datetime(2024, 3, 10, 2, 30), ZoneInfo('US/Eastern')) and asserts the returned utcoffset() is timedelta(hours=-4); also inspect t/unit/utils/test_time.py for existing DST-gap coverage."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "black-starred-type-params-trailing-comma",
+      "tier": "calibration",
+      "repository": "psf/black",
+      "issue_number": 5243,
+      "pre_fix_sha": "51abf53080b09eab12143727641ff1e2cd39d8c9",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "4ec72e508733456baef1415fa59a144b"
+      ],
+      "input_tokens": 14472,
+      "output_tokens": 14827,
+      "llm_elapsed_ms": 85902.214,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Issue reports that magic trailing comma fails to explode PEP 695 type-parameter lists containing *TypeVarTuple/**ParamSpec, while plain type-var lists explode. Evidence shows the magic-trailing-comma gate and a starred-body special case in bracket splitting, but the exact stable-mode decision path is not fully present in the supplied evidence.",
+        "issue_type": "bug",
+        "affected_component": "src/black/trans.py::is_valid_index_factory",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "is_valid_index_factory is a generic sequence-index helper in trans.py with no connection to type-param splitting or magic trailing comma."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "_first_right_hand_split explicitly special-cases bracket bodies whose first leaf is STAR or DOUBLESTAR as unpacking (lines 1026-1027), and the only magic_trailing_comma check in this function is inside the preview hug path (lines 1047-1051), showing starred bracket contents are routed differently from plain comma lists."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "Line.has_magic_trailing_comma is the gate for exploding a bracket body; for RSQB it returns True except for single-element subscript trailers, so a multi-element PEP 695 type-param body ending in a comma should qualify unless the closing bracket is misclassified or a different splitting path is taken."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "normalize_trailing_prefix handles comment prefixes and is unrelated to bracket splitting decisions."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "find_project_root and cached path resolution are unrelated to formatting of type-parameter lists."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "IPython magic detection helpers are unrelated to this formatting bug."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "format_stdin_to_stdout is an entry point that calls format_file_contents; it does not contain the splitting decision."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "cache_dir test fixture is unrelated to type-param formatting."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "blackd client only transmits options such as skip_magic_trailing_comma; it contains no formatting logic."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "assert_format is the natural test helper for a regression test, but no PEP 695 starred-param magic-trailing-comma case is present in the supplied evidence."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "ASTSafetyError exists for equivalence checks, consistent with the issue's note that output is AST-equivalent, but it is not a cause of the splitting bug."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "unwrap_singleton_parenthesis is a parenthesis utility unrelated to square-bracket type-param lists."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Line-range mapping helpers are unrelated to the splitting decision."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "max_delimiter_priority_in_atom only handles LPAR/RPAR atoms; type-param lists use square brackets, so this does not directly govern their splitting."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "diff and _splitlines_no_ff are output helpers unrelated to the bug."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "String prefix normalization is unrelated to type-param list splitting."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Parser initialization is unrelated to the magic-trailing-comma explosion decision."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Mode defaults show magic_trailing_comma=True and preview features off by default, so the bug is in stable splitting logic rather than a disabled feature."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "WildcardPattern initialization is unrelated to formatting type parameters."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "NothingChanged and Report are unrelated to the splitting decision."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "Tentative root cause: for PEP 695 type-parameter lists, the magic-trailing-comma explosion is gated by Line.has_magic_trailing_comma (E3), but when the bracket body begins with a STAR or DOUBLESTAR leaf, as with *TypeVarTuple/**ParamSpec, the bracket-splitting logic in _first_right_hand_split (E2) classifies the body as an unpacking pattern and routes it through a different path that does not apply the one-per-line comma split; the trailing comma is preserved but the body is re-collapsed. Plain type-var lists have no leading STAR/DOUBLESTAR, so they take the normal comma-splitting path and explode.",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "E2",
+              "E3"
+            ],
+            "missing_evidence": [
+              "stable-mode call site where Line.has_magic_trailing_comma is used for type-param bracket bodies",
+              "blib2to3 grammar representation of PEP 695 type_params to confirm closing.parent is not syms.trailer",
+              "regression test or data file for magic trailing comma with *TypeVarTuple/**ParamSpec",
+              "delimiter_priority handling for STAR/DOUBLESTAR in brackets.py"
+            ],
+            "validation_step": "Inspect the call sites of Line.has_magic_trailing_comma in linegen.py and the body Line produced by _first_right_hand_split for the reported snippet, comparing starred vs plain type-param bodies; verify whether the closing RSQB is classified as syms.trailer and whether the body's first leaf is STAR/DOUBLESTAR."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "pip-rich-option-error-usage",
+      "tier": "generalization",
+      "repository": "pypa/pip",
+      "issue_number": 14136,
+      "pre_fix_sha": "6989a79f97a40ed2f0960de7dba3a04fadeade28",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "21bb907e79874872bfe315d764848af4"
+      ],
+      "input_tokens": 27921,
+      "output_tokens": 20000,
+      "llm_elapsed_ms": 86426.363,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "invalid_response",
+      "error": "LLMProviderError: OpenCode returned an invalid structured response"
+    },
+    {
+      "case_id": "mypy-frozen-dataclass-covariance",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21736,
+      "pre_fix_sha": "82e8498c19494edebee08dd615470443ec53fffc",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "ee9757d14dbe48e389f3eaed47e7b1d7"
+      ],
+      "input_tokens": 15420,
+      "output_tokens": 20000,
+      "llm_elapsed_ms": 83438.984,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "invalid_response",
+      "error": "LLMProviderError: OpenCode returned an invalid structured response"
+    },
+    {
+      "case_id": "mypy-generic-default-strict-optional",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21777,
+      "pre_fix_sha": "722047e369657c936851a349ebba6b4c5504b8e2",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "9ad644983bc347de9c4ba10ce4f8a486"
+      ],
+      "input_tokens": 15743,
+      "output_tokens": 9514,
+      "llm_elapsed_ms": 53808.764,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Reported regression: str slices such as directive_name[1:] are rejected with \"Invalid index type slice[int, None, None] for str\". Evidence points to generic/invariant slice type compatibility rather than a missing handler; no direct reproduction is present in the supplied repository evidence.",
+        "issue_type": "bug",
+        "affected_component": "mypyc/build.py::include_dir",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "mypyc build orchestration and include-dir helper; no slice or index type-checking logic."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "TypeInfo dump/serialization; unrelated to str slice validation."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "Cache file naming; unrelated."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "supports_issue",
+            "observation": "Generic proper-subtype routine; if slice is invariant, this is where slice[int,None,None] would be rejected against slice[SupportsIndex|None,...]."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "dummy_context helper; unrelated."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "mypyc IR for-loop builder; unrelated."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Private-name helper; unrelated."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Member access dispatch; resolves __getitem__ but has no slice-specific handling."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Literal type helper; unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Test harness for type-check cases; could host a regression test but does not demonstrate the bug."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Union simplification; no slice-specific logic."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Generic type formatter used to render expected/actual types in errors; matches reported message shape but is not slice-specific."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Type meet routine; no slice handling."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Serious-error exit helper; unrelated."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Daemon source tracking; unrelated."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Mypyc IR cache naming; unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Incremental checker external command runner; unrelated."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "supports_issue",
+            "observation": "Dedicated TupleType.slice logic exists for tuple slicing, but no analogous str/generic-slice special case appears here; str slicing must go through __getitem__ signature checking."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Type variable default recursion check; unrelated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Parser uses feature_version=sys.version_info[1], so Python 3.14 selects feature_version=14; environment-specific but not itself the slice check."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The reported error is a slice-type compatibility failure: mypy infers directive_name[1:] as slice[int, None, None] and checks it against str.__getitem__'s parameter SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex]. Because slice is declared as an invariant generic in the active typeshed, is_proper_subtype (E4) rejects slice[int, None, None] even though its components are valid; the standard formatter (E12) renders the mismatch. Mypy has dedicated tuple-slice logic (E18) but no analogous special-casing for generic slice instances on str in the supplied evidence, so the failure is environment/typeshed-dependent rather than a simple 2.3-only regression, matching the report that 2.2.0 also fails.",
+            "confidence": 0.3,
+            "evidence_ids": [
+              "E4",
+              "E12",
+              "E18"
+            ],
+            "missing_evidence": [
+              "mypy/checkexpr.py index-checking implementation (visit_index_expr/check_index)",
+              "bundled typeshed builtins.pyi declarations for slice and str.__getitem__",
+              "minimal regression test for s[1:] under --python-version 3.14",
+              "diff of slice handling between mypy 2.2 and 2.3"
+            ],
+            "validation_step": "Inspect mypy/checkexpr.py's index-checking path and the bundled typeshed slice/str.__getitem__ declarations; then use mypy's existing testcheck harness with a minimal s = 'x'; s[1:] case under Python 3.14 to confirm whether the error reproduces and whether slice is invariant."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "poetry-empty-conda-prefix",
+      "tier": "main",
+      "repository": "python-poetry/poetry",
+      "issue_number": 10770,
+      "pre_fix_sha": "a35955f4239c129d7599feed8e3a3c39befb4176",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "50047ff0eb98477cbc8ff7cd694d6cc6"
+      ],
+      "input_tokens": 14564,
+      "output_tokens": 5091,
+      "llm_elapsed_ms": 28999.247,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "EnvManager.get treats an empty-string CONDA_PREFIX as an active virtualenv because it checks `env_prefix is not None` rather than requiring a non-empty value; after `conda deactivate` with auto_activate_base disabled, CONDA_PREFIX remains set to '' and Poetry builds a VirtualEnv from an empty prefix.",
+        "issue_type": "bug",
+        "affected_component": "src/poetry/utils/env/env_manager.py::EnvManager.get",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "EnvManager.get reads CONDA_PREFIX via os.environ.get and computes `in_venv = env_prefix is not None and conda_env_name != \"base\"`; an empty-string CONDA_PREFIX satisfies `is not None`, and lines 252-253 then use `Path(env_prefix)`, matching the reported failure."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "VersionSolver._get_comp_key is unrelated to environment detection."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "InstalledRepository.get_package_paths processes .pth files; unrelated."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Chooser._sort_key sorts installation candidates; unrelated."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Solver test helper checks transaction operations; unrelated."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Env.is_venv is an abstract method; no active-environment detection here."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "MergeIntervals._merge is lazy-wheel download bookkeeping; unrelated."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Git peeled_tag helper is unrelated."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Installer fixture/test helpers are unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "SelfCommand.reset_env uses get_system_env(naive=True); unrelated to CONDA_PREFIX detection."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Provider._is_relevant_marker handles markers; unrelated."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "PyProjectTOML read/write helpers are unrelated."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "test_env_manager.py helper clears VIRTUAL_ENV in in_project_venv_dir but does not exercise empty CONDA_PREFIX; neither confirms nor contradicts."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Application.configure_env calls EnvManager.create_venv and reports env if is_venv; it does not contain the active-env detection logic."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "with_no_active_python mocks Python.get_active_python; unrelated to empty CONDA_PREFIX handling."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "PoetryKeyring.preflight_check is unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Python.get_preferred_python selects an interpreter; unrelated to empty CONDA_PREFIX detection."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "SystemEnv.is_venv compares path to base; not the EnvManager.get detection."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "VirtualEnv.is_venv always returns True, so a VirtualEnv built from an empty prefix would be reported as a venv; downstream consequence, not root cause."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "GenericEnv.is_venv compares path to base; unrelated to EnvManager.get detection."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In EnvManager.get, the active-venv check at line 217 treats an empty-string CONDA_PREFIX as active because it tests `env_prefix is not None` instead of requiring a non-empty value. After `conda deactivate` with auto_activate_base disabled, Conda leaves CONDA_PREFIX set to '' while CONDA_DEFAULT_ENV is not 'base', so `in_venv` becomes True; line 252 then builds `Path('')` and returns a VirtualEnv, causing `poetry env use` to look for python under an empty prefix and fail.",
+            "confidence": 0.9,
+            "evidence_ids": [
+              "E1"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Inspect by running a non-mutating Python check that sets os.environ['CONDA_PREFIX']='' and removes CONDA_DEFAULT_ENV, then calls EnvManager.get(reload=True) and asserts it returns a SystemEnv rather than a VirtualEnv; no repository files are changed."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 8,
+    "analysis_successes": 6,
+    "skipped_no_evidence": 0,
+    "failures": 2,
+    "analysis_success_rate": 0.75,
+    "first_attempt_success_rate": 0.75,
+    "persistence_verified": 8,
+    "input_tokens": 158125,
+    "output_tokens": 83710,
+    "average_llm_elapsed_ms": 44750.672,
+    "error_categories": {
+      "invalid_response": 2
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 4,
+      "analysis_successes": 3,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.75,
+      "first_attempt_success_rate": 0.75,
+      "persistence_verified": 4,
+      "input_tokens": 69930,
+      "output_tokens": 39369,
+      "average_llm_elapsed_ms": 39984.506,
+      "error_categories": {
+        "invalid_response": 1
+      }
+    },
+    "calibration": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 14472,
+      "output_tokens": 14827,
+      "average_llm_elapsed_ms": 85902.214,
+      "error_categories": {}
+    },
+    "generalization": {
+      "cases": 3,
+      "analysis_successes": 2,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.6667,
+      "first_attempt_success_rate": 0.6667,
+      "persistence_verified": 3,
+      "input_tokens": 73723,
+      "output_tokens": 29514,
+      "average_llm_elapsed_ms": 31324.15,
+      "error_categories": {
+        "invalid_response": 1
+      }
+    }
+  }
+}

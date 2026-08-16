@@ -1,0 +1,129 @@
+{
+  "created_at": "2026-08-16T16:52:32Z",
+  "manifest": {
+    "name": "real-project-file-localization",
+    "version": 8,
+    "cases": 50
+  },
+  "protocol": {
+    "provider": "opencode",
+    "model": "deepseek-v4-flash",
+    "max_evidence_chars": 100000,
+    "max_lines_per_evidence": 200,
+    "max_output_tokens": 20000,
+    "temperature": 0.1,
+    "timeout_seconds": 180,
+    "llm_delay_seconds": 0,
+    "seed": 1337
+  },
+  "agent_analysis": {
+    "runs": [
+      {
+        "valid": 50,
+        "first_attempt_valid": 49,
+        "attempts": 51,
+        "persisted": 50,
+        "input_tokens": 882486,
+        "output_tokens": 43972,
+        "average_llm_elapsed_ms": 7543.174
+      },
+      {
+        "valid": 50,
+        "first_attempt_valid": 50,
+        "attempts": 50,
+        "persisted": 50,
+        "input_tokens": 882486,
+        "output_tokens": 44143,
+        "average_llm_elapsed_ms": 6946.084
+      },
+      {
+        "valid": 50,
+        "first_attempt_valid": 49,
+        "attempts": 51,
+        "persisted": 50,
+        "input_tokens": 882486,
+        "output_tokens": 45185,
+        "average_llm_elapsed_ms": 11393.607
+      }
+    ],
+    "combined": {
+      "case_runs": 150,
+      "valid": 150,
+      "first_attempt_valid": 148,
+      "attempts": 152,
+      "persisted": 150,
+      "input_tokens": 2647458,
+      "output_tokens": 133300,
+      "max_case_input_tokens": 33408,
+      "retry_cases": [
+        "werkzeug-duplicate-100-continue",
+        "typer-option-envvar"
+      ],
+      "failures": 0
+    },
+    "comparison_with_pre_guard_run": {
+      "pre_guard_input_tokens": 3007488,
+      "bounded_input_tokens": 2647458,
+      "input_token_reduction_percent": 11.97,
+      "pre_guard_max_case_input_tokens": 68407,
+      "bounded_max_case_input_tokens": 33408,
+      "max_case_input_reduction_percent": 51.16
+    }
+  },
+  "hybrid_rerank": {
+    "runs": [
+      {
+        "successes": 50,
+        "fallbacks": 0,
+        "attempts": 50,
+        "input_tokens": 688370,
+        "output_tokens": 446
+      },
+      {
+        "successes": 50,
+        "fallbacks": 0,
+        "attempts": 50,
+        "input_tokens": 688370,
+        "output_tokens": 446
+      },
+      {
+        "successes": 50,
+        "fallbacks": 0,
+        "attempts": 50,
+        "input_tokens": 688370,
+        "output_tokens": 446
+      }
+    ],
+    "combined": {
+      "case_runs": 150,
+      "successes": 150,
+      "fallbacks": 0,
+      "attempts": 150,
+      "input_tokens": 2065110,
+      "output_tokens": 1338,
+      "max_case_input_tokens": 29076
+    },
+    "metrics_each_run": {
+      "file_recall_at_1": 0.7467,
+      "file_recall_at_5": 0.86,
+      "file_recall_at_10": 0.9,
+      "file_recall_at_20": 1.0,
+      "mean_reciprocal_rank": 0.8983,
+      "symbol_cases": 33,
+      "symbol_recall_at_1": 0.6667,
+      "symbol_recall_at_5": 0.697,
+      "symbol_recall_at_10": 0.697,
+      "symbol_recall_at_20": 0.7121,
+      "mean_symbol_reciprocal_rank": 0.7424
+    },
+    "ordering_varied_cases": [
+      "starlette-base-middleware-no-response",
+      "anyio-trio-taskhandle-name",
+      "fastapi-pep695-annotated-dependency",
+      "fastapi-pydantic-json-form",
+      "pytest-parametrize-fixture-ordering",
+      "poetry-publish-no-interaction"
+    ]
+  },
+  "claim_boundary": "The results validate the bounded provider contracts and persistence path on the frozen public suite. They do not score root-cause accuracy, prove deterministic generation, or establish reliability on private or unseen repositories."
+}

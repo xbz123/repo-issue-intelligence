@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect bounded code evidence for Top-K issues while preserving the offline baseline.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect selected code evidence for Top-K issues while preserving the offline baseline.
 
 ## What it does
 
@@ -99,20 +99,30 @@ uv run rii agent-run examples/issues.json \
 
 `--llm` is explicit: without it the workflow remains offline and makes no model requests. The
 runtime does not accept provider or model overrides: all external analysis uses OpenCode
-`deepseek-v4-flash-free`. The API key is read from the environment and is never added to run state
+`deepseek-v4-flash`. The API key is read from the environment and is never added to run state
 or traces. Evidence collection rejects paths outside the repository, skips sensitive filenames,
-numbers source lines, and applies a configurable character budget before sending content.
+numbers source lines, and sends only evidence selected from deterministic Top-K candidates. The
+default external-model path limits each snippet to 200 numbered source lines and the combined
+repository evidence to 100,000 characters. These values can be changed with
+`OPENCODE_MAX_LINES_PER_EVIDENCE` and `OPENCODE_MAX_EVIDENCE_CHARS`; direct library callers may
+explicitly pass `None` for public-repository diagnostics that intentionally need full files. Issue
+bodies are not locally truncated, and the provider context window remains an additional hard
+boundary.
+Requests use the OpenCode Go endpoint
+`https://opencode.ai/zen/go/v1/chat/completions`.
 
-The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
-DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
-It uses `json_object` mode with a compact five-field provider contract followed by local Pydantic
-and evidence-ID validation. Redundant candidate metadata is not sent twice: the model receives the
-Issue and bounded source snippets, while the client derives the affected component, contradiction
-summary, retained evidence order, and more-evidence flag before persisting the full public model.
+The OpenCode path disables reasoning and defaults to temperature `0.1`, a 20,000-token completion
+budget, and a 180-second timeout for both normal Agent runs and evaluation. It uses `json_object`
+mode with a compact five-field provider contract followed by local Pydantic and evidence-ID
+validation. A response with `finish_reason=length` is reported as `output_truncated` and is not
+repeated with the same exhausted budget. Redundant candidate metadata is not sent twice: the model receives the
+Issue and selected source snippets, while the client derives the affected component, contradiction
+summary, retained evidence order, safe validation step, and more-evidence flag before persisting
+the full public model. The validation step is based on the first evidence ID cited by the model;
+it is not an additional provider-required field.
 If deterministic localization yields no readable repository evidence for an Issue, that Issue
 skips the model call, records the skip in node trace metadata, and still reaches human review.
-Only public repository evidence should be sent to free models: OpenCode states that data collected
-during the free period may be used to improve those models; see the
+Only public repository evidence should be sent to external models; see the
 [OpenCode Zen documentation](https://opencode.ai/docs/zen).
 
 Evaluate the full JSON analysis path on frozen public Issue/repository inputs:
@@ -122,7 +132,7 @@ uv run rii agent-evaluate benchmarks/cases.json \
   --case-id starlette-streaming-denial-response \
   --case-id typer-option-envvar \
   --case-id textual-remove-children-reflow \
-  --llm-delay-seconds 30 \
+  --llm-delay-seconds 0 \
   --output benchmarks/results/agent-analysis-latest.json
 ```
 
@@ -132,6 +142,31 @@ evidence reference, restores the final Agent payload from a temporary SQLite sto
 failures in the denominator. The command exits non-zero for provider/schema failures or skipped
 evidence so it can be used as a reliability gate.
 
+The pre-guard 20,000-token Go-endpoint reliability check ran all 50 frozen public cases three times
+with no inter-case delay. It produced 150/150 valid first-attempt analyses and restored all 150
+terminal payloads from SQLite. This followed a diagnostic that traced the preceding recurring
+schema failures to a missing provider-generated `hypothesis.validation_step`; moving that safe,
+non-mutating step to deterministic client normalization removed it from the provider contract
+without relaxing JSON, schema, evidence-coverage, or evidence-ID validation. This is a
+provider-contract and persistence result, not a root-cause accuracy claim. The full diagnostic
+progression and retained artifacts are documented in
+[`docs/llm-evaluation.md`](docs/llm-evaluation.md).
+
+The bounded-input follow-up repeated both external paths three times. Full Agent analysis completed
+`150/150` case-runs with `148/150` first-attempt successes and `150/150` SQLite round trips. The
+evidence guards reduced total input from 3,007,488 to 2,647,458 tokens (`-11.97%`) and the largest
+case from 68,407 to 33,408 tokens (`-51.16%`) relative to the preceding pre-guard runs. Rank-only
+hybrid completed `150/150` requests with zero fallback and identical run-level metrics, although
+six cases changed their full ordering at least once. The compact machine-readable result is
+[`benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json`](benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json).
+
+For a provider-default output-limit diagnostic, `agent-evaluate --omit-max-tokens` omits the
+`max_tokens` field entirely. The default remains the explicit 20,000-token ceiling so normal runs
+stay reproducible across provider-default changes. The authorized 50-case diagnostic returned
+38/50 valid final analyses and 31/50 first-attempt successes, versus 43/50 and 34/50 in the
+immediately preceding explicit-cap run under the older provider-generated-validation contract;
+omitting the field did not improve that contract's reliability.
+
 Run the frozen real-project benchmark:
 
 ```bash
@@ -139,25 +174,24 @@ uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
   --output benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json
 
-LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-latest.json
 ```
 
-The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash-free`; it does not
+The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
 accept provider or model overrides. The reranker requests no grammar-constrained response format
 and parses exactly one `RANK: E3,E1,E2` line. Duplicate IDs are removed, unknown IDs are rejected,
 and omitted candidates keep their deterministic order. Only transport errors, HTTP 429, and HTTP
 5xx responses are retried with bounded exponential backoff; invalid ranks and HTTP 4xx responses
 fall back immediately. This isolates file ordering from hypothesis generation and removes the
 unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
-the completion budget is bounded at 256 tokens with one 1,024-token truncation retry, Issue bodies
-are capped at 2,000 characters, and each evidence snippet is capped at 300 characters under the
-existing 16,000-character total budget. Current manifest version 8 embeds 50 complete Issue
+and the completion budget starts at 8,192 tokens with one 20,000-token truncation retry. The full
+frozen Issue and selected deterministic candidate snippets are sent without project-defined input
+character caps. Current manifest version 8 embeds 50 complete Issue
 snapshots across 21 repositories, corrected pre-fix SHAs, and 39 manually reviewed symbol targets
 across 33 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
@@ -365,22 +399,19 @@ ambiguous definitions, and legacy broad call maps cannot fabricate strong graph 
 top-level `src` and `lib` modules/packages retain their importable names, while layout directories
 are stripped only when they are actual source roots.
 
-Two authorized OpenCode `deepseek-v4-flash-free` rank-only runs over the earlier deterministic
-v0.13 candidate pool kept all 50 cases in the denominator. Both produced 50/50 valid ranks with no
-fallback, grammar error, invalid rank, or unknown evidence ID. File Recall@1 was `0.6567` and
-`0.6767`, Recall@5/10/20 was
-`0.8200/0.8600/0.9300` in both runs, and MRR was `0.8226` and `0.8326`. The run-level mean and
-population standard deviation were Recall@1 `0.6667 +/- 0.0100` and MRR
-`0.8276 +/- 0.0050`. All requests completed in one attempt, with 170,521 input tokens in each run
-and only 485/491 output tokens. Average model latency was `4.13 s` and `4.96 s`.
+Three authorized OpenCode `deepseek-v4-flash` rank-only runs reranked the current deterministic
+v0.25 candidate pool and kept all 150 case-runs in the denominator. Every response produced a
+valid known-ID rank and no case used deterministic fallback. Mean File Recall@1/5/10/20 was
+`0.7367/0.8600/0.9000/1.0000`, with mean MRR `0.8894`; the corresponding deterministic values are
+`0.4067/0.6900/0.7800/1.0000` and `0.6038`. Symbol Recall@1/5/10/20 was
+`0.6667/0.6970/0.6970/0.7121` with MRR `0.7424` in all three runs.
 
-The two runs retained the same deterministic 20-file set for every case but changed the order in
-14/50 cases; only `pydantic-safe-annotations-metaclass` changed expected-file reciprocal rank.
-Fixed seed is therefore best effort rather than deterministic model output. Because later
-deterministic releases changed candidate membership through v0.20, these runs remain historical
-paired evidence and have not yet been repeated against the new pool. They support a bounded
-ordering-gain and protocol-reliability claim, not a production-reliability or root-cause-accuracy
-claim.
+The runs made 57, 50, and 50 requests. Provider telemetry varied sharply despite
+`reasoning_effort=none`: run 1 recorded 162,491 output tokens and 28.53 seconds mean LLM latency,
+while runs 2 and 3 each recorded 446 output tokens and 1.62/1.46 seconds. Only 29/50 complete file
+orders were identical across all repeats. The result therefore supports a reliable rank protocol
+and bounded ordering gain on this frozen pool, not deterministic generation, new-file discovery,
+or root-cause accuracy.
 
 The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
 2026, and only 11 of 50 cases have multi-file production ground truth. All 62 reviewed files now

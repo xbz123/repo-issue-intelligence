@@ -57,9 +57,10 @@ def _build_issue_analyzer(
     options = {
         "max_output_tokens": settings.opencode_max_output_tokens,
         "timeout_seconds": settings.opencode_timeout_seconds,
+        "temperature": (
+            settings.opencode_temperature if temperature is None else temperature
+        ),
     }
-    if temperature is not None:
-        options["temperature"] = temperature
     if seed is not None:
         options["seed"] = seed
     return OpenCodeIssueAnalyzer(
@@ -91,12 +92,15 @@ def _build_analysis_evaluator(
     settings: Settings,
     temperature: float,
     seed: int,
+    omit_max_tokens: bool = False,
 ) -> OpenCodeIssueAnalyzer:
     if settings.opencode_api_key is None:
         raise typer.BadParameter("OPENCODE_API_KEY is required for Agent evaluation")
     return OpenCodeIssueAnalyzer(
         api_key=settings.opencode_api_key.get_secret_value(),
-        max_output_tokens=settings.opencode_max_output_tokens,
+        max_output_tokens=(
+            None if omit_max_tokens else settings.opencode_max_output_tokens
+        ),
         timeout_seconds=max(
             settings.opencode_timeout_seconds,
             OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
@@ -213,7 +217,8 @@ def agent_run_command(
             top_k,
             AgentStore(database),
             llm_analyzer=analyzer,
-            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_evidence_chars=settings.opencode_max_evidence_chars,
+            max_evidence_lines=settings.opencode_max_lines_per_evidence,
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
@@ -288,17 +293,30 @@ def agent_evaluate_command(
         typer.Option("--temperature", min=0, max=2),
     ] = 0.1,
     seed: Annotated[int, typer.Option("--seed")] = 1337,
+    omit_max_tokens: Annotated[
+        bool,
+        typer.Option(
+            "--omit-max-tokens",
+            help="Diagnostic: omit max_tokens and use the provider's server default.",
+        ),
+    ] = False,
 ) -> None:
     """Evaluate full DeepSeek analysis through the persisted Agent graph."""
     settings = Settings()
-    analyzer = _build_analysis_evaluator(settings, temperature, seed)
+    analyzer = _build_analysis_evaluator(
+        settings,
+        temperature,
+        seed,
+        omit_max_tokens=omit_max_tokens,
+    )
     try:
         run = run_agent_analysis_evaluation(
             load_manifest(manifest),
             workspace,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_evidence_chars=settings.opencode_max_evidence_chars,
+            max_lines_per_evidence=settings.opencode_max_lines_per_evidence,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:
@@ -366,7 +384,8 @@ def benchmark(
             variant,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_evidence_chars=settings.opencode_max_evidence_chars,
+            max_lines_per_evidence=settings.opencode_max_lines_per_evidence,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:

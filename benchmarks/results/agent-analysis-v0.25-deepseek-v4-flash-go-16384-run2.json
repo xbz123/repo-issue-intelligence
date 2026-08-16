@@ -1,0 +1,579 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T01:05:40.991450Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "09a99bd80857458ca9e202ba48bfbcd8"
+      ],
+      "input_tokens": 13281,
+      "output_tokens": 4462,
+      "llm_elapsed_ms": 56903.872,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Bug confirmed by code path: WebSocket.send_denial_response delegates directly to the supplied Response, but streaming/file response implementations emit plain http.response.* ASGI messages instead of websocket-prefixed messages, so WebSocket.send rejects them with RuntimeError.",
+        "issue_type": "bug",
+        "affected_component": "starlette/websockets.py::WebSocket.send_denial_response",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "send_denial_response checks for the websocket.http.response extension and then calls response(scope, receive, self.send) directly, so the response itself must emit websocket-prefixed ASGI messages."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "Base Response.__call__ prefixes message types with 'websocket.' when scope['type'] == 'websocket', demonstrating the required behavior for denial responses."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "_StreamingResponse.__call__ hardcodes 'http.response.start' and 'http.response.body' without the websocket prefix, matching the failure mode described for streaming responses."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "request_response calls response(scope, receive, send) for HTTP requests; it does not address websocket denial response message types."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "HTTPConnection is a shared base for Request and WebSocket and contains no ASGI message-type adaptation relevant to this issue."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "wrap_app_handling_exceptions tracks only 'http.response.start' for response_started; it is unrelated to denial response message prefixing."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "supports_issue",
+            "observation": "TestClient's websocket denial handling expects 'websocket.http.response.start' and 'websocket.http.response.body', confirming the required message types for denial responses."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "WebSocketEndpoint.on_receive handles incoming data messages and is unrelated to denial response sending."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Middleware exception-catching test is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "ServerErrorMiddleware passes non-http scopes straight through and does not affect response message prefixing."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "SupportsAsyncClose protocol helper is unrelated to response message types."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Starlette application initialization is unrelated to denial response behavior."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "ExceptionMiddleware registers exception handlers for http/websocket scopes but does not alter response message prefixing."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "StaticFiles.check_config is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Test application websocket endpoint is unrelated to denial response message types."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "FileResponse HEAD test expects http.response.* messages on an HTTP scope and does not cover the websocket denial path."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "WebSocket scope interface test is unrelated to denial response sending."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Form parser enum and import fallback are unrelated to this issue."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "UploadFile.content_type property is unrelated to denial response message types."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Jinja2Templates.TemplateResponse helper is unrelated to websocket denial responses."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "WebSocket.send_denial_response forwards the supplied Response object to the WebSocket send channel unchanged. The base Response.__call__ adapts by prefixing ASGI message types with 'websocket.' when scope['type'] == 'websocket', but streaming/file response implementations hardcode 'http.response.start' and 'http.response.body'. When such a response is passed to send_denial_response, WebSocket.send rejects the plain http.response.* message with RuntimeError, so only Response subclasses that inherit the prefixing __call__ work correctly.",
+            "confidence": 0.78,
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E7"
+            ],
+            "missing_evidence": [
+              "starlette/responses.py StreamingResponse.__call__ implementation",
+              "starlette/responses.py FileResponse.__call__ implementation"
+            ],
+            "validation_step": "Inspect starlette/responses.py StreamingResponse.__call__ and FileResponse.__call__ to verify they emit 'http.response.start'/'http.response.body' without the 'websocket.' prefix; then run a focused test that calls WebSocket.send_denial_response with a StreamingResponse under a scope containing the 'websocket.http.response' extension and observes the RuntimeError."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "fc3f3762428440d180b71a50f39ea39a"
+      ],
+      "input_tokens": 11352,
+      "output_tokens": 3120,
+      "llm_elapsed_ms": 72636.454,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "Evidence points to TyperOption.value_from_envvar in typer/core.py: it resolves the environment variable but only returns None when rv is None, with no return statement for a non-None rv, so envvar values for options are discarded. The Option API still accepts envvar and forwards it to TyperOption, matching the reported regression where Argument envvar works but Option envvar does not.",
+        "issue_type": "bug",
+        "affected_component": "typer/models.py::TyperPath.shell_complete",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TyperPath.shell_complete returns an empty list; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "TyperOption.value_from_envvar calls resolve_envvar_value but only returns None when rv is None; there is no return for a non-None rv, so the resolved envvar value is dropped and the method returns None."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "get_app_dir resolves application config directories; unrelated to envvar resolution."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Typer.command registers CommandInfo objects; unrelated to envvar fallback."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "supports_issue",
+            "observation": "The Option overload signature includes envvar, confirming envvar is part of the public Option API."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Shell completion get_completions logic; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Rich text rendering helpers; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Prompt building helpers; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Click parser _Option.process stores parsed option values; unrelated to envvar fallback."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "augment_usage_errors context manager; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; neutral."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; neutral."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "supports_issue",
+            "observation": "The option decorator instantiates TyperOption with attrs, so envvar passed to Option is forwarded to TyperOption."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Multi-file app example; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "First steps example; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; neutral."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; neutral."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "CLI docs generation main; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Bash completion version check; unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Completion parameter inspection; unrelated to envvar handling."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "TyperOption.value_from_envvar in typer/core.py is missing a return of the resolved envvar value. It calls self.resolve_envvar_value(ctx), and when rv is not None it falls through and implicitly returns None, so typer.Option(envvar=...) never receives the environment variable. Argument envvar works because arguments use a different resolution path, matching the reported regression.",
+            "confidence": 0.82,
+            "evidence_ids": [
+              "E2",
+              "E5",
+              "E13"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Run a non-mutating unit test that constructs a TyperOption with envvar='ME', sets os.environ['ME']='bar', and asserts TyperOption.value_from_envvar(ctx) returns 'bar'; currently it returns None, confirming the dropped envvar value."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "a7f0539c9c0d4ee2ae0f31d69851bbca"
+      ],
+      "input_tokens": 13976,
+      "output_tokens": 4433,
+      "llm_elapsed_ms": 84102.924,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The reported bug is consistent with remove_children passing the wrong parent to app._prune, so the VerticalGroup's layout is not refreshed after its children are removed.",
+        "issue_type": "bug",
+        "affected_component": "src/textual/compose.py::compose",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "compose() collects yielded widgets and routes nested widgets through compose_add_child; it contains no removal or layout-refresh logic relevant to this issue."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "Screen.set_focus schedules scroll-to-center after a refresh; unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "remove_children selects children and calls self.app._prune(*children_to_remove, parent=cast(DOMNode, self._parent)); passing self._parent instead of self is the suspicious target for any post-removal layout refresh."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "The app getter resolves the active app; unrelated to container height refresh."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "run_test provides a headless harness that could reproduce the issue, but no test result is included in the evidence."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Select.from_values builds options from an iterable; unrelated to remove_children."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "ProgressBar.__init__ sets reactive state and clock; unrelated to removal layout refresh."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Static.visual caches the visual and refreshes on content set; unrelated to remove_children."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "TextArea._rewrap_and_refresh_virtual_size rewraps document content; unrelated to generic remove_children height refresh."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Footer.__init__ sets reactive binding state; unrelated to container height refresh."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "SelectionList message definitions; unrelated to remove_children layout refresh."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "RadioSet.__init__ and mount behavior; unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Tabs.remove_tab removes a tab and updates active state; unrelated to generic container height refresh."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "check_identifiers validates identifier format; unrelated to layout refresh."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "ListView._on_mount sets initial index; unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Lazy defers mounting of a widget; unrelated to remove_children."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Input.get_content_height returns 1; unrelated to container height refresh after removal."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Compositor.__contains__ checks widget membership in maps; unrelated to remove_children layout refresh."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "supports_issue",
+            "observation": "VerticalLayout.arrange builds placements from the children list; with no children it returns no placements, so a recalculated vertical layout would have zero height."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "supports_issue",
+            "observation": "StreamLayout.get_content_height returns 0 when widget._nodes is empty, showing content height can shrink if recalculated after removal."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "remove_children (E3) passes parent=cast(DOMNode, self._parent) to app._prune when removing the widget's own children. If _prune uses parent to decide which widget to refresh or re-layout after pruning, this targets the VerticalGroup's parent rather than the VerticalGroup itself, so the container's height is never recalculated after its children are removed. E19 and E20 show that a recalculated vertical/stream layout would produce zero height for an empty container, so the stale height is consistent with a missed refresh rather than incorrect layout math.",
+            "confidence": 0.65,
+            "evidence_ids": [
+              "E3",
+              "E19",
+              "E20"
+            ],
+            "missing_evidence": [
+              "App._prune implementation showing how the parent argument triggers refresh",
+              "VerticalGroup container definition and its layout class"
+            ],
+            "validation_step": "Inspect App._prune to confirm the parent argument is used to trigger a layout refresh on that node; then run the issue's app under run_test, press 'c', and assert the VerticalGroup's height/content height is recalculated to 0 after awaiting the removal."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 3,
+    "analysis_successes": 3,
+    "skipped_no_evidence": 0,
+    "failures": 0,
+    "analysis_success_rate": 1.0,
+    "first_attempt_success_rate": 1.0,
+    "persistence_verified": 3,
+    "input_tokens": 38609,
+    "output_tokens": 12015,
+    "average_llm_elapsed_ms": 71214.417,
+    "error_categories": {}
+  },
+  "by_tier": {
+    "main": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 13281,
+      "output_tokens": 4462,
+      "average_llm_elapsed_ms": 56903.872,
+      "error_categories": {}
+    },
+    "calibration": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 11352,
+      "output_tokens": 3120,
+      "average_llm_elapsed_ms": 72636.454,
+      "error_categories": {}
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 13976,
+      "output_tokens": 4433,
+      "average_llm_elapsed_ms": 84102.924,
+      "error_categories": {}
+    }
+  }
+}
