@@ -15,6 +15,8 @@ SENSITIVE_FILENAMES = {
     "id_rsa",
 }
 LINE_RANGE = re.compile(r"^(?P<start>\d+)-(?P<end>\d+)$")
+DEFAULT_MAX_TOTAL_CHARS = 100_000
+DEFAULT_MAX_LINES_PER_SNIPPET = 200
 
 
 def _candidate_path(root: Path, relative_path: str) -> Path | None:
@@ -46,8 +48,8 @@ def _line_range(
 
 def collect_evidence(
     report: InvestigationReport,
-    max_total_chars: int | None = None,
-    max_lines_per_snippet: int | None = None,
+    max_total_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_lines_per_snippet: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
     context_lines: int = 12,
     max_chars_per_snippet: int | None = None,
 ) -> list[EvidenceSnippet]:
@@ -95,7 +97,7 @@ def collect_evidence(
         if snippet_limit is not None and len(content) > snippet_limit:
             content = content[:snippet_limit].rstrip()
         if not content:
-            break
+            continue
         snippets.append(
             EvidenceSnippet(
                 id=f"E{len(snippets) + 1}",

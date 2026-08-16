@@ -102,16 +102,20 @@ runtime does not accept provider or model overrides: all external analysis uses 
 `deepseek-v4-flash`. The API key is read from the environment and is never added to run state
 or traces. Evidence collection rejects paths outside the repository, skips sensitive filenames,
 numbers source lines, and sends only evidence selected from deterministic Top-K candidates. The
-project no longer applies its own Issue-body, per-snippet, line-count, or total-character truncation;
-the provider's context window remains the actual request-size boundary.
+default external-model path limits each snippet to 200 numbered source lines and the combined
+repository evidence to 100,000 characters. These values can be changed with
+`OPENCODE_MAX_LINES_PER_EVIDENCE` and `OPENCODE_MAX_EVIDENCE_CHARS`; direct library callers may
+explicitly pass `None` for public-repository diagnostics that intentionally need full files. Issue
+bodies are not locally truncated, and the provider context window remains an additional hard
+boundary.
 Requests use the OpenCode Go endpoint
 `https://opencode.ai/zen/go/v1/chat/completions`.
 
-The OpenCode path disables reasoning and defaults to a 20,000-token completion budget plus a
-60-second runtime timeout so the budget remains available to the required JSON fields. The
-`agent-evaluate` reliability command extends the read timeout to 180 seconds. It uses `json_object`
+The OpenCode path disables reasoning and defaults to temperature `0.1`, a 20,000-token completion
+budget, and a 180-second timeout for both normal Agent runs and evaluation. It uses `json_object`
 mode with a compact five-field provider contract followed by local Pydantic and evidence-ID
-validation. Redundant candidate metadata is not sent twice: the model receives the
+validation. A response with `finish_reason=length` is reported as `output_truncated` and is not
+repeated with the same exhausted budget. Redundant candidate metadata is not sent twice: the model receives the
 Issue and selected source snippets, while the client derives the affected component, contradiction
 summary, retained evidence order, safe validation step, and more-evidence flag before persisting
 the full public model. The validation step is based on the first evidence ID cited by the model;
@@ -138,7 +142,7 @@ evidence reference, restores the final Agent payload from a temporary SQLite sto
 failures in the denominator. The command exits non-zero for provider/schema failures or skipped
 evidence so it can be used as a reliability gate.
 
-The current 20,000-token Go-endpoint reliability check ran all 50 frozen public cases three times
+The pre-guard 20,000-token Go-endpoint reliability check ran all 50 frozen public cases three times
 with no inter-case delay. It produced 150/150 valid first-attempt analyses and restored all 150
 terminal payloads from SQLite. This followed a diagnostic that traced the preceding recurring
 schema failures to a missing provider-generated `hypothesis.validation_step`; moving that safe,
@@ -147,6 +151,14 @@ without relaxing JSON, schema, evidence-coverage, or evidence-ID validation. Thi
 provider-contract and persistence result, not a root-cause accuracy claim. The full diagnostic
 progression and retained artifacts are documented in
 [`docs/llm-evaluation.md`](docs/llm-evaluation.md).
+
+The bounded-input follow-up repeated both external paths three times. Full Agent analysis completed
+`150/150` case-runs with `148/150` first-attempt successes and `150/150` SQLite round trips. The
+evidence guards reduced total input from 3,007,488 to 2,647,458 tokens (`-11.97%`) and the largest
+case from 68,407 to 33,408 tokens (`-51.16%`) relative to the preceding pre-guard runs. Rank-only
+hybrid completed `150/150` requests with zero fallback and identical run-level metrics, although
+six cases changed their full ordering at least once. The compact machine-readable result is
+[`benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json`](benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json).
 
 For a provider-default output-limit diagnostic, `agent-evaluate --omit-max-tokens` omits the
 `max_tokens` field entirely. The default remains the explicit 20,000-token ceiling so normal runs

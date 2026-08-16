@@ -14,13 +14,17 @@ An `llm-only` variant remains future work. The implemented Hybrid benchmark cann
 outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
 plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
 disables reasoning, asks for at most three IDs, starts with an 8,192-token output budget, and retries
-once at 20,000 tokens only if the first completion is truncated. The complete frozen Issue and
-selected deterministic evidence are sent without local character truncation; the provider context
-window remains the request-size limit.
+once at 20,000 tokens only if the first completion is truncated. The complete frozen Issue is sent,
+while selected deterministic repository evidence defaults to at most 200 source lines per snippet
+and 100,000 characters in total. The provider context window remains an additional request-size
+limit.
 
 The full Agent analysis path also disables model reasoning before requesting its strict JSON
 object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
 than allowing hidden reasoning to exhaust the response budget before valid JSON is produced.
+Normal Agent runs and evaluation both use temperature `0.1` and a 180-second timeout. A structured
+analysis response ending with `finish_reason=length` is classified as non-retryable
+`output_truncated` instead of being retried with the same exhausted ceiling.
 `agent-evaluate --omit-max-tokens` is a diagnostic-only mode that omits the request field and
 records `max_output_tokens=null`; it delegates the ceiling to the provider rather than creating a
 truly unlimited response.
@@ -319,6 +323,42 @@ Reviewed artifacts:
 - `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run1.json`
 - `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run2.json`
 - `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run3.json`
+
+## Bounded-input production-default result
+
+After the contract-valid runs above, the normal Agent and benchmark paths were given explicit
+production defaults: at most 200 numbered source lines per evidence snippet, 100,000 repository
+evidence characters per request, temperature `0.1`, and a 180-second timeout. Issue snapshots remain
+complete. Structured analysis now classifies `finish_reason=length` as non-retryable
+`output_truncated`, because repeating the same exhausted 20,000-token budget cannot recover it.
+
+Three independent zero-delay 50-case Agent runs produced:
+
+| Run | Final valid | First-attempt valid | Attempts | Persisted | Input tokens | Output tokens | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 50/50 | 49/50 | 51 | 50/50 | 882,486 | 43,972 | 7.54 s |
+| 2 | 50/50 | 50/50 | 50 | 50/50 | 882,486 | 44,143 | 6.95 s |
+| 3 | 50/50 | 49/50 | 51 | 50/50 | 882,486 | 45,185 | 11.39 s |
+| Combined | 150/150 | 148/150 | 152 | 150/150 | 2,647,458 | 133,300 | - |
+
+The two recovered retries were `werkzeug-duplicate-100-continue` and `typer-option-envvar`. The
+latter accumulated 187.57 seconds across a failed first request and successful retry, which confirms
+that the old 60-second production timeout was not aligned with the evaluated recovery path. Relative
+to the preceding three pre-guard runs, combined input fell 11.97% and the maximum single-case input
+fell from 68,407 to 33,408 tokens (51.16%).
+
+The same bounded inputs were then used for three rank-only hybrid runs. All three completed 50/50
+model requests with zero fallback, 688,370 input tokens, and 446 output tokens. Every run reported
+File Recall@1/5/10/20 of `0.7467/0.8600/0.9000/1.0000`, MRR `0.8983`, and Symbol
+Recall@1/5/10/20 of `0.6667/0.6970/0.6970/0.7121` with MRR `0.7424` on 33 labeled
+cases. Six of 50 cases nevertheless changed their complete candidate ordering in at least one run,
+so seed 1337 remains best effort rather than deterministic generation.
+
+Only the compact aggregate is committed at
+`benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json`; the six raw run files were
+kept outside Git to avoid further repository growth. These results validate provider contracts,
+fallback accounting, and persistence on the frozen public suite. They do not measure hypothesis
+correctness or establish behavior on private or unseen repositories.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 

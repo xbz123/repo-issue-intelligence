@@ -254,10 +254,12 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
             api_key,
             max_output_tokens,
             timeout_seconds,
+            temperature,
         ):
             assert api_key == "test-key"
             assert max_output_tokens == 20_000
-            assert timeout_seconds == 60
+            assert timeout_seconds == 180
+            assert temperature == 0.1
             self.model = "deepseek-v4-flash"
 
         def analyze(self, issue, report, evidence):

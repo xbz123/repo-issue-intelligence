@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from repo_issue_intelligence.evidence import collect_evidence
+from repo_issue_intelligence.evidence import (
+    DEFAULT_MAX_LINES_PER_SNIPPET,
+    DEFAULT_MAX_TOTAL_CHARS,
+    collect_evidence,
+)
 from repo_issue_intelligence.investigator import investigate
 from repo_issue_intelligence.models import CandidateLocation, IssueRecord
 from repo_issue_intelligence.repository_index import build_repository_map
@@ -103,17 +107,17 @@ def test_collect_evidence_caps_each_snippet_to_preserve_candidate_breadth(
     assert all(len(snippet.content) <= 200 for snippet in evidence)
 
 
-def test_collect_evidence_has_no_default_local_size_cap(tmp_path: Path) -> None:
+def test_collect_evidence_applies_default_input_guards(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
-    source = "\n".join(f"line_{line}" for line in range(1, 151))
+    source = "\n".join(f"line_{line}" for line in range(1, 251))
     (repository / "large.py").write_text(source, encoding="utf-8")
     report = investigate(issue(), build_repository_map(repository)).model_copy(
         update={
             "candidates": [
                 CandidateLocation(
                     file="large.py",
-                    lines="1-150",
+                    lines=None,
                     confidence=0.9,
                     evidence=["Synthetic candidate"],
                 )
@@ -124,5 +128,35 @@ def test_collect_evidence_has_no_default_local_size_cap(tmp_path: Path) -> None:
     evidence = collect_evidence(report)
 
     assert len(evidence) == 1
-    assert "150: line_150" in evidence[0].content
-    assert len(evidence[0].content) > 1_600
+    assert evidence[0].lines == f"1-{DEFAULT_MAX_LINES_PER_SNIPPET}"
+    assert "200: line_200" in evidence[0].content
+    assert "201: line_201" not in evidence[0].content
+    assert sum(len(snippet.content) for snippet in evidence) <= DEFAULT_MAX_TOTAL_CHARS
+
+
+def test_collect_evidence_can_explicitly_disable_input_guards(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    source = "\n".join(f"line_{line}" for line in range(1, 251))
+    (repository / "large.py").write_text(source, encoding="utf-8")
+    report = investigate(issue(), build_repository_map(repository)).model_copy(
+        update={
+            "candidates": [
+                CandidateLocation(
+                    file="large.py",
+                    lines=None,
+                    confidence=0.9,
+                    evidence=["Synthetic candidate"],
+                )
+            ]
+        }
+    )
+
+    evidence = collect_evidence(
+        report,
+        max_total_chars=None,
+        max_lines_per_snippet=None,
+    )
+
+    assert evidence[0].lines == "1-250"
+    assert "250: line_250" in evidence[0].content

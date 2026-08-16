@@ -739,6 +739,40 @@ def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
     assert error.value.elapsed_ms >= 0
 
 
+def test_opencode_analyzer_reports_analysis_output_truncation_without_retry() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-truncated-analysis",
+                "system_fingerprint": "fingerprint-truncated-analysis",
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "message": {"content": '{"summary":'},
+                    }
+                ],
+                "usage": {"prompt_tokens": 504, "completion_tokens": 20_000},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match="exhausted") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert error.value.category == "output_truncated"
+    assert error.value.retryable is False
+    assert error.value.request_id == "request-truncated-analysis"
+    assert error.value.system_fingerprint == "fingerprint-truncated-analysis"
+    assert error.value.input_tokens == 504
+    assert error.value.output_tokens == 20_000
+
+
 def test_opencode_analyzer_reports_schema_validation_paths_without_content() -> None:
     response_payload = structured_payload()
     response_payload.pop("issue_type")

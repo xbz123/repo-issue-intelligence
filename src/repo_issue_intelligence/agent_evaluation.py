@@ -19,6 +19,7 @@ from .benchmark import (
     prepare_repository,
     tracked_repository_files,
 )
+from .evidence import DEFAULT_MAX_LINES_PER_SNIPPET, DEFAULT_MAX_TOTAL_CHARS
 from .llm_client import IssueAnalyzer, LLMProviderError
 from .models import AgentRun, AgentRunStatus, LLMAnalysis, LLMAnalysisResult
 
@@ -67,6 +68,7 @@ class AgentAnalysisRun(BaseModel):
     model: str
     max_output_tokens: int | None = None
     max_evidence_chars: int | None
+    max_lines_per_evidence: int | None = None
     max_llm_attempts: int
     llm_delay_seconds: float
     temperature: float | None = None
@@ -172,6 +174,7 @@ def _evaluate_case(
     workspace: Path,
     analyzer: IssueAnalyzer,
     max_evidence_chars: int | None,
+    max_lines_per_evidence: int | None,
     max_llm_attempts: int,
 ) -> AgentAnalysisCaseResult:
     repository_root = prepare_repository(case, workspace)
@@ -186,6 +189,7 @@ def _evaluate_case(
                 store=store,
                 llm_analyzer=tracking_analyzer,
                 max_evidence_chars=max_evidence_chars,
+                max_evidence_lines=max_lines_per_evidence,
                 included_files=tracked_repository_files(repository_root),
                 max_attempts=max_llm_attempts,
             )
@@ -277,7 +281,8 @@ def run_agent_analysis_evaluation(
     workspace: Path,
     analyzer: IssueAnalyzer,
     case_ids: set[str] | None = None,
-    max_evidence_chars: int | None = None,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_lines_per_evidence: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
     max_llm_attempts: int = 2,
     llm_delay_seconds: float = 0,
 ) -> AgentAnalysisRun:
@@ -301,6 +306,7 @@ def run_agent_analysis_evaluation(
                 workspace,
                 analyzer,
                 max_evidence_chars,
+                max_lines_per_evidence,
                 max_llm_attempts,
             )
         except Exception as error:
@@ -327,6 +333,7 @@ def run_agent_analysis_evaluation(
         model=analyzer.model,
         max_output_tokens=getattr(analyzer, "max_output_tokens", None),
         max_evidence_chars=max_evidence_chars,
+        max_lines_per_evidence=max_lines_per_evidence,
         max_llm_attempts=max_llm_attempts,
         llm_delay_seconds=llm_delay_seconds,
         temperature=getattr(analyzer, "temperature", None),

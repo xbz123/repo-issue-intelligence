@@ -12,7 +12,11 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 
 from .agent_store import AgentStore
-from .evidence import collect_evidence
+from .evidence import (
+    DEFAULT_MAX_LINES_PER_SNIPPET,
+    DEFAULT_MAX_TOTAL_CHARS,
+    collect_evidence,
+)
 from .investigator import investigate
 from .llm_client import IssueAnalyzer
 from .models import (
@@ -162,11 +166,16 @@ def _investigate_issues_node(state: AgentGraphState) -> dict[str, Any]:
 
 def _collect_code_evidence_node(
     state: AgentGraphState,
-    max_total_chars: int,
+    max_total_chars: int | None,
+    max_lines_per_snippet: int | None,
 ) -> dict[str, Any]:
     return {
         "evidence_by_issue": {
-            report.issue.number: collect_evidence(report, max_total_chars=max_total_chars)
+            report.issue.number: collect_evidence(
+                report,
+                max_total_chars=max_total_chars,
+                max_lines_per_snippet=max_lines_per_snippet,
+            )
             for report in state["investigations"]
         }
     }
@@ -216,7 +225,8 @@ def build_agent_graph(
     run_id: str,
     max_attempts: int = 2,
     llm_analyzer: IssueAnalyzer | None = None,
-    max_evidence_chars: int | None = None,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_evidence_lines: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
     included_files: Sequence[str] | None = None,
 ):
     builder = StateGraph(AgentGraphState)
@@ -234,7 +244,11 @@ def build_agent_graph(
             [
                 (
                     "collect_code_evidence",
-                    lambda state: _collect_code_evidence_node(state, max_evidence_chars),
+                    lambda state: _collect_code_evidence_node(
+                        state,
+                        max_evidence_chars,
+                        max_evidence_lines,
+                    ),
                 ),
                 (
                     "llm_analyze",
@@ -268,7 +282,8 @@ def run_agent(
     top_k: int,
     store: AgentStore,
     llm_analyzer: IssueAnalyzer | None = None,
-    max_evidence_chars: int | None = None,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_evidence_lines: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
     included_files: Sequence[str] | None = None,
     max_attempts: int = 2,
 ) -> AgentRun:
@@ -300,6 +315,7 @@ def run_agent(
         max_attempts=max_attempts,
         llm_analyzer=llm_analyzer,
         max_evidence_chars=max_evidence_chars,
+        max_evidence_lines=max_evidence_lines,
         included_files=included_files,
     )
     initial_state: AgentGraphState = {

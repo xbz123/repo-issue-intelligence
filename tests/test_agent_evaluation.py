@@ -165,6 +165,8 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
     assert run.overall.first_attempt_success_rate == 1
     assert run.overall.persistence_verified == 1
     assert run.max_output_tokens == 20_000
+    assert run.max_evidence_chars == 100_000
+    assert run.max_lines_per_evidence == 200
 
     output = tmp_path / "result.json"
     save_agent_analysis_run(run, output)

@@ -30,6 +30,7 @@ OPENCODE_RERANK_REASONING_EFFORT = "none"
 OPENCODE_ANALYSIS_REASONING_EFFORT = "none"
 OPENCODE_RERANK_TIMEOUT_SECONDS = 180.0
 OPENCODE_ANALYSIS_TIMEOUT_SECONDS = 180.0
+OPENCODE_ANALYSIS_TEMPERATURE = 0.1
 OPENCODE_RERANK_MAX_IDS = 3
 DEEPSEEK_RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item
 is to contain the source location that must change to fix the GitHub issue. Select only the three
@@ -146,8 +147,8 @@ class OpenCodeIssueAnalyzer:
         self,
         api_key: str,
         max_output_tokens: int | None = 20_000,
-        timeout_seconds: float = 60.0,
-        temperature: float = 1.0,
+        timeout_seconds: float = OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
+        temperature: float = OPENCODE_ANALYSIS_TEMPERATURE,
         seed: int | None = None,
         client: httpx.Client | None = None,
     ) -> None:
@@ -303,6 +304,19 @@ class OpenCodeIssueAnalyzer:
         output_tokens = int(usage.get("completion_tokens") or 0)
         request_id = response_payload.get("id")
         system_fingerprint = response_payload.get("system_fingerprint")
+        choices = response_payload.get("choices") or []
+        finish_reason = choices[0].get("finish_reason") if choices else None
+        if finish_reason == "length":
+            raise LLMProviderError(
+                f"{self.provider_label} exhausted the analysis output budget",
+                retryable=False,
+                category="output_truncated",
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                elapsed_ms=elapsed_ms,
+                request_id=request_id,
+                system_fingerprint=system_fingerprint,
+            )
         try:
             analysis = LLMAnalysisResponse.model_validate_json(content)
         except (TypeError, ValueError, ValidationError) as error:

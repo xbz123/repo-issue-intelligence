@@ -162,7 +162,9 @@ rank_issues
 
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
-budget. `llm_analyze` calls OpenCode DeepSeek V4 Flash through
+budget. The default limits are 200 numbered source lines per snippet and 100,000 repository-evidence
+characters per request; both are recorded in evaluation artifacts. Direct library callers must
+explicitly opt out to run a full-file public-repository diagnostic. `llm_analyze` calls OpenCode DeepSeek V4 Flash through
 `https://opencode.ai/zen/go/v1/chat/completions` using `json_object`, an
 explicit compact schema prompt, and local Pydantic validation. The provider returns five fields:
 summary, Issue type, reproduction completeness, one observation per snippet, and exactly one
@@ -177,15 +179,15 @@ readable.
 An Issue with no readable deterministic evidence skips the provider request, retains its
 deterministic investigation with `llm_analysis=null`, records the Issue number in
 `skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
-OpenCode disables reasoning and uses a 20,000-token budget plus a 60-second normal runtime timeout
-so the budget remains available to the required JSON fields. The reliability evaluator extends the
-read timeout to 180 seconds.
+OpenCode disables reasoning and uses temperature `0.1`, a 20,000-token budget, and a 180-second
+timeout in both the normal runtime and reliability evaluator. An analysis completion that reports
+`finish_reason=length` fails as non-retryable `output_truncated`; the workflow does not repeat the
+same request with an already exhausted 20,000-token budget.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
-selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies and selected evidence are not
-locally truncated, while Top-K selection, tracked-file scope, and sensitive-file exclusion still
-bound what repository content can enter a request. The provider context window remains a hard
-external limit.
+selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies are not locally truncated, while
+the evidence budgets, Top-K selection, tracked-file scope, and sensitive-file exclusion bound what
+repository content can enter a request. The provider context window remains a hard external limit.
 
 `agent-evaluate` exercises this complete path against selected frozen benchmark cases. Repository
 maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the

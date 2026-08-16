@@ -291,10 +291,18 @@ def test_agent_run_analyzes_only_issues_with_repository_evidence(
 
     original_collect_evidence = agent_workflow.collect_evidence
 
-    def selective_collect_evidence(report, max_total_chars):
+    def selective_collect_evidence(
+        report,
+        max_total_chars,
+        max_lines_per_snippet,
+    ):
         if report.issue.number == 2:
             return []
-        return original_collect_evidence(report, max_total_chars=max_total_chars)
+        return original_collect_evidence(
+            report,
+            max_total_chars=max_total_chars,
+            max_lines_per_snippet=max_lines_per_snippet,
+        )
 
     monkeypatch.setattr(
         agent_workflow,

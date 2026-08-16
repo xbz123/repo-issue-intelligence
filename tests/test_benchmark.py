@@ -348,7 +348,8 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     assert run.provider == "opencode"
     assert run.timeout_seconds == 180.0
     assert run.max_chars_per_evidence is None
-    assert run.max_evidence_chars is None
+    assert run.max_evidence_chars == 100_000
+    assert run.max_lines_per_evidence == 200
     assert run.initial_output_tokens == 8_192
     assert run.max_output_tokens == 20_000
     assert run.reasoning_effort == "none"
