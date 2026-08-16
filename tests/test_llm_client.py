@@ -88,7 +88,6 @@ def structured_payload(evidence_id: str = "E1") -> dict:
             "confidence": 0.72,
             "evidence_ids": [evidence_id],
             "missing_evidence": ["Runtime stack trace"],
-            "validation_step": "Run the existing refresh-token test and inspect the error.",
         },
     }
 
@@ -133,6 +132,11 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert result.output_tokens == 120
     assert result.system_fingerprint == "fingerprint-1"
     assert result.analysis.hypotheses[0].evidence_ids == ["E1"]
+    assert result.analysis.hypotheses[0].validation_step == (
+        "Inspect the cited behavior at auth_service.py::refresh_token, then run the "
+        "smallest existing relevant test and compare the result with the Issue without "
+        "modifying files."
+    )
     assert result.analysis.affected_component == "auth_service.py::refresh_token"
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.analysis.needs_more_evidence is True
@@ -503,6 +507,7 @@ def test_opencode_deepseek_rerank_marks_5xx_retryable() -> None:
 def test_persisted_analysis_accepts_historical_hypothesis_count() -> None:
     response = structured_payload()
     hypothesis = response["hypothesis"]
+    hypothesis["validation_step"] = "Run the existing test and inspect the result."
     payload = {
         **response,
         "affected_component": "authentication",
@@ -657,6 +662,51 @@ def test_opencode_analyzer_derives_needs_more_evidence() -> None:
     assert result.analysis.hypotheses[0].missing_evidence == []
 
 
+def test_opencode_analyzer_derives_validation_from_cited_evidence() -> None:
+    snippets = [
+        *evidence(),
+        EvidenceSnippet(
+            id="E2",
+            file="validation.py",
+            symbol="validate_token",
+            lines="8-10",
+            content="8: def validate_token():\n9:     raise InvalidToken()",
+        ),
+    ]
+    response_payload = structured_payload("E2")
+    response_payload["evidence_observations"].insert(
+        0,
+        {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "The refresh path calls token validation.",
+        },
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-cited-validation",
+                "choices": [
+                    {"message": {"content": json.dumps(response_payload)}}
+                ],
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    result = analyzer.analyze(issue(), report(issue()), snippets)
+
+    assert result.analysis.hypotheses[0].validation_step.startswith(
+        "Inspect the cited behavior at validation.py::validate_token"
+    )
+
+
 def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -679,13 +729,47 @@ def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
     with pytest.raises(LLMProviderError, match="invalid structured response") as error:
         analyzer.analyze(record, report(record), evidence())
 
-    assert error.value.category == "invalid_response"
+    assert error.value.category == "invalid_json"
+    assert "root=json_invalid" in str(error.value)
     assert error.value.retryable is True
     assert error.value.request_id == "request-invalid-json"
     assert error.value.system_fingerprint == "fingerprint-invalid-json"
     assert error.value.input_tokens == 304
     assert error.value.output_tokens == 124
     assert error.value.elapsed_ms >= 0
+
+
+def test_opencode_analyzer_reports_schema_validation_paths_without_content() -> None:
+    response_payload = structured_payload()
+    response_payload.pop("issue_type")
+    response_payload["unexpected_source_content"] = "must not be persisted"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-invalid-schema",
+                "choices": [
+                    {"message": {"content": json.dumps(response_payload)}}
+                ],
+                "usage": {"prompt_tokens": 305, "completion_tokens": 125},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match="invalid structured response") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert error.value.category == "schema_validation"
+    assert "issue_type=missing" in str(error.value)
+    assert "<unexpected-field>=extra_forbidden" in str(error.value)
+    assert "unexpected_source_content" not in str(error.value)
+    assert "must not be persisted" not in str(error.value)
 
 
 def test_opencode_analyzer_exposes_retry_after_without_response_body() -> None:

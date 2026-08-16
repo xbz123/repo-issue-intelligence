@@ -194,6 +194,15 @@ class LLMAnalysis(StrictOutputModel):
     needs_more_evidence: bool
 
 
+class LLMProviderHypothesis(StrictOutputModel):
+    """Minimal provider hypothesis; validation remains deterministic and local."""
+
+    description: str
+    confidence: float = Field(ge=0, le=1)
+    evidence_ids: list[str] = Field(min_length=1)
+    missing_evidence: list[str]
+
+
 class LLMAnalysisResponse(StrictOutputModel):
     """Compact provider contract; persisted analyses retain the public full schema."""
 
@@ -201,7 +210,7 @@ class LLMAnalysisResponse(StrictOutputModel):
     issue_type: IssueType
     reproduction_completeness: ReproductionCompleteness
     evidence_observations: list[LLMEvidenceObservation]
-    hypothesis: LLMHypothesis
+    hypothesis: LLMProviderHypothesis
 
 
 class LLMAnalysisResult(BaseModel):

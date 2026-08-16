@@ -279,6 +279,47 @@ Artifacts:
 - `benchmarks/results/agent-analysis-v0.25-server-default-output-diagnostic-5-cases-run3.json`
 - `benchmarks/results/agent-analysis-v0.25-server-default-output-manifest-v8-50-cases-run1.json`
 
+## Client-derived validation-step contract result
+
+The recurring low-token `invalid_response` failures were next classified without storing model
+response content. Pydantic validation types and field paths are now retained as bounded error
+metadata, separating invalid JSON from schema validation while excluding response values. A
+seven-case reproduction selected the cases that repeatedly failed in both the explicit-20,000 and
+provider-default runs. Five of seven failed after two attempts, and every failure was the same
+schema violation: `hypothesis.validation_step=missing`. The two successful cases passed on their
+first attempt.
+
+`validation_step` is a safety-sensitive but deterministic workflow instruction rather than a
+model judgment. It was therefore removed from the provider hypothesis contract and is now derived
+locally from the first model-cited evidence location. The generated instruction asks for
+inspection plus the smallest existing relevant test without modifying files. The persisted public
+`LLMHypothesis` schema remains unchanged. Strict JSON parsing, all other provider fields,
+one-observation-per-evidence coverage, evidence-ID validation, and the one-hypothesis limit remain
+enforced. No malformed JSON or schema-invalid response is repaired or accepted.
+
+The same seven cases then completed 7/7 on their first attempt. Three independent zero-delay runs
+subsequently evaluated all 50 frozen manifest-v8 cases:
+
+| Run | Final valid | First-attempt valid | Attempts | Persisted | Input tokens | Output tokens | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 44,408 | 8.05 s |
+| 2 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 43,986 | 7.38 s |
+| 3 | 50/50 | 50/50 | 50 | 50/50 | 1,002,496 | 44,345 | 7.14 s |
+| Combined | 150/150 | 150/150 | 150 | 150/150 | 3,007,488 | 132,739 | 7.52 s |
+
+Every valid response retained exactly one hypothesis and one observation for each of the 19 or 20
+readable evidence snippets supplied by its case. Combined provider latency had a population
+standard deviation of 1.23 seconds and ranged from 4.91 to 11.38 seconds. The result establishes
+contract reliability on this frozen public suite across these three sequential runs. It does not
+score hypothesis correctness, prove reliability on private or unseen repositories, or make the
+hosted model deterministic.
+
+Reviewed artifacts:
+
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run1.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run2.json`
+- `benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-go-20000-client-validation-manifest-v8-50-cases-run3.json`
+
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
 Manifest v8 deterministic v0.25 completed three 50-case runs with structurally identical candidates,

@@ -113,7 +113,9 @@ The OpenCode path disables reasoning and defaults to a 20,000-token completion b
 mode with a compact five-field provider contract followed by local Pydantic and evidence-ID
 validation. Redundant candidate metadata is not sent twice: the model receives the
 Issue and selected source snippets, while the client derives the affected component, contradiction
-summary, retained evidence order, and more-evidence flag before persisting the full public model.
+summary, retained evidence order, safe validation step, and more-evidence flag before persisting
+the full public model. The validation step is based on the first evidence ID cited by the model;
+it is not an additional provider-required field.
 If deterministic localization yields no readable repository evidence for an Issue, that Issue
 skips the model call, records the skip in node trace metadata, and still reaches human review.
 Only public repository evidence should be sent to external models; see the
@@ -137,19 +139,21 @@ failures in the denominator. The command exits non-zero for provider/schema fail
 evidence so it can be used as a reliability gate.
 
 The current 20,000-token Go-endpoint reliability check ran all 50 frozen public cases three times
-with no inter-case delay. It produced 140/150 valid final analyses, 123/150 first-attempt
-successes, and 150/150 payloads restored from SQLite. One strict retry recovered 17 case-runs; ten
-still failed after both attempts. Run-level final success was 47/50, 50/50, and 43/50, so fixed
-seed 1337 does not make contract reliability deterministic. This is a provider-contract and
-persistence result, not a root-cause accuracy claim. The full diagnostic progression and retained
-artifacts are documented in
+with no inter-case delay. It produced 150/150 valid first-attempt analyses and restored all 150
+terminal payloads from SQLite. This followed a diagnostic that traced the preceding recurring
+schema failures to a missing provider-generated `hypothesis.validation_step`; moving that safe,
+non-mutating step to deterministic client normalization removed it from the provider contract
+without relaxing JSON, schema, evidence-coverage, or evidence-ID validation. This is a
+provider-contract and persistence result, not a root-cause accuracy claim. The full diagnostic
+progression and retained artifacts are documented in
 [`docs/llm-evaluation.md`](docs/llm-evaluation.md).
 
 For a provider-default output-limit diagnostic, `agent-evaluate --omit-max-tokens` omits the
 `max_tokens` field entirely. The default remains the explicit 20,000-token ceiling so normal runs
 stay reproducible across provider-default changes. The authorized 50-case diagnostic returned
 38/50 valid final analyses and 31/50 first-attempt successes, versus 43/50 and 34/50 in the
-immediately preceding explicit-cap run; omitting the field did not improve reliability.
+immediately preceding explicit-cap run under the older provider-generated-validation contract;
+omitting the field did not improve that contract's reliability.
 
 Run the frozen real-project benchmark:
 
