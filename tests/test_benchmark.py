@@ -72,8 +72,8 @@ class ReverseEvidenceAnalyzer:
     temperature = 0.1
     seed = 1337
     timeout_seconds = 180.0
-    rerank_initial_output_tokens = 256
-    rerank_max_output_tokens = 1_024
+    rerank_initial_output_tokens = 8_192
+    rerank_max_output_tokens = 20_000
     rerank_reasoning_effort = "none"
 
     def rerank(self, issue, evidence):
@@ -349,8 +349,8 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     assert run.timeout_seconds == 180.0
     assert run.max_chars_per_evidence is None
     assert run.max_evidence_chars is None
-    assert run.initial_output_tokens == 256
-    assert run.max_output_tokens == 1_024
+    assert run.initial_output_tokens == 8_192
+    assert run.max_output_tokens == 20_000
     assert run.reasoning_effort == "none"
 
     historical_payload = run.model_dump(mode="json")

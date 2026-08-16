@@ -23,9 +23,10 @@ from .models import (
 
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
-OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
-OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 1_024
+OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 8_192
+OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 20_000
 OPENCODE_RERANK_REASONING_EFFORT = "none"
+OPENCODE_ANALYSIS_REASONING_EFFORT = "none"
 OPENCODE_RERANK_TIMEOUT_SECONDS = 180.0
 OPENCODE_ANALYSIS_TIMEOUT_SECONDS = 180.0
 OPENCODE_RERANK_MAX_IDS = 3
@@ -106,7 +107,7 @@ class OpenCodeIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
-        max_output_tokens: int = 20_000,
+        max_output_tokens: int | None = 20_000,
         timeout_seconds: float = 60.0,
         temperature: float = 1.0,
         seed: int | None = None,
@@ -159,9 +160,11 @@ class OpenCodeIssueAnalyzer:
                 },
             ],
             "temperature": self.temperature,
+            "reasoning_effort": OPENCODE_ANALYSIS_REASONING_EFFORT,
             "response_format": {"type": "json_object"},
-            "max_tokens": self.max_output_tokens,
         }
+        if self.max_output_tokens is not None:
+            payload["max_tokens"] = self.max_output_tokens
         if self.seed is not None:
             payload["seed"] = self.seed
 
@@ -229,6 +232,7 @@ class OpenCodeIssueAnalyzer:
         except (KeyError, IndexError, TypeError, ValueError) as error:
             raise LLMProviderError(
                 f"{self.provider_label} returned an invalid structured response",
+                retryable=True,
                 category="invalid_response",
                 elapsed_ms=elapsed_ms,
             ) from error
@@ -266,6 +270,7 @@ class OpenCodeIssueAnalyzer:
         except (TypeError, ValueError, ValidationError) as error:
             raise LLMProviderError(
                 f"{self.provider_label} returned an invalid structured response",
+                retryable=True,
                 category="invalid_response",
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
@@ -346,6 +351,7 @@ class OpenCodeIssueAnalyzer:
             raise LLMProviderError(
                 f"{self.provider_label} did not provide exactly one observation "
                 "for every evidence ID",
+                retryable=True,
                 category="evidence_observation_coverage",
             )
         referenced_ids.update(observed_ids)
@@ -356,6 +362,7 @@ class OpenCodeIssueAnalyzer:
             unknown = ", ".join(sorted(unknown_ids))
             raise LLMProviderError(
                 f"{self.provider_label} cited unknown evidence IDs: {unknown}",
+                retryable=True,
                 category="unknown_evidence_id",
             )
 

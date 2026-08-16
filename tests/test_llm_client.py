@@ -141,7 +141,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert captured_request["response_format"] == {"type": "json_object"}
     assert captured_request["max_tokens"] == 20_000
     assert "max_completion_tokens" not in captured_request
-    assert "reasoning_effort" not in captured_request
+    assert captured_request["reasoning_effort"] == "none"
     assert captured_request["temperature"] == 0.1
     assert captured_request["seed"] == 1337
     system_prompt = captured_request["messages"][0]["content"]
@@ -153,6 +153,38 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert "deterministic_candidates" not in user_payload
     assert len(user_payload["issue"]["body"]) == 7_000
     assert user_payload["repository_evidence"][0]["id"] == "E1"
+
+
+def test_opencode_analyzer_can_omit_max_tokens() -> None:
+    captured_request = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_request.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-server-default",
+                "choices": [
+                    {"message": {"content": json.dumps(structured_payload())}}
+                ],
+                "usage": {"prompt_tokens": 300, "completion_tokens": 120},
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        max_output_tokens=None,
+        client=client,
+    )
+
+    result = analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert result.request_id == "request-server-default"
+    assert "max_tokens" not in captured_request
 
 
 def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
@@ -192,7 +224,7 @@ def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
     )
 
     assert "response_format" not in captured_request
-    assert captured_request["max_tokens"] == 256
+    assert captured_request["max_tokens"] == 8_192
     assert "max_completion_tokens" not in captured_request
     assert captured_request["reasoning_effort"] == "none"
     assert captured_request["seed"] == 1337
@@ -360,9 +392,9 @@ def test_opencode_deepseek_rerank_classifies_output_truncation() -> None:
     assert error.value.category == "output_truncated"
     assert error.value.attempts == 2
     assert error.value.input_tokens == 20
-    assert error.value.output_tokens == 1_280
+    assert error.value.output_tokens == 28_192
     assert error.value.elapsed_ms >= 0
-    assert requested_budgets == [256, 1_024]
+    assert requested_budgets == [8_192, 20_000]
 
 
 def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> None:
@@ -371,13 +403,13 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
     def handler(request: httpx.Request) -> httpx.Response:
         budget = json.loads(request.content)["max_tokens"]
         requested_budgets.append(budget)
-        if budget == 256:
+        if budget == 8_192:
             return httpx.Response(
                 200,
                 json={
                     "id": "truncated-request",
                     "choices": [{"finish_reason": "length", "message": {"content": ""}}],
-                    "usage": {"prompt_tokens": 80, "completion_tokens": 256},
+                    "usage": {"prompt_tokens": 80, "completion_tokens": 8_192},
                 },
             )
         return httpx.Response(
@@ -397,11 +429,11 @@ def test_opencode_deepseek_rerank_retries_truncation_with_larger_budget() -> Non
 
     result = analyzer.rerank(issue(), evidence())
 
-    assert requested_budgets == [256, 1_024]
+    assert requested_budgets == [8_192, 20_000]
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.attempts == 2
     assert result.input_tokens == 160
-    assert result.output_tokens == 356
+    assert result.output_tokens == 8_292
 
 
 def test_opencode_deepseek_rerank_marks_grammar_400_non_retryable() -> None:
@@ -648,6 +680,7 @@ def test_opencode_analyzer_preserves_invalid_json_response_telemetry() -> None:
         analyzer.analyze(record, report(record), evidence())
 
     assert error.value.category == "invalid_response"
+    assert error.value.retryable is True
     assert error.value.request_id == "request-invalid-json"
     assert error.value.system_fingerprint == "fingerprint-invalid-json"
     assert error.value.input_tokens == 304

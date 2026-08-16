@@ -1,0 +1,617 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_output_tokens": null,
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T08:15:29.912954Z",
+  "results": [
+    {
+      "case_id": "textual-kitty-keyboard-protocol",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6417,
+      "pre_fix_sha": "f1929043fc5a9346a7a13649c1c2bc6ac4199a3b",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [
+        "97c938d7-8eb0-4509-9682-cb4e47e60fb0"
+      ],
+      "input_tokens": 15861,
+      "output_tokens": 888,
+      "llm_elapsed_ms": 189181.281,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "invalid_response",
+      "error": "LLMProviderError: OpenCode returned an invalid structured response"
+    },
+    {
+      "case_id": "fastapi-sse-include-router",
+      "tier": "main",
+      "repository": "fastapi/fastapi",
+      "issue_number": 15401,
+      "pre_fix_sha": "a82e5f2fac102a8b12c0795da80b2cb1d2a8b016",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "e3568fbb-f82e-4552-a94d-f2d5a422d30f"
+      ],
+      "input_tokens": 16958,
+      "output_tokens": 911,
+      "llm_elapsed_ms": 8096.587,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "The issue reports that SSE stream_item_type is lost when routes are merged via include_router, causing OpenAPI to omit contentSchema. Evidence shows include_router creates new routes without copying stream_item_type, and APIRoute.__init__ only sets it when response_model is a DefaultPlaceholder. The reproduction in the issue is consistent with the code paths shown.",
+        "issue_type": "bug",
+        "affected_component": "fastapi/routing.py::APIRouter.include_router",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "include_router does not copy stream_item_type; it passes route.response_model (which is None after initial route creation) to add_api_route, so the new route's __init__ skips the DefaultPlaceholder branch."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "EventSourceResponse is a marker class with media_type text/event-stream; no stream_item_type handling here."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "FastAPI.include_router delegates to APIRouter.include_router, so the same behavior applies."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "OpenAPI generation uses route objects; if stream_item_type is None, contentSchema is omitted."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Unrelated response classes; no stream_item_type logic."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "supports_issue",
+            "observation": "get_stream_item_type extracts the item type from AsyncIterator annotations; it is only called in APIRoute.__init__ when response_model is a DefaultPlaceholder."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Unrelated background tasks."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Unrelated security parameter."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "OpenAPI models do not include stream_item_type; it is used in schema generation elsewhere."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Unrelated test for JSON response fast path."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Unrelated encoder."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Unrelated docs HTML."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "get_value_or_default is used for response_class resolution, not stream_item_type."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "supports_issue",
+            "observation": "DefaultPlaceholder is the sentinel that triggers stream_item_type detection; when response_model is None (not a placeholder), detection is skipped."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Tests for include_router context do not cover stream_item_type."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Unrelated response model tests."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "SSE tests cover validation but not stream_item_type propagation through include_router."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Compatibility imports; no stream_item_type logic."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Parameter definitions; no stream_item_type logic."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Exception classes; no stream_item_type logic."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The stream_item_type is lost during include_router because APIRoute.__init__ only computes it when response_model is a DefaultPlaceholder. When a route is created on an APIRouter, response_model is a DefaultPlaceholder, so stream_item_type is set and response_model becomes None. Later, include_router creates a new APIRoute passing response_model=None, which is not a DefaultPlaceholder, so the detection branch is skipped and stream_item_type remains None. This causes the OpenAPI schema to omit contentSchema for SSE responses.",
+            "confidence": 0.9,
+            "evidence_ids": [
+              "E1",
+              "E6",
+              "E14"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Inspect APIRoute.__init__ in fastapi/routing.py to confirm that stream_item_type is only set inside the isinstance(response_model, DefaultPlaceholder) branch, and verify that include_router passes route.response_model (which is None) to add_api_route. Then run the reproduction script from the issue to observe that app_b.routes[-1].stream_item_type is None while router.routes[-1].stream_item_type is Frame."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "pydantic-pipeline-constraint-schema",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13507,
+      "pre_fix_sha": "a2a6577d4c329dd574a45dbb01a8feaa16b1ad3d",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "2566cf48-39ba-4392-9193-bdb095c55c07"
+      ],
+      "input_tokens": 24145,
+      "output_tokens": 1095,
+      "llm_elapsed_ms": 9252.14,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "The issue reports that in the experimental pipeline API, chaining constraints after `ge`/`lt`/`le` drops subsequent bounds from the JSON schema, though validation remains correct. The root cause is in `_apply_constraint` in `pydantic/experimental/pipeline.py`, where the `Ge`, `Lt`, and `Le` branches unconditionally wrap the schema with a function-after validator via `_check_func`, even when the native core-schema field was just set. This wrapping changes the schema type to 'function-after', so subsequent constraints cannot set native fields and are hidden inside opaque callables that JSON schema generation cannot read. The `Gt` branch works because its fallback is in an `else` clause, so it only wraps when the native constraint is not applied.",
+        "issue_type": "bug",
+        "affected_component": "pydantic/type_adapter.py::TypeAdapter.validate_python",
+        "reproduction_completeness": "complete",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TypeAdapter.validate_python delegates to the validator; does not affect schema generation."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "JSON schema deduplication logic; not related to constraint application."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "Namespace resolution for schema generation; not related to constraint application."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Alias conversion and model validators; not related to constraint application."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Type checking for annotated types; not related to pipeline constraints."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "V1 schema modification; not related to experimental pipeline."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Annotation retrieval; not related to constraint application."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Deprecated V1 validators; not related to experimental pipeline."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Core schema utilities; not related to constraint application."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Model class completion; not related to pipeline constraints."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Generic type utilities; not related to constraint application."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Core metadata for JSON schema functions; not directly related to the bug."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Field configuration updates; not related to pipeline constraints."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "V1 schema generation; not related to experimental pipeline."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "supports_issue",
+            "observation": "In `_apply_constraint`, the `Ge`, `Lt`, and `Le` branches set the native field (e.g., `s['ge'] = ge`) but then unconditionally call `_check_func`, wrapping the schema in a function-after validator. This changes the schema type to 'function-after', so subsequent constraints cannot set native fields and are hidden inside opaque callables. The `Gt` branch only wraps in an `else` clause, so it works correctly. This matches the issue's described cause."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Dataclass creation; not related to pipeline constraints."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Model JSON schema generation; not related to constraint application."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Field validators; not related to experimental pipeline."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Core schema type checks; not related to constraint application."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "JSON schema handler; not related to constraint application."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The bug is in `_apply_constraint` in `pydantic/experimental/pipeline.py`. For `Ge`, `Lt`, and `Le` constraints, after setting the native core-schema field (e.g., `s['ge'] = ge`), the code unconditionally wraps the schema with a function-after validator via `_check_func`. This wrapping changes the schema type to 'function-after', so subsequent constraints in the chain see a non-numeric schema type and cannot set their native fields; they are instead hidden inside opaque callables that JSON schema generation cannot read. This causes all constraints after the first `ge`/`lt`/`le` to be dropped from the JSON schema, while validation remains correct because the function-after validators still enforce the bounds. The `Gt` branch works because its fallback is in an `else` clause, so it only wraps when the native constraint is not applied.",
+            "confidence": 0.95,
+            "evidence_ids": [
+              "E15"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Inspect the core schema generated for `validate_as(int).ge(1).le(100)` by calling `TypeAdapter(Annotated[int, validate_as(int).ge(1).le(100)]).core_schema` and verify that the outer schema type is 'function-after' and the inner schema contains only the `ge` field, with the `le` constraint hidden inside the function. This confirms the wrapping behavior described in the issue."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "pydantic-safe-annotations-metaclass",
+      "tier": "main",
+      "repository": "pydantic/pydantic",
+      "issue_number": 13520,
+      "pre_fix_sha": "a187a65467a588ccc00761d80f325b45381ca819",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "e9c05ec4-bb31-4b92-a329-5ce288eb8bf8"
+      ],
+      "input_tokens": 27190,
+      "output_tokens": 1386,
+      "llm_elapsed_ms": 10387.092,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The issue describes a regression where reading __annotations__ on a metaclass (e.g., ModelMetaclass) on Python <=3.13 plants an empty dict in the metaclass's __dict__, causing safe_get_annotations() to return parent annotations for generic submodels, leading to dropped defaults and unsubstituted typevars. Evidence shows safe_get_annotations uses getattr (E6), and collect_model_fields uses cls_annotations to decide field copying (E4). The hypothesis is that safe_get_annotations should read own-class annotations via __dict__ to avoid the metaclass shadowing.",
+        "issue_type": "bug",
+        "affected_component": "pydantic/type_adapter.py::TypeAdapter.validate_python",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TypeAdapter.validate_python delegates to self.validator.validate_python; no direct relation to annotation handling."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "FieldInfo.from_annotation creates a FieldInfo without a default, consistent with the issue's claim that the plain annotation branch drops defaults."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "get_module_ns_of retrieves module namespace; unrelated to annotation shadowing."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "supports_issue",
+            "observation": "collect_model_fields uses cls_annotations = safe_get_annotations(cls) to decide if an annotation is from a parent; if cls_annotations incorrectly contains parent annotations, it takes the from_annotation branch (line 348) instead of copying parent FieldInfo with typevars_map, dropping defaults and substitution."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "complete_dataclass calls collect_dataclass_fields; not directly related to the metaclass annotation issue."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "supports_issue",
+            "observation": "safe_get_annotations on Python <3.14 uses getattr(obj, '__annotations__', {}), which can be shadowed by a plain dict on a metaclass, returning parent annotations instead of own empty dict."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "BaseModel.model_validate calls cls.__pydantic_validator__.validate_python; no annotation handling."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "JSON schema deduplication; unrelated."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "field_validator decorator; unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "import_cached_base_model; unrelated."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "RootModel.model_dump; unrelated."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "PydanticUndefinedAnnotation error class; unrelated."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "get_args/get_origin for generics; not directly related to annotation shadowing."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "dataclass decorator uses safe_get_annotations at line 193; could be affected but not central to the issue."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "import_email_validator; unrelated."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Schema generation helpers; unrelated."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "field_serializer decorator; unrelated."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "CoreMetadata TypedDict; unrelated."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "V1 schema helpers; unrelated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "supports_issue",
+            "observation": "ModelMetaclass.__new__ reads raw_annotations from namespace (line 133) and later calls set_model_fields; the metaclass is part of the MRO where a planted __annotations__ dict could shadow type.__annotations__."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "On Python <=3.13, safe_get_annotations() uses getattr(obj, '__annotations__', {}), which can be shadowed by a plain dict planted on a metaclass (e.g., ModelMetaclass) when __annotations__ is read on that metaclass. This causes safe_get_annotations() to return parent annotations for a generic submodel, making collect_model_fields() treat inherited fields as own annotations and take the FieldInfo.from_annotation() branch, dropping defaults and skipping typevar substitution. The fix is to read own-class annotations via obj.__dict__.get('__annotations__', {}) on Python <3.14.",
+            "confidence": 0.85,
+            "evidence_ids": [
+              "E6",
+              "E4",
+              "E20"
+            ],
+            "missing_evidence": [
+              "Exact code of safe_get_annotations call sites in get_model_type_hints and collect_model_fields",
+              "Test case reproducing the issue",
+              "Evidence of the planted __annotations__ dict on metaclass in the repository"
+            ],
+            "validation_step": "Inspect safe_get_annotations() in pydantic/_internal/_typing_extra.py and verify that on Python <3.14 it uses getattr. Then, in a Python 3.13 environment, reproduce the issue by reading type(BaseModel).__annotations__ before parametrizing a generic model, and check that safe_get_annotations(G[str]) returns the origin's annotations instead of {}."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "mypy-generic-default-strict-optional",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21777,
+      "pre_fix_sha": "722047e369657c936851a349ebba6b4c5504b8e2",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [
+        "66937f9d-d720-4c8d-8a8d-de0ccbfd11b5",
+        "d244b29f-c7dc-4e85-9604-d2fe1077d31f"
+      ],
+      "input_tokens": 31370,
+      "output_tokens": 1676,
+      "llm_elapsed_ms": 16762.281,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "invalid_response",
+      "error": "LLMProviderError: OpenCode returned an invalid structured response"
+    }
+  ],
+  "overall": {
+    "cases": 5,
+    "analysis_successes": 3,
+    "skipped_no_evidence": 0,
+    "failures": 2,
+    "analysis_success_rate": 0.6,
+    "first_attempt_success_rate": 0.6,
+    "persistence_verified": 5,
+    "input_tokens": 115524,
+    "output_tokens": 5956,
+    "average_llm_elapsed_ms": 9245.273,
+    "error_categories": {
+      "invalid_response": 2
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 4,
+      "analysis_successes": 3,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.75,
+      "first_attempt_success_rate": 0.75,
+      "persistence_verified": 4,
+      "input_tokens": 99663,
+      "output_tokens": 5068,
+      "average_llm_elapsed_ms": 9245.273,
+      "error_categories": {
+        "invalid_response": 1
+      }
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 15861,
+      "output_tokens": 888,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "invalid_response": 1
+      }
+    }
+  }
+}

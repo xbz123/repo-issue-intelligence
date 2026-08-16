@@ -142,9 +142,11 @@ rank_issues
 
 Each node records its input/output summary, status, attempt number, error, and elapsed time. Generic
 runtime failures retain one compatibility retry before the run is marked failed. Provider errors
-are error-aware: invalid JSON/schema and evidence-contract failures stop after the first attempt,
-while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
-`retry-after` value is used as the minimum delay, with every wait capped at 30 seconds.
+are error-aware: invalid JSON/schema and evidence-contract failures receive one additional strict
+attempt, while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
+`retry-after` value is used as the minimum delay, with every wait capped at 30 seconds. Retried
+contract output must pass the unchanged schema and evidence checks; malformed output is never
+repaired locally.
 
 When an operator explicitly enables OpenCode analysis, two nodes are inserted before review:
 
@@ -175,8 +177,9 @@ readable.
 An Issue with no readable deterministic evidence skips the provider request, retains its
 deterministic investigation with `llm_analysis=null`, records the Issue number in
 `skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
-OpenCode uses a 20,000-token budget and 60-second timeout because reasoning tokens share the
-completion budget and observed valid responses can exceed 30 seconds.
+OpenCode disables reasoning and uses a 20,000-token budget plus a 60-second normal runtime timeout
+so the budget remains available to the required JSON fields. The reliability evaluator extends the
+read timeout to 180 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
 selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies and selected evidence are not
@@ -188,8 +191,11 @@ external limit.
 maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the
 Agent evidence. A case counts as successful only when the complete local schema and evidence-ID
 contract pass, the graph reaches `awaiting_review`, and the final public Agent payload survives a
-SQLite JSON round-trip. The result keeps full validated analysis content plus request attempts,
-tokens, latency, skip state, and failure category; failures remain in the aggregate denominator.
+SQLite JSON round-trip. The result keeps full validated analysis content plus the requested output
+ceiling, request attempts, tokens, latency, skip state, and failure category; failures remain in
+the aggregate denominator. `--omit-max-tokens` is a diagnostic-only switch that removes the
+`max_tokens` request field and records a null ceiling so the provider default can be compared with
+the explicit 20,000-token protocol.
 This reliability suite is deliberately separate from rank-only localization metrics.
 When an HTTP-success response fails JSON/schema or evidence-contract validation, the exception
 retains its request ID, system fingerprint, input/output tokens, and provider latency. The
@@ -205,7 +211,7 @@ and optionally asks OpenCode `deepseek-v4-flash` to rerank selected evidence IDs
 does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
 receives a plain chat-completions request without `response_format`; the response contract is one
 unique `RANK:` line containing at most three evidence IDs. Reasoning is disabled, output starts at
-256 tokens and expands once to 1,024 only after truncation. Issue bodies and selected evidence
+8,192 tokens and expands once to 20,000 only after truncation. Issue bodies and selected evidence
 items have no project-defined character cap. Root-cause hypotheses are
 intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
 normalizes paths and identifiers, rejects

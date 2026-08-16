@@ -1,0 +1,398 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T06:00:09.516600Z",
+  "results": [
+    {
+      "case_id": "pip-rich-option-error-usage",
+      "tier": "generalization",
+      "repository": "pypa/pip",
+      "issue_number": 14136,
+      "pre_fix_sha": "6989a79f97a40ed2f0960de7dba3a04fadeade28",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "a3c143d3e18f4ecba0946326afb93d14"
+      ],
+      "input_tokens": 27921,
+      "output_tokens": 4192,
+      "llm_elapsed_ms": 34836.889,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Option errors print raw Rich markup because ConfigOptionParser.error writes usage directly to stderr without Rich rendering.",
+        "issue_type": "bug",
+        "affected_component": "src/pip/_internal/req/req_file.py::parse_requirements",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "parse_requirements handles requirements-file parsing and is unrelated to option-error usage rendering."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "Rich Console.update_screen is for alt-screen updates and is not involved in CLI usage error output."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "SessionCommandMixin._get_index_urls reads parsed options and is unrelated to usage printing."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "RichHandler renders logging records through Rich, not the optparse error usage path."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "urllib3 connection-pool retry logic is unrelated to CLI option-error output."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "RequirementCommand.determine_resolver_variant selects resolver behavior and is unrelated to usage rendering."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "supports_issue",
+            "observation": "InstallCommand.usage contains literal bracket placeholders such as [options] and [package-index-options]; if printed raw by optparse, these brackets appear literally, matching the issue's raw usage output."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "pkg_resources macOS version detection is unrelated to CLI usage rendering."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Rich progress.open is unrelated to option-error usage output."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Rich error classes define console/style errors but do not handle optparse usage printing."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Command.add_options builds an optparse OptionGroup and parser, establishing the optparse path where error() is invoked, but does not itself render usage."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Rich Style.parse parses style definitions and is unrelated to usage error output."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "RegexHighlighter.highlight is unrelated to option-error usage printing."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Rich pretty.traverse repr fallback is unrelated to CLI usage rendering."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "supports_issue",
+            "observation": "Rich markup.escape escapes brackets so literal text like [options] can be rendered; raw usage containing escaped markup such as \\[options] is only meaningful when passed through Rich markup rendering, supporting that the error path bypasses rendering."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Wheel installation logic is unrelated to option-error usage output."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Rich traceback install is unrelated to optparse usage printing."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "PackageFinder initialization is unrelated to CLI usage rendering."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Resolver topological-weight calculation is unrelated to option-error usage output."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "supports_issue",
+            "observation": "ConfigOptionParser.error calls self.print_usage(sys.stderr) then self.exit, writing usage directly to stderr without Rich/PipConsole rendering; this is the option-error path where raw markup would appear literally."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The option-parsing error path in ConfigOptionParser.error prints usage via optparse's print_usage directly to sys.stderr, bypassing the Rich/PipConsole rendering used by --help. Usage strings contain Rich markup such as [optparse.groups]Usage:[/] and escaped brackets like \\[options], so on invalid options the raw markup is emitted literally. This matches the regression appearing in 26.0 when help output moved to Rich rendering.",
+            "confidence": 0.62,
+            "evidence_ids": [
+              "E20",
+              "E7",
+              "E15"
+            ],
+            "missing_evidence": [
+              "ConfigOptionParser.print_usage method body (same parser.py file, not included in E20)",
+              "PipConsole/help formatter code showing how --help renders usage through Rich",
+              "test or captured stderr trace from pip install --hi on the affected version"
+            ],
+            "validation_step": "Inspect ConfigOptionParser.print_usage and the PipConsole/help formatter to confirm the error path bypasses Rich rendering; then run the existing invalid-option CLI test and assert stderr contains rendered usage rather than literal [optparse.groups] or \\[options] markup."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "mypy-frozen-dataclass-covariance",
+      "tier": "main",
+      "repository": "python/mypy",
+      "issue_number": 21736,
+      "pre_fix_sha": "82e8498c19494edebee08dd615470443ec53fffc",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "82330093accd49bf9c51e18abe39c2a9"
+      ],
+      "input_tokens": 15420,
+      "output_tokens": 3214,
+      "llm_elapsed_ms": 25160.053,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The provided repository evidence contains no dataclass transform, no variance-check code, and no reproducer source, so the issue cannot be confirmed from these snippets. The reported error is most plausibly emitted when a frozen dataclass's synthesized __init__ uses a covariant TypeVar as a parameter, but the evidence does not show that path.",
+        "issue_type": "bug",
+        "affected_component": "mypy/main.py::fail",
+        "reproduction_completeness": "insufficient",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "mypy/main.py fail() writes a serious error and exits; unrelated to dataclass covariance."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "is_final_node() checks final attributes generally; no dataclass or TypeVar variance logic."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "check_type_arguments_in_targets() runs TypeArgumentAnalyzer over deferred targets, but the snippet does not show the covariant-parameter check or dataclass handling."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "get_cache_names() computes cache file names; unrelated to the reported type-checking error."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "is_active_symbol_in_class_body() concerns textual forward references in class bodies; unrelated to frozen dataclass covariance."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "is_private() checks name mangling conventions; unrelated to the issue."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "mypyc build_ir() generates IR for compiled modules; unrelated to dataclass TypeVar variance."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "format_type() formats types for messages; unrelated to the reported error's cause."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "_extract_includes() parses C include directives for mypyc; unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "ClassIR.is_final_attr() concerns mypyc runtime final attributes; unrelated to dataclass covariance checking."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "native_parse() parses source via the Rust parser; unrelated to semantic variance checks."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "deserialize_type() handles mypyc RType deserialization; unrelated."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "can_have_shared_disjoint_base() concerns subtype disjointness; unrelated to dataclass covariance."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Plugin.report_config_data() is a plugin cache hook; unrelated to the reported error."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "bind_self_fast() binds method self types; unrelated to dataclass attribute variance."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "is_proper_subtype() implements subtyping generally; no dataclass or covariant-parameter rejection is shown."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "IRBuilder.flatten_classes() handles isinstance() class flattening for mypyc; unrelated."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "RawExpressionType is a synthetic semantic-analysis type; unrelated to frozen dataclass covariance."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "parse() selects native or old parser; unrelated to the reported semantic error."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "write_cache() writes mypyc IR cache data; unrelated to the issue."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The error 'Cannot use a covariant type variable as a parameter' is likely raised by mypy's generic-function variance validation when the dataclass transform synthesizes an __init__ parameter from a frozen dataclass attribute whose annotation is a covariant TypeVar. The issue's side note indicates PR #21694 made frozen dataclass attributes covariant under type-parameter syntax, so the remaining gap is that the synthesized __init__ still exposes the covariant TypeVar as a parameter and is rejected. The supplied evidence does not include the dataclass transform or the variance-check code, so this is tentative.",
+            "confidence": 0.25,
+            "evidence_ids": [
+              "E3"
+            ],
+            "missing_evidence": [
+              "exact reproducer source from the gist",
+              "dataclass transform/plugin code that synthesizes __init__ for frozen dataclasses",
+              "variance-check code that emits 'Cannot use a covariant type variable as a parameter'",
+              "tests covering frozen dataclass covariance with TypeVar syntax"
+            ],
+            "validation_step": "Trace the error message string to the variance-check function and inspect how dataclass-generated __init__ parameters are typed for frozen classes, then verify the behavior against the exact reproducer without modifying source code."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 2,
+    "analysis_successes": 2,
+    "skipped_no_evidence": 0,
+    "failures": 0,
+    "analysis_success_rate": 1.0,
+    "first_attempt_success_rate": 1.0,
+    "persistence_verified": 2,
+    "input_tokens": 43341,
+    "output_tokens": 7406,
+    "average_llm_elapsed_ms": 29998.471,
+    "error_categories": {}
+  },
+  "by_tier": {
+    "main": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 15420,
+      "output_tokens": 3214,
+      "average_llm_elapsed_ms": 25160.053,
+      "error_categories": {}
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 27921,
+      "output_tokens": 4192,
+      "average_llm_elapsed_ms": 34836.889,
+      "error_categories": {}
+    }
+  }
+}

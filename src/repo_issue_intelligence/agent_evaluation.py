@@ -65,6 +65,7 @@ class AgentAnalysisRun(BaseModel):
     manifest_version: int
     provider: str
     model: str
+    max_output_tokens: int | None = None
     max_evidence_chars: int | None
     max_llm_attempts: int
     llm_delay_seconds: float
@@ -324,6 +325,7 @@ def run_agent_analysis_evaluation(
         manifest_version=manifest.version,
         provider=analyzer.provider,
         model=analyzer.model,
+        max_output_tokens=getattr(analyzer, "max_output_tokens", None),
         max_evidence_chars=max_evidence_chars,
         max_llm_attempts=max_llm_attempts,
         llm_delay_seconds=llm_delay_seconds,
