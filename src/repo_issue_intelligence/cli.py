@@ -20,6 +20,7 @@ from .benchmark import (
 )
 from .benchmark_discovery import (
     CandidateStatus,
+    build_candidate_review_queue,
     curate_benchmark_expansion,
     discover_candidates,
     inspect_candidate,
@@ -27,6 +28,7 @@ from .benchmark_discovery import (
     load_candidate_sources,
     save_benchmark_candidate,
     save_candidate_catalog,
+    save_candidate_review_queue,
     save_curated_expansion,
 )
 from .config import Settings
@@ -542,6 +544,58 @@ def benchmark_audit(
         f"blocking_failures={', '.join(failed_blocking) or 'none'}."
     )
     console.print(f"Saved candidate audit to {output}")
+
+
+@app.command("benchmark-plan")
+def benchmark_plan(
+    base_manifest: Path,
+    candidate_sources: Annotated[
+        list[Path],
+        typer.Argument(help="Candidate catalogs or individual candidate audits."),
+    ],
+    output: Path = Path("benchmarks/expansion-v200-review-queue.json"),
+    target_total_cases: Annotated[
+        int,
+        typer.Option("--target-total-cases", min=1),
+    ] = 200,
+    reserve_cases: Annotated[
+        int,
+        typer.Option("--reserve-cases", min=0),
+    ] = 30,
+    max_primary_per_repository: Annotated[
+        int,
+        typer.Option("--max-primary-per-repository", min=1),
+    ] = 5,
+    target_multi_file_share: Annotated[
+        float,
+        typer.Option("--target-multi-file-share", min=0, max=1),
+    ] = 0.30,
+    default_tier: Annotated[
+        BenchmarkTier,
+        typer.Option("--default-tier"),
+    ] = BenchmarkTier.GENERALIZATION,
+) -> None:
+    """Build a deterministic manual-review queue without accepting candidates."""
+    try:
+        queue = build_candidate_review_queue(
+            load_manifest(base_manifest),
+            load_candidate_sources(candidate_sources),
+            target_total_cases=target_total_cases,
+            reserve_cases=reserve_cases,
+            max_primary_per_repository=max_primary_per_repository,
+            target_multi_file_share=target_multi_file_share,
+            default_tier=default_tier,
+        )
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    save_candidate_review_queue(queue, output)
+    console.print(
+        f"Queued {queue.requested_new_cases} primary and {queue.reserve_cases} "
+        f"reserve candidate(s) from {queue.primary_repositories} repositories; "
+        f"primary multi-file cases={queue.primary_multi_file_cases}."
+    )
+    console.print("All entries remain needs_review until explicit manual curation.")
+    console.print(f"Saved benchmark review queue to {output}")
 
 
 @app.command("benchmark-curate")

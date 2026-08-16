@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import re
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -51,12 +53,24 @@ EXCLUDED_PATH_PREFIXES = (
     "example",
     "test",
 )
+ADVISORY_CHECK_WEIGHTS = {
+    "issue_has_body": 1,
+    "bug_signal": 2,
+    "diagnostic_signal": 2,
+    "closing_reference": 3,
+    "unique_fix_pr": 1,
+}
 
 
 class CandidateStatus(StrEnum):
     NEEDS_REVIEW = "needs_review"
     REJECTED = "rejected"
     ACCEPTED = "accepted"
+
+
+class CandidateReviewPriority(StrEnum):
+    PRIMARY = "primary"
+    RESERVE = "reserve"
 
 
 class CandidateAuditCheck(BaseModel):
@@ -129,6 +143,46 @@ class CuratedCandidateCatalog(BaseModel):
     base_manifest_name: str
     base_manifest_version: int
     candidates: list[BenchmarkCandidate] = Field(min_length=1)
+
+
+class CandidateReviewQueueEntry(BaseModel):
+    review_order: int = Field(ge=1)
+    candidate_id: str
+    priority: CandidateReviewPriority
+    repository: str
+    issue_number: int = Field(ge=1)
+    fix_pr_number: int = Field(ge=1)
+    issue_title: str
+    issue_created_at: datetime
+    suggested_case_id: str
+    suggested_tier: BenchmarkTier
+    expected_files: list[str] = Field(min_length=1)
+    multi_file: bool
+    advisory_score: int = Field(ge=0)
+    passed_advisory_checks: list[str]
+    review_flags: list[str]
+    status: Literal[CandidateStatus.NEEDS_REVIEW] = CandidateStatus.NEEDS_REVIEW
+
+
+class CandidateReviewQueue(BaseModel):
+    name: str
+    version: int = Field(ge=1)
+    generated_at: datetime
+    base_manifest_name: str
+    base_manifest_version: int
+    target_total_cases: int = Field(ge=1)
+    base_case_count: int = Field(ge=0)
+    requested_new_cases: int = Field(ge=1)
+    reserve_cases: int = Field(ge=0)
+    max_primary_per_repository: int = Field(ge=1)
+    target_multi_file_share: float = Field(ge=0, le=1)
+    required_new_multi_file_cases: int = Field(ge=0)
+    available_reviewable_records: int = Field(ge=0)
+    available_unique_cases: int = Field(ge=0)
+    available_unique_multi_file_cases: int = Field(ge=0)
+    primary_multi_file_cases: int = Field(ge=0)
+    primary_repositories: int = Field(ge=0)
+    entries: list[CandidateReviewQueueEntry] = Field(min_length=1)
 
 
 class DiscoveryGitHubClient(Protocol):
@@ -638,10 +692,246 @@ def discover_candidates(
     )
 
 
+def _advisory_score(candidate: BenchmarkCandidate) -> int:
+    return sum(
+        ADVISORY_CHECK_WEIGHTS.get(check.code, 0)
+        for check in candidate.audit_checks
+        if not check.blocking and check.passed
+    )
+
+
+def _candidate_review_rank(candidate: BenchmarkCandidate) -> tuple:
+    passed_codes = {
+        check.code
+        for check in candidate.audit_checks
+        if not check.blocking and check.passed
+    }
+    return (
+        -_advisory_score(candidate),
+        "closing_reference" not in passed_codes,
+        "diagnostic_signal" not in passed_codes,
+        len(candidate.expected_files) == 1,
+        candidate.issue_snapshot.created_at.isoformat(),
+        candidate.repository.lower(),
+        candidate.issue_snapshot.number,
+        candidate.fix_pr_number,
+    )
+
+
+def _unique_reviewable_candidates(
+    base_manifest: BenchmarkManifest,
+    candidates: Sequence[BenchmarkCandidate],
+) -> tuple[int, list[BenchmarkCandidate]]:
+    existing_issue_keys = {
+        (case.repository.lower(), case.issue_number) for case in base_manifest.cases
+    }
+    existing_pr_keys = {
+        (case.repository.lower(), case.fix_pr_number) for case in base_manifest.cases
+    }
+    reviewable = [
+        candidate
+        for candidate in candidates
+        if candidate.status is CandidateStatus.NEEDS_REVIEW
+        and candidate.pre_fix_sha
+        and candidate.expected_files
+        and all(check.passed for check in candidate.audit_checks if check.blocking)
+    ]
+    unique: list[BenchmarkCandidate] = []
+    used_issue_keys = set(existing_issue_keys)
+    used_pr_keys = set(existing_pr_keys)
+    for candidate in sorted(reviewable, key=_candidate_review_rank):
+        issue_key = (candidate.repository.lower(), candidate.issue_snapshot.number)
+        pr_key = (candidate.repository.lower(), candidate.fix_pr_number)
+        if issue_key in used_issue_keys or pr_key in used_pr_keys:
+            continue
+        used_issue_keys.add(issue_key)
+        used_pr_keys.add(pr_key)
+        unique.append(candidate)
+    return len(reviewable), unique
+
+
+def _suggested_case_id(candidate: BenchmarkCandidate) -> str:
+    repository = re.sub(r"[^a-z0-9]+", "-", candidate.repository.lower()).strip("-")
+    return f"{repository}-issue-{candidate.issue_snapshot.number}"
+
+
+def _review_queue_entry(
+    candidate: BenchmarkCandidate,
+    priority: CandidateReviewPriority,
+    default_tier: BenchmarkTier,
+    review_order: int,
+) -> CandidateReviewQueueEntry:
+    advisory_checks = [
+        check for check in candidate.audit_checks if not check.blocking
+    ]
+    return CandidateReviewQueueEntry(
+        review_order=review_order,
+        candidate_id=candidate.id,
+        priority=priority,
+        repository=candidate.repository,
+        issue_number=candidate.issue_snapshot.number,
+        fix_pr_number=candidate.fix_pr_number,
+        issue_title=candidate.issue_snapshot.title,
+        issue_created_at=candidate.issue_snapshot.created_at,
+        suggested_case_id=_suggested_case_id(candidate),
+        suggested_tier=candidate.suggested_tier or default_tier,
+        expected_files=candidate.expected_files,
+        multi_file=len(candidate.expected_files) > 1,
+        advisory_score=_advisory_score(candidate),
+        passed_advisory_checks=sorted(
+            check.code for check in advisory_checks if check.passed
+        ),
+        review_flags=sorted(
+            f"failed:{check.code}" for check in advisory_checks if not check.passed
+        ),
+    )
+
+
+def build_candidate_review_queue(
+    base_manifest: BenchmarkManifest,
+    candidates: Sequence[BenchmarkCandidate],
+    *,
+    target_total_cases: int = 200,
+    reserve_cases: int = 30,
+    max_primary_per_repository: int = 5,
+    target_multi_file_share: float = 0.30,
+    default_tier: BenchmarkTier = BenchmarkTier.GENERALIZATION,
+) -> CandidateReviewQueue:
+    """Prioritize candidates without accepting them as benchmark ground truth."""
+    base_case_count = len(base_manifest.cases)
+    if target_total_cases <= base_case_count:
+        raise ValueError("target_total_cases must exceed the base manifest case count")
+    if reserve_cases < 0:
+        raise ValueError("reserve_cases must be non-negative")
+    if max_primary_per_repository < 1:
+        raise ValueError("max_primary_per_repository must be at least 1")
+    if not 0 <= target_multi_file_share <= 1:
+        raise ValueError("target_multi_file_share must be between 0 and 1")
+
+    requested_new_cases = target_total_cases - base_case_count
+    available_reviewable, unique = _unique_reviewable_candidates(
+        base_manifest,
+        candidates,
+    )
+    ranked = sorted(unique, key=_candidate_review_rank)
+    if len(ranked) < requested_new_cases:
+        raise ValueError(
+            f"Only {len(ranked)} unique reviewable candidates are available; "
+            f"{requested_new_cases} are required"
+        )
+
+    existing_multi_file_cases = sum(
+        len(case.expected_files) > 1 for case in base_manifest.cases
+    )
+    target_multi_file_cases = math.ceil(target_total_cases * target_multi_file_share)
+    required_new_multi_file_cases = max(
+        0,
+        target_multi_file_cases - existing_multi_file_cases,
+    )
+    unique_multi_file_cases = sum(len(candidate.expected_files) > 1 for candidate in ranked)
+    if unique_multi_file_cases < required_new_multi_file_cases:
+        raise ValueError(
+            f"Only {unique_multi_file_cases} unique multi-file candidates are available; "
+            f"{required_new_multi_file_cases} are required"
+        )
+
+    selected: list[BenchmarkCandidate] = []
+    selected_ids: set[str] = set()
+    repository_counts: Counter[str] = Counter()
+
+    def select(candidate: BenchmarkCandidate) -> bool:
+        repository = candidate.repository.lower()
+        if (
+            candidate.id in selected_ids
+            or repository_counts[repository] >= max_primary_per_repository
+            or len(selected) >= requested_new_cases
+        ):
+            return False
+        selected.append(candidate)
+        selected_ids.add(candidate.id)
+        repository_counts[repository] += 1
+        return True
+
+    best_by_repository: dict[str, BenchmarkCandidate] = {}
+    for candidate in ranked:
+        best_by_repository.setdefault(candidate.repository.lower(), candidate)
+    for candidate in sorted(best_by_repository.values(), key=_candidate_review_rank):
+        select(candidate)
+
+    selected_multi_file_cases = sum(
+        len(candidate.expected_files) > 1 for candidate in selected
+    )
+    for candidate in ranked:
+        if selected_multi_file_cases >= required_new_multi_file_cases:
+            break
+        if len(candidate.expected_files) > 1 and select(candidate):
+            selected_multi_file_cases += 1
+
+    for candidate in ranked:
+        select(candidate)
+
+    if len(selected) < requested_new_cases:
+        raise ValueError(
+            f"The per-repository cap permits only {len(selected)} primary candidates; "
+            f"{requested_new_cases} are required"
+        )
+    selected_multi_file_cases = sum(
+        len(candidate.expected_files) > 1 for candidate in selected
+    )
+    if selected_multi_file_cases < required_new_multi_file_cases:
+        raise ValueError(
+            f"The primary queue contains {selected_multi_file_cases} multi-file cases; "
+            f"{required_new_multi_file_cases} are required"
+        )
+
+    remaining = [candidate for candidate in ranked if candidate.id not in selected_ids]
+    reserves = remaining[:reserve_cases]
+    selected.sort(key=_candidate_review_rank)
+    ordered_candidates = [
+        *((candidate, CandidateReviewPriority.PRIMARY) for candidate in selected),
+        *((candidate, CandidateReviewPriority.RESERVE) for candidate in reserves),
+    ]
+    entries = [
+        _review_queue_entry(candidate, priority, default_tier, review_order)
+        for review_order, (candidate, priority) in enumerate(
+            ordered_candidates,
+            start=1,
+        )
+    ]
+    return CandidateReviewQueue(
+        name="real-project-benchmark-v200-review-queue",
+        version=1,
+        generated_at=datetime.now(UTC),
+        base_manifest_name=base_manifest.name,
+        base_manifest_version=base_manifest.version,
+        target_total_cases=target_total_cases,
+        base_case_count=base_case_count,
+        requested_new_cases=requested_new_cases,
+        reserve_cases=len(reserves),
+        max_primary_per_repository=max_primary_per_repository,
+        target_multi_file_share=target_multi_file_share,
+        required_new_multi_file_cases=required_new_multi_file_cases,
+        available_reviewable_records=available_reviewable,
+        available_unique_cases=len(ranked),
+        available_unique_multi_file_cases=unique_multi_file_cases,
+        primary_multi_file_cases=selected_multi_file_cases,
+        primary_repositories=len(repository_counts),
+        entries=entries,
+    )
+
+
 def save_candidate_catalog(catalog: CandidateCatalog, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
         json.dumps(catalog.model_dump(mode="json"), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def save_candidate_review_queue(queue: CandidateReviewQueue, output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(queue.model_dump(mode="json"), indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
 
