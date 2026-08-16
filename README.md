@@ -216,6 +216,14 @@ uv run rii benchmark-audit pytest-dev/pytest 634 1766 \
 uv run rii benchmark-audit agronholm/anyio 1220 1224 \
   --tier generalization \
   --output benchmarks/candidates/anyio-1220-pr-1224.json
+
+uv run rii benchmark-plan benchmarks/cases.json \
+  benchmarks/candidates/discovered.json \
+  --target-total-cases 200 \
+  --reserve-cases 50 \
+  --max-primary-per-repository 5 \
+  --target-multi-file-share 0.30 \
+  --output benchmarks/expansion-v200-review-queue.json
 ```
 
 Discovery only produces `needs_review` or `rejected` candidates. A case enters a frozen manifest
@@ -224,6 +232,9 @@ only through a committed manual selection file with review notes; generated raw 
 uses the parent of the first PR commit as pre-fix SHA, and rejects a proposed pre-fix SHA that
 appears inside the fix PR. The historical v0.4 catalog is retained for provenance;
 `benchmarks/candidates-v0.7.json` contains the corrected expansion audit records.
+`benchmark-plan` de-duplicates overlapping catalogs by Issue and fix PR, enforces repository and
+multi-file quotas, and produces only a `needs_review` queue. It cannot accept candidates or alter
+the frozen manifest.
 
 ## Analyze a real GitHub repository
 

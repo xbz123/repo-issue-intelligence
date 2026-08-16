@@ -1,0 +1,5220 @@
+{
+  "name": "real-project-benchmark-v200-review-queue",
+  "version": 1,
+  "generated_at": "2026-08-16T17:47:54.237519Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 8,
+  "target_total_cases": 200,
+  "base_case_count": 50,
+  "requested_new_cases": 150,
+  "reserve_cases": 49,
+  "max_primary_per_repository": 5,
+  "target_multi_file_share": 0.3,
+  "required_new_multi_file_cases": 49,
+  "available_reviewable_records": 291,
+  "available_unique_cases": 199,
+  "available_unique_multi_file_cases": 61,
+  "primary_multi_file_cases": 54,
+  "primary_repositories": 38,
+  "entries": [
+    {
+      "review_order": 1,
+      "candidate_id": "paramiko-paramiko-issue-175-pr-372",
+      "priority": "primary",
+      "repository": "paramiko/paramiko",
+      "issue_number": 175,
+      "fix_pr_number": 372,
+      "issue_title": "Performance of paramiko is pretty slow (with possible solution)",
+      "issue_created_at": "2013-06-13T12:16:30Z",
+      "suggested_case_id": "paramiko-paramiko-issue-175",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/channel.py",
+        "paramiko/common.py",
+        "paramiko/sftp_client.py",
+        "paramiko/transport.py",
+        "paramiko/util.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 2,
+      "candidate_id": "paramiko-paramiko-issue-865-pr-910",
+      "priority": "primary",
+      "repository": "paramiko/paramiko",
+      "issue_number": 865,
+      "fix_pr_number": 910,
+      "issue_title": "only rsa host key checked",
+      "issue_created_at": "2016-12-16T19:52:39Z",
+      "suggested_case_id": "paramiko-paramiko-issue-865",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/client.py",
+        "paramiko/transport.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 3,
+      "candidate_id": "boto-boto3-issue-1446-pr-4503",
+      "priority": "primary",
+      "repository": "boto/boto3",
+      "issue_number": 1446,
+      "fix_pr_number": 4503,
+      "issue_title": "download_fileobj with a file object in append mode can mess up file content",
+      "issue_created_at": "2018-02-08T08:50:48Z",
+      "suggested_case_id": "boto-boto3-issue-1446",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "boto3/compat.py",
+        "boto3/s3/inject.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 4,
+      "candidate_id": "encode-django-rest-framework-issue-6234-pr-9891",
+      "priority": "primary",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 6234,
+      "fix_pr_number": 9891,
+      "issue_title": "DictField parsing for \"html\" inputs misleadingly returns an empty dict even if the field was not specified",
+      "issue_created_at": "2018-10-07T16:10:49Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-6234",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/fields.py",
+        "rest_framework/serializers.py",
+        "rest_framework/utils/html.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 5,
+      "candidate_id": "matplotlib-matplotlib-issue-13470-pr-17802",
+      "priority": "primary",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 13470,
+      "fix_pr_number": 17802,
+      "issue_title": "Matplotlib.pyplot.close() interacts with tk.Tk() and closes the tk.Tk() object.",
+      "issue_created_at": "2019-02-19T18:57:07Z",
+      "suggested_case_id": "matplotlib-matplotlib-issue-13470",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/backends/_backend_tk.py",
+        "lib/matplotlib/cbook/__init__.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 6,
+      "candidate_id": "pallets-jinja-issue-1413-pr-1664",
+      "priority": "primary",
+      "repository": "pallets/jinja",
+      "issue_number": 1413,
+      "fix_pr_number": 1664,
+      "issue_title": "Namespaces do not allow multi-variable assignments",
+      "issue_created_at": "2021-05-10T00:10:33Z",
+      "suggested_case_id": "pallets-jinja-issue-1413",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/compiler.py",
+        "src/jinja2/parser.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 7,
+      "candidate_id": "pycqa-flake8-issue-1389-pr-1441",
+      "priority": "primary",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1389,
+      "fix_pr_number": 1441,
+      "issue_title": "Current implementation of `--diff` is kind of broken by design",
+      "issue_created_at": "2021-09-16T13:20:15Z",
+      "suggested_case_id": "pycqa-flake8-issue-1389",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/main/application.py",
+        "src/flake8/main/options.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 8,
+      "candidate_id": "encode-django-rest-framework-issue-8409-pr-9866",
+      "priority": "primary",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 8409,
+      "fix_pr_number": 9866,
+      "issue_title": "UniqueTogetherValidator doesn't enforce uniqueness of NULL values on databases that DO enforce them",
+      "issue_created_at": "2022-03-15T08:16:58Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-8409",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/serializers.py",
+        "rest_framework/validators.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 9,
+      "candidate_id": "paramiko-paramiko-issue-2009-pr-2013",
+      "priority": "primary",
+      "repository": "paramiko/paramiko",
+      "issue_number": 2009,
+      "fix_pr_number": 2013,
+      "issue_title": "open_sftp() can block up to an hour",
+      "issue_created_at": "2022-03-18T15:35:10Z",
+      "suggested_case_id": "paramiko-paramiko-issue-2009",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/client.py",
+        "paramiko/transport.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 10,
+      "candidate_id": "pypa-packaging-issue-577-pr-1351",
+      "priority": "primary",
+      "repository": "pypa/packaging",
+      "issue_number": 577,
+      "fix_pr_number": 1351,
+      "issue_title": "migrating from distlib.wheel: `packaging.utils.parse_wheel_filename` allows illegal platform tags",
+      "issue_created_at": "2022-07-18T17:56:33Z",
+      "suggested_case_id": "pypa-packaging-issue-577",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/packaging/tags.py",
+        "src/packaging/utils.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 11,
+      "candidate_id": "tox-dev-tox-issue-2649-pr-2793",
+      "priority": "primary",
+      "repository": "tox-dev/tox",
+      "issue_number": 2649,
+      "fix_pr_number": 2793,
+      "issue_title": "tox4: missing interpreters are skipped by default",
+      "issue_created_at": "2022-12-08T17:19:01Z",
+      "suggested_case_id": "tox-dev-tox-issue-2649",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/session/cmd/run/single.py",
+        "src/tox/tox_env/python/runner.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 12,
+      "candidate_id": "pylint-dev-pylint-issue-8147-pr-11239",
+      "priority": "primary",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 8147,
+      "fix_pr_number": 11239,
+      "issue_title": "Multiple `output-format` arguments with a file output produces all files, but only the last argument's file is filled.",
+      "issue_created_at": "2023-01-31T13:49:59Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-8147",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/config/arguments_manager.py",
+        "pylint/config/callback_actions.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 13,
+      "candidate_id": "tornadoweb-tornado-issue-3271-pr-3621",
+      "priority": "primary",
+      "repository": "TornadoWeb/tornado",
+      "issue_number": 3271,
+      "fix_pr_number": 3621,
+      "issue_title": "Queue.get(timeout) waits indefinitly for timedelta of zero seconds",
+      "issue_created_at": "2023-05-16T09:39:02Z",
+      "suggested_case_id": "tornadoweb-tornado-issue-3271",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "tornado/locks.py",
+        "tornado/queues.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 14,
+      "candidate_id": "numpy-numpy-issue-27137-pr-32029",
+      "priority": "primary",
+      "repository": "numpy/numpy",
+      "issue_number": 27137,
+      "fix_pr_number": 32029,
+      "issue_title": "BUG: scalars don't have dlpack support",
+      "issue_created_at": "2024-08-08T00:04:59Z",
+      "suggested_case_id": "numpy-numpy-issue-27137",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "numpy/_core/_add_newdocs.py",
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 15,
+      "candidate_id": "pytest-dev-pluggy-issue-573-pr-546",
+      "priority": "primary",
+      "repository": "pytest-dev/pluggy",
+      "issue_number": 573,
+      "fix_pr_number": 546,
+      "issue_title": "`'return' in a 'finally' block` is a SyntaxWarning in Python 3.14",
+      "issue_created_at": "2025-04-14T18:29:04Z",
+      "suggested_case_id": "pytest-dev-pluggy-issue-573",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/pluggy/__init__.py",
+        "src/pluggy/_callers.py",
+        "src/pluggy/_hooks.py",
+        "src/pluggy/_manager.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 16,
+      "candidate_id": "astral-sh-ruff-issue-18143-pr-27738",
+      "priority": "primary",
+      "repository": "astral-sh/ruff",
+      "issue_number": 18143,
+      "fix_pr_number": 27738,
+      "issue_title": "PLC2701 treats `os._exit` as private, unlike SLF001",
+      "issue_created_at": "2025-05-16T20:46:53Z",
+      "suggested_case_id": "astral-sh-ruff-issue-18143",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_self/rules/private_member_access.rs",
+        "crates/ruff_linter/src/rules/pylint/helpers.rs",
+        "crates/ruff_linter/src/rules/pylint/rules/import_private_name.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 17,
+      "candidate_id": "pyo3-pyo3-issue-5344-pr-6311",
+      "priority": "primary",
+      "repository": "PyO3/pyo3",
+      "issue_number": 5344,
+      "fix_pr_number": 6311,
+      "issue_title": "chrono-tz tests fail",
+      "issue_created_at": "2025-08-20T23:40:51Z",
+      "suggested_case_id": "pyo3-pyo3-issue-5344",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/conversions/chrono_tz.rs",
+        "src/conversions/serde.rs",
+        "src/conversions/std/string.rs",
+        "src/types/bytes.rs",
+        "src/types/datetime.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 18,
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-12877-pr-13342",
+      "priority": "primary",
+      "repository": "sqlalchemy/sqlalchemy",
+      "issue_number": 12877,
+      "fix_pr_number": 13342,
+      "issue_title": "Incorrect PSQL Quotes for postgresql_inherits (document quoted_name for this, and also clean up old things in quoted_name docs)",
+      "issue_created_at": "2025-09-22T04:06:29Z",
+      "suggested_case_id": "sqlalchemy-sqlalchemy-issue-12877",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/sqlalchemy/dialects/postgresql/base.py",
+        "lib/sqlalchemy/sql/elements.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 19,
+      "candidate_id": "ansible-ansible-issue-87020-pr-87072",
+      "priority": "primary",
+      "repository": "ansible/ansible",
+      "issue_number": 87020,
+      "fix_pr_number": 87072,
+      "issue_title": "Tree plugin deprecation notice",
+      "issue_created_at": "2026-05-22T23:06:23Z",
+      "suggested_case_id": "ansible-ansible-issue-87020",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/ansible/plugins/callback/oneline.py",
+        "lib/ansible/plugins/callback/tree.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 20,
+      "candidate_id": "prefecthq-prefect-issue-22184-pr-22723",
+      "priority": "primary",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22184,
+      "fix_pr_number": 22723,
+      "issue_title": "Process workers do not engage the 3.7 auto-`uv run` launcher",
+      "issue_created_at": "2026-06-01T16:01:40Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22184",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/prefect/runner/_workspace_starter.py",
+        "src/prefect/workers/process.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 21,
+      "candidate_id": "tox-dev-tox-issue-3950-pr-3951",
+      "priority": "primary",
+      "repository": "tox-dev/tox",
+      "issue_number": 3950,
+      "fix_pr_number": 3951,
+      "issue_title": "`TOX_OVERRIDE` does not propagate through config references when overriding a *base configuration*",
+      "issue_created_at": "2026-06-02T19:24:36Z",
+      "suggested_case_id": "tox-dev-tox-issue-3950",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/config/loader/api.py",
+        "src/tox/config/loader/ini/replace.py",
+        "src/tox/config/loader/toml/_replace.py",
+        "src/tox/config/main.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 22,
+      "candidate_id": "pypa-virtualenv-issue-3171-pr-3173",
+      "priority": "primary",
+      "repository": "pypa/virtualenv",
+      "issue_number": 3171,
+      "fix_pr_number": 3173,
+      "issue_title": "Creates broken Python 3.8 environments",
+      "issue_created_at": "2026-06-15T08:26:00Z",
+      "suggested_case_id": "pypa-virtualenv-issue-3171",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/run/plugin/seeders.py",
+        "src/virtualenv/seed/embed/base_embed.py",
+        "src/virtualenv/seed/seeder.py",
+        "src/virtualenv/seed/wheels/embed/__init__.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 23,
+      "candidate_id": "prefecthq-prefect-issue-22525-pr-22774",
+      "priority": "primary",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22525,
+      "fix_pr_number": 22774,
+      "issue_title": "Block-edit UI cannot persist explicit null for an Optional[str] field with a non-null default",
+      "issue_created_at": "2026-07-16T03:42:11Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22525",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-null.tsx",
+        "ui-v2/src/components/schemas/schema-form-input.tsx",
+        "ui-v2/src/components/schemas/schema-form.test.tsx"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 24,
+      "candidate_id": "pandas-dev-pandas-issue-66348-pr-66792",
+      "priority": "primary",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 66348,
+      "fix_pr_number": 66792,
+      "issue_title": "BUG: ASCII mode is broken for `str.match`",
+      "issue_created_at": "2026-07-16T07:05:44Z",
+      "suggested_case_id": "pandas-dev-pandas-issue-66348",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py",
+        "pandas/core/strings/object_array.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 25,
+      "candidate_id": "pandas-dev-pandas-issue-66436-pr-66473",
+      "priority": "primary",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 66436,
+      "fix_pr_number": 66473,
+      "issue_title": "BUG: A test_to_datetime.py test fails on Python 3.15",
+      "issue_created_at": "2026-07-23T11:14:20Z",
+      "suggested_case_id": "pandas-dev-pandas-issue-66436",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pandas/compat/__init__.py",
+        "pandas/compat/_constants.py",
+        "pandas/io/xml.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 26,
+      "candidate_id": "ansible-ansible-issue-87362-pr-87361",
+      "priority": "primary",
+      "repository": "ansible/ansible",
+      "issue_number": 87362,
+      "fix_pr_number": 87361,
+      "issue_title": "modules /plugins disclose URL userinfo inline credentials in failures",
+      "issue_created_at": "2026-08-05T14:54:32Z",
+      "suggested_case_id": "ansible-ansible-issue-87362",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/ansible/module_utils/urls.py",
+        "lib/ansible/modules/apt_key.py",
+        "lib/ansible/modules/get_url.py",
+        "lib/ansible/modules/rpm_key.py",
+        "lib/ansible/modules/uri.py",
+        "lib/ansible/plugins/action/unarchive.py",
+        "lib/ansible/plugins/lookup/url.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 27,
+      "candidate_id": "prefecthq-prefect-issue-22746-pr-22750",
+      "priority": "primary",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22746,
+      "fix_pr_number": 22750,
+      "issue_title": "ui-v2: required array parameter can be emptied and still submits (creates run with `[]`)",
+      "issue_created_at": "2026-08-07T16:09:38Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22746",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-array-enum.test.tsx",
+        "ui-v2/src/components/schemas/schema-form-property.tsx"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 28,
+      "candidate_id": "prefecthq-prefect-issue-22753-pr-22754",
+      "priority": "primary",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22753,
+      "fix_pr_number": 22754,
+      "issue_title": "V2 UI Custom Run crashes when an anyOf schema combines date and string enum",
+      "issue_created_at": "2026-08-07T16:31:25Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22753",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-any-of.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-string-format-date.test.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-string-format-date.tsx",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.test.ts",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 29,
+      "candidate_id": "prefecthq-prefect-issue-22759-pr-22760",
+      "priority": "primary",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22759,
+      "fix_pr_number": 22760,
+      "issue_title": "UI v2 renders nested deployment parameter defaults as [object Object]",
+      "issue_created_at": "2026-08-07T21:19:06Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22759",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.stories.tsx",
+        "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.test.tsx",
+        "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 30,
+      "candidate_id": "astral-sh-uv-issue-21096-pr-21097",
+      "priority": "primary",
+      "repository": "astral-sh/uv",
+      "issue_number": 21096,
+      "fix_pr_number": 21097,
+      "issue_title": "Relative indexes in PEP 723 scripts are resolved against the current working directory",
+      "issue_created_at": "2026-08-13T17:16:54Z",
+      "suggested_case_id": "astral-sh-uv-issue-21096",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/uv-settings/src/lib.rs",
+        "crates/uv/src/commands/project/add.rs",
+        "crates/uv/src/commands/project/mod.rs",
+        "crates/uv/src/lib.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 31,
+      "candidate_id": "sphinx-doc-sphinx-issue-3099-pr-14213",
+      "priority": "primary",
+      "repository": "sphinx-doc/sphinx",
+      "issue_number": 3099,
+      "fix_pr_number": 14213,
+      "issue_title": "literalinclude xml: TeX capacity exceeded, sorry [main memory size=3000000].",
+      "issue_created_at": "2016-10-26T12:30:39Z",
+      "suggested_case_id": "sphinx-doc-sphinx-issue-3099",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sphinx/writers/latex.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 32,
+      "candidate_id": "python-hyper-h2-issue-474-pr-1321",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 474,
+      "fix_pr_number": 1321,
+      "issue_title": "Rewrite frame_buffer to use bytearray()",
+      "issue_created_at": "2017-03-07T11:51:49Z",
+      "suggested_case_id": "python-hyper-h2-issue-474",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/frame_buffer.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 33,
+      "candidate_id": "boto-boto3-issue-1464-pr-1511",
+      "priority": "primary",
+      "repository": "boto/boto3",
+      "issue_number": 1464,
+      "fix_pr_number": 1511,
+      "issue_title": "'NoneType' object has no attribute 'type_name' when tagging",
+      "issue_created_at": "2018-02-25T19:40:20Z",
+      "suggested_case_id": "boto-boto3-issue-1464",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "boto3/dynamodb/transform.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 34,
+      "candidate_id": "encode-django-rest-framework-issue-6010-pr-9981",
+      "priority": "primary",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 6010,
+      "fix_pr_number": 9981,
+      "issue_title": "Crash when using ListSerializer for an update on a model that has Unique together constraints",
+      "issue_created_at": "2018-05-30T18:08:36Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-6010",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/validators.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 35,
+      "candidate_id": "python-hyper-h11-issue-92-pr-109",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 92,
+      "fix_pr_number": 109,
+      "issue_title": "Handle multiple Content-Length headers with the same value",
+      "issue_created_at": "2020-01-08T19:18:38Z",
+      "suggested_case_id": "python-hyper-h11-issue-92",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_headers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 36,
+      "candidate_id": "encode-django-rest-framework-issue-7279-pr-9837",
+      "priority": "primary",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 7279,
+      "fix_pr_number": 9837,
+      "issue_title": "ListField validation errors are inconsistent with ListSerializer",
+      "issue_created_at": "2020-04-18T18:56:58Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-7279",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/serializers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 37,
+      "candidate_id": "pallets-jinja-issue-1253-pr-1665",
+      "priority": "primary",
+      "repository": "pallets/jinja",
+      "issue_number": 1253,
+      "fix_pr_number": 1665,
+      "issue_title": "What's wrong with this Jinja template when using {% elif %}",
+      "issue_created_at": "2020-07-01T20:22:37Z",
+      "suggested_case_id": "pallets-jinja-issue-1253",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/idtracking.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 38,
+      "candidate_id": "matplotlib-matplotlib-issue-18171-pr-18172",
+      "priority": "primary",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 18171,
+      "fix_pr_number": 18172,
+      "issue_title": "webAgg backend incorrectly reports middle clicks as right clicks",
+      "issue_created_at": "2020-08-04T20:41:04Z",
+      "suggested_case_id": "matplotlib-matplotlib-issue-18171",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 39,
+      "candidate_id": "python-hyper-h11-issue-134-pr-140",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 134,
+      "fix_pr_number": 140,
+      "issue_title": "Increase/Decrease status code ranges",
+      "issue_created_at": "2021-08-06T10:50:19Z",
+      "suggested_case_id": "python-hyper-h11-issue-134",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_events.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 40,
+      "candidate_id": "python-hyper-h2-issue-1257-pr-1259",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1257,
+      "fix_pr_number": 1259,
+      "issue_title": "\"IndexError: index out of range\" in _reject_surrounding_whitespace",
+      "issue_created_at": "2021-09-02T19:59:04Z",
+      "suggested_case_id": "python-hyper-h2-issue-1257",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 41,
+      "candidate_id": "pallets-markupsafe-issue-310-pr-311",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 310,
+      "fix_pr_number": 311,
+      "issue_title": "`striptags` doesn't remove tags containing newlines",
+      "issue_created_at": "2022-06-13T13:37:20Z",
+      "suggested_case_id": "pallets-markupsafe-issue-310",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 42,
+      "candidate_id": "pycqa-flake8-issue-1617-pr-1618",
+      "priority": "primary",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1617,
+      "fix_pr_number": 1618,
+      "issue_title": "Flake8 4.0.1 Behavior Not As Expected Regarding User-Level Configuration Files",
+      "issue_created_at": "2022-07-13T18:48:12Z",
+      "suggested_case_id": "pycqa-flake8-issue-1617",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/options/config.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 43,
+      "candidate_id": "pallets-jinja-issue-1701-pr-1702",
+      "priority": "primary",
+      "repository": "pallets/jinja",
+      "issue_number": 1701,
+      "fix_pr_number": 1702,
+      "issue_title": "TypeError: sequence item 0: expected str instance, int found",
+      "issue_created_at": "2022-08-09T04:46:50Z",
+      "suggested_case_id": "pallets-jinja-issue-1701",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 44,
+      "candidate_id": "pallets-jinja-issue-1705-pr-1706",
+      "priority": "primary",
+      "repository": "pallets/jinja",
+      "issue_number": 1705,
+      "fix_pr_number": 1706,
+      "issue_title": "The error message from PackageLoader could be more helpful",
+      "issue_created_at": "2022-08-11T13:36:14Z",
+      "suggested_case_id": "pallets-jinja-issue-1705",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/loaders.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 45,
+      "candidate_id": "tornadoweb-tornado-issue-3182-pr-3523",
+      "priority": "primary",
+      "repository": "TornadoWeb/tornado",
+      "issue_number": 3182,
+      "fix_pr_number": 3523,
+      "issue_title": "Raise ValueError(\"a coroutine was expected, got {!r}\".format(main)) when running .../demos/file_upload/file_receiver.py and uploading a file:",
+      "issue_created_at": "2022-09-02T17:25:24Z",
+      "suggested_case_id": "tornadoweb-tornado-issue-3182",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "demos/file_upload/file_uploader.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 46,
+      "candidate_id": "pallets-jinja-issue-1781-pr-1782",
+      "priority": "primary",
+      "repository": "pallets/jinja",
+      "issue_number": 1781,
+      "fix_pr_number": 1782,
+      "issue_title": "unique filter does not work when chain with a filter that returns async generator",
+      "issue_created_at": "2022-12-23T09:03:01Z",
+      "suggested_case_id": "pallets-jinja-issue-1781",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/filters.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 47,
+      "candidate_id": "python-hyper-h2-issue-1278-pr-1299",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1278,
+      "fix_pr_number": 1299,
+      "issue_title": "Max inbound stream error logging is incorrect",
+      "issue_created_at": "2023-03-10T12:21:40Z",
+      "suggested_case_id": "python-hyper-h2-issue-1278",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/connection.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 48,
+      "candidate_id": "tox-dev-tox-issue-3075-pr-3748",
+      "priority": "primary",
+      "repository": "tox-dev/tox",
+      "issue_number": 3075,
+      "fix_pr_number": 3748,
+      "issue_title": "Tox 4 trying to reuse env where it didn't in tox 3",
+      "issue_created_at": "2023-08-02T20:49:58Z",
+      "suggested_case_id": "tox-dev-tox-issue-3075",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/config/loader/ini/replace.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 49,
+      "candidate_id": "sqlalchemy-alembic-issue-1311-pr-1312",
+      "priority": "primary",
+      "repository": "sqlalchemy/alembic",
+      "issue_number": 1311,
+      "fix_pr_number": 1312,
+      "issue_title": "`alembic init --package` doesn't show adding `__init__.py` path correctly",
+      "issue_created_at": "2023-09-14T07:31:58Z",
+      "suggested_case_id": "sqlalchemy-alembic-issue-1311",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "alembic/command.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 50,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-724-pr-1430",
+      "priority": "primary",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 724,
+      "fix_pr_number": 1430,
+      "issue_title": "ResourceWarning: unclosed event loop",
+      "issue_created_at": "2023-12-15T12:37:12Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-724",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 51,
+      "candidate_id": "psf-requests-issue-6643-pr-6644",
+      "priority": "primary",
+      "repository": "psf/requests",
+      "issue_number": 6643,
+      "fix_pr_number": 6644,
+      "issue_title": "Leading slash in uri followed by column fails",
+      "issue_created_at": "2024-02-21T21:47:35Z",
+      "suggested_case_id": "psf-requests-issue-6643",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/adapters.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 52,
+      "candidate_id": "pylint-dev-pylint-issue-9798-pr-11159",
+      "priority": "primary",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 9798,
+      "fix_pr_number": 11159,
+      "issue_title": "FN `attribute-defined-outside-init` with `setattr()`",
+      "issue_created_at": "2024-07-15T15:10:59Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-9798",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/classes/class_checker.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 53,
+      "candidate_id": "pycqa-flake8-issue-1948-pr-1949",
+      "priority": "primary",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1948,
+      "fix_pr_number": 1949,
+      "issue_title": "`logical_line` for call with f-string can result in invalid ast under Python 3.12",
+      "issue_created_at": "2024-07-31T16:57:16Z",
+      "suggested_case_id": "pycqa-flake8-issue-1948",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/processor.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 54,
+      "candidate_id": "pandas-dev-pandas-issue-59609-pr-66794",
+      "priority": "primary",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 59609,
+      "fix_pr_number": 66794,
+      "issue_title": "BUG: isin check with numpy array works incorrectly when using UInt64 dtype",
+      "issue_created_at": "2024-08-26T11:23:22Z",
+      "suggested_case_id": "pandas-dev-pandas-issue-59609",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pandas/core/algorithms.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 55,
+      "candidate_id": "boto-botocore-issue-3268-pr-3552",
+      "priority": "primary",
+      "repository": "boto/botocore",
+      "issue_number": 3268,
+      "fix_pr_number": 3552,
+      "issue_title": "Upload cancellation causes long retry loop",
+      "issue_created_at": "2024-10-01T02:58:56Z",
+      "suggested_case_id": "boto-botocore-issue-3268",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "botocore/httpsession.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 56,
+      "candidate_id": "pallets-markupsafe-issue-472-pr-477",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 472,
+      "fix_pr_number": 477,
+      "issue_title": "`escape()` fails with certain `str` subclasses",
+      "issue_created_at": "2024-10-10T04:39:54Z",
+      "suggested_case_id": "pallets-markupsafe-issue-472",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 57,
+      "candidate_id": "matplotlib-matplotlib-issue-29256-pr-29338",
+      "priority": "primary",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 29256,
+      "fix_pr_number": 29338,
+      "issue_title": "[Bug]: canvas.manager.set_window_title does not work to figure with `WebAgg` backend",
+      "issue_created_at": "2024-12-08T08:19:23Z",
+      "suggested_case_id": "matplotlib-matplotlib-issue-29256",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 58,
+      "candidate_id": "aio-libs-yarl-issue-1458-pr-1638",
+      "priority": "primary",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1458,
+      "fix_pr_number": 1638,
+      "issue_title": "Convert an `uuid.UUID` variable into `int` when pass it in params",
+      "issue_created_at": "2025-01-06T15:54:22Z",
+      "suggested_case_id": "aio-libs-yarl-issue-1458",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "yarl/_query.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 59,
+      "candidate_id": "pypa-setuptools-issue-4810-pr-5169",
+      "priority": "primary",
+      "repository": "pypa/setuptools",
+      "issue_number": 4810,
+      "fix_pr_number": 5169,
+      "issue_title": "[BUG] Valid syntax for define-macros in pyproject.toml is invalid for ccompiler",
+      "issue_created_at": "2025-01-19T15:33:24Z",
+      "suggested_case_id": "pypa-setuptools-issue-4810",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "setuptools/config/_apply_pyprojecttoml.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 60,
+      "candidate_id": "encode-django-rest-framework-issue-9645-pr-10011",
+      "priority": "primary",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 9645,
+      "fix_pr_number": 10011,
+      "issue_title": "Duplicated GenericIPAddressField validation errors with ModelSerializer and protocol",
+      "issue_created_at": "2025-02-03T17:02:14Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-9645",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/utils/field_mapping.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 61,
+      "candidate_id": "aio-libs-yarl-issue-1467-pr-1468",
+      "priority": "primary",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1467,
+      "fix_pr_number": 1468,
+      "issue_title": "`with_suffix` always reencode entire name",
+      "issue_created_at": "2025-02-09T03:47:45Z",
+      "suggested_case_id": "aio-libs-yarl-issue-1467",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "yarl/_url.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 62,
+      "candidate_id": "aio-libs-yarl-issue-1485-pr-1512",
+      "priority": "primary",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1485,
+      "fix_pr_number": 1512,
+      "issue_title": "Unhandled exception (IndexError) in URL parsing",
+      "issue_created_at": "2025-03-18T10:35:30Z",
+      "suggested_case_id": "aio-libs-yarl-issue-1485",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "yarl/_parse.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 63,
+      "candidate_id": "scikit-learn-scikit-learn-issue-31030-pr-34399",
+      "priority": "primary",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 31030,
+      "fix_pr_number": 34399,
+      "issue_title": "DBSCAN always triggers and EfficiencyWarning",
+      "issue_created_at": "2025-03-19T20:51:03Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-31030",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sklearn/cluster/_dbscan.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 64,
+      "candidate_id": "boto-botocore-issue-3434-pr-3575",
+      "priority": "primary",
+      "repository": "boto/botocore",
+      "issue_number": 3434,
+      "fix_pr_number": 3575,
+      "issue_title": "setuptools deprecation warnings",
+      "issue_created_at": "2025-03-29T05:47:48Z",
+      "suggested_case_id": "boto-botocore-issue-3434",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "setup.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 65,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1090-pr-1481",
+      "priority": "primary",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 1090,
+      "fix_pr_number": 1481,
+      "issue_title": "Type error: `Value of type variable \"_R\" of function cannot be \"AsyncClient\"`",
+      "issue_created_at": "2025-04-08T19:34:54Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1090",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 66,
+      "candidate_id": "aio-libs-multidict-issue-1143-pr-1144",
+      "priority": "primary",
+      "repository": "aio-libs/multidict",
+      "issue_number": 1143,
+      "fix_pr_number": 1144,
+      "issue_title": "6.4.2 fails to build on CPython 3.10.17, with assertions enabled",
+      "issue_created_at": "2025-04-10T03:08:55Z",
+      "suggested_case_id": "aio-libs-multidict-issue-1143",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "setup.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 67,
+      "candidate_id": "boto-botocore-issue-3455-pr-3543",
+      "priority": "primary",
+      "repository": "boto/botocore",
+      "issue_number": 3455,
+      "fix_pr_number": 3543,
+      "issue_title": "Botocore mistakenly expects a reason phrase in \"100 Continue\" responses",
+      "issue_created_at": "2025-04-18T15:07:03Z",
+      "suggested_case_id": "boto-botocore-issue-3455",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "botocore/awsrequest.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 68,
+      "candidate_id": "aio-libs-multidict-issue-1159-pr-1160",
+      "priority": "primary",
+      "repository": "aio-libs/multidict",
+      "issue_number": 1159,
+      "fix_pr_number": 1160,
+      "issue_title": "Segfault calling `MultiDict().setdefault()`",
+      "issue_created_at": "2025-05-04T11:42:35Z",
+      "suggested_case_id": "aio-libs-multidict-issue-1159",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "multidict/_multidict.c"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 69,
+      "candidate_id": "boto-boto3-issue-4526-pr-4527",
+      "priority": "primary",
+      "repository": "boto/boto3",
+      "issue_number": 4526,
+      "fix_pr_number": 4527,
+      "issue_title": "S3 client download_fileobj became incompatible with GzipFile from stdlib",
+      "issue_created_at": "2025-05-06T17:43:23Z",
+      "suggested_case_id": "boto-boto3-issue-4526",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "boto3/compat.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 70,
+      "candidate_id": "boto-botocore-issue-3532-pr-3535",
+      "priority": "primary",
+      "repository": "boto/botocore",
+      "issue_number": 3532,
+      "fix_pr_number": 3535,
+      "issue_title": "Stubber attempting SSO Token retrieval",
+      "issue_created_at": "2025-07-25T13:20:52Z",
+      "suggested_case_id": "boto-botocore-issue-3532",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "botocore/stub.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 71,
+      "candidate_id": "ansible-ansible-issue-85568-pr-87222",
+      "priority": "primary",
+      "repository": "ansible/ansible",
+      "issue_number": 85568,
+      "fix_pr_number": 87222,
+      "issue_title": "getent returns misleading error when service override fails due to platform limitations on Alpine",
+      "issue_created_at": "2025-07-26T19:05:28Z",
+      "suggested_case_id": "ansible-ansible-issue-85568",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/ansible/modules/getent.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 72,
+      "candidate_id": "python-attrs-attrs-issue-1479-pr-1509",
+      "priority": "primary",
+      "repository": "python-attrs/attrs",
+      "issue_number": 1479,
+      "fix_pr_number": 1509,
+      "issue_title": "Alias not available during field transformation",
+      "issue_created_at": "2025-10-13T19:30:05Z",
+      "suggested_case_id": "python-attrs-attrs-issue-1479",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 73,
+      "candidate_id": "sphinx-doc-sphinx-issue-14050-pr-14202",
+      "priority": "primary",
+      "repository": "sphinx-doc/sphinx",
+      "issue_number": 14050,
+      "fix_pr_number": 14202,
+      "issue_title": "LaTeXTranslator fails to build documents using the \"acronym\" standard role.",
+      "issue_created_at": "2025-11-09T16:23:06Z",
+      "suggested_case_id": "sphinx-doc-sphinx-issue-14050",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sphinx/writers/latex.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 74,
+      "candidate_id": "pytest-dev-pluggy-issue-629-pr-632",
+      "priority": "primary",
+      "repository": "pytest-dev/pluggy",
+      "issue_number": 629,
+      "fix_pr_number": 632,
+      "issue_title": "`pluggy` requires `from __future__ import annotations` although it shouldn't in Python 3.14",
+      "issue_created_at": "2025-11-21T11:43:40Z",
+      "suggested_case_id": "pytest-dev-pluggy-issue-629",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/pluggy/_hooks.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 75,
+      "candidate_id": "aio-libs-yarl-issue-1632-pr-1687",
+      "priority": "primary",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1632,
+      "fix_pr_number": 1687,
+      "issue_title": "[heads up] test_pickle and test_pickle_does_not_pollute_cache fail when run with Python 3.15.0a6 (urllib.parse changes)",
+      "issue_created_at": "2026-02-25T11:16:28Z",
+      "suggested_case_id": "aio-libs-yarl-issue-1632",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "yarl/_url.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 76,
+      "candidate_id": "pypa-virtualenv-issue-3089-pr-3092",
+      "priority": "primary",
+      "repository": "pypa/virtualenv",
+      "issue_number": 3089,
+      "fix_pr_number": 3092,
+      "issue_title": "test_create_no_seed[*-venv-*] flaky gitignore check?",
+      "issue_created_at": "2026-03-06T11:22:54Z",
+      "suggested_case_id": "pypa-virtualenv-issue-3089",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/create/via_global_ref/venv.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 77,
+      "candidate_id": "pypa-virtualenv-issue-3105-pr-3110",
+      "priority": "primary",
+      "repository": "pypa/virtualenv",
+      "issue_number": 3105,
+      "fix_pr_number": 3110,
+      "issue_title": "virtualenv --help is not formatting using terminal width",
+      "issue_created_at": "2026-04-04T16:44:06Z",
+      "suggested_case_id": "pypa-virtualenv-issue-3105",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/config/cli/parser.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 78,
+      "candidate_id": "psf-requests-issue-7375-pr-7376",
+      "priority": "primary",
+      "repository": "psf/requests",
+      "issue_number": 7375,
+      "fix_pr_number": 7376,
+      "issue_title": "Tweak urllib3 version checker",
+      "issue_created_at": "2026-04-20T13:22:54Z",
+      "suggested_case_id": "psf-requests-issue-7375",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 79,
+      "candidate_id": "psf-requests-issue-7432-pr-7433",
+      "priority": "primary",
+      "repository": "psf/requests",
+      "issue_number": 7432,
+      "fix_pr_number": 7433,
+      "issue_title": "`prepare_body` stream detection regression",
+      "issue_created_at": "2026-05-12T13:42:12Z",
+      "suggested_case_id": "psf-requests-issue-7432",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/models.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 80,
+      "candidate_id": "tox-dev-tox-issue-3939-pr-3941",
+      "priority": "primary",
+      "repository": "tox-dev/tox",
+      "issue_number": 3939,
+      "fix_pr_number": 3941,
+      "issue_title": "Schema missing updates for conditional replace",
+      "issue_created_at": "2026-05-12T16:00:50Z",
+      "suggested_case_id": "tox-dev-tox-issue-3939",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/session/cmd/schema.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 81,
+      "candidate_id": "tox-dev-tox-issue-3945-pr-3948",
+      "priority": "primary",
+      "repository": "tox-dev/tox",
+      "issue_number": 3945,
+      "fix_pr_number": 3948,
+      "issue_title": "Conflict between `constraints` and `constrain_package_deps` / `use_frozen_constraints` options",
+      "issue_created_at": "2026-05-19T14:15:55Z",
+      "suggested_case_id": "tox-dev-tox-issue-3945",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/tox_env/python/pip/pip_install.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 82,
+      "candidate_id": "scikit-learn-scikit-learn-issue-34170-pr-34657",
+      "priority": "primary",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 34170,
+      "fix_pr_number": 34657,
+      "issue_title": "RidgeClassifier binary coef_ shape does not match documented shape",
+      "issue_created_at": "2026-06-01T16:05:45Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-34170",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sklearn/linear_model/_ridge.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 83,
+      "candidate_id": "urllib3-urllib3-issue-5077-pr-5102",
+      "priority": "primary",
+      "repository": "urllib3/urllib3",
+      "issue_number": 5077,
+      "fix_pr_number": 5102,
+      "issue_title": "`SSL_KEYWORDS` is missing `assert_hostname` and `assert_fingerprint`, leaking HTTPS-only kwargs into HTTP connection construction",
+      "issue_created_at": "2026-06-04T08:31:54Z",
+      "suggested_case_id": "urllib3-urllib3-issue-5077",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/poolmanager.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 84,
+      "candidate_id": "pypa-virtualenv-issue-3157-pr-3166",
+      "priority": "primary",
+      "repository": "pypa/virtualenv",
+      "issue_number": 3157,
+      "fix_pr_number": 3166,
+      "issue_title": "Base interpreter symlink not resolved in pyvenv.cfg (home / base-executable record the symlink)",
+      "issue_created_at": "2026-06-05T14:00:00Z",
+      "suggested_case_id": "pypa-virtualenv-issue-3157",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/app_data/via_disk_folder.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 85,
+      "candidate_id": "scipy-scipy-issue-25406-pr-25450",
+      "priority": "primary",
+      "repository": "scipy/scipy",
+      "issue_number": 25406,
+      "fix_pr_number": 25450,
+      "issue_title": "[BUG] Double-free of wrk1/wrk2/iwrk in fitpack_surfit on allocation failure",
+      "issue_created_at": "2026-06-18T02:41:53Z",
+      "suggested_case_id": "scipy-scipy-issue-25406",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "scipy/interpolate/src/_fitpackmodule.c"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 86,
+      "candidate_id": "scikit-learn-scikit-learn-issue-34338-pr-34341",
+      "priority": "primary",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 34338,
+      "fix_pr_number": 34341,
+      "issue_title": "radius_neighbors with array radius works with n_jobs=1 but raises ValueError for n_jobs>1",
+      "issue_created_at": "2026-06-19T09:51:36Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-34338",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sklearn/neighbors/_base.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 87,
+      "candidate_id": "python-attrs-attrs-issue-1575-pr-1593",
+      "priority": "primary",
+      "repository": "python-attrs/attrs",
+      "issue_number": 1575,
+      "fix_pr_number": 1593,
+      "issue_title": "attrs doesn't recognize ClassVar if not imported in Python 3.14",
+      "issue_created_at": "2026-06-28T23:45:08Z",
+      "suggested_case_id": "python-attrs-attrs-issue-1575",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 88,
+      "candidate_id": "urllib3-urllib3-issue-5099-pr-5103",
+      "priority": "primary",
+      "repository": "urllib3/urllib3",
+      "issue_number": 5099,
+      "fix_pr_number": 5103,
+      "issue_title": "Test failures with `pyopenssl==26.3.0`: `DeprecationWarning: X509.get_subject is deprecated. You should use cryptography's X.509 APIs instead.`",
+      "issue_created_at": "2026-07-04T16:57:10Z",
+      "suggested_case_id": "urllib3-urllib3-issue-5099",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/contrib/pyopenssl.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 89,
+      "candidate_id": "ansible-ansible-issue-87303-pr-87304",
+      "priority": "primary",
+      "repository": "ansible/ansible",
+      "issue_number": 87303,
+      "fix_pr_number": 87304,
+      "issue_title": "`ansible.builtin.rpm_key` fails on openSUSE Tumbleweed with `Unable to parse PGP key armor`.",
+      "issue_created_at": "2026-07-27T14:46:36Z",
+      "suggested_case_id": "ansible-ansible-issue-87303",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/ansible/modules/rpm_key.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 90,
+      "candidate_id": "astral-sh-ruff-issue-27216-pr-27711",
+      "priority": "primary",
+      "repository": "astral-sh/ruff",
+      "issue_number": 27216,
+      "fix_pr_number": 27711,
+      "issue_title": "`delete-full-slice` (FURB131) should not apply to `dict`s",
+      "issue_created_at": "2026-07-27T15:28:26Z",
+      "suggested_case_id": "astral-sh-ruff-issue-27216",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 91,
+      "candidate_id": "pandas-dev-pandas-issue-66517-pr-66791",
+      "priority": "primary",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 66517,
+      "fix_pr_number": 66791,
+      "issue_title": "BUG: convert_dtypes raises OverflowError for integers outside the int64 range",
+      "issue_created_at": "2026-07-29T03:27:05Z",
+      "suggested_case_id": "pandas-dev-pandas-issue-66517",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pandas/core/dtypes/cast.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 92,
+      "candidate_id": "matplotlib-matplotlib-issue-32133-pr-32150",
+      "priority": "primary",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 32133,
+      "fix_pr_number": 32150,
+      "issue_title": "[Bug]: MemoryError in _mark_every_path (with float markevery) when extreme zooming in ",
+      "issue_created_at": "2026-07-29T14:00:44Z",
+      "suggested_case_id": "matplotlib-matplotlib-issue-32133",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/lines.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 93,
+      "candidate_id": "apache-airflow-issue-70822-pr-70879",
+      "priority": "primary",
+      "repository": "apache/airflow",
+      "issue_number": 70822,
+      "fix_pr_number": 70879,
+      "issue_title": "scopes vs scope mismatch in azure provider (msgraphfs vs KiotaRequestAdapter)",
+      "issue_created_at": "2026-07-31T11:06:44Z",
+      "suggested_case_id": "apache-airflow-issue-70822",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 94,
+      "candidate_id": "pylint-dev-pylint-issue-11224-pr-11250",
+      "priority": "primary",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 11224,
+      "fix_pr_number": 11250,
+      "issue_title": "Uncaught NameInferenceError in comparison checker",
+      "issue_created_at": "2026-08-03T02:18:16Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-11224",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/base/comparison_checker.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 95,
+      "candidate_id": "pylint-dev-pylint-issue-11228-pr-11262",
+      "priority": "primary",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 11228,
+      "fix_pr_number": 11262,
+      "issue_title": "`AttributeError: 'FunctionDef' object has no attribute 'ancestors'` in docparams checker",
+      "issue_created_at": "2026-08-04T01:13:11Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-11228",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/extensions/_check_docs_utils.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 96,
+      "candidate_id": "pylint-dev-pylint-issue-11231-pr-11232",
+      "priority": "primary",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 11231,
+      "fix_pr_number": 11232,
+      "issue_title": "False positive invalid-name (C0103) for module-level TypedDict instantiation, regression from PR #10673",
+      "issue_created_at": "2026-08-05T08:45:12Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-11231",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/base/name_checker/checker.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 97,
+      "candidate_id": "pandas-dev-pandas-issue-66639-pr-66790",
+      "priority": "primary",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 66639,
+      "fix_pr_number": 66790,
+      "issue_title": "BUG: read_csv(sep=None) raises TypeError instead of falling back to the python engine",
+      "issue_created_at": "2026-08-06T16:58:16Z",
+      "suggested_case_id": "pandas-dev-pandas-issue-66639",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pandas/io/parsers/readers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 98,
+      "candidate_id": "apache-airflow-issue-71319-pr-71572",
+      "priority": "primary",
+      "repository": "apache/airflow",
+      "issue_number": 71319,
+      "fix_pr_number": 71572,
+      "issue_title": "Keycloak team Op permission is missing team DAG resource",
+      "issue_created_at": "2026-08-08T01:28:11Z",
+      "suggested_case_id": "apache-airflow-issue-71319",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 99,
+      "candidate_id": "astral-sh-ruff-issue-27631-pr-27687",
+      "priority": "primary",
+      "repository": "astral-sh/ruff",
+      "issue_number": 27631,
+      "fix_pr_number": 27687,
+      "issue_title": "False negatives when passing `subprocess` command as keyword argument",
+      "issue_created_at": "2026-08-10T14:49:19Z",
+      "suggested_case_id": "astral-sh-ruff-issue-27631",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 100,
+      "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4862",
+      "priority": "primary",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 4858,
+      "fix_pr_number": 4862,
+      "issue_title": "`st.from_regex` incorrectly considers `re.ASCII` flag for inverted classes",
+      "issue_created_at": "2026-08-13T19:20:04Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4858",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 101,
+      "candidate_id": "paramiko-paramiko-issue-1369-pr-1379",
+      "priority": "primary",
+      "repository": "paramiko/paramiko",
+      "issue_number": 1369,
+      "fix_pr_number": 1379,
+      "issue_title": "CryptographyDeprecationWarnings with cryptography 2.5 release",
+      "issue_created_at": "2019-01-22T20:18:01Z",
+      "suggested_case_id": "paramiko-paramiko-issue-1369",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/ecdsakey.py",
+        "paramiko/kex_ecdh_nist.py",
+        "setup.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 102,
+      "candidate_id": "urllib3-urllib3-issue-4945-pr-5055",
+      "priority": "primary",
+      "repository": "urllib3/urllib3",
+      "issue_number": 4945,
+      "fix_pr_number": 5055,
+      "issue_title": "parse_url doesn't %-decode user/password",
+      "issue_created_at": "2026-03-26T08:11:06Z",
+      "suggested_case_id": "urllib3-urllib3-issue-4945",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/contrib/socks.py",
+        "src/urllib3/util/request.py",
+        "src/urllib3/util/url.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 103,
+      "candidate_id": "astral-sh-uv-issue-21122-pr-21131",
+      "priority": "primary",
+      "repository": "astral-sh/uv",
+      "issue_number": 21122,
+      "fix_pr_number": 21131,
+      "issue_title": "`uv export --format cyclonedx1.5` omits component hashes that `uv.lock` already carries",
+      "issue_created_at": "2026-08-14T03:02:51Z",
+      "suggested_case_id": "astral-sh-uv-issue-21122",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/uv-resolver/src/lock/export/cyclonedx_json.rs",
+        "crates/uv/src/commands/project/export.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 104,
+      "candidate_id": "paramiko-paramiko-issue-713-pr-889",
+      "priority": "primary",
+      "repository": "paramiko/paramiko",
+      "issue_number": 713,
+      "fix_pr_number": 889,
+      "issue_title": "Paramiko passes IV to pycrypto when using MODE_CTR",
+      "issue_created_at": "2016-03-31T14:18:11Z",
+      "suggested_case_id": "paramiko-paramiko-issue-713",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 105,
+      "candidate_id": "pallets-markupsafe-issue-358-pr-376",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 358,
+      "fix_pr_number": 376,
+      "issue_title": "Return type for methods covered by `_simple_escaping_wrapper` is wrong",
+      "issue_created_at": "2023-03-12T11:42:03Z",
+      "suggested_case_id": "pallets-markupsafe-issue-358",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 106,
+      "candidate_id": "pallets-markupsafe-issue-417-pr-418",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 417,
+      "fix_pr_number": 418,
+      "issue_title": "Markup.striptags: comments now get replaced with a space",
+      "issue_created_at": "2024-01-24T15:34:43Z",
+      "suggested_case_id": "pallets-markupsafe-issue-417",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 107,
+      "candidate_id": "python-attrs-attrs-issue-1400-pr-1529",
+      "priority": "primary",
+      "repository": "python-attrs/attrs",
+      "issue_number": 1400,
+      "fix_pr_number": 1529,
+      "issue_title": "Allow attrs class object as input of attrs.fields",
+      "issue_created_at": "2025-01-30T09:19:50Z",
+      "suggested_case_id": "python-attrs-attrs-issue-1400",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 108,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1101-pr-1373",
+      "priority": "primary",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 1101,
+      "fix_pr_number": 1373,
+      "issue_title": "event_loop_policy for single test",
+      "issue_created_at": "2025-04-24T19:46:11Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1101",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 109,
+      "candidate_id": "psf-requests-issue-7219-pr-7220",
+      "priority": "primary",
+      "repository": "psf/requests",
+      "issue_number": 7219,
+      "fix_pr_number": 7220,
+      "issue_title": "chardet 6 triggers RequestsDependencyWarning on stderr",
+      "issue_created_at": "2026-02-22T13:29:04Z",
+      "suggested_case_id": "psf-requests-issue-7219",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 110,
+      "candidate_id": "python-hyper-h11-issue-7-pr-115",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 7,
+      "fix_pr_number": 115,
+      "issue_title": "Support for servers with broken line endings",
+      "issue_created_at": "2016-06-04T18:26:38Z",
+      "suggested_case_id": "python-hyper-h11-issue-7",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_connection.py",
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 111,
+      "candidate_id": "python-hyper-h11-issue-31-pr-104",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 31,
+      "fix_pr_number": 104,
+      "issue_title": "Discussion: Capitalize the header names of outgoing headers.",
+      "issue_created_at": "2017-02-19T15:36:16Z",
+      "suggested_case_id": "python-hyper-h11-issue-31",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_connection.py",
+        "h11/_headers.py",
+        "h11/_readers.py",
+        "h11/_writers.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 112,
+      "candidate_id": "python-hyper-h11-issue-121-pr-122",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 121,
+      "fix_pr_number": 122,
+      "issue_title": "Server wait forever on obviously incorrect but incomplete HTTP request",
+      "issue_created_at": "2020-12-16T22:21:41Z",
+      "suggested_case_id": "python-hyper-h11-issue-121",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 113,
+      "candidate_id": "pycqa-flake8-issue-1689-pr-1713",
+      "priority": "primary",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1689,
+      "fix_pr_number": 1713,
+      "issue_title": "warn on invalid codes in `ignore` / `extend-ignore`",
+      "issue_created_at": "2022-09-15T15:54:13Z",
+      "suggested_case_id": "pycqa-flake8-issue-1689",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/defaults.py",
+        "src/flake8/options/config.py",
+        "src/flake8/plugins/finder.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 114,
+      "candidate_id": "pytest-dev-pluggy-issue-431-pr-646",
+      "priority": "primary",
+      "repository": "pytest-dev/pluggy",
+      "issue_number": 431,
+      "fix_pr_number": 646,
+      "issue_title": "multi hook registration does not unregister",
+      "issue_created_at": "2023-08-14T11:56:26Z",
+      "suggested_case_id": "pytest-dev-pluggy-issue-431",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/pluggy/_hooks.py",
+        "src/pluggy/_manager.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 115,
+      "candidate_id": "sqlalchemy-alembic-issue-1429-pr-1430",
+      "priority": "primary",
+      "repository": "sqlalchemy/alembic",
+      "issue_number": 1429,
+      "fix_pr_number": 1430,
+      "issue_title": "create_foreign_key has wrong type annotations",
+      "issue_created_at": "2024-02-21T09:19:47Z",
+      "suggested_case_id": "sqlalchemy-alembic-issue-1429",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "alembic/operations/base.py",
+        "alembic/operations/ops.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 116,
+      "candidate_id": "pypa-build-issue-966-pr-1087",
+      "priority": "primary",
+      "repository": "pypa/build",
+      "issue_number": 966,
+      "fix_pr_number": 1087,
+      "issue_title": "keep backend logs?",
+      "issue_created_at": "2025-12-16T00:49:53Z",
+      "suggested_case_id": "pypa-build-issue-966",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 117,
+      "candidate_id": "scikit-learn-scikit-learn-issue-34621-pr-34632",
+      "priority": "primary",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 34621,
+      "fix_pr_number": 34632,
+      "issue_title": "⚠️ CI failed on Unit tests Linux x86-64 pylatest_pip_scipy_dev (last failure: Aug 04, 2026) ⚠️",
+      "issue_created_at": "2026-08-01T03:55:35Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-34621",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sklearn/utils/_testing.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 118,
+      "candidate_id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
+      "priority": "primary",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 34719,
+      "fix_pr_number": 34726,
+      "issue_title": "CI Add bot comment when linting job fails early",
+      "issue_created_at": "2026-08-11T05:00:17Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-34719",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "build_tools/get_comment.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 119,
+      "candidate_id": "pyo3-pyo3-issue-6318-pr-6320",
+      "priority": "primary",
+      "repository": "PyO3/pyo3",
+      "issue_number": 6318,
+      "fix_pr_number": 6320,
+      "issue_title": "Flaky test: Pending decref pool is not always processed on next attach",
+      "issue_created_at": "2026-08-13T03:23:43Z",
+      "suggested_case_id": "pyo3-pyo3-issue-6318",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 120,
+      "candidate_id": "python-hyper-h2-issue-1236-pr-1290",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1236,
+      "fix_pr_number": 1290,
+      "issue_title": "Comparison between bytes and string in defining a frozenset throws exception",
+      "issue_created_at": "2020-08-06T20:35:34Z",
+      "suggested_case_id": "python-hyper-h2-issue-1236",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/events.py",
+        "src/h2/stream.py",
+        "src/h2/utilities.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 121,
+      "candidate_id": "numpy-numpy-issue-30494-pr-30514",
+      "priority": "primary",
+      "repository": "numpy/numpy",
+      "issue_number": 30494,
+      "fix_pr_number": 30514,
+      "issue_title": "BUG: Multithreaded scaling bottlenecks on free-threaded Python",
+      "issue_created_at": "2025-12-21T20:07:21Z",
+      "suggested_case_id": "numpy-numpy-issue-30494",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "numpy/_core/src/multiarray/array_coercion.c",
+        "numpy/_core/src/multiarray/ctors.c",
+        "numpy/_core/src/multiarray/iterators.c"
+      ],
+      "multi_file": true,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 122,
+      "candidate_id": "sphinx-doc-sphinx-issue-14238-pr-14538",
+      "priority": "primary",
+      "repository": "sphinx-doc/sphinx",
+      "issue_number": 14238,
+      "fix_pr_number": 14538,
+      "issue_title": "ci: the 'ty' typechecking is failing",
+      "issue_created_at": "2026-01-04T19:47:20Z",
+      "suggested_case_id": "sphinx-doc-sphinx-issue-14238",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sphinx/ext/apidoc/_generate.py",
+        "sphinx/util/_serialise.py",
+        "sphinx/util/matching.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 123,
+      "candidate_id": "psf-requests-issue-7434-pr-7431",
+      "priority": "primary",
+      "repository": "psf/requests",
+      "issue_number": 7434,
+      "fix_pr_number": 7431,
+      "issue_title": "Inline annotations in 2.34.0 cause mypy error for Request json payloads",
+      "issue_created_at": "2026-05-12T15:25:34Z",
+      "suggested_case_id": "psf-requests-issue-7434",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/_types.py",
+        "src/requests/models.py",
+        "src/requests/sessions.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 124,
+      "candidate_id": "astral-sh-uv-issue-21066-pr-21073",
+      "priority": "primary",
+      "repository": "astral-sh/uv",
+      "issue_number": 21066,
+      "fix_pr_number": 21073,
+      "issue_title": "UV recreates the venv on every run.",
+      "issue_created_at": "2026-08-12T13:24:41Z",
+      "suggested_case_id": "astral-sh-uv-issue-21066",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/uv-python/src/interpreter.rs",
+        "crates/uv/src/commands/project/mod.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 125,
+      "candidate_id": "urllib3-urllib3-issue-1362-pr-5020",
+      "priority": "primary",
+      "repository": "urllib3/urllib3",
+      "issue_number": 1362,
+      "fix_pr_number": 5020,
+      "issue_title": "Whitespace is allowed within Header names, should be an Invalid header",
+      "issue_created_at": "2018-04-17T22:31:18Z",
+      "suggested_case_id": "urllib3-urllib3-issue-1362",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connection.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 126,
+      "candidate_id": "urllib3-urllib3-issue-2580-pr-5140",
+      "priority": "primary",
+      "repository": "urllib3/urllib3",
+      "issue_number": 2580,
+      "fix_pr_number": 5140,
+      "issue_title": "Allow tweaking the presentation style of logged errors",
+      "issue_created_at": "2022-03-10T08:27:04Z",
+      "suggested_case_id": "urllib3-urllib3-issue-2580",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connectionpool.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 127,
+      "candidate_id": "pypa-packaging-issue-774-pr-825",
+      "priority": "primary",
+      "repository": "pypa/packaging",
+      "issue_number": 774,
+      "fix_pr_number": 825,
+      "issue_title": "Marker referencing 'platform_release' fails to evaluate on Linux systems with non-PEP 440 kernel versions",
+      "issue_created_at": "2024-01-16T02:04:50Z",
+      "suggested_case_id": "pypa-packaging-issue-774",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/packaging/markers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 128,
+      "candidate_id": "scipy-scipy-issue-23076-pr-24923",
+      "priority": "primary",
+      "repository": "scipy/scipy",
+      "issue_number": 23076,
+      "fix_pr_number": 24923,
+      "issue_title": "BUG: Incorrect use of NumPy scalar types instead of np.dtype in _sputils.py",
+      "issue_created_at": "2025-05-29T03:17:37Z",
+      "suggested_case_id": "scipy-scipy-issue-23076",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "scipy/sparse/_sputils.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 129,
+      "candidate_id": "tornadoweb-tornado-issue-3510-pr-3511",
+      "priority": "primary",
+      "repository": "TornadoWeb/tornado",
+      "issue_number": 3510,
+      "fix_pr_number": 3511,
+      "issue_title": "500 error if non-RFC Host is being passed in headers.",
+      "issue_created_at": "2025-06-11T23:24:27Z",
+      "suggested_case_id": "tornadoweb-tornado-issue-3510",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 130,
+      "candidate_id": "scipy-scipy-issue-24495-pr-25602",
+      "priority": "primary",
+      "repository": "scipy/scipy",
+      "issue_number": 24495,
+      "fix_pr_number": 25602,
+      "issue_title": "BUG: remez hilbert segfault",
+      "issue_created_at": "2026-02-02T14:12:47Z",
+      "suggested_case_id": "scipy-scipy-issue-24495",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "scipy/signal/_sigtoolsmodule.cc"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 131,
+      "candidate_id": "boto-botocore-issue-3651-pr-3652",
+      "priority": "primary",
+      "repository": "boto/botocore",
+      "issue_number": 3651,
+      "fix_pr_number": 3652,
+      "issue_title": "S3 PutObject crashes when using non-seekable stream",
+      "issue_created_at": "2026-03-17T21:21:04Z",
+      "suggested_case_id": "boto-botocore-issue-3651",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "botocore/httpchecksum.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 132,
+      "candidate_id": "scipy-scipy-issue-25657-pr-25658",
+      "priority": "primary",
+      "repository": "scipy/scipy",
+      "issue_number": 25657,
+      "fix_pr_number": 25658,
+      "issue_title": "BUG: `linalg.signm` unpredictable output dtype",
+      "issue_created_at": "2026-07-18T20:05:23Z",
+      "suggested_case_id": "scipy-scipy-issue-25657",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "scipy/linalg/_matfuncs.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 133,
+      "candidate_id": "scipy-scipy-issue-25732-pr-25755",
+      "priority": "primary",
+      "repository": "scipy/scipy",
+      "issue_number": 25732,
+      "fix_pr_number": 25755,
+      "issue_title": "DOC: `orthogonalize` only documented as keyword only in `fft.dctn`",
+      "issue_created_at": "2026-07-28T11:55:16Z",
+      "suggested_case_id": "scipy-scipy-issue-25732",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "scipy/fft/_realtransforms.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 134,
+      "candidate_id": "astral-sh-uv-issue-21089-pr-21094",
+      "priority": "primary",
+      "repository": "astral-sh/uv",
+      "issue_number": 21089,
+      "fix_pr_number": 21094,
+      "issue_title": "Avoid orphaned caret when formatting PEP 508 errors for empty input",
+      "issue_created_at": "2026-08-13T16:14:43Z",
+      "suggested_case_id": "astral-sh-uv-issue-21089",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/uv-pep508/src/lib.rs"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 135,
+      "candidate_id": "hypothesisworks-hypothesis-issue-4859-pr-4853",
+      "priority": "primary",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 4859,
+      "fix_pr_number": 4853,
+      "issue_title": "`st.from_regex` incorrectly combines negative character classes with positive members",
+      "issue_created_at": "2026-08-13T19:22:57Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4859",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 136,
+      "candidate_id": "aio-libs-multidict-issue-292-pr-1204",
+      "priority": "primary",
+      "repository": "aio-libs/multidict",
+      "issue_number": 292,
+      "fix_pr_number": 1204,
+      "issue_title": "Implement md.merge(other)",
+      "issue_created_at": "2018-09-28T05:19:50Z",
+      "suggested_case_id": "aio-libs-multidict-issue-292",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "multidict/_abc.py",
+        "multidict/_multidict.c",
+        "multidict/_multidict_py.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 137,
+      "candidate_id": "python-hyper-h2-issue-1245-pr-1246",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1245,
+      "fix_pr_number": 1246,
+      "issue_title": "Proposal: Rename this repository to \"h2\"",
+      "issue_created_at": "2021-02-19T16:25:38Z",
+      "suggested_case_id": "python-hyper-h2-issue-1245",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "setup.py",
+        "src/h2/__init__.py",
+        "src/h2/config.py",
+        "src/h2/connection.py",
+        "src/h2/events.py",
+        "src/h2/stream.py",
+        "visualizer/visualize.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 138,
+      "candidate_id": "pypa-packaging-issue-597-pr-1344",
+      "priority": "primary",
+      "repository": "pypa/packaging",
+      "issue_number": 597,
+      "fix_pr_number": 1344,
+      "issue_title": "Backfill `.. versionadded` and `.. versionchanged` in the API reference",
+      "issue_created_at": "2022-10-12T10:12:45Z",
+      "suggested_case_id": "pypa-packaging-issue-597",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/packaging/markers.py",
+        "src/packaging/metadata.py",
+        "src/packaging/pylock.py",
+        "src/packaging/requirements.py",
+        "src/packaging/specifiers.py",
+        "src/packaging/tags.py",
+        "src/packaging/utils.py",
+        "src/packaging/version.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 139,
+      "candidate_id": "pypa-build-issue-655-pr-1083",
+      "priority": "primary",
+      "repository": "pypa/build",
+      "issue_number": 655,
+      "fix_pr_number": 1083,
+      "issue_title": "Controlling location of isolated build environments?",
+      "issue_created_at": "2023-08-15T13:14:48Z",
+      "suggested_case_id": "pypa-build-issue-655",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py",
+        "src/build/_exceptions.py",
+        "src/build/env.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 140,
+      "candidate_id": "aio-libs-multidict-issue-1123-pr-1179",
+      "priority": "primary",
+      "repository": "aio-libs/multidict",
+      "issue_number": 1123,
+      "fix_pr_number": 1179,
+      "issue_title": "Setup pre-commit hook for auto-formating both Python and C parts",
+      "issue_created_at": "2025-04-03T10:46:08Z",
+      "suggested_case_id": "aio-libs-multidict-issue-1123",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "multidict/_multidict.c",
+        "multidict/_multidict_py.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 141,
+      "candidate_id": "astral-sh-ruff-issue-21870-pr-27190",
+      "priority": "primary",
+      "repository": "astral-sh/ruff",
+      "issue_number": 21870,
+      "fix_pr_number": 27190,
+      "issue_title": "Request: Rule + Autofix to upgrade `while 1` Python 2 code to `while True`",
+      "issue_created_at": "2025-12-09T18:12:16Z",
+      "suggested_case_id": "astral-sh-ruff-issue-21870",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/checkers/ast/analyze/statement.rs",
+        "crates/ruff_linter/src/codes.rs",
+        "crates/ruff_linter/src/rules/pyupgrade/rules/mod.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 142,
+      "candidate_id": "pyo3-pyo3-issue-6199-pr-6200",
+      "priority": "primary",
+      "repository": "PyO3/pyo3",
+      "issue_number": 6199,
+      "fix_pr_number": 6200,
+      "issue_title": "Reference pool mutex is taken on every attach which serializes multithreaded embedders",
+      "issue_created_at": "2026-07-12T21:01:22Z",
+      "suggested_case_id": "pyo3-pyo3-issue-6199",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "noxfile.py",
+        "pyo3-benches/benches/bench_attach.rs",
+        "src/internal/state.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 143,
+      "candidate_id": "numpy-numpy-issue-32069-pr-32091",
+      "priority": "primary",
+      "repository": "numpy/numpy",
+      "issue_number": 32069,
+      "fix_pr_number": 32091,
+      "issue_title": "ENH: implement a mask aware `np.unwrap` for masked arrays in the `np.ma` module",
+      "issue_created_at": "2026-07-23T00:05:42Z",
+      "suggested_case_id": "numpy-numpy-issue-32069",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "numpy/lib/_function_base_impl.py",
+        "numpy/ma/extras.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 144,
+      "candidate_id": "astral-sh-ruff-issue-27637-pr-27646",
+      "priority": "primary",
+      "repository": "astral-sh/ruff",
+      "issue_number": 27637,
+      "fix_pr_number": 27646,
+      "issue_title": "ruff check --statistics doesn't link rule codes to web pages, unlike plain ruff check",
+      "issue_created_at": "2026-08-10T21:27:33Z",
+      "suggested_case_id": "astral-sh-ruff-issue-27637",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/ruff/src/printer.rs",
+        "crates/ruff_db/src/diagnostic/mod.rs",
+        "crates/ruff_db/src/diagnostic/stylesheet.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 145,
+      "candidate_id": "hypothesisworks-hypothesis-issue-4851-pr-4856",
+      "priority": "primary",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 4851,
+      "fix_pr_number": 4856,
+      "issue_title": "Ship Python 3.15t wheels",
+      "issue_created_at": "2026-08-13T07:59:24Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4851",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "hypothesis/src/hypothesis/internal/lambda_sources.py",
+        "hypothesis/src/hypothesis/internal/reflection.py",
+        "hypothesis/src/hypothesis/strategies/_internal/types.py",
+        "tooling/src/hypothesistooling/__main__.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 146,
+      "candidate_id": "python-attrs-attrs-issue-240-pr-1541",
+      "priority": "primary",
+      "repository": "python-attrs/attrs",
+      "issue_number": 240,
+      "fix_pr_number": 1541,
+      "issue_title": "Add decorator for convert",
+      "issue_created_at": "2017-09-01T11:03:15Z",
+      "suggested_case_id": "python-attrs-attrs-issue-240",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 147,
+      "candidate_id": "pypa-build-issue-198-pr-1080",
+      "priority": "primary",
+      "repository": "pypa/build",
+      "issue_number": 198,
+      "fix_pr_number": 1080,
+      "issue_title": "Machine-readable build report",
+      "issue_created_at": "2020-12-07T18:02:21Z",
+      "suggested_case_id": "pypa-build-issue-198",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 148,
+      "candidate_id": "hypothesisworks-hypothesis-issue-3176-pr-4835",
+      "priority": "primary",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 3176,
+      "fix_pr_number": 4835,
+      "issue_title": "Better heuristic for when to optimize `target()` metrics",
+      "issue_created_at": "2021-12-04T13:16:43Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-3176",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "hypothesis/src/hypothesis/internal/conjecture/engine.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 149,
+      "candidate_id": "pypa-setuptools-issue-3085-pr-5007",
+      "priority": "primary",
+      "repository": "pypa/setuptools",
+      "issue_number": 3085,
+      "fix_pr_number": 5007,
+      "issue_title": "Setuptools should not rely on pkg_resources",
+      "issue_created_at": "2022-02-05T14:32:14Z",
+      "suggested_case_id": "pypa-setuptools-issue-3085",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pkg_resources/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 150,
+      "candidate_id": "pycqa-flake8-issue-1747-pr-1854",
+      "priority": "primary",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1747,
+      "fix_pr_number": 1854,
+      "issue_title": "Remove `--include-in-doctest` / `--exclude-from-doctest`",
+      "issue_created_at": "2022-11-23T18:56:33Z",
+      "suggested_case_id": "pycqa-flake8-issue-1747",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/plugins/pyflakes.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 151,
+      "candidate_id": "pallets-jinja-issue-2021-pr-2022",
+      "priority": "reserve",
+      "repository": "pallets/jinja",
+      "issue_number": 2021,
+      "fix_pr_number": 2022,
+      "issue_title": "non-deterministic output from compile templates when using tuple unpacking",
+      "issue_created_at": "2024-09-03T16:04:39Z",
+      "suggested_case_id": "pallets-jinja-issue-2021",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/compiler.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 152,
+      "candidate_id": "pallets-jinja-issue-2025-pr-2026",
+      "priority": "reserve",
+      "repository": "pallets/jinja",
+      "issue_number": 2025,
+      "fix_pr_number": 2026,
+      "issue_title": "Undefined objects can't be copied or pickled by Python > 3.5",
+      "issue_created_at": "2024-10-01T19:08:45Z",
+      "suggested_case_id": "pallets-jinja-issue-2025",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 153,
+      "candidate_id": "python-hyper-h2-issue-1308-pr-1309",
+      "priority": "reserve",
+      "repository": "python-hyper/h2",
+      "issue_number": 1308,
+      "fix_pr_number": 1309,
+      "issue_title": "Header validation stricter than RFC 9113/8441 for pseudo-headers (extended CONNECT / CONNECT edge case)",
+      "issue_created_at": "2025-10-04T19:28:46Z",
+      "suggested_case_id": "python-hyper-h2-issue-1308",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 154,
+      "candidate_id": "tox-dev-tox-issue-3975-pr-3976",
+      "priority": "reserve",
+      "repository": "tox-dev/tox",
+      "issue_number": 3975,
+      "fix_pr_number": 3976,
+      "issue_title": "Parallel runs expose usage of closed fds",
+      "issue_created_at": "2026-07-08T14:07:46Z",
+      "suggested_case_id": "tox-dev-tox-issue-3975",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/execute/local_sub_process/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 155,
+      "candidate_id": "prefecthq-prefect-issue-22807-pr-22808",
+      "priority": "reserve",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22807,
+      "fix_pr_number": 22808,
+      "issue_title": "task-run-recorder bulk upserts fragment to one row per INSERT statement",
+      "issue_created_at": "2026-08-11T14:38:30Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22807",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/prefect/server/services/task_run_recorder.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 156,
+      "candidate_id": "tox-dev-tox-issue-4021-pr-4022",
+      "priority": "reserve",
+      "repository": "tox-dev/tox",
+      "issue_number": 4021,
+      "fix_pr_number": 4022,
+      "issue_title": "Provisioning fails when config has backwards incompatible options",
+      "issue_created_at": "2026-08-12T10:47:21Z",
+      "suggested_case_id": "tox-dev-tox-issue-4021",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/session/env_select.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 157,
+      "candidate_id": "prefecthq-prefect-issue-22812-pr-22813",
+      "priority": "reserve",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22812,
+      "fix_pr_number": 22813,
+      "issue_title": "Self-hosted `PrefectEventsClient` never authenticates its `/events/in` WebSocket connection — task run events silently dropped when `PREFECT_SERVER_API_AUTH_STRING` is set",
+      "issue_created_at": "2026-08-12T15:25:32Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22812",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/prefect/events/clients.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 158,
+      "candidate_id": "pylint-dev-pylint-issue-11267-pr-11268",
+      "priority": "reserve",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 11267,
+      "fix_pr_number": 11268,
+      "issue_title": "Crash `AttributeError: 'For' object has no attribute 'value'` when `x.__class__` is a for-loop, `with`, or unpacking target",
+      "issue_created_at": "2026-08-12T17:36:56Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-11267",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/classes/class_checker.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 159,
+      "candidate_id": "encode-django-rest-framework-issue-6202-pr-9902",
+      "priority": "reserve",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 6202,
+      "fix_pr_number": 9902,
+      "issue_title": "ListField does not respect ordered sequence in form data with partial updates.",
+      "issue_created_at": "2018-09-22T06:44:07Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-6202",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/fields.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 160,
+      "candidate_id": "paramiko-paramiko-issue-2038-pr-2039",
+      "priority": "reserve",
+      "repository": "paramiko/paramiko",
+      "issue_number": 2038,
+      "fix_pr_number": 2039,
+      "issue_title": "paramiko causing Warnings due to Blowfish deprecation in cryptography 37.0.0",
+      "issue_created_at": "2022-04-26T20:38:44Z",
+      "suggested_case_id": "paramiko-paramiko-issue-2038",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 161,
+      "candidate_id": "encode-django-rest-framework-issue-9741-pr-9742",
+      "priority": "reserve",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 9741,
+      "fix_pr_number": 9742,
+      "issue_title": "Do not use mutable data structures for argument defaults",
+      "issue_created_at": "2025-07-15T10:07:42Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-9741",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/filters.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 162,
+      "candidate_id": "pylint-dev-pylint-issue-11271-pr-11275",
+      "priority": "reserve",
+      "repository": "pylint-dev/pylint",
+      "issue_number": 11271,
+      "fix_pr_number": 11275,
+      "issue_title": "False positive `possibly-used-before-assignment` for `-> typing.NoReturn`",
+      "issue_created_at": "2026-08-14T00:47:44Z",
+      "suggested_case_id": "pylint-dev-pylint-issue-11271",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/utils.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 163,
+      "candidate_id": "prefecthq-prefect-issue-22804-pr-22806",
+      "priority": "reserve",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22804,
+      "fix_pr_number": 22806,
+      "issue_title": "V2 UI feedback: Bug or incorrect behavior - Copy to new run not working",
+      "issue_created_at": "2026-08-11T13:09:02Z",
+      "suggested_case_id": "prefecthq-prefect-issue-22804",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.test.ts",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "multi_file": true,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 164,
+      "candidate_id": "paramiko-paramiko-issue-67-pr-153",
+      "priority": "reserve",
+      "repository": "paramiko/paramiko",
+      "issue_number": 67,
+      "fix_pr_number": 153,
+      "issue_title": "Confusing error message when trying to verify unknown host key types",
+      "issue_created_at": "2012-05-08T10:00:18Z",
+      "suggested_case_id": "paramiko-paramiko-issue-67",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "paramiko/hostkeys.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 165,
+      "candidate_id": "python-hyper-h11-issue-98-pr-99",
+      "priority": "reserve",
+      "repository": "python-hyper/h11",
+      "issue_number": 98,
+      "fix_pr_number": 99,
+      "issue_title": "RemoteProtocolError's messaging is not specific",
+      "issue_created_at": "2020-03-13T05:59:56Z",
+      "suggested_case_id": "python-hyper-h11-issue-98",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "h11/_readers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 166,
+      "candidate_id": "pallets-jinja-issue-2015-pr-2017",
+      "priority": "reserve",
+      "repository": "pallets/jinja",
+      "issue_number": 2015,
+      "fix_pr_number": 2017,
+      "issue_title": "Incorrect list comprehension",
+      "issue_created_at": "2024-08-11T11:34:51Z",
+      "suggested_case_id": "pallets-jinja-issue-2015",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/jinja2/filters.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 167,
+      "candidate_id": "encode-django-rest-framework-issue-9927-pr-9928",
+      "priority": "reserve",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 9927,
+      "fix_pr_number": 9928,
+      "issue_title": "After upgrade to 3.17.0 the null datetime values are not rendered and a ValueError is raised",
+      "issue_created_at": "2026-03-19T14:13:39Z",
+      "suggested_case_id": "encode-django-rest-framework-issue-9927",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "rest_framework/renderers.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 168,
+      "candidate_id": "tox-dev-tox-issue-3929-pr-3931",
+      "priority": "reserve",
+      "repository": "tox-dev/tox",
+      "issue_number": 3929,
+      "fix_pr_number": 3931,
+      "issue_title": "tox.toml Schema does not align with implementation for env deps property",
+      "issue_created_at": "2026-04-26T21:00:57Z",
+      "suggested_case_id": "tox-dev-tox-issue-3929",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/tox/session/cmd/schema.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 169,
+      "candidate_id": "python-hyper-h2-issue-1316-pr-1317",
+      "priority": "reserve",
+      "repository": "python-hyper/h2",
+      "issue_number": 1316,
+      "fix_pr_number": 1317,
+      "issue_title": "Reject conflicting duplicate Content-Length headers",
+      "issue_created_at": "2026-05-13T21:40:10Z",
+      "suggested_case_id": "python-hyper-h2-issue-1316",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/stream.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 170,
+      "candidate_id": "psf-requests-issue-6646-pr-7309",
+      "priority": "reserve",
+      "repository": "psf/requests",
+      "issue_number": 6646,
+      "fix_pr_number": 7309,
+      "issue_title": "`get_encoding_from_headers` fails if charset name not specified",
+      "issue_created_at": "2024-02-22T23:56:00Z",
+      "suggested_case_id": "psf-requests-issue-6646",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/utils.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 171,
+      "candidate_id": "python-hyper-h2-issue-1305-pr-1315",
+      "priority": "reserve",
+      "repository": "python-hyper/h2",
+      "issue_number": 1305,
+      "fix_pr_number": 1315,
+      "issue_title": "Update types to adhere to `--strict-bytes` / PEP688",
+      "issue_created_at": "2025-08-08T10:18:30Z",
+      "suggested_case_id": "python-hyper-h2-issue-1305",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/h2/connection.py",
+        "src/h2/frame_buffer.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 172,
+      "candidate_id": "pypa-build-issue-557-pr-1084",
+      "priority": "reserve",
+      "repository": "pypa/build",
+      "issue_number": 557,
+      "fix_pr_number": 1084,
+      "issue_title": "Validate dependencies in non-isolated builds",
+      "issue_created_at": "2022-12-28T19:49:23Z",
+      "suggested_case_id": "pypa-build-issue-557",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/build/util.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 173,
+      "candidate_id": "urllib3-urllib3-issue-2936-pr-5054",
+      "priority": "reserve",
+      "repository": "urllib3/urllib3",
+      "issue_number": 2936,
+      "fix_pr_number": 5054,
+      "issue_title": "ProxyManager doesn't honor HTTPConnection.default_socket_options",
+      "issue_created_at": "2023-03-14T17:35:50Z",
+      "suggested_case_id": "urllib3-urllib3-issue-2936",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connection.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 174,
+      "candidate_id": "python-hyper-h11-issue-158-pr-159",
+      "priority": "reserve",
+      "repository": "python-hyper/h11",
+      "issue_number": 158,
+      "fix_pr_number": 159,
+      "issue_title": "Remove test files when publishing package",
+      "issue_created_at": "2023-04-02T03:00:34Z",
+      "suggested_case_id": "python-hyper-h11-issue-158",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "setup.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 175,
+      "candidate_id": "pycqa-flake8-issue-1823-pr-1824",
+      "priority": "reserve",
+      "repository": "PyCQA/flake8",
+      "issue_number": 1823,
+      "fix_pr_number": 1824,
+      "issue_title": "Outdated regex101 link in source comments",
+      "issue_created_at": "2023-04-30T18:59:34Z",
+      "suggested_case_id": "pycqa-flake8-issue-1823",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/flake8/defaults.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 176,
+      "candidate_id": "urllib3-urllib3-issue-3289-pr-5057",
+      "priority": "reserve",
+      "repository": "urllib3/urllib3",
+      "issue_number": 3289,
+      "fix_pr_number": 5057,
+      "issue_title": "Make custom queue class feature work well with gevent",
+      "issue_created_at": "2024-01-19T16:23:13Z",
+      "suggested_case_id": "urllib3-urllib3-issue-3289",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connectionpool.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 177,
+      "candidate_id": "pypa-packaging-issue-781-pr-1346",
+      "priority": "reserve",
+      "repository": "pypa/packaging",
+      "issue_number": 781,
+      "fix_pr_number": 1346,
+      "issue_title": "Provide a way to get just pure Python tags",
+      "issue_created_at": "2024-02-20T02:40:53Z",
+      "suggested_case_id": "pypa-packaging-issue-781",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/packaging/tags.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 178,
+      "candidate_id": "matplotlib-matplotlib-issue-28220-pr-32195",
+      "priority": "reserve",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 28220,
+      "fix_pr_number": 32195,
+      "issue_title": "[ENH]: matplotlib.widgets.PolygonSelector widget initial cursor position at data rather than (0,0)",
+      "issue_created_at": "2024-05-13T22:31:59Z",
+      "suggested_case_id": "matplotlib-matplotlib-issue-28220",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/widgets.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 179,
+      "candidate_id": "aio-libs-yarl-issue-1455-pr-1456",
+      "priority": "reserve",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1455,
+      "fix_pr_number": 1456,
+      "issue_title": "Support the free-threaded build of CPython 3.13",
+      "issue_created_at": "2024-12-20T16:54:52Z",
+      "suggested_case_id": "aio-libs-yarl-issue-1455",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "packaging/pep517_backend/_backend.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 180,
+      "candidate_id": "urllib3-urllib3-issue-3546-pr-5120",
+      "priority": "reserve",
+      "repository": "urllib3/urllib3",
+      "issue_number": 3546,
+      "fix_pr_number": 5120,
+      "issue_title": "Misleading description for `RETRY_AFTER_STATUS_CODES`",
+      "issue_created_at": "2025-01-09T12:46:43Z",
+      "suggested_case_id": "urllib3-urllib3-issue-3546",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/urllib3/util/retry.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 181,
+      "candidate_id": "apache-airflow-issue-54983-pr-68107",
+      "priority": "reserve",
+      "repository": "apache/airflow",
+      "issue_number": 54983,
+      "fix_pr_number": 68107,
+      "issue_title": "Add support for Snowflake Workload Identity Federation",
+      "issue_created_at": "2025-08-27T10:50:02Z",
+      "suggested_case_id": "apache-airflow-issue-54983",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 182,
+      "candidate_id": "apache-airflow-issue-58618-pr-58981",
+      "priority": "reserve",
+      "repository": "apache/airflow",
+      "issue_number": 58618,
+      "fix_pr_number": 58981,
+      "issue_title": "Display Username in the UI",
+      "issue_created_at": "2025-11-24T10:54:59Z",
+      "suggested_case_id": "apache-airflow-issue-58618",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 183,
+      "candidate_id": "tornadoweb-tornado-issue-3562-pr-3563",
+      "priority": "reserve",
+      "repository": "TornadoWeb/tornado",
+      "issue_number": 3562,
+      "fix_pr_number": 3563,
+      "issue_title": "Change of behavior in request.headers __contains__ protocol",
+      "issue_created_at": "2025-12-15T10:39:36Z",
+      "suggested_case_id": "tornadoweb-tornado-issue-3562",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 184,
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-13132-pr-13155",
+      "priority": "reserve",
+      "repository": "sqlalchemy/sqlalchemy",
+      "issue_number": 13132,
+      "fix_pr_number": 13155,
+      "issue_title": "Some references are not resolved in the relationship docs, like has/any",
+      "issue_created_at": "2026-02-19T11:24:28Z",
+      "suggested_case_id": "sqlalchemy-sqlalchemy-issue-13132",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/sqlalchemy/orm/relationships.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 185,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1419-pr-1421",
+      "priority": "reserve",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 1419,
+      "fix_pr_number": 1421,
+      "issue_title": "Deprecate event_loop_policy fixture",
+      "issue_created_at": "2026-04-15T15:17:46Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1419",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 186,
+      "candidate_id": "pypa-packaging-issue-1220-pr-1224",
+      "priority": "reserve",
+      "repository": "pypa/packaging",
+      "issue_number": 1220,
+      "fix_pr_number": 1224,
+      "issue_title": "Limiting the maximum number of tags on `Tag.parse_tag()`",
+      "issue_created_at": "2026-06-03T18:43:51Z",
+      "suggested_case_id": "pypa-packaging-issue-1220",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/packaging/tags.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 187,
+      "candidate_id": "tornadoweb-tornado-issue-3637-pr-3646",
+      "priority": "reserve",
+      "repository": "TornadoWeb/tornado",
+      "issue_number": 3637,
+      "fix_pr_number": 3646,
+      "issue_title": "httputil: Clean up HTTPServerRequest uri and start_line",
+      "issue_created_at": "2026-06-16T18:14:09Z",
+      "suggested_case_id": "tornadoweb-tornado-issue-3637",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 188,
+      "candidate_id": "pypa-virtualenv-issue-3181-pr-3184",
+      "priority": "reserve",
+      "repository": "pypa/virtualenv",
+      "issue_number": 3181,
+      "fix_pr_number": 3184,
+      "issue_title": "Is `_virtualenv.{py,pth}` still required",
+      "issue_created_at": "2026-07-06T11:23:30Z",
+      "suggested_case_id": "pypa-virtualenv-issue-3181",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/create/via_global_ref/api.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 189,
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-13462-pr-13463",
+      "priority": "reserve",
+      "repository": "sqlalchemy/sqlalchemy",
+      "issue_number": 13462,
+      "fix_pr_number": 13463,
+      "issue_title": "Documentation fault: sqlite DATETIME regex/storage_format pair example out of sync",
+      "issue_created_at": "2026-07-28T14:31:09Z",
+      "suggested_case_id": "sqlalchemy-sqlalchemy-issue-13462",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/sqlalchemy/dialects/sqlite/base.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 190,
+      "candidate_id": "python-hyper-h11-issue-28-pr-93",
+      "priority": "reserve",
+      "repository": "python-hyper/h11",
+      "issue_number": 28,
+      "fix_pr_number": 93,
+      "issue_title": "pep8 examples please",
+      "issue_created_at": "2017-02-02T16:03:25Z",
+      "suggested_case_id": "python-hyper-h11-issue-28",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "fuzz/afl-server.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "closing_reference"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal",
+        "failed:issue_has_body"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 191,
+      "candidate_id": "astral-sh-uv-issue-21083-pr-21085",
+      "priority": "reserve",
+      "repository": "astral-sh/uv",
+      "issue_number": 21083,
+      "fix_pr_number": 21085,
+      "issue_title": "uv check --no-install-project",
+      "issue_created_at": "2026-08-13T13:25:11Z",
+      "suggested_case_id": "astral-sh-uv-issue-21083",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "crates/uv-cli/src/lib.rs",
+        "crates/uv/src/commands/project/check.rs",
+        "crates/uv/src/lib.rs",
+        "crates/uv/src/settings.rs"
+      ],
+      "multi_file": true,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 192,
+      "candidate_id": "psf-requests-issue-4795-pr-7427",
+      "priority": "reserve",
+      "repository": "psf/requests",
+      "issue_number": 4795,
+      "fix_pr_number": 7427,
+      "issue_title": "`no_proxy` implementation is too greedy",
+      "issue_created_at": "2018-09-17T20:59:31Z",
+      "suggested_case_id": "psf-requests-issue-4795",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/requests/utils.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 193,
+      "candidate_id": "pallets-markupsafe-issue-460-pr-461",
+      "priority": "reserve",
+      "repository": "pallets/markupsafe",
+      "issue_number": 460,
+      "fix_pr_number": 461,
+      "issue_title": "Please could `markupsafe._speedups` declare support (or lack thereof) for free-threaded Python?",
+      "issue_created_at": "2024-08-18T01:11:39Z",
+      "suggested_case_id": "pallets-markupsafe-issue-460",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 194,
+      "candidate_id": "pytest-dev-pluggy-issue-186-pr-236",
+      "priority": "reserve",
+      "repository": "pytest-dev/pluggy",
+      "issue_number": 186,
+      "fix_pr_number": 236,
+      "issue_title": "Docs: some name links and refs are borked",
+      "issue_created_at": "2019-01-05T23:13:41Z",
+      "suggested_case_id": "pytest-dev-pluggy-issue-186",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "src/pluggy/hooks.py",
+        "src/pluggy/manager.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 195,
+      "candidate_id": "sphinx-doc-sphinx-issue-11873-pr-12011",
+      "priority": "reserve",
+      "repository": "sphinx-doc/sphinx",
+      "issue_number": 11873,
+      "fix_pr_number": 12011,
+      "issue_title": "Provide a better error message if the master document is not included in project documents",
+      "issue_created_at": "2024-01-12T04:49:19Z",
+      "suggested_case_id": "sphinx-doc-sphinx-issue-11873",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "sphinx/builders/__init__.py",
+        "sphinx/config.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 196,
+      "candidate_id": "ansible-ansible-issue-85037-pr-86432",
+      "priority": "reserve",
+      "repository": "ansible/ansible",
+      "issue_number": 85037,
+      "fix_pr_number": 86432,
+      "issue_title": "ansible.modue_utils.common.respawn.probe_interpreters_for_module() only allows to check for a single module name",
+      "issue_created_at": "2025-04-23T18:36:37Z",
+      "suggested_case_id": "ansible-ansible-issue-85037",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "lib/ansible/executor/module_common.py",
+        "lib/ansible/module_utils/common/respawn.py",
+        "lib/ansible/modules/dnf.py",
+        "lib/ansible/modules/package_facts.py",
+        "lib/ansible/utils/collection_loader/_collection_finder.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 197,
+      "candidate_id": "boto-boto3-issue-3163-pr-4613",
+      "priority": "reserve",
+      "repository": "boto/boto3",
+      "issue_number": 3163,
+      "fix_pr_number": 4613,
+      "issue_title": "`ExtraArgs` arguments supported by `Bucket.copy`",
+      "issue_created_at": "2022-02-22T12:37:05Z",
+      "suggested_case_id": "boto-boto3-issue-3163",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "boto3/s3/inject.py",
+        "boto3/s3/transfer.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 1,
+      "passed_advisory_checks": [
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 198,
+      "candidate_id": "pytest-dev-pluggy-issue-37-pr-42",
+      "priority": "reserve",
+      "repository": "pytest-dev/pluggy",
+      "issue_number": 37,
+      "fix_pr_number": 42,
+      "issue_title": "Add some benchmark tests",
+      "issue_created_at": "2016-11-18T23:56:33Z",
+      "suggested_case_id": "pytest-dev-pluggy-issue-37",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "pluggy.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 1,
+      "passed_advisory_checks": [
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 199,
+      "candidate_id": "boto-boto3-issue-3787-pr-3863",
+      "priority": "reserve",
+      "repository": "boto/boto3",
+      "issue_number": 3787,
+      "fix_pr_number": 3863,
+      "issue_title": "Missing cross-reference links",
+      "issue_created_at": "2023-07-18T19:25:13Z",
+      "suggested_case_id": "boto-boto3-issue-3787",
+      "suggested_tier": "generalization",
+      "expected_files": [
+        "boto3/s3/inject.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 1,
+      "passed_advisory_checks": [
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    }
+  ]
+}
