@@ -104,8 +104,10 @@ or traces. Evidence collection rejects paths outside the repository, skips sensi
 numbers source lines, and sends only evidence selected from deterministic Top-K candidates. The
 project no longer applies its own Issue-body, per-snippet, line-count, or total-character truncation;
 the provider's context window remains the actual request-size boundary.
+Requests use the OpenCode Go endpoint
+`https://opencode.ai/zen/go/v1/chat/completions`.
 
-The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
+The OpenCode path defaults to a 20,000-token completion budget and 60-second request timeout because
 DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
 It uses `json_object` mode with a compact five-field provider contract followed by local Pydantic
 and evidence-ID validation. Redundant candidate metadata is not sent twice: the model receives the
@@ -132,6 +134,15 @@ uses only Git-tracked files at the frozen pre-fix SHA, validates the complete an
 evidence reference, restores the final Agent payload from a temporary SQLite store, and retains
 failures in the denominator. The command exits non-zero for provider/schema failures or skipped
 evidence so it can be used as a reliability gate.
+
+The current 20,000-token Go-endpoint readiness check ran these three public cases three times with
+no delay. It produced 8/9 valid analyses, 6/9 first-attempt successes, and 9/9 payloads restored
+from SQLite. The single failed case exhausted both attempts with provider `ReadTimeout`; no valid
+response used more than 4,928 output tokens, so this run showed no output-budget truncation. Fixed
+seed 1337 did not make repeated analyses identical, and this small suite is a contract/readiness
+check rather than a production-reliability claim. The full diagnostic progression and retained
+artifacts are documented in
+[`docs/llm-evaluation.md`](docs/llm-evaluation.md).
 
 Run the frozen real-project benchmark:
 

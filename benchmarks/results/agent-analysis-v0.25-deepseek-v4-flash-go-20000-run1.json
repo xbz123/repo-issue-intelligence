@@ -1,0 +1,439 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T01:22:35.256181Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "40f8096f45c448c081a0a1045e3e757e"
+      ],
+      "input_tokens": 13281,
+      "output_tokens": 3027,
+      "llm_elapsed_ms": 61262.152,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Evidence confirms send_denial_response invokes arbitrary Response objects directly on a websocket scope, base Response prefixes ASGI message types with 'websocket.', while streaming response implementations hardcode plain 'http.response.*' messages, causing WebSocket.send to raise RuntimeError.",
+        "issue_type": "bug",
+        "affected_component": "starlette/websockets.py::WebSocket.send_denial_response",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "send_denial_response directly awaits the passed response with the websocket scope and send callable; it does not translate message types, so any response emitting plain http.response.* messages will fail."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "Base Response.__call__ prefixes message types with 'websocket.' when scope['type'] == 'websocket', showing the message format required for websocket denial responses."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "_StreamingResponse.__call__ hardcodes 'http.response.start' and 'http.response.body' without checking scope type, so it emits plain HTTP messages on a websocket scope."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "request_response invokes response(scope, receive, send) for HTTP requests; it is not part of the websocket denial-response path."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "HTTPConnection is a base class for Request/WebSocket and contains no denial-response handling."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "wrap_app_handling_exceptions tracks only 'http.response.start' and is unrelated to websocket denial-response message translation."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "supports_issue",
+            "observation": "TestClient's websocket session expects 'websocket.http.response.start' and 'websocket.http.response.body' for denial responses, confirming the required message types."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "WebSocketEndpoint.on_connect defaults to accept(); it does not handle denial responses."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "BaseHTTPMiddleware exception-catching test is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "ServerErrorMiddleware passes non-http scopes straight through, so it does not translate denial-response message types."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "SupportsAsyncClose protocol utility is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Starlette application initialization and middleware stack building contain no denial-response logic."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "ExceptionMiddleware handles http/websocket scopes but does not alter response message types."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "StaticFiles uses FileResponse for HTTP responses; it does not exercise the websocket denial path."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Test application endpoints cover websocket accept/close and exceptions, not denial responses."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "FileResponse HEAD test asserts plain http.response messages for an http scope, not a websocket scope."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "WebSocket tests cover accept/close/receive behavior, not send_denial_response with streaming responses."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "FormMessage enum in formparsers is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "UploadFile.content_type property is unrelated to websocket denial responses."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Jinja2Templates.TemplateResponse returns a template response and is unrelated to websocket denial responses."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "send_denial_response passes the response object directly to the websocket ASGI send callable. Response subclasses that override __call__ (StreamingResponse and FileResponse) hardcode 'http.response.start'/'http.response.body' instead of using the 'websocket.'-prefixed message types that base Response.__call__ emits when scope['type'] == 'websocket'. On a websocket scope, WebSocket.send rejects those plain HTTP messages with RuntimeError, so denial responses only work with response classes that inherit the base __call__ prefixing behavior.",
+            "confidence": 0.82,
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E7"
+            ],
+            "missing_evidence": [
+              "starlette/responses.py StreamingResponse.__call__ source",
+              "starlette/responses.py FileResponse.__call__ source",
+              "test in tests/test_websockets.py reproducing send_denial_response with StreamingResponse"
+            ],
+            "validation_step": "Inspect starlette/responses.py StreamingResponse.__call__ and FileResponse.__call__ to confirm they hardcode 'http.response.start'/'http.response.body' without the 'websocket.' prefix, then run a non-mutating test that calls send_denial_response with a StreamingResponse under a websocket scope and asserts the first send message type."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [],
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "llm_elapsed_ms": 360250.101,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "transport",
+      "error": "LLMProviderError: OpenCode request failed: ReadTimeout"
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "59c510ac1cda48db865ab0d009d28ce1"
+      ],
+      "input_tokens": 13976,
+      "output_tokens": 2679,
+      "llm_elapsed_ms": 41617.845,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "Evidence points to Widget.remove_children passing the container's parent (self._parent) to App._prune instead of the container itself, so the layout invalidation/refresh targets the wrong node and the VerticalGroup's height is never recalculated after its children are removed. The layout code would produce a zero/empty height if it were re-run, so the missing shrink is consistent with a refresh/routing defect rather than a layout-calculation defect.",
+        "issue_type": "bug",
+        "affected_component": "src/textual/compose.py::compose",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "compose() handles mounting and compose stacks; no removal or height-refresh logic relevant to the issue."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "neutral",
+            "observation": "Screen focus/scroll-to-center logic is unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "Widget.remove_children calls app._prune(*children_to_remove, parent=cast(DOMNode, self._parent)), passing the container's parent rather than the container itself, which is the likely cause of the missing layout refresh on the container."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "The app getter property is unrelated to removal or layout refresh."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "App.run_test provides a testing harness but does not itself affect remove_children behavior."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Select.from_values is unrelated to the reported container height bug."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "ProgressBar initialization is unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Static.visual caching is unrelated to container height after child removal."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "TextArea rewrap/virtual-size logic is unrelated to VerticalGroup remove_children."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "Footer initialization is unrelated to the reported bug."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "SelectionList message definitions are unrelated to container height refresh."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "RadioSet initialization is unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "Tabs.remove_tab handles tab-specific removal and active-tab logic, not generic container height refresh."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Identifier validation is unrelated to the reported layout bug."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "ListView mount/index logic is unrelated to remove_children height refresh."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Lazy widget mounting is unrelated to the reported bug."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Input content-height calculation is unrelated to VerticalGroup shrink after remove_children."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Compositor membership checks are unrelated to the reported height-refresh failure."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "supports_issue",
+            "observation": "VerticalLayout.arrange builds placements from the children list; with no children it would produce no placements, so the container would shrink if its layout were recalculated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "supports_issue",
+            "observation": "StreamLayout.get_content_height returns 0 when widget._nodes is empty, confirming layout code can compute a zero height once re-evaluated."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "The height is not refreshed after remove_children because Widget.remove_children passes parent=self._parent to App._prune instead of parent=self. As a result, the prune/layout invalidation is applied to the VerticalGroup's parent rather than to the VerticalGroup itself, so the container's own height is never recalculated after its children are removed. The layout implementations (VerticalLayout.arrange and StreamLayout.get_content_height) would yield an empty/zero height if the container were re-laid-out, so the defect is in the removal/refresh routing, not in the layout math.",
+            "confidence": 0.62,
+            "evidence_ids": [
+              "E3",
+              "E19",
+              "E20"
+            ],
+            "missing_evidence": [
+              "App._prune implementation showing how the parent argument is used for refresh/layout invalidation",
+              "Git diff or changelog between textual 6.2.0 and 6.3.0 for remove_children/_prune",
+              "A headless run_test reproduction asserting VerticalGroup.size.height before and after remove_children"
+            ],
+            "validation_step": "Inspect App._prune to confirm how its parent argument drives refresh/layout invalidation, then run a headless run_test reproduction that records VerticalGroup.size.height before and after remove_children without modifying source code."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    }
+  ],
+  "overall": {
+    "cases": 3,
+    "analysis_successes": 2,
+    "skipped_no_evidence": 0,
+    "failures": 1,
+    "analysis_success_rate": 0.6667,
+    "first_attempt_success_rate": 0.6667,
+    "persistence_verified": 3,
+    "input_tokens": 27257,
+    "output_tokens": 5706,
+    "average_llm_elapsed_ms": 51439.999,
+    "error_categories": {
+      "transport": 1
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 13281,
+      "output_tokens": 3027,
+      "average_llm_elapsed_ms": 61262.152,
+      "error_categories": {}
+    },
+    "calibration": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "transport": 1
+      }
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 13976,
+      "output_tokens": 2679,
+      "average_llm_elapsed_ms": 41617.845,
+      "error_categories": {}
+    }
+  }
+}

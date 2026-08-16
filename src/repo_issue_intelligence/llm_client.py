@@ -21,7 +21,7 @@ from .models import (
     LLMAnalysisResult,
 )
 
-OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
+OPENCODE_API_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
 OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
 OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 1_024
@@ -106,7 +106,7 @@ class OpenCodeIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
-        max_output_tokens: int = 4_096,
+        max_output_tokens: int = 20_000,
         timeout_seconds: float = 60.0,
         temperature: float = 1.0,
         seed: int | None = None,

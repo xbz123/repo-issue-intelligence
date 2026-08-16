@@ -1,0 +1,434 @@
+{
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 8,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "max_evidence_chars": null,
+  "max_llm_attempts": 2,
+  "llm_delay_seconds": 0.0,
+  "temperature": 0.1,
+  "seed": 1337,
+  "created_at": "2026-08-16T00:55:17.443941Z",
+  "results": [
+    {
+      "case_id": "starlette-streaming-denial-response",
+      "tier": "main",
+      "repository": "encode/starlette",
+      "issue_number": 3048,
+      "pre_fix_sha": "a0bcc26612c9c344737cd59fb4ef847326adf37a",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 2,
+      "request_ids": [
+        "34e9ad483b944d4d84350a607914837a"
+      ],
+      "input_tokens": 13281,
+      "output_tokens": 5612,
+      "llm_elapsed_ms": 286499.532,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": true,
+      "analysis": {
+        "summary": "The websocket denial-response path passes a websocket scope/send into the response, but streaming response implementations emit un-prefixed http.response.* messages, causing WebSocket.send to reject them.",
+        "issue_type": "bug",
+        "affected_component": "starlette/websockets.py::WebSocket.send_denial_response",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "supports_issue",
+            "observation": "WebSocket.send_denial_response calls response(self.scope, self.receive, self.send) after only checking the extension, so the response must emit websocket-prefixed ASGI messages."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "Response.__call__ prefixes message types with 'websocket.' when scope['type'] == 'websocket', demonstrating the behavior that streaming responses lack."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "supports_issue",
+            "observation": "The streaming response implementation in middleware/base.py unconditionally sends 'http.response.start' and 'http.response.body' with no 'websocket.' prefix, matching the issue's claim about StreamingResponse."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "request_response invokes responses for HTTP requests; not relevant to the websocket denial path."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "HTTPConnection base class contains no denial-response logic."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Exception wrapper tracks only 'http.response.start'; not involved in the streaming denial path."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "supports_issue",
+            "observation": "TestClient's websocket denial-response handling expects 'websocket.http.response.start' and 'websocket.http.response.body', confirming the required message types."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "WebSocketEndpoint.on_receive handles data messages, not denial responses."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "Test for BaseHTTPMiddleware exception catching is unrelated."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "ServerErrorMiddleware bypasses non-http scopes; unrelated."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Utility protocol definition is unrelated."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Starlette application initialization is unrelated."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "ExceptionMiddleware setup is unrelated."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "StaticFiles configuration check is unrelated."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "Test websocket endpoint is unrelated to denial responses."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "FileResponse HEAD test only exercises HTTP scope, so it does not cover websocket denial behavior."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "WebSocket scope interface test is unrelated."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "Form parser code is unrelated."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "UploadFile content_type property is unrelated."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "TemplateResponse implementation is unrelated."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "StreamingResponse.__call__ (the streaming path shown by _StreamingResponse in E3) hardcodes 'http.response.start' and 'http.response.body' rather than applying the 'websocket.' prefix that Response.__call__ applies for websocket scopes (E2). WebSocket.send_denial_response passes the websocket scope and WebSocket.send wrapper directly to the response (E1), so WebSocket.send rejects the un-prefixed messages with RuntimeError. The TestClient denial-response path confirms the required message types are websocket.http.response.start/body (E7).",
+            "confidence": 0.78,
+            "evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E7"
+            ],
+            "missing_evidence": [
+              "starlette/responses.py StreamingResponse.__call__ implementation",
+              "starlette/responses.py FileResponse.__call__ implementation"
+            ],
+            "validation_step": "Inspect starlette/responses.py StreamingResponse.__call__ and FileResponse.__call__ to verify they emit 'http.response.start'/'http.response.body' without the 'websocket.' prefix; then run the provided reproduction against a server advertising the websocket.http.response extension and confirm WebSocket.send raises RuntimeError for un-prefixed messages."
+          }
+        ],
+        "needs_more_evidence": true
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "typer-option-envvar",
+      "tier": "calibration",
+      "repository": "fastapi/typer",
+      "issue_number": 1787,
+      "pre_fix_sha": "959a356fec72cedcfd4ee3f84790789f8e961989",
+      "agent_status": "awaiting_review",
+      "analysis_succeeded": true,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "206a76feadf244c68141c1b920c6fcaf"
+      ],
+      "input_tokens": 11352,
+      "output_tokens": 3701,
+      "llm_elapsed_ms": 89259.727,
+      "evidence_observations": 20,
+      "hypotheses": 1,
+      "needs_more_evidence": false,
+      "analysis": {
+        "summary": "TyperOption.value_from_envvar in typer/core.py resolves the environment variable but never returns it, so Click treats the envvar as unset for options; this matches the reported 0.26.0 regression where typer.Option(envvar=...) is ignored while typer.Argument(envvar=...) works.",
+        "issue_type": "bug",
+        "affected_component": "typer/models.py::TyperPath.shell_complete",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+          {
+            "evidence_id": "E1",
+            "alignment": "neutral",
+            "observation": "TyperPath.shell_complete returns an empty list; unrelated to envvar resolution."
+          },
+          {
+            "evidence_id": "E2",
+            "alignment": "supports_issue",
+            "observation": "TyperOption.value_from_envvar calls self.resolve_envvar_value(ctx), returns None only when rv is None, and then falls through without returning rv, so any resolved envvar value is discarded and the method implicitly returns None."
+          },
+          {
+            "evidence_id": "E3",
+            "alignment": "neutral",
+            "observation": "get_app_dir is a config-directory helper unrelated to option envvar handling."
+          },
+          {
+            "evidence_id": "E4",
+            "alignment": "neutral",
+            "observation": "Typer.command registers command metadata; unrelated to envvar fallback."
+          },
+          {
+            "evidence_id": "E5",
+            "alignment": "neutral",
+            "observation": "Option's signature accepts envvar, confirming the API exposes it, but this does not show runtime handling."
+          },
+          {
+            "evidence_id": "E6",
+            "alignment": "neutral",
+            "observation": "Shell completion logic is unrelated to envvar resolution."
+          },
+          {
+            "evidence_id": "E7",
+            "alignment": "neutral",
+            "observation": "Rich text rendering is unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E8",
+            "alignment": "neutral",
+            "observation": "Prompt building is unrelated to envvar fallback."
+          },
+          {
+            "evidence_id": "E9",
+            "alignment": "neutral",
+            "observation": "_Option.process stores parsed CLI values; unrelated to envvar fallback."
+          },
+          {
+            "evidence_id": "E10",
+            "alignment": "neutral",
+            "observation": "augment_usage_errors only augments exceptions; unrelated to envvar resolution."
+          },
+          {
+            "evidence_id": "E11",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; unrelated to the regression."
+          },
+          {
+            "evidence_id": "E12",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; unrelated to the regression."
+          },
+          {
+            "evidence_id": "E13",
+            "alignment": "neutral",
+            "observation": "option decorator instantiates TyperOption with attrs, so envvar would be passed through, but it does not explain the missing return."
+          },
+          {
+            "evidence_id": "E14",
+            "alignment": "neutral",
+            "observation": "Multi-file app composition is unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E15",
+            "alignment": "neutral",
+            "observation": "typer.run example is unrelated to option envvar handling."
+          },
+          {
+            "evidence_id": "E16",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; unrelated to the regression."
+          },
+          {
+            "evidence_id": "E17",
+            "alignment": "neutral",
+            "observation": "Docs example uses Option without envvar; unrelated to the regression."
+          },
+          {
+            "evidence_id": "E18",
+            "alignment": "neutral",
+            "observation": "CLI docs generation is unrelated to envvar resolution."
+          },
+          {
+            "evidence_id": "E19",
+            "alignment": "neutral",
+            "observation": "Bash completion version check is unrelated to envvar handling."
+          },
+          {
+            "evidence_id": "E20",
+            "alignment": "neutral",
+            "observation": "Completion parameter inspection is unrelated to option envvar fallback."
+          }
+        ],
+        "contradictions": [],
+        "reranked_evidence_ids": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7",
+          "E8",
+          "E9",
+          "E10",
+          "E11",
+          "E12",
+          "E13",
+          "E14",
+          "E15",
+          "E16",
+          "E17",
+          "E18",
+          "E19",
+          "E20"
+        ],
+        "hypotheses": [
+          {
+            "description": "In typer/core.py, TyperOption.value_from_envvar overrides Click's Parameter.value_from_envvar but fails to return the resolved environment variable: it computes rv = self.resolve_envvar_value(ctx), returns None only when rv is None, and then ends without returning rv. Consequently Click receives None from value_from_envvar and treats the envvar as unset for options, while Argument envvars (which do not go through this broken override) still work. This directly explains the reported typer==0.26.0 regression for typer.Option(envvar=...).",
+            "confidence": 0.86,
+            "evidence_ids": [
+              "E2"
+            ],
+            "missing_evidence": [],
+            "validation_step": "Non-mutating inspection: construct a Click context with the envvar ME set, call TyperOption.value_from_envvar(ctx) on an option configured with envvar='ME', and observe that the method returns None instead of the envvar value."
+          }
+        ],
+        "needs_more_evidence": false
+      },
+      "error_category": null,
+      "error": null
+    },
+    {
+      "case_id": "textual-remove-children-reflow",
+      "tier": "generalization",
+      "repository": "Textualize/textual",
+      "issue_number": 6205,
+      "pre_fix_sha": "dfb0110527eaaca4537a4a894dac9cdf00b8bcc3",
+      "agent_status": "failed",
+      "analysis_succeeded": false,
+      "skipped_no_evidence": false,
+      "persistence_verified": true,
+      "llm_attempts": 1,
+      "request_ids": [
+        "2dcdf82991294017bbbfc51caddfe3f4"
+      ],
+      "input_tokens": 13976,
+      "output_tokens": 8192,
+      "llm_elapsed_ms": 160968.874,
+      "evidence_observations": 0,
+      "hypotheses": 0,
+      "needs_more_evidence": null,
+      "analysis": null,
+      "error_category": "invalid_response",
+      "error": "LLMProviderError: OpenCode returned an invalid structured response"
+    }
+  ],
+  "overall": {
+    "cases": 3,
+    "analysis_successes": 2,
+    "skipped_no_evidence": 0,
+    "failures": 1,
+    "analysis_success_rate": 0.6667,
+    "first_attempt_success_rate": 0.3333,
+    "persistence_verified": 3,
+    "input_tokens": 38609,
+    "output_tokens": 17505,
+    "average_llm_elapsed_ms": 187879.63,
+    "error_categories": {
+      "invalid_response": 1
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 13281,
+      "output_tokens": 5612,
+      "average_llm_elapsed_ms": 286499.532,
+      "error_categories": {}
+    },
+    "calibration": {
+      "cases": 1,
+      "analysis_successes": 1,
+      "skipped_no_evidence": 0,
+      "failures": 0,
+      "analysis_success_rate": 1.0,
+      "first_attempt_success_rate": 1.0,
+      "persistence_verified": 1,
+      "input_tokens": 11352,
+      "output_tokens": 3701,
+      "average_llm_elapsed_ms": 89259.727,
+      "error_categories": {}
+    },
+    "generalization": {
+      "cases": 1,
+      "analysis_successes": 0,
+      "skipped_no_evidence": 0,
+      "failures": 1,
+      "analysis_success_rate": 0.0,
+      "first_attempt_success_rate": 0.0,
+      "persistence_verified": 1,
+      "input_tokens": 13976,
+      "output_tokens": 8192,
+      "average_llm_elapsed_ms": null,
+      "error_categories": {
+        "invalid_response": 1
+      }
+    }
+  }
+}

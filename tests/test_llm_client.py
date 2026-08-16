@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from repo_issue_intelligence.llm_client import (
+    OPENCODE_API_BASE_URL,
     LLMProviderError,
     OpenCodeIssueAnalyzer,
 )
@@ -138,7 +139,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert result.provider == "opencode"
     assert result.model == "deepseek-v4-flash"
     assert captured_request["response_format"] == {"type": "json_object"}
-    assert captured_request["max_tokens"] == 4_096
+    assert captured_request["max_tokens"] == 20_000
     assert "max_completion_tokens" not in captured_request
     assert "reasoning_effort" not in captured_request
     assert captured_request["temperature"] == 0.1
@@ -748,5 +749,6 @@ def test_opencode_analyzer_wraps_transport_error_without_request_details() -> No
 def test_opencode_analyzer_uses_fixed_deepseek_model() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key")
 
+    assert OPENCODE_API_BASE_URL == "https://opencode.ai/zen/go/v1"
     assert analyzer.model == "deepseek-v4-flash"
     analyzer.close()

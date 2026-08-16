@@ -224,7 +224,7 @@ def test_agent_evaluator_uses_long_read_timeout() -> None:
     analyzer = _build_analysis_evaluator(settings, temperature=0.1, seed=1337)
 
     assert analyzer.timeout_seconds == 180
-    assert analyzer.max_output_tokens == 4_096
+    assert analyzer.max_output_tokens == 20_000
     analyzer.close()
 
 
@@ -237,7 +237,7 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
             timeout_seconds,
         ):
             assert api_key == "test-key"
-            assert max_output_tokens == 4_096
+            assert max_output_tokens == 20_000
             assert timeout_seconds == 60
             self.model = "deepseek-v4-flash"
 

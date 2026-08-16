@@ -135,18 +135,45 @@ Machine-readable artifacts:
 On 2026-08-16, the runtime model was changed from the historical
 `deepseek-v4-flash-free` endpoint to `deepseek-v4-flash`, local Issue/evidence character
 truncation was removed, and the same frozen Starlette, Typer, and Textual full-analysis suite was
-run with zero delay between cases. The primary credential returned HTTP 401 insufficient balance
-for all three cases before inference. A separate minimal request with the configured backup
-credential returned HTTP 401 because that workspace had no payment method. No request reported
-input or output tokens, so these results do not measure model reliability or the effect of the
-larger input contract.
+run with zero delay between cases. The original `https://opencode.ai/zen/v1/chat/completions`
+route returned HTTP 401 before inference for both configured workspaces. Those three failed Agent
+runs persisted correctly and remain in the denominator in
+`benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-unbounded-run1.json`.
 
-All three failed Agent runs persisted correctly and remained in the denominator. Provider URLs are
-redacted from the committed artifact and future structured provider-error messages. The reviewed
-artifact is
-`benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-unbounded-run1.json`. Successful live
-validation remains blocked until an OpenCode workspace for the configured credential has billing
-enabled; repeating identical requests cannot resolve this failure.
+The runtime was then moved to OpenCode's Go-compatible route,
+`https://opencode.ai/zen/go/v1/chat/completions`. A minimal rank request succeeded with 279 input
+tokens, 31 output tokens, and 2.17 seconds of provider latency. The first three-case full-analysis
+diagnostic used a 4,096-token completion budget and produced one valid result; the two failures
+both consumed exactly 4,096 output tokens before failing local JSON validation. At an 8,192-token
+budget, the two retained runs completed 3/3 and 2/3 cases. The remaining invalid response again
+consumed exactly the full 8,192-token budget, while a separate transport timeout recovered on its
+second attempt. These diagnostics are retained in
+`agent-analysis-v0.25-deepseek-v4-flash-go-run1.json` and the two
+`agent-analysis-v0.25-deepseek-v4-flash-go-8192-run*.json` artifacts.
+
+An intermediate 16,384-token configuration completed three independent zero-delay runs with 9/9
+valid analyses, 9/9 first-attempt responses, and 9/9 payloads restored from SQLite. Those runs used
+115,827 input tokens and 29,657 output tokens in total. Mean provider latency was 67.14 seconds per
+case (population standard deviation 19.15 seconds; range 38.62--104.40 seconds). The retained
+artifacts are the three `agent-analysis-v0.25-deepseek-v4-flash-go-16384-run*.json` files.
+
+The requested final 20,000-token configuration was then evaluated with the same fixed cases,
+temperature 0.1, seed 1337, and zero delay. Across three runs it produced 8/9 valid analyses, 6/9
+first-attempt successes, and 9/9 payloads restored from SQLite. The single failed Typer case
+exhausted both attempts with provider `ReadTimeout`; two other cases recovered from one read timeout
+on their second attempt. The runs made 12 attempts, used 104,475 input tokens and 27,229 output
+tokens, and recorded a mean per-case LLM elapsed time of 164.39 seconds including the failed case
+(population standard deviation 117.59 seconds; range 41.62--360.25 seconds). The largest valid
+response used 4,928 output tokens, so none approached the 20,000-token ceiling. Every valid
+response contained observations for all 20 supplied evidence snippets and exactly one
+evidence-grounded hypothesis. The reviewed artifacts are the three
+`agent-analysis-v0.25-deepseek-v4-flash-go-20000-run*.json` files.
+
+Fixed seed 1337 remains best effort: every successfully repeated case produced a different
+normalized analysis. The 20,000-token result therefore supports endpoint availability and an 8/9
+contract-valid rate on this small public three-case suite, while also exposing provider read-timeout
+instability. It does not establish deterministic generation or production reliability. Provider
+URLs are redacted from structured provider-error messages before artifacts are persisted.
 
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
