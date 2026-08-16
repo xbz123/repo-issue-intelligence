@@ -31,27 +31,29 @@ def _candidate_path(root: Path, relative_path: str) -> Path | None:
 def _line_range(
     value: str | None,
     line_count: int,
-    max_lines: int,
+    max_lines: int | None,
     context_lines: int,
 ) -> tuple[int, int]:
     match = LINE_RANGE.fullmatch(value or "")
     start = int(match.group("start")) if match else 1
-    end = int(match.group("end")) if match else start + max_lines - 1
+    end = int(match.group("end")) if match else line_count
     start = min(max(1, start - context_lines), max(1, line_count))
-    end = min(max(start, end + context_lines), line_count, start + max_lines - 1)
+    end = min(max(start, end + context_lines), line_count)
+    if max_lines is not None:
+        end = min(end, start + max_lines - 1)
     return start, end
 
 
 def collect_evidence(
     report: InvestigationReport,
-    max_total_chars: int = 16_000,
-    max_lines_per_snippet: int = 80,
+    max_total_chars: int | None = None,
+    max_lines_per_snippet: int | None = None,
     context_lines: int = 12,
     max_chars_per_snippet: int | None = None,
 ) -> list[EvidenceSnippet]:
-    if max_total_chars < 1:
+    if max_total_chars is not None and max_total_chars < 1:
         raise ValueError("max_total_chars must be positive")
-    if max_lines_per_snippet < 1:
+    if max_lines_per_snippet is not None and max_lines_per_snippet < 1:
         raise ValueError("max_lines_per_snippet must be positive")
     if context_lines < 0:
         raise ValueError("context_lines cannot be negative")
@@ -85,10 +87,12 @@ def collect_evidence(
             for line_number in range(start, end + 1)
         ]
         content = "\n".join(numbered_lines)
-        snippet_limit = remaining
-        if max_chars_per_snippet is not None:
-            snippet_limit = min(snippet_limit, max_chars_per_snippet)
-        if len(content) > snippet_limit:
+        snippet_limit = max_chars_per_snippet
+        if remaining is not None:
+            snippet_limit = (
+                remaining if snippet_limit is None else min(remaining, snippet_limit)
+            )
+        if snippet_limit is not None and len(content) > snippet_limit:
             content = content[:snippet_limit].rstrip()
         if not content:
             break
@@ -101,7 +105,8 @@ def collect_evidence(
                 content=content,
             )
         )
-        remaining -= len(content)
-        if remaining <= 0:
-            break
+        if remaining is not None:
+            remaining -= len(content)
+            if remaining <= 0:
+                break
     return snippets

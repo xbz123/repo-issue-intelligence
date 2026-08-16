@@ -8,13 +8,15 @@ quality improvement is claimed.
 1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
    bounded static-graph reranking inside fixed Top-10 bands.
 2. `hybrid`: deterministic retrieval followed only by OpenCode
-   `deepseek-v4-flash-free` evidence-ID reranking.
+   `deepseek-v4-flash` evidence-ID reranking.
 
 An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
 outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
 plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
 disables reasoning, asks for at most three IDs, starts with a 256-token output budget, and retries
-once at 1,024 tokens only if the first completion is truncated.
+once at 1,024 tokens only if the first completion is truncated. The complete frozen Issue and
+selected deterministic evidence are sent without local character truncation; the provider context
+window remains the request-size limit.
 
 ## Dataset
 
@@ -128,6 +130,24 @@ Machine-readable artifacts:
 - `benchmarks/results/agent-analysis-compact-v0.21-run2.json`
 - `benchmarks/results/agent-analysis-compact-v0.21-run3.json`
 
+## DeepSeek V4 Flash readiness attempt
+
+On 2026-08-16, the runtime model was changed from the historical
+`deepseek-v4-flash-free` endpoint to `deepseek-v4-flash`, local Issue/evidence character
+truncation was removed, and the same frozen Starlette, Typer, and Textual full-analysis suite was
+run with zero delay between cases. The primary credential returned HTTP 401 insufficient balance
+for all three cases before inference. A separate minimal request with the configured backup
+credential returned HTTP 401 because that workspace had no payment method. No request reported
+input or output tokens, so these results do not measure model reliability or the effect of the
+larger input contract.
+
+All three failed Agent runs persisted correctly and remained in the denominator. Provider URLs are
+redacted from the committed artifact and future structured provider-error messages. The reviewed
+artifact is
+`benchmarks/results/agent-analysis-v0.25-deepseek-v4-flash-unbounded-run1.json`. Successful live
+validation remains blocked until an OpenCode workspace for the configured credential has billing
+enabled; repeating identical requests cannot resolve this failure.
+
 ## Current manifest-v8 deterministic result and retained paired LLM result
 
 Manifest v8 deterministic v0.25 completed three 50-case runs with structurally identical candidates,
@@ -234,7 +254,7 @@ rerank schema is therefore more reliable than the full hypothesis schema.
 
 The historical shortlist is deliberately small:
 
-- `deepseek-v4-flash-free` remains the only current benchmark reranker. Its plain rank-only
+- `deepseek-v4-flash-free` was the historical benchmark reranker. Its plain rank-only
   protocol returned 50/50 valid ranks in each of two v8 runs and raised paired MRR substantially.
   Fixed-seed ordering still changed in 14/50 cases, so deterministic fallback and protocol
   telemetry remain required even though neither run used fallback.

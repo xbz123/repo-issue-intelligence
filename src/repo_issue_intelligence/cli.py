@@ -213,7 +213,6 @@ def agent_run_command(
             top_k,
             AgentStore(database),
             llm_analyzer=analyzer,
-            max_evidence_chars=settings.llm_max_evidence_chars,
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
@@ -298,7 +297,6 @@ def agent_evaluate_command(
             workspace,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.llm_max_evidence_chars,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:
@@ -366,7 +364,6 @@ def benchmark(
             variant,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.llm_max_evidence_chars,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:

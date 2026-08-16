@@ -40,7 +40,7 @@ def create_repository(root: Path) -> Path:
 
 class FakeAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def analyze(self, issue, report, evidence):
         assert issue.number == report.issue.number
@@ -87,7 +87,7 @@ class FakeAnalyzer:
 
 class FailIfCalledAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def analyze(self, issue, report, evidence):
         raise AssertionError("analyzer must not be called without evidence")
@@ -95,7 +95,7 @@ class FailIfCalledAnalyzer:
 
 class InvalidResponseAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
 
     def __init__(self) -> None:
         self.calls = 0
@@ -210,7 +210,7 @@ def test_agent_run_adds_optional_llm_nodes_and_trace_metadata(tmp_path: Path) ->
 
     assert run.status is AgentRunStatus.AWAITING_REVIEW
     assert run.llm_enabled is True
-    assert run.llm_model == "deepseek-v4-flash-free"
+    assert run.llm_model == "deepseek-v4-flash"
     assert [trace.node_name for trace in run.traces] == [
         "rank_issues",
         "route_top_k",

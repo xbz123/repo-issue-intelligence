@@ -25,7 +25,6 @@ from .models import (
 from .repository_index import build_repository_map
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
-RERANK_MAX_CHARS_PER_SNIPPET = 300
 
 
 class BenchmarkTier(StrEnum):
@@ -278,16 +277,16 @@ def _hybrid_candidate_files(
     issue: IssueRecord,
     report,
     analyzer: EvidenceReranker,
-    max_evidence_chars: int,
+    max_evidence_chars: int | None,
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> tuple[list[str], EvidenceRerankResult, int]:
     evidence = collect_evidence(
         report,
         max_total_chars=max_evidence_chars,
-        max_lines_per_snippet=20,
+        max_lines_per_snippet=None,
         context_lines=4,
-        max_chars_per_snippet=RERANK_MAX_CHARS_PER_SNIPPET,
+        max_chars_per_snippet=None,
     )
     if not evidence:
         error = LLMProviderError(
@@ -373,7 +372,7 @@ def evaluate_case(
     repository_root: Path,
     variant: BenchmarkVariant,
     analyzer: EvidenceReranker | None = None,
-    max_evidence_chars: int = 16_000,
+    max_evidence_chars: int | None = None,
     max_llm_attempts: int = 2,
     llm_retry_delay_seconds: float = 0,
     included_files: Sequence[str] | None = None,
@@ -682,7 +681,7 @@ def run_benchmark(
     variant: BenchmarkVariant,
     analyzer: EvidenceReranker | None = None,
     case_ids: set[str] | None = None,
-    max_evidence_chars: int = 16_000,
+    max_evidence_chars: int | None = None,
     max_llm_attempts: int = 2,
     llm_delay_seconds: float = 0,
 ) -> BenchmarkRun:
@@ -748,7 +747,7 @@ def run_benchmark(
         provider=getattr(analyzer, "provider", None),
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,
-        max_chars_per_evidence=RERANK_MAX_CHARS_PER_SNIPPET if analyzer else None,
+        max_chars_per_evidence=None,
         initial_output_tokens=getattr(
             analyzer,
             "rerank_initial_output_tokens",

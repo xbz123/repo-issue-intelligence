@@ -101,3 +101,28 @@ def test_collect_evidence_caps_each_snippet_to_preserve_candidate_breadth(
 
     assert [snippet.file for snippet in evidence] == ["first.py", "second.py"]
     assert all(len(snippet.content) <= 200 for snippet in evidence)
+
+
+def test_collect_evidence_has_no_default_local_size_cap(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    source = "\n".join(f"line_{line}" for line in range(1, 151))
+    (repository / "large.py").write_text(source, encoding="utf-8")
+    report = investigate(issue(), build_repository_map(repository)).model_copy(
+        update={
+            "candidates": [
+                CandidateLocation(
+                    file="large.py",
+                    lines="1-150",
+                    confidence=0.9,
+                    evidence=["Synthetic candidate"],
+                )
+            ]
+        }
+    )
+
+    evidence = collect_evidence(report)
+
+    assert len(evidence) == 1
+    assert "150: line_150" in evidence[0].content
+    assert len(evidence[0].content) > 1_600

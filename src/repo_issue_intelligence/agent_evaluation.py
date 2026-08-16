@@ -65,7 +65,7 @@ class AgentAnalysisRun(BaseModel):
     manifest_version: int
     provider: str
     model: str
-    max_evidence_chars: int
+    max_evidence_chars: int | None
     max_llm_attempts: int
     llm_delay_seconds: float
     temperature: float | None = None
@@ -170,7 +170,7 @@ def _evaluate_case(
     case: BenchmarkCase,
     workspace: Path,
     analyzer: IssueAnalyzer,
-    max_evidence_chars: int,
+    max_evidence_chars: int | None,
     max_llm_attempts: int,
 ) -> AgentAnalysisCaseResult:
     repository_root = prepare_repository(case, workspace)
@@ -276,7 +276,7 @@ def run_agent_analysis_evaluation(
     workspace: Path,
     analyzer: IssueAnalyzer,
     case_ids: set[str] | None = None,
-    max_evidence_chars: int = 16_000,
+    max_evidence_chars: int | None = None,
     max_llm_attempts: int = 2,
     llm_delay_seconds: float = 0,
 ) -> AgentAnalysisRun:

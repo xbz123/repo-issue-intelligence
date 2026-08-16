@@ -178,7 +178,10 @@ OpenCode uses a 4,096-token budget and 60-second timeout because reasoning token
 completion budget and observed valid responses can exceed 30 seconds.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
 Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
-selection; `--llm` always uses `deepseek-v4-flash-free`.
+selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies and selected evidence are not
+locally truncated, while Top-K selection, tracked-file scope, and sensitive-file exclusion still
+bound what repository content can enter a request. The provider context window remains a hard
+external limit.
 
 `agent-evaluate` exercises this complete path against selected frozen benchmark cases. Repository
 maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the
@@ -197,19 +200,18 @@ Localization evaluation uses a separate rank-only model contract. `benchmark.py`
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
 files exist, and indexes only paths returned by `git ls-files`. It runs deterministic retrieval
-and optionally asks OpenCode `deepseek-v4-flash-free` to rerank bounded evidence IDs. The benchmark
+and optionally asks OpenCode `deepseek-v4-flash` to rerank selected evidence IDs. The benchmark
 does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
 receives a plain chat-completions request without `response_format`; the response contract is one
 unique `RANK:` line containing at most three evidence IDs. Reasoning is disabled, output starts at
-256 tokens and expands once to 1,024 only after truncation, the Issue body is capped at 2,000
-characters, and each evidence item is capped at 300 characters. Root-cause hypotheses are
+256 tokens and expands once to 1,024 only after truncation. Issue bodies and selected evidence
+items have no project-defined character cap. Root-cause hypotheses are
 intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
 normalizes paths and identifiers, rejects
 dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
 and applies bounded graph/history evidence. Compound identifier variants preserve source term
-order rather than depending on set iteration. Per-candidate evidence caps preserve candidate
-breadth before LLM reranking. Python AST symbols retain both their local name and qualified
+order rather than depending on set iteration. Python AST symbols retain both their local name and qualified
 class/function ownership. Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.

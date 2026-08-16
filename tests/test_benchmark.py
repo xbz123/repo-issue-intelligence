@@ -67,7 +67,7 @@ def create_repository(root: Path) -> Path:
 
 class ReverseEvidenceAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
     reasoning_effort = None
     temperature = 0.1
     seed = 1337
@@ -347,7 +347,8 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
 
     assert run.provider == "opencode"
     assert run.timeout_seconds == 180.0
-    assert run.max_chars_per_evidence == 300
+    assert run.max_chars_per_evidence is None
+    assert run.max_evidence_chars is None
     assert run.initial_output_tokens == 256
     assert run.max_output_tokens == 1_024
     assert run.reasoning_effort == "none"

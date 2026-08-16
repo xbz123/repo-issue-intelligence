@@ -123,7 +123,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
         seed=1337,
         client=client,
     )
-    record = issue()
+    record = issue().model_copy(update={"body": "x" * 7_000})
 
     result = analyzer.analyze(record, report(record), evidence())
 
@@ -136,7 +136,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.analysis.needs_more_evidence is True
     assert result.provider == "opencode"
-    assert result.model == "deepseek-v4-flash-free"
+    assert result.model == "deepseek-v4-flash"
     assert captured_request["response_format"] == {"type": "json_object"}
     assert captured_request["max_tokens"] == 4_096
     assert "max_completion_tokens" not in captured_request
@@ -150,6 +150,7 @@ def test_opencode_analyzer_requests_json_object_and_parses_usage() -> None:
     assert '"reranked_evidence_ids"' not in system_prompt
     user_payload = json.loads(captured_request["messages"][1]["content"])
     assert "deterministic_candidates" not in user_payload
+    assert len(user_payload["issue"]["body"]) == 7_000
     assert user_payload["repository_evidence"][0]["id"] == "E1"
 
 
@@ -198,7 +199,7 @@ def test_opencode_deepseek_rerank_uses_plain_rank_protocol() -> None:
     assert "three\nstrongest evidence IDs" in captured_request["messages"][0]["content"]
     assert "RANK: E3,E1,E2" in captured_request["messages"][0]["content"]
     user_payload = json.loads(captured_request["messages"][1]["content"])
-    assert len(user_payload["issue"]["body"]) == 2_000
+    assert len(user_payload["issue"]["body"]) == 2_100
     assert result.provider == "opencode"
     assert result.analysis.reranked_evidence_ids == ["E1"]
     assert result.input_tokens == 80
@@ -701,6 +702,32 @@ def test_opencode_analyzer_reports_bounded_structured_error_detail() -> None:
         analyzer.analyze(record, report(record), evidence())
 
 
+def test_opencode_analyzer_redacts_provider_urls_from_errors() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            json={
+                "error": {
+                    "message": (
+                        "Insufficient balance. Manage billing at "
+                        "https://opencode.ai/workspace/private-id/billing"
+                    )
+                }
+            },
+        )
+
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/v1",
+        transport=httpx.MockTransport(handler),
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", client=client)
+
+    with pytest.raises(LLMProviderError, match=r"\[URL redacted\]") as error:
+        analyzer.analyze(issue(), report(issue()), evidence())
+
+    assert "private-id" not in str(error.value)
+
+
 def test_opencode_analyzer_wraps_transport_error_without_request_details() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("secret upstream detail", request=request)
@@ -721,5 +748,5 @@ def test_opencode_analyzer_wraps_transport_error_without_request_details() -> No
 def test_opencode_analyzer_uses_fixed_deepseek_model() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key")
 
-    assert analyzer.model == "deepseek-v4-flash-free"
+    assert analyzer.model == "deepseek-v4-flash"
     analyzer.close()

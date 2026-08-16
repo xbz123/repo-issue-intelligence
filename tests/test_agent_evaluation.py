@@ -60,7 +60,7 @@ def _repository(tmp_path: Path) -> Path:
 
 class ValidAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
     temperature = 0.1
     seed = 1337
 
@@ -107,7 +107,7 @@ class ValidAnalyzer:
 
 class InvalidAnalyzer:
     provider = "opencode"
-    model = "deepseek-v4-flash-free"
+    model = "deepseek-v4-flash"
     temperature = 0.1
     seed = 1337
 

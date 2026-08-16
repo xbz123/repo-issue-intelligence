@@ -216,7 +216,7 @@ def build_agent_graph(
     run_id: str,
     max_attempts: int = 2,
     llm_analyzer: IssueAnalyzer | None = None,
-    max_evidence_chars: int = 16_000,
+    max_evidence_chars: int | None = None,
     included_files: Sequence[str] | None = None,
 ):
     builder = StateGraph(AgentGraphState)
@@ -268,7 +268,7 @@ def run_agent(
     top_k: int,
     store: AgentStore,
     llm_analyzer: IssueAnalyzer | None = None,
-    max_evidence_chars: int = 16_000,
+    max_evidence_chars: int | None = None,
     included_files: Sequence[str] | None = None,
     max_attempts: int = 2,
 ) -> AgentRun:

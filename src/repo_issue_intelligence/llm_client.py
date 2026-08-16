@@ -22,13 +22,12 @@ from .models import (
 )
 
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/v1"
-OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash-free"
+OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
 OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS = 256
 OPENCODE_RERANK_MAX_OUTPUT_TOKENS = 1_024
 OPENCODE_RERANK_REASONING_EFFORT = "none"
 OPENCODE_RERANK_TIMEOUT_SECONDS = 180.0
 OPENCODE_ANALYSIS_TIMEOUT_SECONDS = 180.0
-OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS = 2_000
 OPENCODE_RERANK_MAX_IDS = 3
 DEEPSEEK_RERANK_SYSTEM_PROMPT = """Rank the supplied repository evidence by how likely each item
 is to contain the source location that must change to fix the GitHub issue. Select only the three
@@ -42,6 +41,7 @@ RANK_LINE_PATTERN = re.compile(
     r"^\s*RANK:\s*([A-Za-z0-9_-]+(?:\s*,\s*[A-Za-z0-9_-]+)*)\s*$",
     re.MULTILINE,
 )
+PROVIDER_URL_PATTERN = re.compile(r"https?://\S+")
 SYSTEM_PROMPT = """You investigate a GitHub issue using only the supplied repository evidence.
 
 Return the requested compact analysis. The hypothesis is tentative, not a confirmed root cause,
@@ -192,7 +192,10 @@ class OpenCodeIssueAnalyzer:
                 try:
                     error_payload = response.json().get("error") or {}
                     error_code = str(error_payload.get("code") or "").strip()
-                    error_message = str(error_payload.get("message") or "").strip()
+                    error_message = PROVIDER_URL_PATTERN.sub(
+                        "[URL redacted]",
+                        str(error_payload.get("message") or "").strip(),
+                    )
                 except (AttributeError, TypeError, ValueError):
                     error_code = ""
                     error_message = ""
@@ -241,7 +244,7 @@ class OpenCodeIssueAnalyzer:
             "issue": {
                 "number": issue.number,
                 "title": issue.title,
-                "body": issue.body[:6_000],
+                "body": issue.body,
                 "labels": issue.labels,
             },
             "repository_evidence": [
@@ -365,7 +368,7 @@ class OpenCodeIssueAnalyzer:
             "issue": {
                 "number": issue.number,
                 "title": issue.title,
-                "body": issue.body[:OPENCODE_RERANK_MAX_ISSUE_BODY_CHARS],
+                "body": issue.body,
                 "labels": issue.labels,
             },
             "repository_evidence": [

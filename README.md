@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect bounded code evidence for Top-K issues while preserving the offline baseline.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect selected code evidence for Top-K issues while preserving the offline baseline.
 
 ## What it does
 
@@ -99,20 +99,21 @@ uv run rii agent-run examples/issues.json \
 
 `--llm` is explicit: without it the workflow remains offline and makes no model requests. The
 runtime does not accept provider or model overrides: all external analysis uses OpenCode
-`deepseek-v4-flash-free`. The API key is read from the environment and is never added to run state
+`deepseek-v4-flash`. The API key is read from the environment and is never added to run state
 or traces. Evidence collection rejects paths outside the repository, skips sensitive filenames,
-numbers source lines, and applies a configurable character budget before sending content.
+numbers source lines, and sends only evidence selected from deterministic Top-K candidates. The
+project no longer applies its own Issue-body, per-snippet, line-count, or total-character truncation;
+the provider's context window remains the actual request-size boundary.
 
 The OpenCode path defaults to a 4,096-token completion budget and 60-second request timeout because
 DeepSeek reasoning tokens share the completion budget and valid responses can exceed 30 seconds.
 It uses `json_object` mode with a compact five-field provider contract followed by local Pydantic
 and evidence-ID validation. Redundant candidate metadata is not sent twice: the model receives the
-Issue and bounded source snippets, while the client derives the affected component, contradiction
+Issue and selected source snippets, while the client derives the affected component, contradiction
 summary, retained evidence order, and more-evidence flag before persisting the full public model.
 If deterministic localization yields no readable repository evidence for an Issue, that Issue
 skips the model call, records the skip in node trace metadata, and still reaches human review.
-Only public repository evidence should be sent to free models: OpenCode states that data collected
-during the free period may be used to improve those models; see the
+Only public repository evidence should be sent to external models; see the
 [OpenCode Zen documentation](https://opencode.ai/docs/zen).
 
 Evaluate the full JSON analysis path on frozen public Issue/repository inputs:
@@ -122,7 +123,7 @@ uv run rii agent-evaluate benchmarks/cases.json \
   --case-id starlette-streaming-denial-response \
   --case-id typer-option-envvar \
   --case-id textual-remove-children-reflow \
-  --llm-delay-seconds 30 \
+  --llm-delay-seconds 0 \
   --output benchmarks/results/agent-analysis-latest.json
 ```
 
@@ -139,25 +140,24 @@ uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
   --output benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json
 
-LLM_MAX_EVIDENCE_CHARS=16000 \
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-rank-none-v0.14-manifest-v8-run1.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-unbounded-latest.json
 ```
 
-The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash-free`; it does not
+The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
 accept provider or model overrides. The reranker requests no grammar-constrained response format
 and parses exactly one `RANK: E3,E1,E2` line. Duplicate IDs are removed, unknown IDs are rejected,
 and omitted candidates keep their deterministic order. Only transport errors, HTTP 429, and HTTP
 5xx responses are retried with bounded exponential backoff; invalid ranks and HTTP 4xx responses
 fall back immediately. This isolates file ordering from hypothesis generation and removes the
 unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
-the completion budget is bounded at 256 tokens with one 1,024-token truncation retry, Issue bodies
-are capped at 2,000 characters, and each evidence snippet is capped at 300 characters under the
-existing 16,000-character total budget. Current manifest version 8 embeds 50 complete Issue
+and the completion budget is bounded at 256 tokens with one 1,024-token truncation retry. The full
+frozen Issue and selected deterministic candidate snippets are sent without project-defined input
+character caps. Current manifest version 8 embeds 50 complete Issue
 snapshots across 21 repositories, corrected pre-fix SHAs, and 39 manually reviewed symbol targets
 across 33 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
