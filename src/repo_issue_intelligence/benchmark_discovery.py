@@ -752,41 +752,14 @@ def _blocking_check_failures(candidate: BenchmarkCandidate) -> list[str]:
     return sorted(set(failures))
 
 
-def _unique_reviewable_candidates(
-    base_manifest: BenchmarkManifest,
+def _maximum_issue_pr_matching(
     candidates: Sequence[BenchmarkCandidate],
-) -> tuple[int, list[BenchmarkCandidate]]:
-    existing_issue_keys = {
-        (case.repository.lower(), case.issue_number) for case in base_manifest.cases
-    }
-    existing_pr_keys = {
-        (case.repository.lower(), case.fix_pr_number) for case in base_manifest.cases
-    }
-    reviewable = [
-        candidate
-        for candidate in candidates
-        if candidate.status is CandidateStatus.NEEDS_REVIEW
-        and candidate.pre_fix_sha
-        and candidate.expected_files
-        and not _blocking_check_failures(candidate)
-    ]
-
-    ranked = sorted(reviewable, key=_candidate_review_rank)
+) -> list[BenchmarkCandidate]:
     candidates_by_issue: dict[tuple[str, int], list[BenchmarkCandidate]] = defaultdict(
         list
     )
-    seen_edges: set[tuple[tuple[str, int], tuple[str, int]]] = set()
-    for candidate in ranked:
+    for candidate in sorted(candidates, key=_candidate_review_rank):
         issue_key = (candidate.repository.lower(), candidate.issue_snapshot.number)
-        pr_key = (candidate.repository.lower(), candidate.fix_pr_number)
-        edge = (issue_key, pr_key)
-        if (
-            issue_key in existing_issue_keys
-            or pr_key in existing_pr_keys
-            or edge in seen_edges
-        ):
-            continue
-        seen_edges.add(edge)
         candidates_by_issue[issue_key].append(candidate)
 
     issue_order = sorted(
@@ -823,8 +796,43 @@ def _unique_reviewable_candidates(
     for issue_key in issue_order:
         augment(issue_key, set())
 
-    unique = sorted(matched_by_pr.values(), key=_candidate_review_rank)
-    return len(reviewable), unique
+    return sorted(matched_by_pr.values(), key=_candidate_review_rank)
+
+
+def _reviewable_candidate_edges(
+    base_manifest: BenchmarkManifest,
+    candidates: Sequence[BenchmarkCandidate],
+) -> tuple[int, list[BenchmarkCandidate]]:
+    existing_issue_keys = {
+        (case.repository.lower(), case.issue_number) for case in base_manifest.cases
+    }
+    existing_pr_keys = {
+        (case.repository.lower(), case.fix_pr_number) for case in base_manifest.cases
+    }
+    reviewable = [
+        candidate
+        for candidate in candidates
+        if candidate.status is CandidateStatus.NEEDS_REVIEW
+        and candidate.pre_fix_sha
+        and candidate.expected_files
+        and not _blocking_check_failures(candidate)
+    ]
+
+    edges: list[BenchmarkCandidate] = []
+    seen_edges: set[tuple[tuple[str, int], tuple[str, int]]] = set()
+    for candidate in sorted(reviewable, key=_candidate_review_rank):
+        issue_key = (candidate.repository.lower(), candidate.issue_snapshot.number)
+        pr_key = (candidate.repository.lower(), candidate.fix_pr_number)
+        edge = (issue_key, pr_key)
+        if (
+            issue_key in existing_issue_keys
+            or pr_key in existing_pr_keys
+            or edge in seen_edges
+        ):
+            continue
+        seen_edges.add(edge)
+        edges.append(candidate)
+    return len(reviewable), edges
 
 
 def _suggested_case_id(candidate: BenchmarkCandidate) -> str:
@@ -868,12 +876,80 @@ def _review_queue_entry(
     )
 
 
+def _repository_primary_options(
+    candidates: Sequence[BenchmarkCandidate],
+    rank_by_id: dict[str, int],
+    max_primary_per_repository: int,
+    reserve_cases: int,
+) -> list[
+    tuple[int, int, int, int, tuple[str, ...], tuple[BenchmarkCandidate, ...]]
+]:
+    best_options: dict[
+        tuple[int, int, int],
+        tuple[int, tuple[str, ...], tuple[BenchmarkCandidate, ...]],
+    ] = {}
+
+    def collect_options(
+        start: int,
+        chosen: tuple[BenchmarkCandidate, ...],
+        used_issue_numbers: frozenset[int],
+        used_pr_numbers: frozenset[int],
+        multi_count: int,
+        cost: int,
+    ) -> None:
+        remaining = [
+            candidate
+            for candidate in candidates
+            if candidate.issue_snapshot.number not in used_issue_numbers
+            and candidate.fix_pr_number not in used_pr_numbers
+        ]
+        reserve_capacity = min(
+            reserve_cases,
+            len(_maximum_issue_pr_matching(remaining)),
+        )
+        key = (len(chosen), multi_count, reserve_capacity)
+        candidate_ids = tuple(candidate.id for candidate in chosen)
+        option = (cost, candidate_ids, chosen)
+        previous = best_options.get(key)
+        if previous is None or option[:2] < previous[:2]:
+            best_options[key] = option
+        if len(chosen) >= max_primary_per_repository:
+            return
+        for index in range(start, len(candidates)):
+            candidate = candidates[index]
+            issue_number = candidate.issue_snapshot.number
+            if (
+                issue_number in used_issue_numbers
+                or candidate.fix_pr_number in used_pr_numbers
+            ):
+                continue
+            collect_options(
+                index + 1,
+                (*chosen, candidate),
+                used_issue_numbers | {issue_number},
+                used_pr_numbers | {candidate.fix_pr_number},
+                multi_count + (len(candidate.expected_files) > 1),
+                cost + rank_by_id[candidate.id],
+            )
+
+    collect_options(0, (), frozenset(), frozenset(), 0, 0)
+    return [
+        (count, multi_count, reserve_capacity, cost, candidate_ids, chosen)
+        for (count, multi_count, reserve_capacity), (
+            cost,
+            candidate_ids,
+            chosen,
+        ) in best_options.items()
+    ]
+
+
 def _select_primary_candidates(
     ranked: Sequence[BenchmarkCandidate],
     *,
     requested_new_cases: int,
     required_new_multi_file_cases: int,
     max_primary_per_repository: int,
+    reserve_cases: int,
 ) -> list[BenchmarkCandidate]:
     candidates_by_repository: dict[str, list[BenchmarkCandidate]] = defaultdict(list)
     for candidate in ranked:
@@ -883,60 +959,47 @@ def _select_primary_candidates(
     require_repository_coverage = requested_new_cases >= len(repository_keys)
     rank_by_id = {candidate.id: index for index, candidate in enumerate(ranked)}
 
-    # A state stores the best ranked candidate tuple for a total count and a
-    # capped multi-file count after processing each repository.
+    # A state stores the best ranked primary tuple for a total count, a capped
+    # multi-file count, and enough remaining matching capacity for reserves.
     states: dict[
-        tuple[int, int],
+        tuple[int, int, int],
         tuple[int, tuple[str, ...], tuple[BenchmarkCandidate, ...]],
-    ] = {(0, 0): (0, (), ())}
+    ] = {(0, 0, 0): (0, (), ())}
     for repository in repository_keys:
         repository_candidates = candidates_by_repository[repository]
-        multi_file = [
-            candidate
-            for candidate in repository_candidates
-            if len(candidate.expected_files) > 1
-        ]
-        single_file = [
-            candidate
-            for candidate in repository_candidates
-            if len(candidate.expected_files) == 1
-        ]
-        options: list[
-            tuple[int, int, int, tuple[str, ...], tuple[BenchmarkCandidate, ...]]
-        ] = []
         minimum = 1 if require_repository_coverage else 0
-        for multi_count in range(
-            min(max_primary_per_repository, len(multi_file)) + 1
-        ):
-            remaining_capacity = max_primary_per_repository - multi_count
-            for single_count in range(
-                min(remaining_capacity, len(single_file)) + 1
-            ):
-                count = multi_count + single_count
-                if count < minimum:
-                    continue
-                chosen = tuple(
-                    sorted(
-                        [
-                            *multi_file[:multi_count],
-                            *single_file[:single_count],
-                        ],
-                        key=_candidate_review_rank,
-                    )
-                )
-                candidate_ids = tuple(candidate.id for candidate in chosen)
-                cost = sum(rank_by_id[candidate.id] for candidate in chosen)
-                options.append(
-                    (count, multi_count, cost, candidate_ids, chosen)
-                )
+        options = [
+            (count, multi_count, reserve_capacity, cost, candidate_ids, chosen)
+            for (
+                count,
+                multi_count,
+                reserve_capacity,
+                cost,
+                candidate_ids,
+                chosen,
+            ) in _repository_primary_options(
+                repository_candidates,
+                rank_by_id,
+                max_primary_per_repository,
+                reserve_cases,
+            )
+            if count >= minimum
+        ]
 
         next_states: dict[
-            tuple[int, int],
+            tuple[int, int, int],
             tuple[int, tuple[str, ...], tuple[BenchmarkCandidate, ...]],
         ] = {}
-        for (total_count, total_multi), state in states.items():
+        for (total_count, total_multi, total_reserve), state in states.items():
             state_cost, state_ids, state_candidates = state
-            for count, multi_count, cost, candidate_ids, chosen in options:
+            for (
+                count,
+                multi_count,
+                reserve_capacity,
+                cost,
+                candidate_ids,
+                chosen,
+            ) in options:
                 next_count = total_count + count
                 if next_count > requested_new_cases:
                     continue
@@ -944,23 +1007,29 @@ def _select_primary_candidates(
                     required_new_multi_file_cases,
                     total_multi + multi_count,
                 )
+                next_reserve = min(
+                    reserve_cases,
+                    total_reserve + reserve_capacity,
+                )
                 next_ids = (*state_ids, *candidate_ids)
                 next_state = (
                     state_cost + cost,
                     next_ids,
                     (*state_candidates, *chosen),
                 )
-                key = (next_count, next_multi)
+                key = (next_count, next_multi, next_reserve)
                 previous = next_states.get(key)
                 if previous is None or next_state[:2] < previous[:2]:
                     next_states[key] = next_state
         states = next_states
 
-    final = states.get((requested_new_cases, required_new_multi_file_cases))
+    final = states.get(
+        (requested_new_cases, required_new_multi_file_cases, reserve_cases)
+    )
     if final is None:
         raise ValueError(
             "No feasible primary queue satisfies repository coverage, "
-            "the per-repository cap, and the multi-file quota"
+            "the per-repository cap, the multi-file quota, and reserve capacity"
         )
     return sorted(final[2], key=_candidate_review_rank)
 
@@ -987,14 +1056,15 @@ def build_candidate_review_queue(
         raise ValueError("target_multi_file_share must be between 0 and 1")
 
     requested_new_cases = target_total_cases - base_case_count
-    available_reviewable, unique = _unique_reviewable_candidates(
+    available_reviewable, edges = _reviewable_candidate_edges(
         base_manifest,
         candidates,
     )
-    ranked = sorted(unique, key=_candidate_review_rank)
-    if len(ranked) < requested_new_cases:
+    ranked = sorted(edges, key=_candidate_review_rank)
+    maximum_matching = _maximum_issue_pr_matching(ranked)
+    if len(maximum_matching) < requested_new_cases:
         raise ValueError(
-            f"Only {len(ranked)} unique reviewable candidates are available; "
+            f"Only {len(maximum_matching)} unique reviewable candidates are available; "
             f"{requested_new_cases} are required"
         )
 
@@ -1006,7 +1076,11 @@ def build_candidate_review_queue(
         0,
         target_multi_file_cases - existing_multi_file_cases,
     )
-    unique_multi_file_cases = sum(len(candidate.expected_files) > 1 for candidate in ranked)
+    unique_multi_file_cases = len(
+        _maximum_issue_pr_matching(
+            [candidate for candidate in ranked if len(candidate.expected_files) > 1]
+        )
+    )
     if unique_multi_file_cases < required_new_multi_file_cases:
         raise ValueError(
             f"Only {unique_multi_file_cases} unique multi-file candidates are available; "
@@ -1018,14 +1092,36 @@ def build_candidate_review_queue(
         requested_new_cases=requested_new_cases,
         required_new_multi_file_cases=required_new_multi_file_cases,
         max_primary_per_repository=max_primary_per_repository,
+        reserve_cases=reserve_cases,
     )
     selected_ids = {candidate.id for candidate in selected}
     selected_multi_file_cases = sum(
         len(candidate.expected_files) > 1 for candidate in selected
     )
 
-    remaining = [candidate for candidate in ranked if candidate.id not in selected_ids]
-    reserves = remaining[:reserve_cases]
+    selected_issue_keys = {
+        (candidate.repository.lower(), candidate.issue_snapshot.number)
+        for candidate in selected
+    }
+    selected_pr_keys = {
+        (candidate.repository.lower(), candidate.fix_pr_number)
+        for candidate in selected
+    }
+    remaining = [
+        candidate
+        for candidate in ranked
+        if candidate.id not in selected_ids
+        and (candidate.repository.lower(), candidate.issue_snapshot.number)
+        not in selected_issue_keys
+        and (candidate.repository.lower(), candidate.fix_pr_number)
+        not in selected_pr_keys
+    ]
+    reserves = _maximum_issue_pr_matching(remaining)[:reserve_cases]
+    if len(reserves) < reserve_cases:
+        raise ValueError(
+            f"Only {len(reserves)} unique reserve candidates remain; "
+            f"{reserve_cases} are required"
+        )
     ordered_candidates = [
         *((candidate, CandidateReviewPriority.PRIMARY) for candidate in selected),
         *((candidate, CandidateReviewPriority.RESERVE) for candidate in reserves),
@@ -1051,7 +1147,7 @@ def build_candidate_review_queue(
         target_multi_file_share=target_multi_file_share,
         required_new_multi_file_cases=required_new_multi_file_cases,
         available_reviewable_records=available_reviewable,
-        available_unique_cases=len(ranked),
+        available_unique_cases=len(maximum_matching),
         available_unique_multi_file_cases=unique_multi_file_cases,
         primary_multi_file_cases=selected_multi_file_cases,
         primary_repositories=len(

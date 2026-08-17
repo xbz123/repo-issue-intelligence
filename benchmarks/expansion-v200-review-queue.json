@@ -1,7 +1,7 @@
 {
   "name": "python-real-issue-file-localization-200-case-review-queue",
   "version": 1,
-  "generated_at": "2026-08-17T07:31:10.917476Z",
+  "generated_at": "2026-08-17T13:18:40.277077Z",
   "base_manifest_name": "python-real-issue-file-localization",
   "base_manifest_version": 8,
   "target_total_cases": 200,
@@ -13,7 +13,7 @@
   "required_new_multi_file_cases": 49,
   "available_reviewable_records": 291,
   "available_unique_cases": 200,
-  "available_unique_multi_file_cases": 61,
+  "available_unique_multi_file_cases": 65,
   "primary_multi_file_cases": 52,
   "primary_repositories": 38,
   "entries": [
@@ -2784,14 +2784,14 @@
     },
     {
       "review_order": 101,
-      "candidate_id": "hypothesisworks-hypothesis-issue-4859-pr-4862",
+      "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4862",
       "priority": "primary",
       "repository": "HypothesisWorks/hypothesis",
-      "issue_number": 4859,
+      "issue_number": 4858,
       "fix_pr_number": 4862,
-      "issue_title": "`st.from_regex` incorrectly combines negative character classes with positive members",
-      "issue_created_at": "2026-08-13T19:22:57Z",
-      "suggested_case_id": "hypothesisworks-hypothesis-issue-4859",
+      "issue_title": "`st.from_regex` incorrectly considers `re.ASCII` flag for inverted classes",
+      "issue_created_at": "2026-08-13T19:20:04Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4858",
       "suggested_tier": "generalization",
       "pre_fix_sha": "a15954b165af42884b655dcf7e9338cb107711da",
       "pre_fix_sha_source": "first_pull_commit_parent",
@@ -2806,7 +2806,9 @@
         "diagnostic_signal",
         "issue_has_body"
       ],
-      "review_flags": [],
+      "review_flags": [
+        "failed:unique_fix_pr"
+      ],
       "status": "needs_review"
     },
     {
@@ -3757,14 +3759,14 @@
     },
     {
       "review_order": 135,
-      "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4853",
+      "candidate_id": "hypothesisworks-hypothesis-issue-4859-pr-4853",
       "priority": "primary",
       "repository": "HypothesisWorks/hypothesis",
-      "issue_number": 4858,
+      "issue_number": 4859,
       "fix_pr_number": 4853,
-      "issue_title": "`st.from_regex` incorrectly considers `re.ASCII` flag for inverted classes",
-      "issue_created_at": "2026-08-13T19:20:04Z",
-      "suggested_case_id": "hypothesisworks-hypothesis-issue-4858",
+      "issue_title": "`st.from_regex` incorrectly combines negative character classes with positive members",
+      "issue_created_at": "2026-08-13T19:22:57Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4859",
       "suggested_tier": "generalization",
       "pre_fix_sha": "2f49474d4eac805cb851dc6b75f7cea3cc40354f",
       "pre_fix_sha_source": "first_pull_commit_parent",
@@ -3779,8 +3781,7 @@
         "issue_has_body"
       ],
       "review_flags": [
-        "failed:closing_reference",
-        "failed:unique_fix_pr"
+        "failed:closing_reference"
       ],
       "status": "needs_review"
     },

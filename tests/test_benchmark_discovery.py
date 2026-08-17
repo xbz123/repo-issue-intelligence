@@ -479,6 +479,114 @@ def test_build_candidate_review_queue_uses_maximum_issue_pr_matching() -> None:
     assert len({entry.fix_pr_number for entry in primary}) == 2
 
 
+def test_build_candidate_review_queue_keeps_quota_feasible_matching_edges() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="matching-quota-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    preferred_single = _queue_candidate(
+        "owner/project",
+        11,
+        101,
+        multi_file=False,
+    )
+    alternate_multi_candidate = _queue_candidate(
+        "owner/project",
+        12,
+        101,
+        multi_file=True,
+    )
+    alternate_multi = alternate_multi_candidate.model_copy(
+        update={
+            "audit_checks": [
+                check.model_copy(update={"passed": False})
+                if check.code == "bug_signal"
+                else check
+                for check in alternate_multi_candidate.audit_checks
+            ]
+        },
+        deep=True,
+    )
+    independent_multi = _queue_candidate(
+        "owner/project",
+        13,
+        102,
+        multi_file=True,
+    )
+
+    queue = build_candidate_review_queue(
+        base_manifest,
+        [preferred_single, alternate_multi, independent_multi],
+        target_total_cases=3,
+        reserve_cases=0,
+        max_primary_per_repository=2,
+        target_multi_file_share=0.66,
+    )
+
+    primary = [entry for entry in queue.entries if entry.priority == "primary"]
+    assert queue.available_unique_cases == 2
+    assert queue.available_unique_multi_file_cases == 2
+    assert len(primary) == 2
+    assert all(entry.multi_file for entry in primary)
+    assert {entry.issue_number for entry in primary} == {12, 13}
+    assert {entry.fix_pr_number for entry in primary} == {101, 102}
+
+
+def test_build_candidate_review_queue_preserves_reserve_matching_capacity() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="reserve-capacity-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    candidates = [
+        _queue_candidate("owner/project", 11, 101, multi_file=False),
+        _queue_candidate("owner/project", 11, 102, multi_file=False),
+        _queue_candidate("owner/project", 12, 101, multi_file=False),
+    ]
+
+    queue = build_candidate_review_queue(
+        base_manifest,
+        candidates,
+        target_total_cases=2,
+        reserve_cases=1,
+        max_primary_per_repository=1,
+        target_multi_file_share=0,
+    )
+
+    assert len(queue.entries) == 2
+    assert len({entry.issue_number for entry in queue.entries}) == 2
+    assert len({entry.fix_pr_number for entry in queue.entries}) == 2
+    primary = next(entry for entry in queue.entries if entry.priority == "primary")
+    assert (primary.issue_number, primary.fix_pr_number) != (11, 101)
+
+
 def test_build_candidate_review_queue_solves_coverage_and_multi_file_together() -> None:
     base_issue = issue(1)
     base_manifest = BenchmarkManifest(
