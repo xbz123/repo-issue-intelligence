@@ -2,6 +2,8 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
@@ -424,10 +426,169 @@ def test_build_candidate_review_queue_balances_and_deduplicates() -> None:
     assert queue.available_unique_cases == 16
     assert queue.primary_multi_file_cases >= 4
     assert queue.primary_repositories == 4
+    assert queue.name == "test-benchmark-9-case-review-queue"
     assert max(repository_counts.values()) == 2
     assert len({entry.fix_pr_number for entry in queue.entries}) == len(queue.entries)
     assert [entry.review_order for entry in queue.entries] == list(range(1, 11))
+    assert all(entry.pre_fix_sha == PRE_FIX_SHA for entry in queue.entries)
+    assert all(
+        entry.pre_fix_sha_source == "first_pull_commit_parent"
+        for entry in queue.entries
+    )
     assert all(entry.status is CandidateStatus.NEEDS_REVIEW for entry in queue.entries)
+
+
+def test_build_candidate_review_queue_uses_maximum_issue_pr_matching() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="matching-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    candidates = [
+        _queue_candidate("owner/project", 11, 101, multi_file=False),
+        _queue_candidate("owner/project", 11, 102, multi_file=False),
+        _queue_candidate("owner/project", 12, 101, multi_file=False),
+    ]
+
+    queue = build_candidate_review_queue(
+        base_manifest,
+        candidates,
+        target_total_cases=3,
+        reserve_cases=0,
+        max_primary_per_repository=2,
+        target_multi_file_share=0,
+    )
+
+    primary = [entry for entry in queue.entries if entry.priority == "primary"]
+    assert queue.available_unique_cases == 2
+    assert len(primary) == 2
+    assert len({entry.issue_number for entry in primary}) == 2
+    assert len({entry.fix_pr_number for entry in primary}) == 2
+
+
+def test_build_candidate_review_queue_solves_coverage_and_multi_file_together() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="quota-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    preferred_single = _queue_candidate(
+        "owner/project-a",
+        11,
+        101,
+        multi_file=False,
+    )
+    multi_candidate = _queue_candidate(
+        "owner/project-a",
+        12,
+        102,
+        multi_file=True,
+    )
+    lower_ranked_multi = multi_candidate.model_copy(
+        update={
+            "audit_checks": [
+                check.model_copy(update={"passed": False})
+                if check.code == "bug_signal"
+                else check
+                for check in multi_candidate.audit_checks
+            ]
+        },
+        deep=True,
+    )
+    other_multi = _queue_candidate(
+        "owner/project-b",
+        21,
+        201,
+        multi_file=True,
+    )
+
+    queue = build_candidate_review_queue(
+        base_manifest,
+        [preferred_single, lower_ranked_multi, other_multi],
+        target_total_cases=3,
+        reserve_cases=0,
+        max_primary_per_repository=1,
+        target_multi_file_share=0.66,
+    )
+
+    primary = [entry for entry in queue.entries if entry.priority == "primary"]
+    assert len(primary) == 2
+    assert all(entry.multi_file for entry in primary)
+
+
+def test_planning_and_curation_require_complete_blocking_checks() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="audit-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    incomplete = _queue_candidate(
+        "owner/project",
+        11,
+        101,
+        multi_file=False,
+    ).model_copy(update={"audit_checks": []}, deep=True)
+
+    with pytest.raises(ValueError, match="unique reviewable candidates"):
+        build_candidate_review_queue(
+            base_manifest,
+            [incomplete],
+            target_total_cases=2,
+        )
+
+    selection = CandidateSelectionManifest(
+        name="invalid-selection",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id=incomplete.id,
+                case_id="invalid-case",
+                tier=BenchmarkTier.GENERALIZATION,
+                review_notes=["This must not bypass missing audit checks."],
+            )
+        ],
+    )
+    with pytest.raises(ValueError, match="required blocking checks"):
+        curate_benchmark_expansion(base_manifest, [incomplete], selection)
 
 
 def test_build_candidate_review_queue_rejects_insufficient_pool() -> None:

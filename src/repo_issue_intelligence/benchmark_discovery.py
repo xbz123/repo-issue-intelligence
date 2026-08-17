@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections import Counter
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -60,6 +60,18 @@ ADVISORY_CHECK_WEIGHTS = {
     "closing_reference": 3,
     "unique_fix_pr": 1,
 }
+REQUIRED_BLOCKING_CHECK_CODES = frozenset(
+    {
+        "same_repository",
+        "merged_pull_request",
+        "issue_precedes_fix",
+        "pre_fix_sha_identified",
+        "pull_commit_history",
+        "pre_fix_outside_pull_commits",
+        "production_source_files",
+        "bounded_source_files",
+    }
+)
 
 
 class CandidateStatus(StrEnum):
@@ -156,6 +168,8 @@ class CandidateReviewQueueEntry(BaseModel):
     issue_created_at: datetime
     suggested_case_id: str
     suggested_tier: BenchmarkTier
+    pre_fix_sha: str = Field(min_length=1)
+    pre_fix_sha_source: str | None = None
     expected_files: list[str] = Field(min_length=1)
     multi_file: bool
     advisory_score: int = Field(ge=0)
@@ -718,6 +732,26 @@ def _candidate_review_rank(candidate: BenchmarkCandidate) -> tuple:
     )
 
 
+def _blocking_check_failures(candidate: BenchmarkCandidate) -> list[str]:
+    checks_by_code: dict[str, list[CandidateAuditCheck]] = defaultdict(list)
+    for check in candidate.audit_checks:
+        checks_by_code[check.code].append(check)
+
+    failures: list[str] = []
+    for code in sorted(REQUIRED_BLOCKING_CHECK_CODES):
+        checks = checks_by_code.get(code, [])
+        if len(checks) != 1:
+            failures.append(code)
+        elif not checks[0].blocking or not checks[0].passed:
+            failures.append(code)
+    failures.extend(
+        check.code
+        for check in candidate.audit_checks
+        if check.blocking and not check.passed
+    )
+    return sorted(set(failures))
+
+
 def _unique_reviewable_candidates(
     base_manifest: BenchmarkManifest,
     candidates: Sequence[BenchmarkCandidate],
@@ -734,19 +768,62 @@ def _unique_reviewable_candidates(
         if candidate.status is CandidateStatus.NEEDS_REVIEW
         and candidate.pre_fix_sha
         and candidate.expected_files
-        and all(check.passed for check in candidate.audit_checks if check.blocking)
+        and not _blocking_check_failures(candidate)
     ]
-    unique: list[BenchmarkCandidate] = []
-    used_issue_keys = set(existing_issue_keys)
-    used_pr_keys = set(existing_pr_keys)
-    for candidate in sorted(reviewable, key=_candidate_review_rank):
+
+    ranked = sorted(reviewable, key=_candidate_review_rank)
+    candidates_by_issue: dict[tuple[str, int], list[BenchmarkCandidate]] = defaultdict(
+        list
+    )
+    seen_edges: set[tuple[tuple[str, int], tuple[str, int]]] = set()
+    for candidate in ranked:
         issue_key = (candidate.repository.lower(), candidate.issue_snapshot.number)
         pr_key = (candidate.repository.lower(), candidate.fix_pr_number)
-        if issue_key in used_issue_keys or pr_key in used_pr_keys:
+        edge = (issue_key, pr_key)
+        if (
+            issue_key in existing_issue_keys
+            or pr_key in existing_pr_keys
+            or edge in seen_edges
+        ):
             continue
-        used_issue_keys.add(issue_key)
-        used_pr_keys.add(pr_key)
-        unique.append(candidate)
+        seen_edges.add(edge)
+        candidates_by_issue[issue_key].append(candidate)
+
+    issue_order = sorted(
+        candidates_by_issue,
+        key=lambda issue_key: (
+            _candidate_review_rank(candidates_by_issue[issue_key][0]),
+            issue_key,
+        ),
+    )
+    matched_by_pr: dict[tuple[str, int], BenchmarkCandidate] = {}
+
+    def augment(
+        issue_key: tuple[str, int],
+        visited_prs: set[tuple[str, int]],
+    ) -> bool:
+        for candidate in candidates_by_issue[issue_key]:
+            pr_key = (candidate.repository.lower(), candidate.fix_pr_number)
+            if pr_key in visited_prs:
+                continue
+            visited_prs.add(pr_key)
+            previous = matched_by_pr.get(pr_key)
+            if previous is None:
+                matched_by_pr[pr_key] = candidate
+                return True
+            previous_issue_key = (
+                previous.repository.lower(),
+                previous.issue_snapshot.number,
+            )
+            if augment(previous_issue_key, visited_prs):
+                matched_by_pr[pr_key] = candidate
+                return True
+        return False
+
+    for issue_key in issue_order:
+        augment(issue_key, set())
+
+    unique = sorted(matched_by_pr.values(), key=_candidate_review_rank)
     return len(reviewable), unique
 
 
@@ -761,6 +838,8 @@ def _review_queue_entry(
     default_tier: BenchmarkTier,
     review_order: int,
 ) -> CandidateReviewQueueEntry:
+    if candidate.pre_fix_sha is None:
+        raise ValueError(f"Candidate {candidate.id} is missing a pre-fix SHA")
     advisory_checks = [
         check for check in candidate.audit_checks if not check.blocking
     ]
@@ -775,6 +854,8 @@ def _review_queue_entry(
         issue_created_at=candidate.issue_snapshot.created_at,
         suggested_case_id=_suggested_case_id(candidate),
         suggested_tier=candidate.suggested_tier or default_tier,
+        pre_fix_sha=candidate.pre_fix_sha,
+        pre_fix_sha_source=candidate.pre_fix_sha_source,
         expected_files=candidate.expected_files,
         multi_file=len(candidate.expected_files) > 1,
         advisory_score=_advisory_score(candidate),
@@ -785,6 +866,103 @@ def _review_queue_entry(
             f"failed:{check.code}" for check in advisory_checks if not check.passed
         ),
     )
+
+
+def _select_primary_candidates(
+    ranked: Sequence[BenchmarkCandidate],
+    *,
+    requested_new_cases: int,
+    required_new_multi_file_cases: int,
+    max_primary_per_repository: int,
+) -> list[BenchmarkCandidate]:
+    candidates_by_repository: dict[str, list[BenchmarkCandidate]] = defaultdict(list)
+    for candidate in ranked:
+        candidates_by_repository[candidate.repository.lower()].append(candidate)
+
+    repository_keys = sorted(candidates_by_repository)
+    require_repository_coverage = requested_new_cases >= len(repository_keys)
+    rank_by_id = {candidate.id: index for index, candidate in enumerate(ranked)}
+
+    # A state stores the best ranked candidate tuple for a total count and a
+    # capped multi-file count after processing each repository.
+    states: dict[
+        tuple[int, int],
+        tuple[int, tuple[str, ...], tuple[BenchmarkCandidate, ...]],
+    ] = {(0, 0): (0, (), ())}
+    for repository in repository_keys:
+        repository_candidates = candidates_by_repository[repository]
+        multi_file = [
+            candidate
+            for candidate in repository_candidates
+            if len(candidate.expected_files) > 1
+        ]
+        single_file = [
+            candidate
+            for candidate in repository_candidates
+            if len(candidate.expected_files) == 1
+        ]
+        options: list[
+            tuple[int, int, int, tuple[str, ...], tuple[BenchmarkCandidate, ...]]
+        ] = []
+        minimum = 1 if require_repository_coverage else 0
+        for multi_count in range(
+            min(max_primary_per_repository, len(multi_file)) + 1
+        ):
+            remaining_capacity = max_primary_per_repository - multi_count
+            for single_count in range(
+                min(remaining_capacity, len(single_file)) + 1
+            ):
+                count = multi_count + single_count
+                if count < minimum:
+                    continue
+                chosen = tuple(
+                    sorted(
+                        [
+                            *multi_file[:multi_count],
+                            *single_file[:single_count],
+                        ],
+                        key=_candidate_review_rank,
+                    )
+                )
+                candidate_ids = tuple(candidate.id for candidate in chosen)
+                cost = sum(rank_by_id[candidate.id] for candidate in chosen)
+                options.append(
+                    (count, multi_count, cost, candidate_ids, chosen)
+                )
+
+        next_states: dict[
+            tuple[int, int],
+            tuple[int, tuple[str, ...], tuple[BenchmarkCandidate, ...]],
+        ] = {}
+        for (total_count, total_multi), state in states.items():
+            state_cost, state_ids, state_candidates = state
+            for count, multi_count, cost, candidate_ids, chosen in options:
+                next_count = total_count + count
+                if next_count > requested_new_cases:
+                    continue
+                next_multi = min(
+                    required_new_multi_file_cases,
+                    total_multi + multi_count,
+                )
+                next_ids = (*state_ids, *candidate_ids)
+                next_state = (
+                    state_cost + cost,
+                    next_ids,
+                    (*state_candidates, *chosen),
+                )
+                key = (next_count, next_multi)
+                previous = next_states.get(key)
+                if previous is None or next_state[:2] < previous[:2]:
+                    next_states[key] = next_state
+        states = next_states
+
+    final = states.get((requested_new_cases, required_new_multi_file_cases))
+    if final is None:
+        raise ValueError(
+            "No feasible primary queue satisfies repository coverage, "
+            "the per-repository cap, and the multi-file quota"
+        )
+    return sorted(final[2], key=_candidate_review_rank)
 
 
 def build_candidate_review_queue(
@@ -835,58 +1013,19 @@ def build_candidate_review_queue(
             f"{required_new_multi_file_cases} are required"
         )
 
-    selected: list[BenchmarkCandidate] = []
-    selected_ids: set[str] = set()
-    repository_counts: Counter[str] = Counter()
-
-    def select(candidate: BenchmarkCandidate) -> bool:
-        repository = candidate.repository.lower()
-        if (
-            candidate.id in selected_ids
-            or repository_counts[repository] >= max_primary_per_repository
-            or len(selected) >= requested_new_cases
-        ):
-            return False
-        selected.append(candidate)
-        selected_ids.add(candidate.id)
-        repository_counts[repository] += 1
-        return True
-
-    best_by_repository: dict[str, BenchmarkCandidate] = {}
-    for candidate in ranked:
-        best_by_repository.setdefault(candidate.repository.lower(), candidate)
-    for candidate in sorted(best_by_repository.values(), key=_candidate_review_rank):
-        select(candidate)
-
+    selected = _select_primary_candidates(
+        ranked,
+        requested_new_cases=requested_new_cases,
+        required_new_multi_file_cases=required_new_multi_file_cases,
+        max_primary_per_repository=max_primary_per_repository,
+    )
+    selected_ids = {candidate.id for candidate in selected}
     selected_multi_file_cases = sum(
         len(candidate.expected_files) > 1 for candidate in selected
     )
-    for candidate in ranked:
-        if selected_multi_file_cases >= required_new_multi_file_cases:
-            break
-        if len(candidate.expected_files) > 1 and select(candidate):
-            selected_multi_file_cases += 1
-
-    for candidate in ranked:
-        select(candidate)
-
-    if len(selected) < requested_new_cases:
-        raise ValueError(
-            f"The per-repository cap permits only {len(selected)} primary candidates; "
-            f"{requested_new_cases} are required"
-        )
-    selected_multi_file_cases = sum(
-        len(candidate.expected_files) > 1 for candidate in selected
-    )
-    if selected_multi_file_cases < required_new_multi_file_cases:
-        raise ValueError(
-            f"The primary queue contains {selected_multi_file_cases} multi-file cases; "
-            f"{required_new_multi_file_cases} are required"
-        )
 
     remaining = [candidate for candidate in ranked if candidate.id not in selected_ids]
     reserves = remaining[:reserve_cases]
-    selected.sort(key=_candidate_review_rank)
     ordered_candidates = [
         *((candidate, CandidateReviewPriority.PRIMARY) for candidate in selected),
         *((candidate, CandidateReviewPriority.RESERVE) for candidate in reserves),
@@ -899,7 +1038,7 @@ def build_candidate_review_queue(
         )
     ]
     return CandidateReviewQueue(
-        name="real-project-benchmark-v200-review-queue",
+        name=f"{base_manifest.name}-{target_total_cases}-case-review-queue",
         version=1,
         generated_at=datetime.now(UTC),
         base_manifest_name=base_manifest.name,
@@ -915,7 +1054,9 @@ def build_candidate_review_queue(
         available_unique_cases=len(ranked),
         available_unique_multi_file_cases=unique_multi_file_cases,
         primary_multi_file_cases=selected_multi_file_cases,
-        primary_repositories=len(repository_counts),
+        primary_repositories=len(
+            {candidate.repository.lower() for candidate in selected}
+        ),
         entries=entries,
     )
 
@@ -994,14 +1135,10 @@ def curate_benchmark_expansion(
         candidate = candidates_by_id.get(entry.candidate_id)
         if candidate is None:
             raise ValueError(f"Unknown candidate ID: {entry.candidate_id}")
-        failed_blocking = [
-            check.code
-            for check in candidate.audit_checks
-            if check.blocking and not check.passed
-        ]
+        failed_blocking = _blocking_check_failures(candidate)
         if failed_blocking:
             raise ValueError(
-                f"Candidate {candidate.id} has blocking failures: "
+                f"Candidate {candidate.id} is missing or failed required blocking checks: "
                 + ", ".join(failed_blocking)
             )
         if candidate.pre_fix_sha is None or not candidate.expected_files:

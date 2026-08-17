@@ -232,9 +232,10 @@ only through a committed manual selection file with review notes; generated raw 
 uses the parent of the first PR commit as pre-fix SHA, and rejects a proposed pre-fix SHA that
 appears inside the fix PR. The historical v0.4 catalog is retained for provenance;
 `benchmarks/candidates-v0.7.json` contains the corrected expansion audit records.
-`benchmark-plan` de-duplicates overlapping catalogs by Issue and fix PR, enforces repository and
-multi-file quotas, and produces only a `needs_review` queue. It cannot accept candidates or alter
-the frozen manifest.
+`benchmark-plan` uses maximum-cardinality Issue/fix-PR matching for overlapping catalogs, requires
+the complete blocking-audit set, jointly enforces repository and multi-file quotas, and records the
+pre-fix SHA provenance in a `needs_review` queue. It cannot accept candidates or alter the frozen
+manifest.
 
 ## Analyze a real GitHub repository
 
