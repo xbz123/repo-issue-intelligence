@@ -257,17 +257,18 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After de-duplicating by both `(repository, Issue)` and `(repository, fix PR)`, and excluding pairs
-already present in manifest v8, the pool contains 199 unique candidates across 38 repositories.
+After maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)`, and
+excluding pairs already present in manifest v8, the pool contains 200 unique candidates across 38
+repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 150 primary candidates and 49 reserves;
+- 150 primary candidates and 50 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 54 new multi-file primary candidates, which would raise the suite from 11/50 to 65/200
-  multi-file cases (32.5%) if all primary candidates pass review;
-- 93 primary Issues created before 2026, including cases from 2013 through 2025;
-- 100 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 52 new multi-file primary candidates, which would raise the suite from 11/50 to 63/200
+  multi-file cases (31.5%) if all primary candidates pass review;
+- 92 primary Issues created before 2026, including cases from 2013 through 2025;
+- 101 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -278,8 +279,9 @@ ground truth where the fix hunk supports it. Rejected primaries should be replac
 queue without weakening the repository cap or the 30% multi-file target.
 
 The raw discovery catalogs remain ignored because they contain repeated, mutable Issue snapshots.
-The compact queue is committed so review order, advisory signals, expected files, and diversity
-constraints are auditable without claiming that the 200-case manifest already exists.
+The compact queue is committed so review order, advisory signals, pre-fix SHA provenance, expected
+files, and diversity constraints are auditable without claiming that the 200-case manifest already
+exists.
 
 After the v0.20 package re-export retrieval change, all 62 reviewed production-file targets appear
 in the deterministic Top-20. Future expansion should test whether this saturation survives older,

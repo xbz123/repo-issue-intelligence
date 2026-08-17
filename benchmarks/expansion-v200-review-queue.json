@@ -1,20 +1,20 @@
 {
-  "name": "real-project-benchmark-v200-review-queue",
+  "name": "python-real-issue-file-localization-200-case-review-queue",
   "version": 1,
-  "generated_at": "2026-08-16T17:47:54.237519Z",
+  "generated_at": "2026-08-17T13:18:40.277077Z",
   "base_manifest_name": "python-real-issue-file-localization",
   "base_manifest_version": 8,
   "target_total_cases": 200,
   "base_case_count": 50,
   "requested_new_cases": 150,
-  "reserve_cases": 49,
+  "reserve_cases": 50,
   "max_primary_per_repository": 5,
   "target_multi_file_share": 0.3,
   "required_new_multi_file_cases": 49,
   "available_reviewable_records": 291,
-  "available_unique_cases": 199,
-  "available_unique_multi_file_cases": 61,
-  "primary_multi_file_cases": 54,
+  "available_unique_cases": 200,
+  "available_unique_multi_file_cases": 65,
+  "primary_multi_file_cases": 52,
   "primary_repositories": 38,
   "entries": [
     {
@@ -28,6 +28,8 @@
       "issue_created_at": "2013-06-13T12:16:30Z",
       "suggested_case_id": "paramiko-paramiko-issue-175",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "991d56bad32c1ea4eda6c86771a4a4b7bef00475",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/channel.py",
         "paramiko/common.py",
@@ -57,6 +59,8 @@
       "issue_created_at": "2016-12-16T19:52:39Z",
       "suggested_case_id": "paramiko-paramiko-issue-865",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "04a70b9bf61684bacac1e82910ac949a96cbf070",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/client.py",
         "paramiko/transport.py"
@@ -83,6 +87,8 @@
       "issue_created_at": "2018-02-08T08:50:48Z",
       "suggested_case_id": "boto-boto3-issue-1446",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "018a02be73a5e75dc5431d53e252ca950b6aff43",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "boto3/compat.py",
         "boto3/s3/inject.py"
@@ -109,6 +115,8 @@
       "issue_created_at": "2018-10-07T16:10:49Z",
       "suggested_case_id": "encode-django-rest-framework-issue-6234",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1b63dce808dae688240dd5d7775ad07276140a9a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/fields.py",
         "rest_framework/serializers.py",
@@ -136,6 +144,8 @@
       "issue_created_at": "2019-02-19T18:57:07Z",
       "suggested_case_id": "matplotlib-matplotlib-issue-13470",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "56d4f69923d5a4bb1158c7d61fbc7e24bd10d9b9",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/matplotlib/backends/_backend_tk.py",
         "lib/matplotlib/cbook/__init__.py"
@@ -162,6 +172,8 @@
       "issue_created_at": "2021-05-10T00:10:33Z",
       "suggested_case_id": "pallets-jinja-issue-1413",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1d55cddbb28e433779511f28f13a2d8c4ec45826",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/compiler.py",
         "src/jinja2/parser.py"
@@ -188,6 +200,8 @@
       "issue_created_at": "2021-09-16T13:20:15Z",
       "suggested_case_id": "pycqa-flake8-issue-1389",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "a08fc4be981f890a18238562463cb76a905fa171",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/main/application.py",
         "src/flake8/main/options.py"
@@ -214,6 +228,8 @@
       "issue_created_at": "2022-03-15T08:16:58Z",
       "suggested_case_id": "encode-django-rest-framework-issue-8409",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "3f190b7ddc1ae19c9c9a3ed10f987c30b2eb9d5d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/serializers.py",
         "rest_framework/validators.py"
@@ -240,6 +256,8 @@
       "issue_created_at": "2022-03-18T15:35:10Z",
       "suggested_case_id": "paramiko-paramiko-issue-2009",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6379b018ac49b1e869f1248b1d6743d316b5a37b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/client.py",
         "paramiko/transport.py"
@@ -266,6 +284,8 @@
       "issue_created_at": "2022-07-18T17:56:33Z",
       "suggested_case_id": "pypa-packaging-issue-577",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "b62954b62d04f58a939d2856c67ebe4de32cdb5d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/packaging/tags.py",
         "src/packaging/utils.py"
@@ -292,6 +312,8 @@
       "issue_created_at": "2022-12-08T17:19:01Z",
       "suggested_case_id": "tox-dev-tox-issue-2649",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1d739a2641bcb0545815afbabf8b3da9694ec0ff",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/session/cmd/run/single.py",
         "src/tox/tox_env/python/runner.py"
@@ -318,6 +340,8 @@
       "issue_created_at": "2023-01-31T13:49:59Z",
       "suggested_case_id": "pylint-dev-pylint-issue-8147",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7f0d9a706ad6d549168bad4acb446cf5be36f2ae",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/config/arguments_manager.py",
         "pylint/config/callback_actions.py"
@@ -344,6 +368,8 @@
       "issue_created_at": "2023-05-16T09:39:02Z",
       "suggested_case_id": "tornadoweb-tornado-issue-3271",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4d892393adb0a434baeaa98a427d23c6c459a4bc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "tornado/locks.py",
         "tornado/queues.py"
@@ -370,6 +396,8 @@
       "issue_created_at": "2024-08-08T00:04:59Z",
       "suggested_case_id": "numpy-numpy-issue-27137",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f67f65a1ab0d0998896703d6f205912d6975f966",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "numpy/_core/_add_newdocs.py",
         "numpy/_core/src/multiarray/dlpack.c"
@@ -396,6 +424,8 @@
       "issue_created_at": "2025-04-14T18:29:04Z",
       "suggested_case_id": "pytest-dev-pluggy-issue-573",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "832b21f282c7a5fba1ce27cf7e6af1f889a393dd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/pluggy/__init__.py",
         "src/pluggy/_callers.py",
@@ -424,6 +454,8 @@
       "issue_created_at": "2025-05-16T20:46:53Z",
       "suggested_case_id": "astral-sh-ruff-issue-18143",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "04d59f43abf8e6e6df8643202ef3f03fb39a6ed2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/ruff_linter/src/rules/flake8_self/rules/private_member_access.rs",
         "crates/ruff_linter/src/rules/pylint/helpers.rs",
@@ -451,6 +483,8 @@
       "issue_created_at": "2025-08-20T23:40:51Z",
       "suggested_case_id": "pyo3-pyo3-issue-5344",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "51dcc7dbd30db78953ba6b190bec97a115af7d76",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/conversions/chrono_tz.rs",
         "src/conversions/serde.rs",
@@ -480,6 +514,8 @@
       "issue_created_at": "2025-09-22T04:06:29Z",
       "suggested_case_id": "sqlalchemy-sqlalchemy-issue-12877",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4fb459aaf05dd9c31ce3ece57c1bbf81ca9855de",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/sqlalchemy/dialects/postgresql/base.py",
         "lib/sqlalchemy/sql/elements.py"
@@ -506,6 +542,8 @@
       "issue_created_at": "2026-05-22T23:06:23Z",
       "suggested_case_id": "ansible-ansible-issue-87020",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "744a880709d7282446d771ab245efc86408a2ca8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/ansible/plugins/callback/oneline.py",
         "lib/ansible/plugins/callback/tree.py"
@@ -532,6 +570,8 @@
       "issue_created_at": "2026-06-01T16:01:40Z",
       "suggested_case_id": "prefecthq-prefect-issue-22184",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f3e3cd5a0175f716c4a73c26dbe390f2d266408c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/prefect/runner/_workspace_starter.py",
         "src/prefect/workers/process.py"
@@ -558,6 +598,8 @@
       "issue_created_at": "2026-06-02T19:24:36Z",
       "suggested_case_id": "tox-dev-tox-issue-3950",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "28972a9932710c58f7c5b6f24d80f99aab134f00",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/config/loader/api.py",
         "src/tox/config/loader/ini/replace.py",
@@ -586,6 +628,8 @@
       "issue_created_at": "2026-06-15T08:26:00Z",
       "suggested_case_id": "pypa-virtualenv-issue-3171",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7042705b5f4eddbcace0830fcfd3bcfbddc25635",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/virtualenv/run/plugin/seeders.py",
         "src/virtualenv/seed/embed/base_embed.py",
@@ -614,6 +658,8 @@
       "issue_created_at": "2026-07-16T03:42:11Z",
       "suggested_case_id": "prefecthq-prefect-issue-22525",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fc2add9829b99be48dd45e7d61a8518e27b8954d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
         "ui-v2/src/components/schemas/schema-form-input-null.tsx",
@@ -642,6 +688,8 @@
       "issue_created_at": "2026-07-16T07:05:44Z",
       "suggested_case_id": "pandas-dev-pandas-issue-66348",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pandas/core/arrays/_arrow_string_mixins.py",
         "pandas/core/arrays/arrow/array.py",
@@ -670,6 +718,8 @@
       "issue_created_at": "2026-07-23T11:14:20Z",
       "suggested_case_id": "pandas-dev-pandas-issue-66436",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7dd7ccf65e3f36c1264f7ae76450ed4d4cc6e14f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pandas/compat/__init__.py",
         "pandas/compat/_constants.py",
@@ -697,6 +747,8 @@
       "issue_created_at": "2026-08-05T14:54:32Z",
       "suggested_case_id": "ansible-ansible-issue-87362",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4e131d639aabd9d4cecd589dc046582921487a41",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/ansible/module_utils/urls.py",
         "lib/ansible/modules/apt_key.py",
@@ -728,6 +780,8 @@
       "issue_created_at": "2026-08-07T16:09:38Z",
       "suggested_case_id": "prefecthq-prefect-issue-22746",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "af6dccb217d31183941574d05864b3c822763be4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "ui-v2/src/components/schemas/schema-form-input-array-enum.test.tsx",
         "ui-v2/src/components/schemas/schema-form-property.tsx"
@@ -754,6 +808,8 @@
       "issue_created_at": "2026-08-07T16:31:25Z",
       "suggested_case_id": "prefecthq-prefect-issue-22753",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "af6dccb217d31183941574d05864b3c822763be4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
         "ui-v2/src/components/schemas/schema-form-input-any-of.tsx",
@@ -784,6 +840,8 @@
       "issue_created_at": "2026-08-07T21:19:06Z",
       "suggested_case_id": "prefecthq-prefect-issue-22759",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "b535a27ea1b567bd0363b94617fc2502a56d23c8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.stories.tsx",
         "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.test.tsx",
@@ -811,6 +869,8 @@
       "issue_created_at": "2026-08-13T17:16:54Z",
       "suggested_case_id": "astral-sh-uv-issue-21096",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "791e7a963a6c73bb4d5e1a22ca9c161390fc7c98",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/uv-settings/src/lib.rs",
         "crates/uv/src/commands/project/add.rs",
@@ -839,6 +899,8 @@
       "issue_created_at": "2016-10-26T12:30:39Z",
       "suggested_case_id": "sphinx-doc-sphinx-issue-3099",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "37ceb97e72792a80e1c90e18272ad72d182490e6",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sphinx/writers/latex.py"
       ],
@@ -864,6 +926,8 @@
       "issue_created_at": "2017-03-07T11:51:49Z",
       "suggested_case_id": "python-hyper-h2-issue-474",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6cce763997eca5b826f3e435a611b7a7fc73f633",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/h2/frame_buffer.py"
       ],
@@ -889,6 +953,8 @@
       "issue_created_at": "2018-02-25T19:40:20Z",
       "suggested_case_id": "boto-boto3-issue-1464",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5c773d9e5eb0ca33c1ebef9e32e7773d89c5aff4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "boto3/dynamodb/transform.py"
       ],
@@ -914,6 +980,8 @@
       "issue_created_at": "2018-05-30T18:08:36Z",
       "suggested_case_id": "encode-django-rest-framework-issue-6010",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cf582fb58e9e5ffcc8ed78a2cb9aaa8f4865666a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/validators.py"
       ],
@@ -939,6 +1007,8 @@
       "issue_created_at": "2020-01-08T19:18:38Z",
       "suggested_case_id": "python-hyper-h11-issue-92",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0d92213c370cbc97964ad87de48c2262468f6d13",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_headers.py"
       ],
@@ -964,6 +1034,8 @@
       "issue_created_at": "2020-04-18T18:56:58Z",
       "suggested_case_id": "encode-django-rest-framework-issue-7279",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "365d409adb43ebad7d8a42cab2407ec841d8038e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/serializers.py"
       ],
@@ -989,6 +1061,8 @@
       "issue_created_at": "2020-07-01T20:22:37Z",
       "suggested_case_id": "pallets-jinja-issue-1253",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fbc3a696c729d177340cc089531de7e2e5b6f065",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/idtracking.py"
       ],
@@ -1014,6 +1088,8 @@
       "issue_created_at": "2020-08-04T20:41:04Z",
       "suggested_case_id": "matplotlib-matplotlib-issue-18171",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ede8e566e5c7e7a12fdd66231ba02f363aab8913",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/matplotlib/backends/backend_webagg_core.py"
       ],
@@ -1039,6 +1115,8 @@
       "issue_created_at": "2021-08-06T10:50:19Z",
       "suggested_case_id": "python-hyper-h11-issue-134",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6578c26465f836f64c9a8a6b4edc1920038ee8ff",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_events.py"
       ],
@@ -1064,6 +1142,8 @@
       "issue_created_at": "2021-09-02T19:59:04Z",
       "suggested_case_id": "python-hyper-h2-issue-1257",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "13589e3c03640ce462dea28b7176aab7b80572d4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/h2/utilities.py"
       ],
@@ -1089,6 +1169,8 @@
       "issue_created_at": "2022-06-13T13:37:20Z",
       "suggested_case_id": "pallets-markupsafe-issue-310",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0e366be90424816156802b41997b37b5dadd0851",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/markupsafe/__init__.py"
       ],
@@ -1114,6 +1196,8 @@
       "issue_created_at": "2022-07-13T18:48:12Z",
       "suggested_case_id": "pycqa-flake8-issue-1617",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fb439e15454f4762b06109aa8712d740f0b52c6d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/options/config.py"
       ],
@@ -1139,6 +1223,8 @@
       "issue_created_at": "2022-08-09T04:46:50Z",
       "suggested_case_id": "pallets-jinja-issue-1701",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "791dd3b0415b99faac229d42a81db1d7096b003c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/runtime.py"
       ],
@@ -1164,6 +1250,8 @@
       "issue_created_at": "2022-08-11T13:36:14Z",
       "suggested_case_id": "pallets-jinja-issue-1705",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "58a358f0928df381c003be244b930367c68dbb85",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/loaders.py"
       ],
@@ -1189,6 +1277,8 @@
       "issue_created_at": "2022-09-02T17:25:24Z",
       "suggested_case_id": "tornadoweb-tornado-issue-3182",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "37417f8d4db9d9fbdebe90c85a85b530b8659542",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "demos/file_upload/file_uploader.py"
       ],
@@ -1214,6 +1304,8 @@
       "issue_created_at": "2022-12-23T09:03:01Z",
       "suggested_case_id": "pallets-jinja-issue-1781",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "a4abbfd7538e9ff216244266579232585033136c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/filters.py"
       ],
@@ -1239,6 +1331,8 @@
       "issue_created_at": "2023-03-10T12:21:40Z",
       "suggested_case_id": "python-hyper-h2-issue-1278",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "c6ed27c2272a178fc3a8f443b52f970a19c15404",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/h2/connection.py"
       ],
@@ -1264,6 +1358,8 @@
       "issue_created_at": "2023-08-02T20:49:58Z",
       "suggested_case_id": "tox-dev-tox-issue-3075",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "bdcd9d85556d8e53baa1167a8e65f7921ce11f96",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/config/loader/ini/replace.py"
       ],
@@ -1289,6 +1385,8 @@
       "issue_created_at": "2023-09-14T07:31:58Z",
       "suggested_case_id": "sqlalchemy-alembic-issue-1311",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "8542a09459daa9a75a73ab8e4c109686255e4f34",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "alembic/command.py"
       ],
@@ -1314,6 +1412,8 @@
       "issue_created_at": "2023-12-15T12:37:12Z",
       "suggested_case_id": "pytest-dev-pytest-asyncio-issue-724",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "af62924bd1ae2840be1466a349331fdc584b924a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pytest_asyncio/plugin.py"
       ],
@@ -1339,6 +1439,8 @@
       "issue_created_at": "2024-02-21T21:47:35Z",
       "suggested_case_id": "psf-requests-issue-6643",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7a13c041dbef42f9f3feb14110f02626f6892e9a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/adapters.py"
       ],
@@ -1364,6 +1466,8 @@
       "issue_created_at": "2024-07-15T15:10:59Z",
       "suggested_case_id": "pylint-dev-pylint-issue-9798",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5a5ab6b529869f201ea55f473aeebce9845e751a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/checkers/classes/class_checker.py"
       ],
@@ -1389,6 +1493,8 @@
       "issue_created_at": "2024-07-31T16:57:16Z",
       "suggested_case_id": "pycqa-flake8-issue-1948",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2a811cc4d2aaed3e8eb5a9f04f08ccc8af7c0791",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/processor.py"
       ],
@@ -1414,6 +1520,8 @@
       "issue_created_at": "2024-08-26T11:23:22Z",
       "suggested_case_id": "pandas-dev-pandas-issue-59609",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "63c18fa41de4a2d4513013ebf63d2f5808d1744d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pandas/core/algorithms.py"
       ],
@@ -1441,6 +1549,8 @@
       "issue_created_at": "2024-10-01T02:58:56Z",
       "suggested_case_id": "boto-botocore-issue-3268",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "25cbbe2251d746b3f5ef0a4fcdb644def86937dc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "botocore/httpsession.py"
       ],
@@ -1466,6 +1576,8 @@
       "issue_created_at": "2024-10-10T04:39:54Z",
       "suggested_case_id": "pallets-markupsafe-issue-472",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "9c44ecf45141f691d373a66ce664c43b5a6cc761",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/markupsafe/_speedups.c"
       ],
@@ -1491,6 +1603,8 @@
       "issue_created_at": "2024-12-08T08:19:23Z",
       "suggested_case_id": "matplotlib-matplotlib-issue-29256",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f8900ead0d9381a7652568768b065324f929734e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/matplotlib/backends/backend_webagg_core.py"
       ],
@@ -1516,6 +1630,8 @@
       "issue_created_at": "2025-01-06T15:54:22Z",
       "suggested_case_id": "aio-libs-yarl-issue-1458",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "9d7a194c2a50b189c07a057ecb6b066f27e7cb24",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "yarl/_query.py"
       ],
@@ -1541,6 +1657,8 @@
       "issue_created_at": "2025-01-19T15:33:24Z",
       "suggested_case_id": "pypa-setuptools-issue-4810",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7308942329bff7078bff4e16b89964b2bc6df616",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "setuptools/config/_apply_pyprojecttoml.py"
       ],
@@ -1566,6 +1684,8 @@
       "issue_created_at": "2025-02-03T17:02:14Z",
       "suggested_case_id": "encode-django-rest-framework-issue-9645",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cf582fb58e9e5ffcc8ed78a2cb9aaa8f4865666a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/utils/field_mapping.py"
       ],
@@ -1591,6 +1711,8 @@
       "issue_created_at": "2025-02-09T03:47:45Z",
       "suggested_case_id": "aio-libs-yarl-issue-1467",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0db43c6d7c9c0ce0a6738b3772535ca9136f7008",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "yarl/_url.py"
       ],
@@ -1616,6 +1738,8 @@
       "issue_created_at": "2025-03-18T10:35:30Z",
       "suggested_case_id": "aio-libs-yarl-issue-1485",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "07d0ba3b7bad907787478ca3637fa03d07a2f8ad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "yarl/_parse.py"
       ],
@@ -1641,6 +1765,8 @@
       "issue_created_at": "2025-03-19T20:51:03Z",
       "suggested_case_id": "scikit-learn-scikit-learn-issue-31030",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "bf2dfd4f4d1949cf78405af7891ec9b340b83d15",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sklearn/cluster/_dbscan.py"
       ],
@@ -1666,6 +1792,8 @@
       "issue_created_at": "2025-03-29T05:47:48Z",
       "suggested_case_id": "boto-botocore-issue-3434",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "40325331e046dbe894ff54dee67ad0f2925fdff7",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "setup.py"
       ],
@@ -1691,6 +1819,8 @@
       "issue_created_at": "2025-04-08T19:34:54Z",
       "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1090",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "bf5b4e09248e073d94c33dde590f2893986c98c1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pytest_asyncio/plugin.py"
       ],
@@ -1716,6 +1846,8 @@
       "issue_created_at": "2025-04-10T03:08:55Z",
       "suggested_case_id": "aio-libs-multidict-issue-1143",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fe79f9747450f7e52451c29cff8fb93d91ea92ee",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "setup.py"
       ],
@@ -1741,6 +1873,8 @@
       "issue_created_at": "2025-04-18T15:07:03Z",
       "suggested_case_id": "boto-botocore-issue-3455",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "22bdd1723be32bcd318b73bace38026869bdb609",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "botocore/awsrequest.py"
       ],
@@ -1766,6 +1900,8 @@
       "issue_created_at": "2025-05-04T11:42:35Z",
       "suggested_case_id": "aio-libs-multidict-issue-1159",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "af420430358d6f0ebb660d6a733c16b7ff491d3f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "multidict/_multidict.c"
       ],
@@ -1791,6 +1927,8 @@
       "issue_created_at": "2025-05-06T17:43:23Z",
       "suggested_case_id": "boto-boto3-issue-4526",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "773a915cec9109cb9c32460c1ac5a615c6bf446e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "boto3/compat.py"
       ],
@@ -1816,6 +1954,8 @@
       "issue_created_at": "2025-07-25T13:20:52Z",
       "suggested_case_id": "boto-botocore-issue-3532",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "749ac95af44c97966e49d86f6bd327f0529fde9c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "botocore/stub.py"
       ],
@@ -1841,6 +1981,8 @@
       "issue_created_at": "2025-07-26T19:05:28Z",
       "suggested_case_id": "ansible-ansible-issue-85568",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0e69d86c0c6cbbf239c6f9301c31458608503d8a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/ansible/modules/getent.py"
       ],
@@ -1857,6 +1999,35 @@
     },
     {
       "review_order": 72,
+      "candidate_id": "python-hyper-h2-issue-1308-pr-1309",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1308,
+      "fix_pr_number": 1309,
+      "issue_title": "Header validation stricter than RFC 9113/8441 for pseudo-headers (extended CONNECT / CONNECT edge case)",
+      "issue_created_at": "2025-10-04T19:28:46Z",
+      "suggested_case_id": "python-hyper-h2-issue-1308",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "9268b7235f345e6a335733d56d298594e8069aa3",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 8,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 73,
       "candidate_id": "python-attrs-attrs-issue-1479-pr-1509",
       "priority": "primary",
       "repository": "python-attrs/attrs",
@@ -1866,6 +2037,8 @@
       "issue_created_at": "2025-10-13T19:30:05Z",
       "suggested_case_id": "python-attrs-attrs-issue-1479",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "c44b8b0052ca3a4594219efa702129e1537d8966",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/attr/_make.py"
       ],
@@ -1881,7 +2054,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 73,
+      "review_order": 74,
       "candidate_id": "sphinx-doc-sphinx-issue-14050-pr-14202",
       "priority": "primary",
       "repository": "sphinx-doc/sphinx",
@@ -1891,6 +2064,8 @@
       "issue_created_at": "2025-11-09T16:23:06Z",
       "suggested_case_id": "sphinx-doc-sphinx-issue-14050",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5c2ab212b44a844d977ef6ddab89590af3eb65cd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sphinx/writers/latex.py"
       ],
@@ -1906,7 +2081,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 74,
+      "review_order": 75,
       "candidate_id": "pytest-dev-pluggy-issue-629-pr-632",
       "priority": "primary",
       "repository": "pytest-dev/pluggy",
@@ -1916,6 +2091,8 @@
       "issue_created_at": "2025-11-21T11:43:40Z",
       "suggested_case_id": "pytest-dev-pluggy-issue-629",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "59e66fdb231bf47ce5e0b8ed75b788820b135c34",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/pluggy/_hooks.py"
       ],
@@ -1931,7 +2108,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 75,
+      "review_order": 76,
       "candidate_id": "aio-libs-yarl-issue-1632-pr-1687",
       "priority": "primary",
       "repository": "aio-libs/yarl",
@@ -1941,6 +2118,8 @@
       "issue_created_at": "2026-02-25T11:16:28Z",
       "suggested_case_id": "aio-libs-yarl-issue-1632",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d92a83f5ff11ce4066df38f3df2e9bef6d2d9c40",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "yarl/_url.py"
       ],
@@ -1956,7 +2135,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 76,
+      "review_order": 77,
       "candidate_id": "pypa-virtualenv-issue-3089-pr-3092",
       "priority": "primary",
       "repository": "pypa/virtualenv",
@@ -1966,6 +2145,8 @@
       "issue_created_at": "2026-03-06T11:22:54Z",
       "suggested_case_id": "pypa-virtualenv-issue-3089",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0cd0e09526863f46f91a4afc057f179fdacf3878",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/virtualenv/create/via_global_ref/venv.py"
       ],
@@ -1981,7 +2162,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 77,
+      "review_order": 78,
       "candidate_id": "pypa-virtualenv-issue-3105-pr-3110",
       "priority": "primary",
       "repository": "pypa/virtualenv",
@@ -1991,6 +2172,8 @@
       "issue_created_at": "2026-04-04T16:44:06Z",
       "suggested_case_id": "pypa-virtualenv-issue-3105",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "dfaa73826dad5e9c2cdc2b5873a14eb80c37480b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/virtualenv/config/cli/parser.py"
       ],
@@ -2006,7 +2189,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 78,
+      "review_order": 79,
       "candidate_id": "psf-requests-issue-7375-pr-7376",
       "priority": "primary",
       "repository": "psf/requests",
@@ -2016,6 +2199,8 @@
       "issue_created_at": "2026-04-20T13:22:54Z",
       "suggested_case_id": "psf-requests-issue-7375",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5f3ff9b9e4d3d44960467e7877e06e9efa22f20b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/__init__.py"
       ],
@@ -2031,7 +2216,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 79,
+      "review_order": 80,
       "candidate_id": "psf-requests-issue-7432-pr-7433",
       "priority": "primary",
       "repository": "psf/requests",
@@ -2041,6 +2226,8 @@
       "issue_created_at": "2026-05-12T13:42:12Z",
       "suggested_case_id": "psf-requests-issue-7432",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0b401c76b6e80a4eecf3c690085b2553f6e261ca",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/models.py"
       ],
@@ -2056,7 +2243,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 80,
+      "review_order": 81,
       "candidate_id": "tox-dev-tox-issue-3939-pr-3941",
       "priority": "primary",
       "repository": "tox-dev/tox",
@@ -2066,6 +2253,8 @@
       "issue_created_at": "2026-05-12T16:00:50Z",
       "suggested_case_id": "tox-dev-tox-issue-3939",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1ad47ddaab21c891f136a9627d1c6cdb6ea655d7",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/session/cmd/schema.py"
       ],
@@ -2081,7 +2270,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 81,
+      "review_order": 82,
       "candidate_id": "tox-dev-tox-issue-3945-pr-3948",
       "priority": "primary",
       "repository": "tox-dev/tox",
@@ -2091,6 +2280,8 @@
       "issue_created_at": "2026-05-19T14:15:55Z",
       "suggested_case_id": "tox-dev-tox-issue-3945",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "27b68b39e6db707909311e654fcb6aa4d626cccf",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/tox_env/python/pip/pip_install.py"
       ],
@@ -2106,7 +2297,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 82,
+      "review_order": 83,
       "candidate_id": "scikit-learn-scikit-learn-issue-34170-pr-34657",
       "priority": "primary",
       "repository": "scikit-learn/scikit-learn",
@@ -2116,6 +2307,8 @@
       "issue_created_at": "2026-06-01T16:05:45Z",
       "suggested_case_id": "scikit-learn-scikit-learn-issue-34170",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1b36d21e0ffcda57d0b934f7710b9aa71e50cdd7",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sklearn/linear_model/_ridge.py"
       ],
@@ -2131,7 +2324,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 83,
+      "review_order": 84,
       "candidate_id": "urllib3-urllib3-issue-5077-pr-5102",
       "priority": "primary",
       "repository": "urllib3/urllib3",
@@ -2141,6 +2334,8 @@
       "issue_created_at": "2026-06-04T08:31:54Z",
       "suggested_case_id": "urllib3-urllib3-issue-5077",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4e5ce638723118dc41f218cd6715f91a9f321908",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/poolmanager.py"
       ],
@@ -2156,7 +2351,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 84,
+      "review_order": 85,
       "candidate_id": "pypa-virtualenv-issue-3157-pr-3166",
       "priority": "primary",
       "repository": "pypa/virtualenv",
@@ -2166,6 +2361,8 @@
       "issue_created_at": "2026-06-05T14:00:00Z",
       "suggested_case_id": "pypa-virtualenv-issue-3157",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0134feeec7ba0bd1a6193dc6245934ee5e800774",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/virtualenv/app_data/via_disk_folder.py"
       ],
@@ -2181,7 +2378,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 85,
+      "review_order": 86,
       "candidate_id": "scipy-scipy-issue-25406-pr-25450",
       "priority": "primary",
       "repository": "scipy/scipy",
@@ -2191,6 +2388,8 @@
       "issue_created_at": "2026-06-18T02:41:53Z",
       "suggested_case_id": "scipy-scipy-issue-25406",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1add120eb5d929b34374e3c83e8052bcd17f8f96",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "scipy/interpolate/src/_fitpackmodule.c"
       ],
@@ -2206,7 +2405,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 86,
+      "review_order": 87,
       "candidate_id": "scikit-learn-scikit-learn-issue-34338-pr-34341",
       "priority": "primary",
       "repository": "scikit-learn/scikit-learn",
@@ -2216,6 +2415,8 @@
       "issue_created_at": "2026-06-19T09:51:36Z",
       "suggested_case_id": "scikit-learn-scikit-learn-issue-34338",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cb4f2be10c4dc1da2592834b14a93ad9dbefa91d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sklearn/neighbors/_base.py"
       ],
@@ -2231,7 +2432,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 87,
+      "review_order": 88,
       "candidate_id": "python-attrs-attrs-issue-1575-pr-1593",
       "priority": "primary",
       "repository": "python-attrs/attrs",
@@ -2241,6 +2442,8 @@
       "issue_created_at": "2026-06-28T23:45:08Z",
       "suggested_case_id": "python-attrs-attrs-issue-1575",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "358dec2c61e0213dd454a3240664cfb9924f3b56",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/attr/_make.py"
       ],
@@ -2256,7 +2459,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 88,
+      "review_order": 89,
       "candidate_id": "urllib3-urllib3-issue-5099-pr-5103",
       "priority": "primary",
       "repository": "urllib3/urllib3",
@@ -2266,6 +2469,8 @@
       "issue_created_at": "2026-07-04T16:57:10Z",
       "suggested_case_id": "urllib3-urllib3-issue-5099",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "e18a0d1a159210a5b64354a435b6e5437c80e0d6",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/contrib/pyopenssl.py"
       ],
@@ -2281,7 +2486,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 89,
+      "review_order": 90,
       "candidate_id": "ansible-ansible-issue-87303-pr-87304",
       "priority": "primary",
       "repository": "ansible/ansible",
@@ -2291,6 +2496,8 @@
       "issue_created_at": "2026-07-27T14:46:36Z",
       "suggested_case_id": "ansible-ansible-issue-87303",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "76884711a617bfe59b417df11fbfc42016c99de8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/ansible/modules/rpm_key.py"
       ],
@@ -2306,7 +2513,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 90,
+      "review_order": 91,
       "candidate_id": "astral-sh-ruff-issue-27216-pr-27711",
       "priority": "primary",
       "repository": "astral-sh/ruff",
@@ -2316,6 +2523,8 @@
       "issue_created_at": "2026-07-27T15:28:26Z",
       "suggested_case_id": "astral-sh-ruff-issue-27216",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "b8c5e73abe5b15a74fb066e474d30397d1421cfe",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
       ],
@@ -2331,7 +2540,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 91,
+      "review_order": 92,
       "candidate_id": "pandas-dev-pandas-issue-66517-pr-66791",
       "priority": "primary",
       "repository": "pandas-dev/pandas",
@@ -2341,6 +2550,8 @@
       "issue_created_at": "2026-07-29T03:27:05Z",
       "suggested_case_id": "pandas-dev-pandas-issue-66517",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "63c18fa41de4a2d4513013ebf63d2f5808d1744d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pandas/core/dtypes/cast.py"
       ],
@@ -2356,7 +2567,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 92,
+      "review_order": 93,
       "candidate_id": "matplotlib-matplotlib-issue-32133-pr-32150",
       "priority": "primary",
       "repository": "matplotlib/matplotlib",
@@ -2366,6 +2577,8 @@
       "issue_created_at": "2026-07-29T14:00:44Z",
       "suggested_case_id": "matplotlib-matplotlib-issue-32133",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6ee8677adb7d874b7ca16b5ea0b8ad55a47dc8a5",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/matplotlib/lines.py"
       ],
@@ -2381,7 +2594,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 93,
+      "review_order": 94,
       "candidate_id": "apache-airflow-issue-70822-pr-70879",
       "priority": "primary",
       "repository": "apache/airflow",
@@ -2391,6 +2604,8 @@
       "issue_created_at": "2026-07-31T11:06:44Z",
       "suggested_case_id": "apache-airflow-issue-70822",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "655740bb98282ca64d5bde2aeec65da8c56b1930",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py"
       ],
@@ -2406,7 +2621,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 94,
+      "review_order": 95,
       "candidate_id": "pylint-dev-pylint-issue-11224-pr-11250",
       "priority": "primary",
       "repository": "pylint-dev/pylint",
@@ -2416,6 +2631,8 @@
       "issue_created_at": "2026-08-03T02:18:16Z",
       "suggested_case_id": "pylint-dev-pylint-issue-11224",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d58d7e717ad9d045c9efd8bc2290590a4c63a979",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/checkers/base/comparison_checker.py"
       ],
@@ -2431,7 +2648,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 95,
+      "review_order": 96,
       "candidate_id": "pylint-dev-pylint-issue-11228-pr-11262",
       "priority": "primary",
       "repository": "pylint-dev/pylint",
@@ -2441,6 +2658,8 @@
       "issue_created_at": "2026-08-04T01:13:11Z",
       "suggested_case_id": "pylint-dev-pylint-issue-11228",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d4ade4ae762534f203d57c3cbcb94e4d7d3d7f0d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/extensions/_check_docs_utils.py"
       ],
@@ -2456,7 +2675,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 96,
+      "review_order": 97,
       "candidate_id": "pylint-dev-pylint-issue-11231-pr-11232",
       "priority": "primary",
       "repository": "pylint-dev/pylint",
@@ -2466,6 +2685,8 @@
       "issue_created_at": "2026-08-05T08:45:12Z",
       "suggested_case_id": "pylint-dev-pylint-issue-11231",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2704876d736917a36ba5674bed9c9251434d096f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/checkers/base/name_checker/checker.py"
       ],
@@ -2481,7 +2702,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 97,
+      "review_order": 98,
       "candidate_id": "pandas-dev-pandas-issue-66639-pr-66790",
       "priority": "primary",
       "repository": "pandas-dev/pandas",
@@ -2491,6 +2712,8 @@
       "issue_created_at": "2026-08-06T16:58:16Z",
       "suggested_case_id": "pandas-dev-pandas-issue-66639",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pandas/io/parsers/readers.py"
       ],
@@ -2506,7 +2729,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 98,
+      "review_order": 99,
       "candidate_id": "apache-airflow-issue-71319-pr-71572",
       "priority": "primary",
       "repository": "apache/airflow",
@@ -2516,6 +2739,8 @@
       "issue_created_at": "2026-08-08T01:28:11Z",
       "suggested_case_id": "apache-airflow-issue-71319",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fbb0ca79e69fc668a0f9b590ca1aa5c00098d569",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py"
       ],
@@ -2531,7 +2756,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 99,
+      "review_order": 100,
       "candidate_id": "astral-sh-ruff-issue-27631-pr-27687",
       "priority": "primary",
       "repository": "astral-sh/ruff",
@@ -2541,6 +2766,8 @@
       "issue_created_at": "2026-08-10T14:49:19Z",
       "suggested_case_id": "astral-sh-ruff-issue-27631",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "8f11b10b926b1625cf35a5babb44854e2bbd423d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs"
       ],
@@ -2556,7 +2783,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 100,
+      "review_order": 101,
       "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4862",
       "priority": "primary",
       "repository": "HypothesisWorks/hypothesis",
@@ -2566,6 +2793,8 @@
       "issue_created_at": "2026-08-13T19:20:04Z",
       "suggested_case_id": "hypothesisworks-hypothesis-issue-4858",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "a15954b165af42884b655dcf7e9338cb107711da",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "hypothesis/src/hypothesis/strategies/_internal/regex.py"
       ],
@@ -2583,7 +2812,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 101,
+      "review_order": 102,
       "candidate_id": "paramiko-paramiko-issue-1369-pr-1379",
       "priority": "primary",
       "repository": "paramiko/paramiko",
@@ -2593,6 +2822,8 @@
       "issue_created_at": "2019-01-22T20:18:01Z",
       "suggested_case_id": "paramiko-paramiko-issue-1369",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cf7d49d66f3b1fbc8b0853518a54050182b3b5eb",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/ecdsakey.py",
         "paramiko/kex_ecdh_nist.py",
@@ -2611,7 +2842,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 102,
+      "review_order": 103,
       "candidate_id": "urllib3-urllib3-issue-4945-pr-5055",
       "priority": "primary",
       "repository": "urllib3/urllib3",
@@ -2621,6 +2852,8 @@
       "issue_created_at": "2026-03-26T08:11:06Z",
       "suggested_case_id": "urllib3-urllib3-issue-4945",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "29ae1419530857dc43f5d28907da5d6fbc229739",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/contrib/socks.py",
         "src/urllib3/util/request.py",
@@ -2639,7 +2872,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 103,
+      "review_order": 104,
       "candidate_id": "astral-sh-uv-issue-21122-pr-21131",
       "priority": "primary",
       "repository": "astral-sh/uv",
@@ -2649,6 +2882,8 @@
       "issue_created_at": "2026-08-14T03:02:51Z",
       "suggested_case_id": "astral-sh-uv-issue-21122",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "298dda41bff49bbd0a2f397e1662ab09b9cd148e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/uv-resolver/src/lock/export/cyclonedx_json.rs",
         "crates/uv/src/commands/project/export.rs"
@@ -2666,7 +2901,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 104,
+      "review_order": 105,
       "candidate_id": "paramiko-paramiko-issue-713-pr-889",
       "priority": "primary",
       "repository": "paramiko/paramiko",
@@ -2676,6 +2911,8 @@
       "issue_created_at": "2016-03-31T14:18:11Z",
       "suggested_case_id": "paramiko-paramiko-issue-713",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7a9d633486991b11e4c212e6937ceea42c1e539f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/transport.py"
       ],
@@ -2692,7 +2929,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 105,
+      "review_order": 106,
       "candidate_id": "pallets-markupsafe-issue-358-pr-376",
       "priority": "primary",
       "repository": "pallets/markupsafe",
@@ -2702,32 +2939,8 @@
       "issue_created_at": "2023-03-12T11:42:03Z",
       "suggested_case_id": "pallets-markupsafe-issue-358",
       "suggested_tier": "generalization",
-      "expected_files": [
-        "src/markupsafe/__init__.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 106,
-      "candidate_id": "pallets-markupsafe-issue-417-pr-418",
-      "priority": "primary",
-      "repository": "pallets/markupsafe",
-      "issue_number": 417,
-      "fix_pr_number": 418,
-      "issue_title": "Markup.striptags: comments now get replaced with a space",
-      "issue_created_at": "2024-01-24T15:34:43Z",
-      "suggested_case_id": "pallets-markupsafe-issue-417",
-      "suggested_tier": "generalization",
+      "pre_fix_sha": "910ffffbcc991f5bc38345bb7134844700504db5",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/markupsafe/__init__.py"
       ],
@@ -2745,6 +2958,34 @@
     },
     {
       "review_order": 107,
+      "candidate_id": "pallets-markupsafe-issue-417-pr-418",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 417,
+      "fix_pr_number": 418,
+      "issue_title": "Markup.striptags: comments now get replaced with a space",
+      "issue_created_at": "2024-01-24T15:34:43Z",
+      "suggested_case_id": "pallets-markupsafe-issue-417",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "73e6a4886564a554c4a19983d29c97f9fc95457d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 108,
       "candidate_id": "python-attrs-attrs-issue-1400-pr-1529",
       "priority": "primary",
       "repository": "python-attrs/attrs",
@@ -2754,6 +2995,8 @@
       "issue_created_at": "2025-01-30T09:19:50Z",
       "suggested_case_id": "python-attrs-attrs-issue-1400",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "3a68d4913221abc6f8ad3be50937f7ae49300a98",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/attr/_make.py"
       ],
@@ -2770,33 +3013,6 @@
       "status": "needs_review"
     },
     {
-      "review_order": 108,
-      "candidate_id": "pytest-dev-pytest-asyncio-issue-1101-pr-1373",
-      "priority": "primary",
-      "repository": "pytest-dev/pytest-asyncio",
-      "issue_number": 1101,
-      "fix_pr_number": 1373,
-      "issue_title": "event_loop_policy for single test",
-      "issue_created_at": "2025-04-24T19:46:11Z",
-      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1101",
-      "suggested_tier": "generalization",
-      "expected_files": [
-        "pytest_asyncio/plugin.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal",
-        "failed:unique_fix_pr"
-      ],
-      "status": "needs_review"
-    },
-    {
       "review_order": 109,
       "candidate_id": "psf-requests-issue-7219-pr-7220",
       "priority": "primary",
@@ -2807,6 +3023,8 @@
       "issue_created_at": "2026-02-22T13:29:04Z",
       "suggested_case_id": "psf-requests-issue-7219",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "da9113c0466850a425e554630a732ec1f7d045fc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/__init__.py"
       ],
@@ -2833,6 +3051,8 @@
       "issue_created_at": "2016-06-04T18:26:38Z",
       "suggested_case_id": "python-hyper-h11-issue-7",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "522b00470b5776dda2dc7e98ff778eb1e418e6ad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_connection.py",
         "h11/_readers.py",
@@ -2861,6 +3081,8 @@
       "issue_created_at": "2017-02-19T15:36:16Z",
       "suggested_case_id": "python-hyper-h11-issue-31",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "15408436718637b41906e88e2f0414836ffb2073",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_connection.py",
         "h11/_headers.py",
@@ -2890,6 +3112,8 @@
       "issue_created_at": "2020-12-16T22:21:41Z",
       "suggested_case_id": "python-hyper-h11-issue-121",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "889a56446f8ffd2e915d75f761bdb61a9102f4ba",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_readers.py",
         "h11/_receivebuffer.py"
@@ -2917,6 +3141,8 @@
       "issue_created_at": "2022-09-15T15:54:13Z",
       "suggested_case_id": "pycqa-flake8-issue-1689",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5eeee3fbc0b64c7de347d1964de3074b9b2bde0b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/defaults.py",
         "src/flake8/options/config.py",
@@ -2945,6 +3171,8 @@
       "issue_created_at": "2023-08-14T11:56:26Z",
       "suggested_case_id": "pytest-dev-pluggy-issue-431",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/pluggy/_hooks.py",
         "src/pluggy/_manager.py"
@@ -2972,6 +3200,8 @@
       "issue_created_at": "2024-02-21T09:19:47Z",
       "suggested_case_id": "sqlalchemy-alembic-issue-1429",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "a22d21a43c2eb7a12944377168727ed76a51aaa9",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "alembic/operations/base.py",
         "alembic/operations/ops.py"
@@ -2999,6 +3229,8 @@
       "issue_created_at": "2025-12-16T00:49:53Z",
       "suggested_case_id": "pypa-build-issue-966",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "254be0cc5be82b0871b8d4702b9fca4cabc87eb4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/build/__main__.py"
       ],
@@ -3016,6 +3248,34 @@
     },
     {
       "review_order": 117,
+      "candidate_id": "python-hyper-h2-issue-1316-pr-1317",
+      "priority": "primary",
+      "repository": "python-hyper/h2",
+      "issue_number": 1316,
+      "fix_pr_number": 1317,
+      "issue_title": "Reject conflicting duplicate Content-Length headers",
+      "issue_created_at": "2026-05-13T21:40:10Z",
+      "suggested_case_id": "python-hyper-h2-issue-1316",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "dc5da5c3329e293492c97ff2243e93ede84f2d20",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/stream.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 118,
       "candidate_id": "scikit-learn-scikit-learn-issue-34621-pr-34632",
       "priority": "primary",
       "repository": "scikit-learn/scikit-learn",
@@ -3025,6 +3285,8 @@
       "issue_created_at": "2026-08-01T03:55:35Z",
       "suggested_case_id": "scikit-learn-scikit-learn-issue-34621",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5799d3eac08bda44fbce3309e641cbf98c5d312a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sklearn/utils/_testing.py"
       ],
@@ -3041,7 +3303,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 118,
+      "review_order": 119,
       "candidate_id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
       "priority": "primary",
       "repository": "scikit-learn/scikit-learn",
@@ -3051,6 +3313,8 @@
       "issue_created_at": "2026-08-11T05:00:17Z",
       "suggested_case_id": "scikit-learn-scikit-learn-issue-34719",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "e27ccf58592fcfe8c7ca87f53dde840c436093b2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "build_tools/get_comment.py"
       ],
@@ -3067,7 +3331,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 119,
+      "review_order": 120,
       "candidate_id": "pyo3-pyo3-issue-6318-pr-6320",
       "priority": "primary",
       "repository": "PyO3/pyo3",
@@ -3077,6 +3341,8 @@
       "issue_created_at": "2026-08-13T03:23:43Z",
       "suggested_case_id": "pyo3-pyo3-issue-6318",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "dfdbc468faf92dbf1594bdeb31bd96fb7c1ef06b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/internal/state.rs"
       ],
@@ -3093,34 +3359,6 @@
       "status": "needs_review"
     },
     {
-      "review_order": 120,
-      "candidate_id": "python-hyper-h2-issue-1236-pr-1290",
-      "priority": "primary",
-      "repository": "python-hyper/h2",
-      "issue_number": 1236,
-      "fix_pr_number": 1290,
-      "issue_title": "Comparison between bytes and string in defining a frozenset throws exception",
-      "issue_created_at": "2020-08-06T20:35:34Z",
-      "suggested_case_id": "python-hyper-h2-issue-1236",
-      "suggested_tier": "generalization",
-      "expected_files": [
-        "src/h2/events.py",
-        "src/h2/stream.py",
-        "src/h2/utilities.py"
-      ],
-      "multi_file": true,
-      "advisory_score": 5,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:closing_reference"
-      ],
-      "status": "needs_review"
-    },
-    {
       "review_order": 121,
       "candidate_id": "numpy-numpy-issue-30494-pr-30514",
       "priority": "primary",
@@ -3131,6 +3369,8 @@
       "issue_created_at": "2025-12-21T20:07:21Z",
       "suggested_case_id": "numpy-numpy-issue-30494",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "472373d61dc4fd83f1d6efe5e2ef0613d0cf1204",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "numpy/_core/src/multiarray/array_coercion.c",
         "numpy/_core/src/multiarray/ctors.c",
@@ -3159,6 +3399,8 @@
       "issue_created_at": "2026-01-04T19:47:20Z",
       "suggested_case_id": "sphinx-doc-sphinx-issue-14238",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "c1b618c559e6de70e5198ed6876f5b9fab88face",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sphinx/ext/apidoc/_generate.py",
         "sphinx/util/_serialise.py",
@@ -3187,6 +3429,8 @@
       "issue_created_at": "2026-05-12T15:25:34Z",
       "suggested_case_id": "psf-requests-issue-7434",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0b401c76b6e80a4eecf3c690085b2553f6e261ca",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/_types.py",
         "src/requests/models.py",
@@ -3215,6 +3459,8 @@
       "issue_created_at": "2026-08-12T13:24:41Z",
       "suggested_case_id": "astral-sh-uv-issue-21066",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1ddd31e53ef669ecd2df5c737fb8d6e973798e8b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/uv-python/src/interpreter.rs",
         "crates/uv/src/commands/project/mod.rs"
@@ -3242,6 +3488,8 @@
       "issue_created_at": "2018-04-17T22:31:18Z",
       "suggested_case_id": "urllib3-urllib3-issue-1362",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "6e42ff11a1ba5c1542f38c67ec17238d0b779552",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/connection.py"
       ],
@@ -3268,6 +3516,8 @@
       "issue_created_at": "2022-03-10T08:27:04Z",
       "suggested_case_id": "urllib3-urllib3-issue-2580",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "627636551e0e0159996b0f28dd21a60372cc5b10",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/connectionpool.py"
       ],
@@ -3294,6 +3544,8 @@
       "issue_created_at": "2024-01-16T02:04:50Z",
       "suggested_case_id": "pypa-packaging-issue-774",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ead9d34f9b6a5e504a4563d9246f76d37a112e85",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/packaging/markers.py"
       ],
@@ -3320,6 +3572,8 @@
       "issue_created_at": "2025-05-29T03:17:37Z",
       "suggested_case_id": "scipy-scipy-issue-23076",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1733d53c1d50a5ebbc8c454b90fa57016a8d6973",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "scipy/sparse/_sputils.py"
       ],
@@ -3346,6 +3600,8 @@
       "issue_created_at": "2025-06-11T23:24:27Z",
       "suggested_case_id": "tornadoweb-tornado-issue-3510",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "bb07ce9d1f0e9529b6fe9c2cebe78cfb238b4a0c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "tornado/httputil.py"
       ],
@@ -3372,6 +3628,8 @@
       "issue_created_at": "2026-02-02T14:12:47Z",
       "suggested_case_id": "scipy-scipy-issue-24495",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "29feda5420bc33379b5e0a002f782276a78b7ef2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "scipy/signal/_sigtoolsmodule.cc"
       ],
@@ -3398,6 +3656,8 @@
       "issue_created_at": "2026-03-17T21:21:04Z",
       "suggested_case_id": "boto-botocore-issue-3651",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ee59a860fcc20a937e25e4fe71719701ff101c79",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "botocore/httpchecksum.py"
       ],
@@ -3424,6 +3684,8 @@
       "issue_created_at": "2026-07-18T20:05:23Z",
       "suggested_case_id": "scipy-scipy-issue-25657",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ea194aeb77d8e7f1b1c4221ef8e086c3de7e056b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "scipy/linalg/_matfuncs.py"
       ],
@@ -3450,6 +3712,8 @@
       "issue_created_at": "2026-07-28T11:55:16Z",
       "suggested_case_id": "scipy-scipy-issue-25732",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f9cea05baaabcd90c43edbe74a1a75678b3e402f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "scipy/fft/_realtransforms.py"
       ],
@@ -3476,6 +3740,8 @@
       "issue_created_at": "2026-08-13T16:14:43Z",
       "suggested_case_id": "astral-sh-uv-issue-21089",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "8357dfd955ca3a0de5be63893138f3c0a43a0e76",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/uv-pep508/src/lib.rs"
       ],
@@ -3502,6 +3768,8 @@
       "issue_created_at": "2026-08-13T19:22:57Z",
       "suggested_case_id": "hypothesisworks-hypothesis-issue-4859",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2f49474d4eac805cb851dc6b75f7cea3cc40354f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "hypothesis/src/hypothesis/strategies/_internal/regex.py"
       ],
@@ -3528,6 +3796,8 @@
       "issue_created_at": "2018-09-28T05:19:50Z",
       "suggested_case_id": "aio-libs-multidict-issue-292",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2119f97a39cfee6dc0051878d13565bc00079b81",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "multidict/_abc.py",
         "multidict/_multidict.c",
@@ -3547,38 +3817,6 @@
     },
     {
       "review_order": 137,
-      "candidate_id": "python-hyper-h2-issue-1245-pr-1246",
-      "priority": "primary",
-      "repository": "python-hyper/h2",
-      "issue_number": 1245,
-      "fix_pr_number": 1246,
-      "issue_title": "Proposal: Rename this repository to \"h2\"",
-      "issue_created_at": "2021-02-19T16:25:38Z",
-      "suggested_case_id": "python-hyper-h2-issue-1245",
-      "suggested_tier": "generalization",
-      "expected_files": [
-        "setup.py",
-        "src/h2/__init__.py",
-        "src/h2/config.py",
-        "src/h2/connection.py",
-        "src/h2/events.py",
-        "src/h2/stream.py",
-        "visualizer/visualize.py"
-      ],
-      "multi_file": true,
-      "advisory_score": 4,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal",
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 138,
       "candidate_id": "pypa-packaging-issue-597-pr-1344",
       "priority": "primary",
       "repository": "pypa/packaging",
@@ -3588,6 +3826,8 @@
       "issue_created_at": "2022-10-12T10:12:45Z",
       "suggested_case_id": "pypa-packaging-issue-597",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fe18f139c5b3d73cd9fdd9b25f1eda1b6fd7ba15",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/packaging/markers.py",
         "src/packaging/metadata.py",
@@ -3611,7 +3851,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 139,
+      "review_order": 138,
       "candidate_id": "pypa-build-issue-655-pr-1083",
       "priority": "primary",
       "repository": "pypa/build",
@@ -3621,6 +3861,8 @@
       "issue_created_at": "2023-08-15T13:14:48Z",
       "suggested_case_id": "pypa-build-issue-655",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "9ac8718f5ffaeba3660b02158822047c580b194e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/build/__main__.py",
         "src/build/_exceptions.py",
@@ -3639,7 +3881,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 140,
+      "review_order": 139,
       "candidate_id": "aio-libs-multidict-issue-1123-pr-1179",
       "priority": "primary",
       "repository": "aio-libs/multidict",
@@ -3649,6 +3891,8 @@
       "issue_created_at": "2025-04-03T10:46:08Z",
       "suggested_case_id": "aio-libs-multidict-issue-1123",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "26987f9594a29e7a2b9d8b554543ad9bcba82b8e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "multidict/_multidict.c",
         "multidict/_multidict_py.py"
@@ -3666,7 +3910,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 141,
+      "review_order": 140,
       "candidate_id": "astral-sh-ruff-issue-21870-pr-27190",
       "priority": "primary",
       "repository": "astral-sh/ruff",
@@ -3676,6 +3920,8 @@
       "issue_created_at": "2025-12-09T18:12:16Z",
       "suggested_case_id": "astral-sh-ruff-issue-21870",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "a5cdc6d5813b68f6d0cd3b0da015b273cd444620",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/ruff_linter/src/checkers/ast/analyze/statement.rs",
         "crates/ruff_linter/src/codes.rs",
@@ -3694,7 +3940,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 142,
+      "review_order": 141,
       "candidate_id": "pyo3-pyo3-issue-6199-pr-6200",
       "priority": "primary",
       "repository": "PyO3/pyo3",
@@ -3704,6 +3950,8 @@
       "issue_created_at": "2026-07-12T21:01:22Z",
       "suggested_case_id": "pyo3-pyo3-issue-6199",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d1e3be6ef10f29f0b0a42551a1ed82973bd1289c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "noxfile.py",
         "pyo3-benches/benches/bench_attach.rs",
@@ -3722,7 +3970,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 143,
+      "review_order": 142,
       "candidate_id": "numpy-numpy-issue-32069-pr-32091",
       "priority": "primary",
       "repository": "numpy/numpy",
@@ -3732,6 +3980,8 @@
       "issue_created_at": "2026-07-23T00:05:42Z",
       "suggested_case_id": "numpy-numpy-issue-32069",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "15f9211465d8ed5671f71f7d1fa2471f6daaabad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "numpy/lib/_function_base_impl.py",
         "numpy/ma/extras.py"
@@ -3749,7 +3999,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 144,
+      "review_order": 143,
       "candidate_id": "astral-sh-ruff-issue-27637-pr-27646",
       "priority": "primary",
       "repository": "astral-sh/ruff",
@@ -3759,6 +4009,8 @@
       "issue_created_at": "2026-08-10T21:27:33Z",
       "suggested_case_id": "astral-sh-ruff-issue-27637",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d08b174e09a23c0a0413b7e7db7dc67d69593eac",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/ruff/src/printer.rs",
         "crates/ruff_db/src/diagnostic/mod.rs",
@@ -3777,7 +4029,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 145,
+      "review_order": 144,
       "candidate_id": "hypothesisworks-hypothesis-issue-4851-pr-4856",
       "priority": "primary",
       "repository": "HypothesisWorks/hypothesis",
@@ -3787,6 +4039,8 @@
       "issue_created_at": "2026-08-13T07:59:24Z",
       "suggested_case_id": "hypothesisworks-hypothesis-issue-4851",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2f49474d4eac805cb851dc6b75f7cea3cc40354f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "hypothesis/src/hypothesis/internal/lambda_sources.py",
         "hypothesis/src/hypothesis/internal/reflection.py",
@@ -3806,7 +4060,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 146,
+      "review_order": 145,
       "candidate_id": "python-attrs-attrs-issue-240-pr-1541",
       "priority": "primary",
       "repository": "python-attrs/attrs",
@@ -3816,6 +4070,8 @@
       "issue_created_at": "2017-09-01T11:03:15Z",
       "suggested_case_id": "python-attrs-attrs-issue-240",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f0e420b71af1a5cd5dbf43efd1a42aece6ce8f4e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/attr/_make.py"
       ],
@@ -3832,7 +4088,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 147,
+      "review_order": 146,
       "candidate_id": "pypa-build-issue-198-pr-1080",
       "priority": "primary",
       "repository": "pypa/build",
@@ -3842,6 +4098,8 @@
       "issue_created_at": "2020-12-07T18:02:21Z",
       "suggested_case_id": "pypa-build-issue-198",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "714175afba330b51a7eb47f9153173dc75210d48",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/build/__main__.py"
       ],
@@ -3858,7 +4116,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 148,
+      "review_order": 147,
       "candidate_id": "hypothesisworks-hypothesis-issue-3176-pr-4835",
       "priority": "primary",
       "repository": "HypothesisWorks/hypothesis",
@@ -3868,6 +4126,8 @@
       "issue_created_at": "2021-12-04T13:16:43Z",
       "suggested_case_id": "hypothesisworks-hypothesis-issue-3176",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4b8467b2e33864d3a71fa297d5f9be3e8fc9120d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "hypothesis/src/hypothesis/internal/conjecture/engine.py"
       ],
@@ -3884,7 +4144,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 149,
+      "review_order": 148,
       "candidate_id": "pypa-setuptools-issue-3085-pr-5007",
       "priority": "primary",
       "repository": "pypa/setuptools",
@@ -3894,6 +4154,8 @@
       "issue_created_at": "2022-02-05T14:32:14Z",
       "suggested_case_id": "pypa-setuptools-issue-3085",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5ccf50e01ab0d303f524c065f2cb51042b34bc55",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pkg_resources/__init__.py"
       ],
@@ -3910,7 +4172,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 150,
+      "review_order": 149,
       "candidate_id": "pycqa-flake8-issue-1747-pr-1854",
       "priority": "primary",
       "repository": "PyCQA/flake8",
@@ -3920,8 +4182,38 @@
       "issue_created_at": "2022-11-23T18:56:33Z",
       "suggested_case_id": "pycqa-flake8-issue-1747",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "15f45696701bc234494fbc0e803f8fdee712b945",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/plugins/pyflakes.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 150,
+      "candidate_id": "pypa-build-issue-557-pr-1084",
+      "priority": "primary",
+      "repository": "pypa/build",
+      "issue_number": 557,
+      "fix_pr_number": 1084,
+      "issue_title": "Validate dependencies in non-isolated builds",
+      "issue_created_at": "2022-12-28T19:49:23Z",
+      "suggested_case_id": "pypa-build-issue-557",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "1904c7768d7591f40e5bf95014f9c383fc9d524d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/build/util.py"
       ],
       "multi_file": false,
       "advisory_score": 4,
@@ -3946,6 +4238,8 @@
       "issue_created_at": "2024-09-03T16:04:39Z",
       "suggested_case_id": "pallets-jinja-issue-2021",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "3ef3ba885bc7a465b022abfd525d6bb4a1c8dd3c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/compiler.py"
       ],
@@ -3971,6 +4265,8 @@
       "issue_created_at": "2024-10-01T19:08:45Z",
       "suggested_case_id": "pallets-jinja-issue-2025",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "39d9ffff1f33a5e5141af655857f9dbe6b6df03d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/runtime.py"
       ],
@@ -3987,33 +4283,6 @@
     },
     {
       "review_order": 153,
-      "candidate_id": "python-hyper-h2-issue-1308-pr-1309",
-      "priority": "reserve",
-      "repository": "python-hyper/h2",
-      "issue_number": 1308,
-      "fix_pr_number": 1309,
-      "issue_title": "Header validation stricter than RFC 9113/8441 for pseudo-headers (extended CONNECT / CONNECT edge case)",
-      "issue_created_at": "2025-10-04T19:28:46Z",
-      "suggested_case_id": "python-hyper-h2-issue-1308",
-      "suggested_tier": "generalization",
-      "expected_files": [
-        "src/h2/utilities.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:unique_fix_pr"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 154,
       "candidate_id": "tox-dev-tox-issue-3975-pr-3976",
       "priority": "reserve",
       "repository": "tox-dev/tox",
@@ -4023,6 +4292,8 @@
       "issue_created_at": "2026-07-08T14:07:46Z",
       "suggested_case_id": "tox-dev-tox-issue-3975",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "5458a28f15a36c0d7ad2e7166cce4dac0a9cd7cf",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/execute/local_sub_process/__init__.py"
       ],
@@ -4038,7 +4309,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 155,
+      "review_order": 154,
       "candidate_id": "prefecthq-prefect-issue-22807-pr-22808",
       "priority": "reserve",
       "repository": "PrefectHQ/prefect",
@@ -4048,6 +4319,8 @@
       "issue_created_at": "2026-08-11T14:38:30Z",
       "suggested_case_id": "prefecthq-prefect-issue-22807",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "20bc90f1ab99db9c1c236840f12576b2faea6a14",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/prefect/server/services/task_run_recorder.py"
       ],
@@ -4063,7 +4336,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 156,
+      "review_order": 155,
       "candidate_id": "tox-dev-tox-issue-4021-pr-4022",
       "priority": "reserve",
       "repository": "tox-dev/tox",
@@ -4073,6 +4346,8 @@
       "issue_created_at": "2026-08-12T10:47:21Z",
       "suggested_case_id": "tox-dev-tox-issue-4021",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cb7eeca7bb5caaef8d05f08e3cd82536c6ca6a15",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/session/env_select.py"
       ],
@@ -4088,7 +4363,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 157,
+      "review_order": 156,
       "candidate_id": "prefecthq-prefect-issue-22812-pr-22813",
       "priority": "reserve",
       "repository": "PrefectHQ/prefect",
@@ -4098,6 +4373,8 @@
       "issue_created_at": "2026-08-12T15:25:32Z",
       "suggested_case_id": "prefecthq-prefect-issue-22812",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "9e78db2a7f4b686715007abf837713c6e6f79c8a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/prefect/events/clients.py"
       ],
@@ -4113,7 +4390,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 158,
+      "review_order": 157,
       "candidate_id": "pylint-dev-pylint-issue-11267-pr-11268",
       "priority": "reserve",
       "repository": "pylint-dev/pylint",
@@ -4123,6 +4400,8 @@
       "issue_created_at": "2026-08-12T17:36:56Z",
       "suggested_case_id": "pylint-dev-pylint-issue-11267",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4be9585ecfe0f9922917905e7884710baa932886",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/checkers/classes/class_checker.py"
       ],
@@ -4138,7 +4417,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 159,
+      "review_order": 158,
       "candidate_id": "encode-django-rest-framework-issue-6202-pr-9902",
       "priority": "reserve",
       "repository": "encode/django-rest-framework",
@@ -4148,6 +4427,8 @@
       "issue_created_at": "2018-09-22T06:44:07Z",
       "suggested_case_id": "encode-django-rest-framework-issue-6202",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "64bee7ff2867a926c81423846d6cba4fd7597ccc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/fields.py"
       ],
@@ -4164,7 +4445,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 160,
+      "review_order": 159,
       "candidate_id": "paramiko-paramiko-issue-2038-pr-2039",
       "priority": "reserve",
       "repository": "paramiko/paramiko",
@@ -4174,6 +4455,8 @@
       "issue_created_at": "2022-04-26T20:38:44Z",
       "suggested_case_id": "paramiko-paramiko-issue-2038",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "29c4d3210b745e7d56c328ffebc2513ebfb482fb",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/transport.py"
       ],
@@ -4190,7 +4473,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 161,
+      "review_order": 160,
       "candidate_id": "encode-django-rest-framework-issue-9741-pr-9742",
       "priority": "reserve",
       "repository": "encode/django-rest-framework",
@@ -4200,6 +4483,8 @@
       "issue_created_at": "2025-07-15T10:07:42Z",
       "suggested_case_id": "encode-django-rest-framework-issue-9741",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ade172e1d5db87dc86bc616cbb4df7ccd2eb2fd3",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/filters.py"
       ],
@@ -4216,7 +4501,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 162,
+      "review_order": 161,
       "candidate_id": "pylint-dev-pylint-issue-11271-pr-11275",
       "priority": "reserve",
       "repository": "pylint-dev/pylint",
@@ -4226,6 +4511,8 @@
       "issue_created_at": "2026-08-14T00:47:44Z",
       "suggested_case_id": "pylint-dev-pylint-issue-11271",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "03eaf44a7fa3dc7831ff849215751862a5d00154",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pylint/checkers/utils.py"
       ],
@@ -4242,7 +4529,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 163,
+      "review_order": 162,
       "candidate_id": "prefecthq-prefect-issue-22804-pr-22806",
       "priority": "reserve",
       "repository": "PrefectHQ/prefect",
@@ -4252,6 +4539,8 @@
       "issue_created_at": "2026-08-11T13:09:02Z",
       "suggested_case_id": "prefecthq-prefect-issue-22804",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7d377adfd43019a26cc901d7f50491489a86377f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
         "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.test.ts",
@@ -4270,7 +4559,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 164,
+      "review_order": 163,
       "candidate_id": "paramiko-paramiko-issue-67-pr-153",
       "priority": "reserve",
       "repository": "paramiko/paramiko",
@@ -4280,6 +4569,8 @@
       "issue_created_at": "2012-05-08T10:00:18Z",
       "suggested_case_id": "paramiko-paramiko-issue-67",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "3966ac103c988218be02371803817b66b4deab17",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "paramiko/hostkeys.py"
       ],
@@ -4296,7 +4587,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 165,
+      "review_order": 164,
       "candidate_id": "python-hyper-h11-issue-98-pr-99",
       "priority": "reserve",
       "repository": "python-hyper/h11",
@@ -4306,6 +4597,8 @@
       "issue_created_at": "2020-03-13T05:59:56Z",
       "suggested_case_id": "python-hyper-h11-issue-98",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "68e32dbb475d5241f077afaa278b6ef248b1f9bd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "h11/_readers.py"
       ],
@@ -4322,7 +4615,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 166,
+      "review_order": 165,
       "candidate_id": "pallets-jinja-issue-2015-pr-2017",
       "priority": "reserve",
       "repository": "pallets/jinja",
@@ -4332,6 +4625,8 @@
       "issue_created_at": "2024-08-11T11:34:51Z",
       "suggested_case_id": "pallets-jinja-issue-2015",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "13c42b3aabe57511537e14cf4736a5730b1a8782",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/jinja2/filters.py"
       ],
@@ -4348,7 +4643,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 167,
+      "review_order": 166,
       "candidate_id": "encode-django-rest-framework-issue-9927-pr-9928",
       "priority": "reserve",
       "repository": "encode/django-rest-framework",
@@ -4358,6 +4653,8 @@
       "issue_created_at": "2026-03-19T14:13:39Z",
       "suggested_case_id": "encode-django-rest-framework-issue-9927",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "30d58a75eeef7097f97cdc9f171d2ec741b36d30",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "rest_framework/renderers.py"
       ],
@@ -4374,7 +4671,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 168,
+      "review_order": 167,
       "candidate_id": "tox-dev-tox-issue-3929-pr-3931",
       "priority": "reserve",
       "repository": "tox-dev/tox",
@@ -4384,6 +4681,8 @@
       "issue_created_at": "2026-04-26T21:00:57Z",
       "suggested_case_id": "tox-dev-tox-issue-3929",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "59b6cd2c5cd7b7ebc44f65646f239ec6f2382f6e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/tox/session/cmd/schema.py"
       ],
@@ -4400,33 +4699,37 @@
       "status": "needs_review"
     },
     {
-      "review_order": 169,
-      "candidate_id": "python-hyper-h2-issue-1316-pr-1317",
+      "review_order": 168,
+      "candidate_id": "python-hyper-h2-issue-1236-pr-1290",
       "priority": "reserve",
       "repository": "python-hyper/h2",
-      "issue_number": 1316,
-      "fix_pr_number": 1317,
-      "issue_title": "Reject conflicting duplicate Content-Length headers",
-      "issue_created_at": "2026-05-13T21:40:10Z",
-      "suggested_case_id": "python-hyper-h2-issue-1316",
+      "issue_number": 1236,
+      "fix_pr_number": 1290,
+      "issue_title": "Comparison between bytes and string in defining a frozenset throws exception",
+      "issue_created_at": "2020-08-06T20:35:34Z",
+      "suggested_case_id": "python-hyper-h2-issue-1236",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "25f4b75f62c6c636ecdf9182cd907c6cd67643cc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
-        "src/h2/stream.py"
+        "src/h2/events.py",
+        "src/h2/stream.py",
+        "src/h2/utilities.py"
       ],
-      "multi_file": false,
-      "advisory_score": 6,
+      "multi_file": true,
+      "advisory_score": 5,
       "passed_advisory_checks": [
         "bug_signal",
-        "closing_reference",
+        "diagnostic_signal",
         "issue_has_body"
       ],
       "review_flags": [
-        "failed:diagnostic_signal"
+        "failed:closing_reference"
       ],
       "status": "needs_review"
     },
     {
-      "review_order": 170,
+      "review_order": 169,
       "candidate_id": "psf-requests-issue-6646-pr-7309",
       "priority": "reserve",
       "repository": "psf/requests",
@@ -4436,6 +4739,8 @@
       "issue_created_at": "2024-02-22T23:56:00Z",
       "suggested_case_id": "psf-requests-issue-6646",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "7407309c8a8a73aa2f4337184025d440bbedab7a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/utils.py"
       ],
@@ -4452,6 +4757,40 @@
       "status": "needs_review"
     },
     {
+      "review_order": 170,
+      "candidate_id": "python-hyper-h2-issue-1245-pr-1246",
+      "priority": "reserve",
+      "repository": "python-hyper/h2",
+      "issue_number": 1245,
+      "fix_pr_number": 1246,
+      "issue_title": "Proposal: Rename this repository to \"h2\"",
+      "issue_created_at": "2021-02-19T16:25:38Z",
+      "suggested_case_id": "python-hyper-h2-issue-1245",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "5bfbb6742ad09b1807da73070eea90484f968f2c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "setup.py",
+        "src/h2/__init__.py",
+        "src/h2/config.py",
+        "src/h2/connection.py",
+        "src/h2/events.py",
+        "src/h2/stream.py",
+        "visualizer/visualize.py"
+      ],
+      "multi_file": true,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
       "review_order": 171,
       "candidate_id": "python-hyper-h2-issue-1305-pr-1315",
       "priority": "reserve",
@@ -4462,6 +4801,8 @@
       "issue_created_at": "2025-08-08T10:18:30Z",
       "suggested_case_id": "python-hyper-h2-issue-1305",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "73a232d9b1f00514994bf9af066adb9f13f3fc73",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/h2/connection.py",
         "src/h2/frame_buffer.py"
@@ -4480,32 +4821,6 @@
     },
     {
       "review_order": 172,
-      "candidate_id": "pypa-build-issue-557-pr-1084",
-      "priority": "reserve",
-      "repository": "pypa/build",
-      "issue_number": 557,
-      "fix_pr_number": 1084,
-      "issue_title": "Validate dependencies in non-isolated builds",
-      "issue_created_at": "2022-12-28T19:49:23Z",
-      "suggested_case_id": "pypa-build-issue-557",
-      "suggested_tier": "generalization",
-      "expected_files": [
-        "src/build/util.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 4,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal",
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 173,
       "candidate_id": "urllib3-urllib3-issue-2936-pr-5054",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -4515,6 +4830,8 @@
       "issue_created_at": "2023-03-14T17:35:50Z",
       "suggested_case_id": "urllib3-urllib3-issue-2936",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "29ae1419530857dc43f5d28907da5d6fbc229739",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/connection.py"
       ],
@@ -4531,7 +4848,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 174,
+      "review_order": 173,
       "candidate_id": "python-hyper-h11-issue-158-pr-159",
       "priority": "reserve",
       "repository": "python-hyper/h11",
@@ -4541,6 +4858,8 @@
       "issue_created_at": "2023-04-02T03:00:34Z",
       "suggested_case_id": "python-hyper-h11-issue-158",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cdccbeff44a39426b58010eb454a75015ec6f8bc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "setup.py"
       ],
@@ -4557,7 +4876,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 175,
+      "review_order": 174,
       "candidate_id": "pycqa-flake8-issue-1823-pr-1824",
       "priority": "reserve",
       "repository": "PyCQA/flake8",
@@ -4567,6 +4886,8 @@
       "issue_created_at": "2023-04-30T18:59:34Z",
       "suggested_case_id": "pycqa-flake8-issue-1823",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d016204366a22d382b5b56dc14b6cbff28ce929e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/flake8/defaults.py"
       ],
@@ -4583,7 +4904,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 176,
+      "review_order": 175,
       "candidate_id": "urllib3-urllib3-issue-3289-pr-5057",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -4593,6 +4914,8 @@
       "issue_created_at": "2024-01-19T16:23:13Z",
       "suggested_case_id": "urllib3-urllib3-issue-3289",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "29ae1419530857dc43f5d28907da5d6fbc229739",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/connectionpool.py"
       ],
@@ -4609,7 +4932,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 177,
+      "review_order": 176,
       "candidate_id": "pypa-packaging-issue-781-pr-1346",
       "priority": "reserve",
       "repository": "pypa/packaging",
@@ -4619,6 +4942,8 @@
       "issue_created_at": "2024-02-20T02:40:53Z",
       "suggested_case_id": "pypa-packaging-issue-781",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "0bfc3cea4f9fe1b1b0c80ce06f02bd2433500c81",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/packaging/tags.py"
       ],
@@ -4635,7 +4960,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 178,
+      "review_order": 177,
       "candidate_id": "matplotlib-matplotlib-issue-28220-pr-32195",
       "priority": "reserve",
       "repository": "matplotlib/matplotlib",
@@ -4645,6 +4970,8 @@
       "issue_created_at": "2024-05-13T22:31:59Z",
       "suggested_case_id": "matplotlib-matplotlib-issue-28220",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "787c7d4873501cc90371af9b265cae234ecfef13",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/matplotlib/widgets.py"
       ],
@@ -4661,7 +4988,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 179,
+      "review_order": 178,
       "candidate_id": "aio-libs-yarl-issue-1455-pr-1456",
       "priority": "reserve",
       "repository": "aio-libs/yarl",
@@ -4671,6 +4998,8 @@
       "issue_created_at": "2024-12-20T16:54:52Z",
       "suggested_case_id": "aio-libs-yarl-issue-1455",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "3967268196259d81bf9d3df858bbe9cc4bc04f7a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "packaging/pep517_backend/_backend.py"
       ],
@@ -4687,7 +5016,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 180,
+      "review_order": 179,
       "candidate_id": "urllib3-urllib3-issue-3546-pr-5120",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -4697,6 +5026,8 @@
       "issue_created_at": "2025-01-09T12:46:43Z",
       "suggested_case_id": "urllib3-urllib3-issue-3546",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "470374abd485b6705dfea82689b1e29c345785f1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/urllib3/util/retry.py"
       ],
@@ -4713,7 +5044,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 181,
+      "review_order": 180,
       "candidate_id": "apache-airflow-issue-54983-pr-68107",
       "priority": "reserve",
       "repository": "apache/airflow",
@@ -4723,6 +5054,8 @@
       "issue_created_at": "2025-08-27T10:50:02Z",
       "suggested_case_id": "apache-airflow-issue-54983",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "d4a5294dcef72f61be040db597c4fd685dec42fb",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py"
       ],
@@ -4739,7 +5072,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 182,
+      "review_order": 181,
       "candidate_id": "apache-airflow-issue-58618-pr-58981",
       "priority": "reserve",
       "repository": "apache/airflow",
@@ -4749,6 +5082,8 @@
       "issue_created_at": "2025-11-24T10:54:59Z",
       "suggested_case_id": "apache-airflow-issue-58618",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "1f575ab700a5bc3624e47707bc5bf32309227b7d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
       ],
@@ -4765,7 +5100,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 183,
+      "review_order": 182,
       "candidate_id": "tornadoweb-tornado-issue-3562-pr-3563",
       "priority": "reserve",
       "repository": "TornadoWeb/tornado",
@@ -4775,6 +5110,8 @@
       "issue_created_at": "2025-12-15T10:39:36Z",
       "suggested_case_id": "tornadoweb-tornado-issue-3562",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "2f02d6821888f1b8e7a6bff49f34bfd34384462b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "tornado/httputil.py"
       ],
@@ -4791,7 +5128,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 184,
+      "review_order": 183,
       "candidate_id": "sqlalchemy-sqlalchemy-issue-13132-pr-13155",
       "priority": "reserve",
       "repository": "sqlalchemy/sqlalchemy",
@@ -4801,6 +5138,8 @@
       "issue_created_at": "2026-02-19T11:24:28Z",
       "suggested_case_id": "sqlalchemy-sqlalchemy-issue-13132",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f09778c70050391ab77e97e8043083f6a5177038",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/sqlalchemy/orm/relationships.py"
       ],
@@ -4817,7 +5156,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 185,
+      "review_order": 184,
       "candidate_id": "pytest-dev-pytest-asyncio-issue-1419-pr-1421",
       "priority": "reserve",
       "repository": "pytest-dev/pytest-asyncio",
@@ -4827,6 +5166,8 @@
       "issue_created_at": "2026-04-15T15:17:46Z",
       "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1419",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4919983a16b1f65ee34be58980e02c2dc47a3c07",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pytest_asyncio/plugin.py"
       ],
@@ -4843,7 +5184,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 186,
+      "review_order": 185,
       "candidate_id": "pypa-packaging-issue-1220-pr-1224",
       "priority": "reserve",
       "repository": "pypa/packaging",
@@ -4853,6 +5194,8 @@
       "issue_created_at": "2026-06-03T18:43:51Z",
       "suggested_case_id": "pypa-packaging-issue-1220",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "84833cc16be84bc7f1d9f64e2818afe0dd48aade",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/packaging/tags.py"
       ],
@@ -4869,7 +5212,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 187,
+      "review_order": 186,
       "candidate_id": "tornadoweb-tornado-issue-3637-pr-3646",
       "priority": "reserve",
       "repository": "TornadoWeb/tornado",
@@ -4879,6 +5222,8 @@
       "issue_created_at": "2026-06-16T18:14:09Z",
       "suggested_case_id": "tornadoweb-tornado-issue-3637",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "f491e4c1914be0ac6635a0eacb3c978d89eec4f1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "tornado/httputil.py"
       ],
@@ -4895,7 +5240,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 188,
+      "review_order": 187,
       "candidate_id": "pypa-virtualenv-issue-3181-pr-3184",
       "priority": "reserve",
       "repository": "pypa/virtualenv",
@@ -4905,6 +5250,8 @@
       "issue_created_at": "2026-07-06T11:23:30Z",
       "suggested_case_id": "pypa-virtualenv-issue-3181",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "ca5eefaa86e5b9a3f431f9b9f6a11ed5be439642",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/virtualenv/create/via_global_ref/api.py"
       ],
@@ -4921,7 +5268,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 189,
+      "review_order": 188,
       "candidate_id": "sqlalchemy-sqlalchemy-issue-13462-pr-13463",
       "priority": "reserve",
       "repository": "sqlalchemy/sqlalchemy",
@@ -4931,6 +5278,8 @@
       "issue_created_at": "2026-07-28T14:31:09Z",
       "suggested_case_id": "sqlalchemy-sqlalchemy-issue-13462",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "aa1a5575358d3aa14953b04dced02f4763fed2e7",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/sqlalchemy/dialects/sqlite/base.py"
       ],
@@ -4947,7 +5296,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 190,
+      "review_order": 189,
       "candidate_id": "python-hyper-h11-issue-28-pr-93",
       "priority": "reserve",
       "repository": "python-hyper/h11",
@@ -4957,6 +5306,8 @@
       "issue_created_at": "2017-02-02T16:03:25Z",
       "suggested_case_id": "python-hyper-h11-issue-28",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "68e32dbb475d5241f077afaa278b6ef248b1f9bd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "fuzz/afl-server.py"
       ],
@@ -4973,7 +5324,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 191,
+      "review_order": 190,
       "candidate_id": "astral-sh-uv-issue-21083-pr-21085",
       "priority": "reserve",
       "repository": "astral-sh/uv",
@@ -4983,6 +5334,8 @@
       "issue_created_at": "2026-08-13T13:25:11Z",
       "suggested_case_id": "astral-sh-uv-issue-21083",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "76d653943c6c82d3cca03227c24e98b1d0320aed",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "crates/uv-cli/src/lib.rs",
         "crates/uv/src/commands/project/check.rs",
@@ -5002,7 +5355,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 192,
+      "review_order": 191,
       "candidate_id": "psf-requests-issue-4795-pr-7427",
       "priority": "reserve",
       "repository": "psf/requests",
@@ -5012,6 +5365,8 @@
       "issue_created_at": "2018-09-17T20:59:31Z",
       "suggested_case_id": "psf-requests-issue-4795",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "e8d2c015eecda8273612dd4562425e00cd164ba5",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/requests/utils.py"
       ],
@@ -5028,7 +5383,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 193,
+      "review_order": 192,
       "candidate_id": "pallets-markupsafe-issue-460-pr-461",
       "priority": "reserve",
       "repository": "pallets/markupsafe",
@@ -5038,6 +5393,8 @@
       "issue_created_at": "2024-08-18T01:11:39Z",
       "suggested_case_id": "pallets-markupsafe-issue-460",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "b43c029eb1541645454623d46cd6b92df8acbaaa",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/markupsafe/_speedups.c"
       ],
@@ -5054,7 +5411,63 @@
       "status": "needs_review"
     },
     {
+      "review_order": 193,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1101-pr-1111",
+      "priority": "reserve",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 1101,
+      "fix_pr_number": 1111,
+      "issue_title": "event_loop_policy for single test",
+      "issue_created_at": "2025-04-24T19:46:11Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1101",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "af3b32dbbec1167375f58af32923b5f45789a112",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
       "review_order": 194,
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1346-pr-1373",
+      "priority": "reserve",
+      "repository": "pytest-dev/pytest-asyncio",
+      "issue_number": 1346,
+      "fix_pr_number": 1373,
+      "issue_title": "Documented `uvloop` pattern is deprecated",
+      "issue_created_at": "2026-01-26T21:45:46Z",
+      "suggested_case_id": "pytest-dev-pytest-asyncio-issue-1346",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "ff72406b32adaa95002bd305ab7de6d3670b7de1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 195,
       "candidate_id": "pytest-dev-pluggy-issue-186-pr-236",
       "priority": "reserve",
       "repository": "pytest-dev/pluggy",
@@ -5064,6 +5477,8 @@
       "issue_created_at": "2019-01-05T23:13:41Z",
       "suggested_case_id": "pytest-dev-pluggy-issue-186",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "fe5a72bc922e870c94f943df881f5623b6b71931",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "src/pluggy/hooks.py",
         "src/pluggy/manager.py"
@@ -5081,7 +5496,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 195,
+      "review_order": 196,
       "candidate_id": "sphinx-doc-sphinx-issue-11873-pr-12011",
       "priority": "reserve",
       "repository": "sphinx-doc/sphinx",
@@ -5091,6 +5506,8 @@
       "issue_created_at": "2024-01-12T04:49:19Z",
       "suggested_case_id": "sphinx-doc-sphinx-issue-11873",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "e08f12f848a73142acb74a254eb62a3d6c87d13f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "sphinx/builders/__init__.py",
         "sphinx/config.py"
@@ -5108,7 +5525,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 196,
+      "review_order": 197,
       "candidate_id": "ansible-ansible-issue-85037-pr-86432",
       "priority": "reserve",
       "repository": "ansible/ansible",
@@ -5118,6 +5535,8 @@
       "issue_created_at": "2025-04-23T18:36:37Z",
       "suggested_case_id": "ansible-ansible-issue-85037",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "4fdeac0a72727fb3e95c22877512697fbbe3ee72",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "lib/ansible/executor/module_common.py",
         "lib/ansible/module_utils/common/respawn.py",
@@ -5138,7 +5557,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 197,
+      "review_order": 198,
       "candidate_id": "boto-boto3-issue-3163-pr-4613",
       "priority": "reserve",
       "repository": "boto/boto3",
@@ -5148,6 +5567,8 @@
       "issue_created_at": "2022-02-22T12:37:05Z",
       "suggested_case_id": "boto-boto3-issue-3163",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "eda2e77a2a141593f689be4f07b47d0b55cba6e1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "boto3/s3/inject.py",
         "boto3/s3/transfer.py"
@@ -5165,7 +5586,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 198,
+      "review_order": 199,
       "candidate_id": "pytest-dev-pluggy-issue-37-pr-42",
       "priority": "reserve",
       "repository": "pytest-dev/pluggy",
@@ -5175,6 +5596,8 @@
       "issue_created_at": "2016-11-18T23:56:33Z",
       "suggested_case_id": "pytest-dev-pluggy-issue-37",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "cf059aa272ac64e54df6056965c49d08f01c2086",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "pluggy.py"
       ],
@@ -5191,7 +5614,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 199,
+      "review_order": 200,
       "candidate_id": "boto-boto3-issue-3787-pr-3863",
       "priority": "reserve",
       "repository": "boto/boto3",
@@ -5201,6 +5624,8 @@
       "issue_created_at": "2023-07-18T19:25:13Z",
       "suggested_case_id": "boto-boto3-issue-3787",
       "suggested_tier": "generalization",
+      "pre_fix_sha": "daf14a736b3160ced03d1223c14d47bcd3aeb8fd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
         "boto3/s3/inject.py"
       ],
