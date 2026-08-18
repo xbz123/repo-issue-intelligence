@@ -172,14 +172,14 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json
+  --output benchmarks/results/deterministic-v0.26-batch1-60-cases-run1.json
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.25-rank20000-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.26-rank20000-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
@@ -191,9 +191,9 @@ fall back immediately. This isolates file ordering from hypothesis generation an
 unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
 and the completion budget starts at 8,192 tokens with one 20,000-token truncation retry. The full
 frozen Issue and selected deterministic candidate snippets are sent without project-defined input
-character caps. Current manifest version 8 embeds 50 complete Issue
-snapshots across 21 repositories, corrected pre-fix SHAs, and 39 manually reviewed symbol targets
-across 33 cases. Older deterministic and DeepSeek artifacts remain committed as historical
+character caps. Current manifest version 9 embeds 60 complete Issue
+snapshots across 31 repositories, corrected pre-fix SHAs, and 56 manually reviewed symbol targets
+across 41 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
 variants.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
@@ -316,16 +316,18 @@ See `docs/architecture.md` for system boundaries and
 
 ## Evaluation
 
-The current frozen benchmark contains 50 closed issues with linked fix PRs across 21 projects:
-17 main, 11 calibration, and 22 generalization cases. It records 62 reviewed production-file
-targets and 39 reviewed symbols across 33 cases. Each case uses a committed Issue snapshot and the
+The current frozen benchmark contains 60 closed issues with linked fix PRs across 31 projects:
+17 main, 11 calibration, and 32 generalization cases. It records 86 reviewed production-file
+targets and 56 reviewed symbols across 41 cases. Each case uses a committed Issue snapshot and the
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v8 deterministic v0.25 runs completed 50/50 cases and produced identical candidates,
-symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.4067`,
-Recall@5 `0.6900`, Recall@10 `0.7800`, Recall@20 `1.0000`, and MRR `0.6038`. Symbol Recall@1 is
-`0.3485`, Recall@5 `0.5455`, Recall@10 `0.5758`, Recall@20 `0.7121`, and symbol MRR `0.4873`.
+Three manifest-v9 deterministic v0.26 runs completed 60/60 cases and produced identical candidates,
+symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.3811`,
+Recall@5 `0.6517`, Recall@10 `0.7517`, Recall@20 `0.9717`, and MRR `0.6115`. Symbol Recall@1 is
+`0.3049`, Recall@5 `0.4756`, Recall@10 `0.5122`, Recall@20 `0.6341`, and symbol MRR `0.4345`.
+The new batch adds ten older multi-file cases from ten repositories and exposes four production
+targets that are absent from the current deterministic Top-20.
 
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
@@ -411,7 +413,7 @@ ambiguous definitions, and legacy broad call maps cannot fabricate strong graph 
 top-level `src` and `lib` modules/packages retain their importable names, while layout directories
 are stripped only when they are actual source roots.
 
-Three authorized OpenCode `deepseek-v4-flash` rank-only runs reranked the current deterministic
+Three retained OpenCode `deepseek-v4-flash` rank-only runs reranked the manifest-v8 deterministic
 v0.25 candidate pool and kept all 150 case-runs in the denominator. Every response produced a
 valid known-ID rank and no case used deterministic fallback. Mean File Recall@1/5/10/20 was
 `0.7367/0.8600/0.9000/1.0000`, with mean MRR `0.8894`; the corresponding deterministic values are
@@ -425,11 +427,11 @@ orders were identical across all repeats. The result therefore supports a reliab
 and bounded ordering gain on this frozen pool, not deterministic generation, new-file discovery,
 or root-cause accuracy.
 
-The added slice is deliberately reported with its limitations: 16 of the 18 new Issues are from
-2026, and only 11 of 50 cases have multi-file production ground truth. All 62 reviewed files now
-appear in the deterministic Top-20, but this frozen sample does not establish general recall.
-Superseded manifests and older DeepSeek runs remain committed for provenance but must not be mixed with current
-manifest-v8 quality metrics.
+The v0.14 batch deliberately improves the earlier temporal and structural skew: all ten additions
+are multi-file cases created from 2013 through 2023, raising multi-file coverage to 21/60. Four of
+the 86 reviewed production targets remain outside the deterministic Top-20, so this expanded sample
+does not support a perfect-recall claim. Superseded manifests and the retained 50-case DeepSeek runs
+remain committed for provenance but must not be mixed with current manifest-v9 quality metrics.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.

@@ -1,0 +1,1546 @@
+{
+  "name": "real-project-benchmark-expansion-v0.14",
+  "version": 1,
+  "curated_at": "2026-08-18T10:50:42.433780Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 8,
+  "candidates": [
+    {
+      "id": "paramiko-paramiko-issue-175-pr-372",
+      "repository": "paramiko/paramiko",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 175,
+        "title": "Performance of paramiko is pretty slow (with possible solution)",
+        "body": "Hi, \nactually I wanted to post the text below on a mailing list but it seems paramiko has none any more?\n\nI am using paramiko and doing a sftp file transfer from a twisted sftp server.\nUnfortunately it turned out that paramiko is about 20 times slower then e.g. the putty sftp client for large files (100MB in my testcase).\nSo I started investigating and figured out that in the putty case every requested packet is immediately written to the outgoing buffer and in the paramiko case almost always queued waiting for a window advertisement (twisted/conch/ssh/channel.py line 180 method write).\nThe reason is that the remote window size in paramiko's case was never big enough!\n\nSo I checked which remote window size each of the tools set \n(twisted/conch/ssh/connection.py line 116 method ssh_CHANNEL_OPEN).\n\nPutty uses: 2147483647\nParamiko uses: 65536\n\nSo for a first test I patched the paramiko transport window size to be the same as putty's\n\n```\nself.trans = paramiko.Transport((hostname, port))\nself.trans.window_size = 2147483647\n```\n\nand then I reduced the window size back until I saw the first performance degradations.\n\nHere are some (non scientific) performance measurements with client and server on the same localhost\nOS: Win7 64Bit, Python 2.7.3, Twisted-13.0.0, pycrypto-2.6, paramiko-1.10.1, Putty 0.62\n\nPutty psftp:               10.00 MB/sec\nParamiko ws=default:        0.54 MB/sec\nParamiko ws=2147483647:     9.09 MB/sec\nParamiko ws=134217727:      9.09 MB/sec\nParamiko ws=67108863        5.55 MB/sec\nParamiko ws=33554431        2.44 MB/sec\n\nSo I think the default winow size of paramiko should be raised to be at least 134217727 \nbut maybe even higher. Since this window size seems to be a different one then the TCP window size it seems to be harmless. As a side note I was now for the first time able the transmit a 1GB File in a reasonable time and ran into the twisted bug http://twistedmatrix.com/trac/ticket/4395 that rekeying is broken.\nUnfortunately it is still not fixed in twisted 13.0.0! To workaround the bug set the following:\n\n```\nself.trans = paramiko.Transport((hostname, port))\nself.trans.packetizer.REKEY_BYTES = pow(2, 40) # 1TB max, this is a security degradation\nself.trans.packetizer.REKEY_PACKETS = pow(2, 40) # 1TB max, this is a security degradation\n```\n\nFinally I enabled compression in paramiko by calling self.trans.use_compression() which increased the download performance to 52.63 MB/sec for a file containing only zeros and decreased the performance to 6.88 MB/sec for a file containing complete random data.\n\nFor reference this was the unmodified paramiko profile, somehow even in the optimized case a lot of time is spent in the aquire method. I don't understand this since this measurement of acquire and release on Win7 returns a much higher performance: \n\n```\npython -m timeit -s \"from threading import Lock; l=Lock(); a=l.acquire; r=l.release\" \"a(); r()\"\n10000000 loops, best of 3: 0.159 usec per loop\n```\n\nbefore:\n\n```\n746002 function calls in 170.389 seconds\n\nOrdered by: call count\n\nncalls  tottime  percall  cumtime  percall filename:lineno(function)\n145033    0.015    0.000    0.015    0.000 {len}\n48405  168.886    0.003  168.886    0.003 {method 'acquire' of 'thread.lock' objects}\n37137    0.007    0.000    0.007    0.000 {method 'release' of 'thread.lock' objects}\n17103    0.011    0.000    0.011    0.000 {_struct.pack}\n17091    0.014    0.000    0.014    0.000 {hasattr}\n17076    0.010    0.000    0.010    0.000 {_hashlib.openssl_sha1}\n17076    0.022    0.000    0.068    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\Crypto\\Hash\\SHA.py:73(__init__)\n17076    0.022    0.000    0.046    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\Crypto\\Hash\\hashalgo.py:34(__init__)\n17076    0.015    0.000    0.015    0.000 {method 'update' of '_hashlib.HASH' objects}\n12841    0.006    0.000    0.006    0.000 {method 'write' of 'cStringIO.StringO' objects}\n12814    0.004    0.000    0.004    0.000 {chr}\n12807    0.011    0.000    0.024    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\Crypto\\Hash\\hashalgo.py:53(update)\n12305    0.005    0.000    0.005    0.000 C:\\Program Files (x86)\\Python27\\lib\\threading.py:62(_note)\n12298    0.009    0.000    0.009    0.000 {time.time}\n10334    0.009    0.000    0.009    0.000 {isinstance}\n10277    0.031    0.000    0.082    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\channel.py:1171(_check_add_window)\n10277    0.019    0.000    0.019    0.000 {method 'tostring' of 'array.array' objects}\n10277    0.118    0.000  167.202    0.016 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\buffered_pipe.py:101(read)\n10277    0.055    0.000  169.884    0.017 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\channel.py:601(recv)\n 9198    0.004    0.000    0.004    0.000 {_struct.unpack}\n 9195    0.018    0.000    0.018    0.000 {method 'read' of 'cStringIO.StringI' objects}\n[...]\n```\n\nand this with window_size = 134217727\n\n```\n298643 function calls in 11.527 seconds\n\nOrdered by: call count\n\nncalls  tottime  percall  cumtime  percall filename:lineno(function)\n88806    0.008    0.000    0.008    0.000 {len}\n24538   10.980    0.000   10.980    0.000 {method 'acquire' of 'thread.lock' objects}\n15358    0.002    0.000    0.002    0.000 {method 'release' of 'thread.lock' objects}\n 9198    0.003    0.000    0.003    0.000 {_struct.unpack}\n 9195    0.012    0.000    0.012    0.000 {method 'read' of 'cStringIO.StringI' objects}\n 9195    0.015    0.000    0.029    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\message.py:103(get_bytes)\n 6175    0.004    0.000    0.004    0.000 {isinstance}\n 6136    0.016    0.000    0.029    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\message.py:139(get_int)\n 6118    0.021    0.000    0.072    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\channel.py:1171(_check_add_window)\n 6118    0.064    0.000   11.044    0.002 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\buffered_pipe.py:101(read)\n 6118    0.017    0.000   11.134    0.002 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\channel.py:601(recv)\n 6118    0.022    0.000   11.162    0.002 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\sftp.py:144(_read_all)\n 6118    0.013    0.000    0.013    0.000 {method 'tostring' of 'array.array' objects}\n 6112    0.001    0.000    0.001    0.000 {method 'append' of 'list' objects}\n 6106    0.002    0.000    0.002    0.000 {min}\n 6105    0.022    0.000    0.026    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\sftp_file.py:108(_data_in_prefetch_buffers)\n 6105    0.002    0.000    0.002    0.000 {method 'keys' of 'dict' objects}\n 3099    0.001    0.000    0.001    0.000 C:\\Program Files (x86)\\Python27\\lib\\threading.py:62(_note)\n 3092    0.002    0.000    0.002    0.000 {time.time}\n 3082    0.001    0.000    0.001    0.000 {cStringIO.StringIO}\n 3080    0.005    0.000    0.006    0.000 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\message.py:40(__init__)\n 3073    0.000    0.000    0.000    0.000 {ord}\n 3062    0.008    0.000    0.008    0.000 {thread.allocate_lock}\n 3060    0.002    0.000    0.002    0.000 C:\\Program Files (x86)\\Python27\\lib\\threading.py:219(_release_save)\n 3060    0.016    0.000   10.935    0.004 C:\\Program Files (x86)\\Python27\\lib\\threading.py:234(wait)\n 3060    0.002    0.000    0.009    0.000 C:\\Program Files (x86)\\Python27\\lib\\threading.py:225(_is_owned)\n 3060    0.002    0.000    0.012    0.000 C:\\Program Files (x86)\\Python27\\lib\\threading.py:222(_acquire_restore)\n 3059    0.029    0.000   11.303    0.004 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\sftp_client.py:716(_read_response)\n 3059    0.025    0.000   11.189    0.004 C:\\Program Files (x86)\\Python27\\lib\\site-packages\\paramiko\\sftp.py:174(_read_packet)\n[...]\n```\n",
+        "labels": [
+          "Needs investigation"
+        ],
+        "comments_count": 28,
+        "created_at": "2013-06-13T12:16:30Z",
+        "updated_at": "2020-07-07T17:38:53Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/175",
+        "author": "sturmf"
+      },
+      "fix_pr_number": 372,
+      "fix_pr_title": "Window and packet fixes",
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/372",
+      "fix_pr_merged_at": "2014-09-08T21:58:59Z",
+      "merge_commit_sha": "adfe4a13c2cccef60288a781c21a0c1349938dc6",
+      "pre_fix_sha": "991d56bad32c1ea4eda6c86771a4a4b7bef00475",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "paramiko/channel.py",
+        "paramiko/common.py",
+        "paramiko/sftp_client.py",
+        "paramiko/transport.py",
+        "paramiko/util.py"
+      ],
+      "changed_files": [
+        {
+          "path": "paramiko/channel.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 58,
+          "deletions": 61,
+          "changes": 119,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/common.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 0,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/sftp_client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 4,
+          "changes": 19,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/transport.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 68,
+          "deletions": 14,
+          "changes": 82,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_transport.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 75,
+          "deletions": 54,
+          "changes": 129,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: paramiko/paramiko"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2014-09-08T21:58:59Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2013-06-13T12:16:30+00:00, pr_merged_at=2014-09-08T21:58:59+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "12 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "7909 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Needs investigation"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #372 is the merged same-repository fix for Issue #175, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The five expected files are the complete production patch; tests are excluded, common.py changes a constant, and the util.py helper is introduced by the fix rather than present in the pre-fix index."
+      ]
+    },
+    {
+      "id": "boto-boto3-issue-1446-pr-4503",
+      "repository": "boto/boto3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1446,
+        "title": "download_fileobj with a file object in append mode can mess up file content",
+        "body": "Environment\r\n-----------------\r\n\r\nPython 3.6.1\r\nboto3 (1.4.5)\r\n\r\nWhy do I use it\r\n--------------------\r\n\r\nI am using the UNLOAD function from Redshift to dump data as a csv to S3.\r\nRedshift maximizes performance by handling multiple chunks simultaneously and writes them on S3 separately.\r\nAs the final destination will be a local file on the user's hard drive, I use _download_fileobj()_ to stream each chunk into a single file.\r\n\r\nThe problem\r\n------------------\r\n\r\nboto3 handles this with a multipart download and often messes with the local file content.\r\nThis does __not__ happen when using a file object in write mode.\r\nThis does __not__ happen when disabling the multi part download with \r\n\r\n`\r\nconfig = boto3.s3.transfer.TransferConfig(\r\n    use_threads = False        \r\n)\r\n`\r\n\r\nRelated issues\r\n---------------------\r\n\r\nThis issue seems to be  related to #1304 \r\n\r\nReproduce the issue\r\n----------------------------\r\n\r\nI created a mock dataset that I put on a public S3 bucket and created a code snippet to reproduce the issue.\r\n\r\n```python\r\nimport boto3\r\nimport csv\r\n\r\nbucket           = 'rl-boto3-issues-mock-data' \r\nfile_key         = 'mock_dataset.csv' \r\noutput_file_path = 'output_file.csv'\r\n\r\ns3     = boto3.resource('s3')\r\nbucket = s3.Bucket(bucket)\r\n\r\n#Create file & write header\r\nheader = 'index1;index2;location;consumption\\n'\r\nwith open(output_file_path, 'wt') as file_object:\r\n    file_object.write(header)\r\n\r\n#Dump binary in append mode\r\nwith open(output_file_path, 'ab') as file_object:\r\n\r\n    bucket.download_fileobj(\r\n        Key     = file_key, \r\n        Fileobj = file_object,\r\n    )\r\n\r\n#Read whole csv\r\nwith open(output_file_path, 'r') as file_object:\r\n\r\n    header = next(file_object)\r\n\r\n    reader = csv.reader(\r\n        file_object,\r\n        delimiter  = ';',\r\n    )\r\n\r\n    csv_data = list(reader)\r\n\r\n#Check csv integrity\r\nfor index, row in enumerate(csv_data):\r\n    \r\n    nb_cells = len(row)\r\n\r\n    if nb_cells != 4:\r\n        print('Row {0} : number of cells is {1} and should be 4 !'.format(index, nb_cells))\r\n        print('Row is : \\n')\r\n        print(row)\r\n        print('\\n')\r\n        break\r\n```\r\n\r\n",
+        "labels": [
+          "bug",
+          "s3",
+          "automation-exempt",
+          "p3"
+        ],
+        "comments_count": 5,
+        "created_at": "2018-02-08T08:50:48Z",
+        "updated_at": "2025-04-11T13:04:23Z",
+        "html_url": "https://github.com/boto/boto3/issues/1446",
+        "author": "remiloze"
+      },
+      "fix_pr_number": 4503,
+      "fix_pr_title": "Use a single thread for download_fileobj for append mode",
+      "fix_pr_url": "https://github.com/boto/boto3/pull/4503",
+      "fix_pr_merged_at": "2025-04-10T19:51:42Z",
+      "merge_commit_sha": "81e617edae3210f51943ce8ee6d413764c6fd974",
+      "pre_fix_sha": "018a02be73a5e75dc5431d53e252ca950b6aff43",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "boto3/compat.py",
+        "boto3/s3/inject.py"
+      ],
+      "changed_files": [
+        {
+          "path": ".changes/next-release/bugfix-downloadfileobj-69709.json",
+          "status": "added",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "boto3/compat.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "boto3/s3/inject.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 30,
+          "deletions": 1,
+          "changes": 31,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/s3/test_inject.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 17,
+          "deletions": 0,
+          "changes": 17,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: boto/boto3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-04-10T19:51:42Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2018-02-08T08:50:48+00:00, pr_merged_at=2025-04-10T19:51:42+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2130 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, s3, automation-exempt, p3"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #4503 is the merged same-repository fix for Issue #1446, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files implement append-mode detection and transfer configuration; both named helpers are introduced by the fix, so no pre-fix symbol labels are assigned, and tests and release metadata are excluded."
+      ]
+    },
+    {
+      "id": "encode-django-rest-framework-issue-6234-pr-9891",
+      "repository": "encode/django-rest-framework",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 6234,
+        "title": "DictField parsing for \"html\" inputs misleadingly returns an empty dict even if the field was not specified",
+        "body": "## Checklist\n\n- [x] I have verified that that issue exists against the `master` branch of Django REST framework.\n- [x] I have searched for similar issues in both open and closed tickets and cannot find a duplicate.\n- [x] This is not a usage question. (Those should be directed to the [discussion group](https://groups.google.com/forum/#!forum/django-rest-framework) instead.)\n- [x] This cannot be dealt with as a third party library. (We prefer new functionality to be [in the form of third party libraries](https://www.django-rest-framework.org/topics/third-party-resources/#about-third-party-packages) where possible.)\n- [x] I have reduced the issue to the simplest possible case.\n- [ ] I have included a failing test as a pull request. (If you are unable to do so we can still accept the issue.)\n\n## Steps to reproduce\n\nUsing a DictField and custom partial update logic in a serializer, a condition such as:\n\n`if not self.partial or \"field-name\" in data:`\n\nIs always true when the request type is `multipart/form-data`, even if the field was not specified.  In fact, in this case, it seems like it is impossible to distinguish between an empty input and an unspecified input for that field.\n\n## Expected behavior\n\nThe condition `if not self.partial or \"field-name\" in data` should only be true when the field was specified by the client, even when using `multipart/form-data` requests.\n\n## Actual behavior\n\nThe condition is always true for `mutlipart/form-data` requests, even when the field was not specified as part of the request, and the update method has no way to distinguish between an empty input and an unspecified field.\n\nNote that this is not the case for ListField, and the problem seems to be in the return of the function at https://github.com/encode/django-rest-framework/blob/master/rest_framework/utils/html.py#L69.  The equivalent function for a list field returns an empty value if no matching elements were found in the input.  For the dict field parsing logic, an empty dictionary is incorrectly returned.",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2018-10-07T16:10:49Z",
+        "updated_at": "2026-08-06T08:46:25Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/6234",
+        "author": "brett-lempereur"
+      },
+      "fix_pr_number": 9891,
+      "fix_pr_title": "Fix DictField HTML input returning empty dict for missing fields",
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/9891",
+      "fix_pr_merged_at": "2026-08-06T08:46:24Z",
+      "merge_commit_sha": "69d1cd7f1322060397b7f747d199e3926f5d297b",
+      "pre_fix_sha": "1b63dce808dae688240dd5d7775ad07276140a9a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "rest_framework/fields.py",
+        "rest_framework/serializers.py",
+        "rest_framework/utils/html.py"
+      ],
+      "changed_files": [
+        {
+          "path": "rest_framework/fields.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 2,
+          "changes": 17,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "rest_framework/serializers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "rest_framework/utils/html.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 2,
+          "changes": 14,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_fields.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 68,
+          "deletions": 0,
+          "changes": 68,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_serializer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 20,
+          "deletions": 0,
+          "changes": 20,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: encode/django-rest-framework"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-06T08:46:24Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2018-10-07T16:10:49+00:00, pr_merged_at=2026-08-06T08:46:24+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "17 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2029 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #9891 is the merged same-repository fix for Issue #6234, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three expected production files carry the missing-value sentinel through HTML dictionary parsing; field and serializer tests are excluded."
+      ]
+    },
+    {
+      "id": "matplotlib-matplotlib-issue-13470-pr-17802",
+      "repository": "matplotlib/matplotlib",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 13470,
+        "title": "Matplotlib.pyplot.close() interacts with tk.Tk() and closes the tk.Tk() object.",
+        "body": "<!--To help us understand and resolve your issue, please fill out the form to the best of your ability.-->\r\n<!--You can feel free to delete the sections that do not apply.-->\r\n\r\n### Bug report\r\n\r\n**Bug summary**\r\n\r\nThe bug revolves around the interaction between tkinter and matplotlib, while using PdfPages. Specifically, somehow a call to `pyplot.close()` let's the current 'module' finish but afterwards the tk.Tk() instance is closed without warning/error (see the attached MVE code). I expect that this is a bug in the matplotlib domain after hearing that this occurs more often (https://stackoverflow.com/q/54772180/1093485).\r\n\r\n**Code for reproduction**\r\n\r\n<!--A minimum code snippet required to reproduce the bug.\r\nPlease make sure to minimize the number of dependencies required, and provide\r\nany necessary plotted data.\r\nAvoid using threads, as Matplotlib is (explicitly) not thread-safe.-->\r\n\r\n```python\r\nimport tkinter as tk\r\nimport matplotlib.pyplot as plt\r\nimport numpy as np\r\nfrom matplotlib.backends.backend_pdf import PdfPages\r\nfrom pathlib import Path\r\n\r\nclass Pdf(object):\r\n    def __init__(self, master):\r\n        self.master = master\r\n        pdf = PdfPages(Path.cwd() / 'demo.pdf')\r\n\r\n        self.pdf = pdf\r\n\r\n    def plot_initial(self):\r\n        fig = plt.figure(figsize=(8,6))\r\n        fig.add_subplot(111)\r\n\r\n        mu, sigma = 0, 0.1\r\n        s = np.random.normal(mu, sigma, 1000)\r\n        count, bins, ignored = plt.hist(s, 30, density=True)\r\n        plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *\r\n                 np.exp( - (bins - mu)**2 / (2 * sigma**2) ),\r\n                 linewidth=2, color='r')\r\n        plt.title('Overview')\r\n        plt.xlabel('X')\r\n        plt.ylabel('Y')\r\n        self.pdf.savefig(fig)\r\n        # THE CULPRIT\r\n        plt.close(fig)\r\n\r\n    def plot_extra(self):\r\n        fig = plt.figure(figsize=(8,6))\r\n        fig.add_subplot(111)\r\n\r\n        mu, sigma = 0, 0.1\r\n        s = np.random.normal(mu, sigma, 1000)\r\n        count, bins, ignored = plt.hist(s, 30, density=True)\r\n        plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *\r\n                 np.exp( - (bins - mu)**2 / (2 * sigma**2) ),\r\n                 linewidth=2, color='r')\r\n        plt.title('Extra')\r\n        plt.xlabel('X')\r\n        plt.ylabel('Y')\r\n        self.pdf.savefig(fig)\r\n        plt.close(fig)\r\n\r\n    def close(self):\r\n        self.pdf.close()\r\n\r\nclass MVE(object):\r\n    @classmethod\r\n    def run(cls):\r\n        root = tk.Tk()\r\n        MVE(root)\r\n        root.mainloop()\r\n\r\n    def __init__(self, master):\r\n        self.root = master\r\n        tk.Frame(master)\r\n\r\n        menu = tk.Menu(master)\r\n        master.config(menu=menu)\r\n\r\n        test_menu = tk.Menu(menu, tearoff=0)\r\n        menu.add_cascade(label='Bug', menu=test_menu)\r\n        test_menu.add_command(label='PDF', command=\r\n                              self.generate_pdf)\r\n\r\n    def generate_pdf(self):\r\n        pdf = Pdf(self)\r\n\r\n        pdf.plot_initial()\r\n        for i in range(0,3):\r\n            pdf.plot_extra()\r\n        pdf.close()\r\n\r\nif __name__ == \"__main__\":\r\n    MVE.run()\r\n```\r\n\r\n**Expected outcome**\r\n\r\n<!--A description of the expected outcome from the code snippet-->\r\n<!--If this used to work in an earlier version of Matplotlib, please note the version it used to work on-->\r\nI expect that the initial tk.Tk() window isn't closed once the PDF report has been generated.\r\n\r\n**Matplotlib version**\r\n<!--Please specify your platform and versions of the relevant libraries you are using:-->\r\n  * Operating system: Tested on Win 7 and Win 10\r\n  * Matplotlib version: 2.2.3 from pip\r\n  * Matplotlib backend (`print(matplotlib.get_backend())`): TkAgg\r\n  * Python version: 3.7.0\r\n  * Jupyter version (if applicable):\r\n  * Other libraries: Tkinter 8.6 from pip\r\n\r\n<!--Please tell us how you installed matplotlib and python e.g., from source, pip, conda-->\r\n<!--If you installed from conda, please specify which channel you used if not the default-->\r\n\r\n\r\n",
+        "labels": [
+          "GUI: tk",
+          "Good first issue"
+        ],
+        "comments_count": 15,
+        "created_at": "2019-02-19T18:57:07Z",
+        "updated_at": "2026-08-09T11:02:55Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/13470",
+        "author": "Tarskin"
+      },
+      "fix_pr_number": 17802,
+      "fix_pr_title": "fix FigureManagerTk close behavior if embedded in Tk App",
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/17802",
+      "fix_pr_merged_at": "2020-08-07T01:14:29Z",
+      "merge_commit_sha": "97fb361689589931fd00a0430ce16ba86b881f7f",
+      "pre_fix_sha": "56d4f69923d5a4bb1158c7d61fbc7e24bd10d9b9",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/matplotlib/backends/_backend_tk.py",
+        "lib/matplotlib/cbook/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "lib/matplotlib/backends/_backend_tk.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 19,
+          "deletions": 12,
+          "changes": 31,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "lib/matplotlib/cbook/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "lib/matplotlib/tests/test_backend_tk.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 75,
+          "deletions": 1,
+          "changes": 76,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: matplotlib/matplotlib"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-08-07T01:14:29Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2019-02-19T18:57:07+00:00, pr_merged_at=2020-08-07T01:14:29+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "13 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "3951 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=GUI: tk, Good first issue"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #17802 is the merged same-repository fix for Issue #13470, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files contain the Tk manager destruction and running-framework checks; the Tk test module is excluded."
+      ]
+    },
+    {
+      "id": "pallets-jinja-issue-1413-pr-1664",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1413,
+        "title": "Namespaces do not allow multi-variable assignments",
+        "body": "Replace this comment with a clear outline of what the bug is.\r\n-->\r\n\r\nIn Jinja we can use standard python multi-variable assignments like line 3 below, which successfully evaluates but does not confer benefits of namespaces variables.\r\n\r\nHowever, line 4 below throws an error, `jinja2.exceptions.TemplateSyntaxError: expected token 'end of statement block', got ','`\r\n```\r\n            {% set full = namespace(id=\"\", prev_id=\"\") -%}\r\n            {% for id endpoints recursive %}\r\n              {% set prev_id, id = id, id + \"/\" + id -%}\r\n              {% set full.prev_id, full.id = full.id, full.id + \"/\" + id -%}\r\n            {% endfor -%}\r\n```\r\n\r\n\r\nInclude the full traceback if there was an exception.\r\n-->\r\n\r\n```\r\nTraceback (most recent call last):\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2328, in __call__\r\n    return self.wsgi_app(environ, start_response)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2314, in wsgi_app\r\n    response = self.handle_exception(e)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1760, in handle_exception\r\n    reraise(exc_type, exc_value, tb)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/_compat.py\", line 36, in reraise\r\n    raise value\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2311, in wsgi_app\r\n    response = self.full_dispatch_request()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1834, in full_dispatch_request\r\n    rv = self.handle_user_exception(e)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1737, in handle_user_exception\r\n    reraise(exc_type, exc_value, tb)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/_compat.py\", line 36, in reraise\r\n    raise value\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1832, in full_dispatch_request\r\n    rv = self.dispatch_request()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1818, in dispatch_request\r\n    return self.view_functions[rule.endpoint](**req.view_args)\r\n  File \"/home/ubuntu/cap/endpoints/views.py\", line 12, in home_page\r\n    return Response(render_template('home.html'))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/templating.py\", line 135, in render_template\r\n    context, ctx.app)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/templating.py\", line 117, in _render\r\n    rv = template.render(context)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 1090, in render\r\n    self.environment.handle_exception()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 832, in handle_exception\r\n    reraise(*rewrite_traceback_stack(source=source))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/_compat.py\", line 28, in reraise\r\n    raise value.with_traceback(tb)\r\n  File \"/home/ubuntu/cap/templates/home.html\", line 1, in top-level template code\r\n    {% extends \"index.html\" %}\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 832, in handle_exception\r\n    reraise(*rewrite_traceback_stack(source=source))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/_compat.py\", line 28, in reraise\r\n    raise value.with_traceback(tb)\r\n  File \"/home/ubuntu/cap/templates/index.html\", line 89, in template\r\n    {% set full.prev_id, full.id = full.id, full.id + \"/\" + id -%}\r\njinja2.exceptions.TemplateSyntaxError: expected token 'end of statement block', got ','\r\n```\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.6.9\r\n- Jinja version: 2.11.3\r\n",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2021-05-10T00:10:33Z",
+        "updated_at": "2025-01-04T00:18:25Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1413",
+        "author": "hans2520"
+      },
+      "fix_pr_number": 1664,
+      "fix_pr_title": "Add support for namespaces in tuple parsing",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1664",
+      "fix_pr_merged_at": "2024-12-20T22:52:51Z",
+      "merge_commit_sha": "fbc3a696c729d177340cc089531de7e2e5b6f065",
+      "pre_fix_sha": "1d55cddbb28e433779511f28f13a2d8c4ec45826",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/compiler.py",
+        "src/jinja2/parser.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "docs/templates.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/jinja2/compiler.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 10,
+          "changes": 37,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/jinja2/parser.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 16,
+          "changes": 40,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_core_tags.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-20T22:52:51Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2021-05-10T00:10:33+00:00, pr_merged_at=2024-12-20T22:52:51+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "3718 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1664 is the merged same-repository fix for Issue #1413, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The parser and compiler files jointly implement namespace multi-assignment; tests, documentation, and changelog entries are excluded."
+      ]
+    },
+    {
+      "id": "pycqa-flake8-issue-1389-pr-1441",
+      "repository": "PyCQA/flake8",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1389,
+        "title": "Current implementation of `--diff` is kind of broken by design",
+        "body": "`--diff` currently makes assumptions that code changes will introduce lint errors *at the position of the code change* which may have been true for `pycodestyle` which only concerns itself with whitespace / style issues -- but it is not true for pyflakes or generally true for flake8 plugins\r\n\r\nhere is a small concrete example:\r\n\r\n```diff\r\n import os\r\n \r\n def main():\r\n-    print(os.getcwd())\r\n+    print('hi')\r\n```\r\n\r\n`flake8 t.py` reports F401 on line 1, but `flake8 --diff` silently passes (even though the diff _caused_ that new issue)\r\n\r\nas such, I think the option's behaviour needs to be changed in an incompatible way, or removed entirely\r\n\r\nif kept, I think the only reasonable behaviour would be to limit changes to the file which a diff touched -- rather than the lines which were touched",
+        "labels": [
+          "feature:proposed"
+        ],
+        "comments_count": 2,
+        "created_at": "2021-09-16T13:20:15Z",
+        "updated_at": "2024-07-21T12:52:58Z",
+        "html_url": "https://github.com/PyCQA/flake8/issues/1389",
+        "author": "asottile"
+      },
+      "fix_pr_number": 1441,
+      "fix_pr_title": "deprecate the --diff option",
+      "fix_pr_url": "https://github.com/PyCQA/flake8/pull/1441",
+      "fix_pr_merged_at": "2021-11-06T11:03:53Z",
+      "merge_commit_sha": "e34647fb37a78f87a815f239697222f00785c94d",
+      "pre_fix_sha": "a08fc4be981f890a18238562463cb76a905fa171",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/flake8/main/application.py",
+        "src/flake8/main/options.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/source/user/options.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/flake8/main/application.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/flake8/main/options.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyCQA/flake8"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2021-11-06T11:03:53Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2021-09-16T13:20:15+00:00, pr_merged_at=2021-11-06T11:03:53+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "800 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=feature:proposed"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1441 is the merged same-repository resolution for Issue #1389, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files deprecate and warn on the broken diff behavior; the user documentation change is excluded."
+      ]
+    },
+    {
+      "id": "pypa-packaging-issue-577-pr-1351",
+      "repository": "pypa/packaging",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 577,
+        "title": "migrating from distlib.wheel: `packaging.utils.parse_wheel_filename` allows illegal platform tags",
+        "body": "I'm looking to migrate a caller from utilizing `distlib.wheel` to instead use `packaging.utils.parse_wheel_filename` and my tests encountered an edge case which isn't handled by the `packaging` version\r\n\r\nhere's the distlib code: https://github.com/pypa/distlib/blob/91aa92e64ee5d5005901907eaa340a72f18d7212/distlib/wheel.py#L83\r\n\r\npackaging's `parse_tag` doesn't validate the interpreter in any way -- whereas distlib required a particular structure\r\n\r\nthe test case in question: https://github.com/chriskuehl/dumb-pypi/blob/b3fc62c6519bdb84960d2b491b40ad065fb79a47/tests/main_test.py#L61\r\n\r\n`playlyfe-0.1.1-2.7.6-none-any.whl` should not parse as a valid wheel, however `packaging` allows it (and parses as three separate tag-triplets: `2-none-any`, `7-none-any`, `6-none-any`)\r\n\r\nI propose adding a little bit of validation to `parse_tag` to check that the tags are supported interpreter versions\r\n\r\nI believe this involves something like:\r\n\r\n```python\r\n_INTERPRETER_RE = re.compile(fr'^(?:{\"|\".join(sorted(INTERPRETER_SHORT_NAMES.values()))}\\d+')\r\n```\r\n\r\nand then utilizing that regex to validate the names (and throwing an appropriate exception) -- I think a new `InvalidTag` (extending `ValueError`) or somesuch exception would need to be created as well (similar to the ones in `packaging.utils` for the wheel / stdist filename)\r\n\r\nwanted to propose this first before diving in and implementing it to save time -- thoughts?",
+        "labels": [
+          "bug",
+          "packaging.utils"
+        ],
+        "comments_count": 6,
+        "created_at": "2022-07-18T17:56:33Z",
+        "updated_at": "2026-07-28T03:40:29Z",
+        "html_url": "https://github.com/pypa/packaging/issues/577",
+        "author": "asottile-sentry"
+      },
+      "fix_pr_number": 1351,
+      "fix_pr_title": "fix: reject invalid interpreter tags",
+      "fix_pr_url": "https://github.com/pypa/packaging/pull/1351",
+      "fix_pr_merged_at": "2026-07-28T03:40:28Z",
+      "merge_commit_sha": "26fa1d42ccd98010d5fcf701dd10069e761b034c",
+      "pre_fix_sha": "b62954b62d04f58a939d2856c67ebe4de32cdb5d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/packaging/tags.py",
+        "src/packaging/utils.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGELOG.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/packaging/tags.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 7,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/packaging/utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 3,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_tags.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 19,
+          "deletions": 0,
+          "changes": 19,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/packaging"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-28T03:40:28Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-07-18T17:56:33+00:00, pr_merged_at=2026-07-28T03:40:28+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1430 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, packaging.utils"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1351 is the merged same-repository fix for Issue #577, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files validate tag components and translate the resulting wheel filename error; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "tox-dev-tox-issue-2649-pr-2793",
+      "repository": "tox-dev/tox",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 2649,
+        "title": "tox4: missing interpreters are skipped by default",
+        "body": "## Issue\r\n\r\ntox4 skips missing interpreters and reports success even when `--skip-missing-interpreters` is not present.\r\n\r\n## Environment\r\n\r\nProvide at least:\r\n\r\n- OS: macOS Ventura\r\n- `pip list` of the host Python where `tox` is installed:\r\n\r\n```console\r\nPackage           Version Editable project location\r\n----------------- ------- -------------------------------------\r\nattrs             22.1.0\r\ncachetools        5.2.0\r\nchardet           5.1.0\r\ncolorama          0.4.6\r\ncoverage          6.5.0\r\ndistlib           0.3.6\r\nexceptiongroup    1.0.4\r\nfilelock          3.8.2\r\niniconfig         1.1.1\r\nmy-lovely-project 0.1.0   /Users/simon/source/my-lovely-project\r\npackaging         22.0\r\npip               22.3.1\r\nplatformdirs      2.6.0\r\npluggy            1.0.0\r\npyproject_api     1.2.1\r\npytest            7.2.0\r\npytest-cov        4.0.0\r\npytest-mock       3.10.0\r\nPyYAML            6.0\r\nsetuptools        65.5.1\r\ntomli             2.0.1\r\ntox               4.0.2\r\nvirtualenv        20.17.1\r\nwheel             0.38.4\r\n```\r\n- `tox.ini`\r\n\r\n```ini\r\n[tox]\r\nenvlist = py38,py39,py310,py311\r\nisolated_build=true\r\n\r\n[testenv]\r\ndeps =\r\n    -rbuild/requirements-with-dev.txt\r\ncommands =\r\n    pytest --cov=my_lovely_project --cov-append --cov-branch\r\n\r\n```\r\n\r\n## Output of running tox\r\n\r\nProvide the output of `tox -rvv`:\r\n\r\n```console\r\n.pkg: 432 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 433 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 433 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 433 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 433 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 433 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 433 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 433 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\n.pkg: 433 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 433 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 434 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 434 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 434 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 434 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 434 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 434 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\n.pkg: 434 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 434 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 434 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 434 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 434 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 434 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 435 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 435 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\n.pkg: 435 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 435 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 435 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 435 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 435 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 435 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 435 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 435 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 435 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 436 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 436 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 436 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 436 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 441 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 441 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 441 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 441 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 441 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 441 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 441 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 441 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 441 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 441 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 441 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 442 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 442 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 442 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 442 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 442 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 442 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 442 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 442 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 442 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 442 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 442 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 442 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\nROOT: 442 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\nROOT: 442 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\nROOT: 442 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\nROOT: 442 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 443 W remove tox env folder /Users/simon/source/my-lovely-project/.tox/py38 [tox/tox_env/api.py:292]\r\npy38: 444 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 444 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 444 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 444 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 444 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 444 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 444 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 444 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\n.pkg: 444 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 445 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 445 W remove tox env folder /Users/simon/source/my-lovely-project/.tox/.pkg [tox/tox_env/api.py:292]\r\n.pkg: 628 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 628 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 628 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 628 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 628 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 628 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 633 I find interpreter for spec PythonSpec(major=3, minor=8) [virtualenv/discovery/builtin.py:56]\r\npy38: 633 D discover exe for PythonInfo(spec=CPython3.10.8.final.0-64, exe=/Users/simon/Library/Caches/pypoetry/virtualenvs/my-lovely-project-liKnIVLw-py3.10/bin/python, platform=darwin, version='3.10.8 (main, Oct 13 2022, 09:48:40) [Clang 14.0.0 (clang-1400.0.29.102)]', encoding_fs_io=utf-8-utf-8) in /opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10 [virtualenv/discovery/py_info.py:437]\r\npy38: 633 D filesystem is not case-sensitive [virtualenv/info.py:24]\r\npy38: 634 D Attempting to acquire lock 4360118640 on /Users/simon/Library/Application Support/virtualenv/py_info/1/2d6cbd8ca062199a98662f3310ba6286764b31353ea4bf55baab4dae9f4129d0.lock [filelock/_api.py:172]\r\npy38: 635 D Lock 4360118640 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/2d6cbd8ca062199a98662f3310ba6286764b31353ea4bf55baab4dae9f4129d0.lock [filelock/_api.py:176]\r\npy38: 635 D got python info of /opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/bin/python3.10 from /Users/simon/Library/Application Support/virtualenv/py_info/1/2d6cbd8ca062199a98662f3310ba6286764b31353ea4bf55baab4dae9f4129d0.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 635 D Attempting to release lock 4360118640 on /Users/simon/Library/Application Support/virtualenv/py_info/1/2d6cbd8ca062199a98662f3310ba6286764b31353ea4bf55baab4dae9f4129d0.lock [filelock/_api.py:209]\r\npy38: 635 D Lock 4360118640 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/2d6cbd8ca062199a98662f3310ba6286764b31353ea4bf55baab4dae9f4129d0.lock [filelock/_api.py:212]\r\npy38: 635 D Attempting to acquire lock 4360116768 on /Users/simon/Library/Application Support/virtualenv/py_info/1/eda7e54fe21129b67f77862937907ee926f057597a3e2fa1e18ac955e40912b3.lock [filelock/_api.py:172]\r\npy38: 635 D Lock 4360116768 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/eda7e54fe21129b67f77862937907ee926f057597a3e2fa1e18ac955e40912b3.lock [filelock/_api.py:176]\r\npy38: 636 D got python info of /opt/homebrew/opt/python@3.10/bin/python3.10 from /Users/simon/Library/Application Support/virtualenv/py_info/1/eda7e54fe21129b67f77862937907ee926f057597a3e2fa1e18ac955e40912b3.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 636 D Attempting to release lock 4360116768 on /Users/simon/Library/Application Support/virtualenv/py_info/1/eda7e54fe21129b67f77862937907ee926f057597a3e2fa1e18ac955e40912b3.lock [filelock/_api.py:209]\r\npy38: 636 D Lock 4360116768 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/eda7e54fe21129b67f77862937907ee926f057597a3e2fa1e18ac955e40912b3.lock [filelock/_api.py:212]\r\npy38: 636 I proposed PythonInfo(spec=CPython3.10.8.final.0-64, system=/opt/homebrew/opt/python@3.10/bin/python3.10, exe=/Users/simon/Library/Caches/pypoetry/virtualenvs/my-lovely-project-liKnIVLw-py3.10/bin/python, platform=darwin, version='3.10.8 (main, Oct 13 2022, 09:48:40) [Clang 14.0.0 (clang-1400.0.29.102)]', encoding_fs_io=utf-8-utf-8) [virtualenv/discovery/builtin.py:63]\r\npy38: 636 D discover PATH[0]=/Users/simon/Library/Caches/pypoetry/virtualenvs/my-lovely-project-liKnIVLw-py3.10/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 636 D Attempting to acquire lock 4360116720 on /Users/simon/Library/Application Support/virtualenv/py_info/1/afa8ded6870ac890efb860a4da2817f148454a0eabad8c0b7c2c00eca0cfaaf8.lock [filelock/_api.py:172]\r\npy38: 636 D Lock 4360116720 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/afa8ded6870ac890efb860a4da2817f148454a0eabad8c0b7c2c00eca0cfaaf8.lock [filelock/_api.py:176]\r\npy38: 636 D got python info of /Users/simon/Library/Caches/pypoetry/virtualenvs/my-lovely-project-liKnIVLw-py3.10/bin/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/afa8ded6870ac890efb860a4da2817f148454a0eabad8c0b7c2c00eca0cfaaf8.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 637 D Attempting to release lock 4360116720 on /Users/simon/Library/Application Support/virtualenv/py_info/1/afa8ded6870ac890efb860a4da2817f148454a0eabad8c0b7c2c00eca0cfaaf8.lock [filelock/_api.py:209]\r\npy38: 637 D Lock 4360116720 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/afa8ded6870ac890efb860a4da2817f148454a0eabad8c0b7c2c00eca0cfaaf8.lock [filelock/_api.py:212]\r\npy38: 637 D discover exe from cache /opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10 - exact False: PythonInfo({'architecture': 64, 'base_exec_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'base_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'distutils_install': {}, 'exec_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'executable': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/bin/python3.10', 'file_system_encoding': 'utf-8', 'has_venv': True, 'implementation': 'CPython', 'max_size': 9223372036854775807, 'original_executable': '/opt/homebrew/opt/python@3.10/bin/python3.10', 'os': 'posix', 'path': ['/Users/simon/.local/pipx/venvs/poetry/lib/python3.10/site-packages/virtualenv/discovery', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python310.zip', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python3.10', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python3.10/lib-dynload', '/opt/homebrew/lib/python3.10/site-packages'], 'platform': 'darwin', 'prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'real_prefix': None, 'stdout_encoding': 'utf-8', 'sysconfig': {'makefile_filename': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10/config-3.10-darwin/Makefile'}, 'sysconfig_paths': {'data': '{base}', 'include': '{installed_base}/include/python{py_version_short}{abiflags}', 'platlib': '{platbase}/{platlibdir}/python{py_version_short}/site-packages', 'platstdlib': '{platbase}/{platlibdir}/python{py_version_short}', 'purelib': '{base}/lib/python{py_version_short}/site-packages', 'scripts': '{base}/bin', 'stdlib': '{installed_base}/{platlibdir}/python{py_version_short}'}, 'sysconfig_scheme': 'venv', 'sysconfig_vars': {'PYTHONFRAMEWORK': 'Python', 'abiflags': '', 'base': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'installed_base': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'platbase': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'platlibdir': 'lib', 'py_version_short': '3.10'}, 'system_executable': '/opt/homebrew/opt/python@3.10/bin/python3.10', 'system_stdlib': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10', 'system_stdlib_platform': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10', 'version': '3.10.8 (main, Oct 13 2022, 09:48:40) [Clang 14.0.0 (clang-1400.0.29.102)]', 'version_info': VersionInfo(major=3, minor=10, micro=8, releaselevel='final', serial=0), 'version_nodot': '310'}) [virtualenv/discovery/py_info.py:435]\r\npy38: 637 D discover exe from cache /opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10 - exact False: PythonInfo({'architecture': 64, 'base_exec_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'base_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'distutils_install': {}, 'exec_prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'executable': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/bin/python3.10', 'file_system_encoding': 'utf-8', 'has_venv': True, 'implementation': 'CPython', 'max_size': 9223372036854775807, 'original_executable': '/opt/homebrew/opt/python@3.10/bin/python3.10', 'os': 'posix', 'path': ['/Users/simon/.local/pipx/venvs/poetry/lib/python3.10/site-packages/virtualenv/discovery', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python310.zip', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python3.10', '/opt/homebrew/Cellar/python@3.10/3.10.8/Frameworks/Python.framework/Versions/3.10/lib/python3.10/lib-dynload', '/opt/homebrew/lib/python3.10/site-packages'], 'platform': 'darwin', 'prefix': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'real_prefix': None, 'stdout_encoding': 'utf-8', 'sysconfig': {'makefile_filename': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10/config-3.10-darwin/Makefile'}, 'sysconfig_paths': {'data': '{base}', 'include': '{installed_base}/include/python{py_version_short}{abiflags}', 'platlib': '{platbase}/{platlibdir}/python{py_version_short}/site-packages', 'platstdlib': '{platbase}/{platlibdir}/python{py_version_short}', 'purelib': '{base}/lib/python{py_version_short}/site-packages', 'scripts': '{base}/bin', 'stdlib': '{installed_base}/{platlibdir}/python{py_version_short}'}, 'sysconfig_scheme': 'venv', 'sysconfig_vars': {'PYTHONFRAMEWORK': 'Python', 'abiflags': '', 'base': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'installed_base': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'platbase': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10', 'platlibdir': 'lib', 'py_version_short': '3.10'}, 'system_executable': '/opt/homebrew/opt/python@3.10/bin/python3.10', 'system_stdlib': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10', 'system_stdlib_platform': '/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/lib/python3.10', 'version': '3.10.8 (main, Oct 13 2022, 09:48:40) [Clang 14.0.0 (clang-1400.0.29.102)]', 'version_info': VersionInfo(major=3, minor=10, micro=8, releaselevel='final', serial=0), 'version_nodot': '310'}) [virtualenv/discovery/py_info.py:435]\r\npy38: 637 D discover PATH[1]=/Users/simon/.pyenv/shims [virtualenv/discovery/builtin.py:108]\r\npy38: 637 D Attempting to acquire lock 4360116768 on /Users/simon/Library/Application Support/virtualenv/py_info/1/ca1106d8b15983dad15318348905b42c948bc2c8605c28a3b1bd76a76ad1f9de.lock [filelock/_api.py:172]\r\npy38: 637 D Lock 4360116768 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/ca1106d8b15983dad15318348905b42c948bc2c8605c28a3b1bd76a76ad1f9de.lock [filelock/_api.py:176]\r\npy38: 638 D got python info of /Users/simon/.pyenv/shims/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/ca1106d8b15983dad15318348905b42c948bc2c8605c28a3b1bd76a76ad1f9de.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 638 D Attempting to release lock 4360116768 on /Users/simon/Library/Application Support/virtualenv/py_info/1/ca1106d8b15983dad15318348905b42c948bc2c8605c28a3b1bd76a76ad1f9de.lock [filelock/_api.py:209]\r\npy38: 638 D Lock 4360116768 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/ca1106d8b15983dad15318348905b42c948bc2c8605c28a3b1bd76a76ad1f9de.lock [filelock/_api.py:212]\r\npy38: 638 D Attempting to acquire lock 4360118256 on /Users/simon/Library/Application Support/virtualenv/py_info/1/0211b3d9ee4d9940a347b9685a755fd54e8f3a4508b5935cec12786806c31a2e.lock [filelock/_api.py:172]\r\npy38: 638 D Lock 4360118256 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/0211b3d9ee4d9940a347b9685a755fd54e8f3a4508b5935cec12786806c31a2e.lock [filelock/_api.py:176]\r\npy38: 638 D got python info of /Users/simon/.pyenv/versions/3.11.0/bin/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/0211b3d9ee4d9940a347b9685a755fd54e8f3a4508b5935cec12786806c31a2e.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 638 D Attempting to release lock 4360118256 on /Users/simon/Library/Application Support/virtualenv/py_info/1/0211b3d9ee4d9940a347b9685a755fd54e8f3a4508b5935cec12786806c31a2e.lock [filelock/_api.py:209]\r\npy38: 639 D Lock 4360118256 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/0211b3d9ee4d9940a347b9685a755fd54e8f3a4508b5935cec12786806c31a2e.lock [filelock/_api.py:212]\r\npy38: 639 I proposed PathPythonInfo(spec=CPython3.11.0.final.0-64, system=/Users/simon/.pyenv/versions/3.11.0/bin/python3, exe=/Users/simon/.pyenv/shims/python3, platform=darwin, version='3.11.0 (main, Nov  3 2022, 21:39:22) [Clang 14.0.0 (clang-1400.0.29.202)]', encoding_fs_io=utf-8-utf-8) [virtualenv/discovery/builtin.py:63]\r\npy38: 639 D Attempting to acquire lock 4360126272 on /Users/simon/Library/Application Support/virtualenv/py_info/1/047ae90f408a933ad48bddadac0fc0b38b2fe9c584dc18c2aa07afe05ab44ed7.lock [filelock/_api.py:172]\r\npy38: 639 D Lock 4360126272 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/047ae90f408a933ad48bddadac0fc0b38b2fe9c584dc18c2aa07afe05ab44ed7.lock [filelock/_api.py:176]\r\npy38: 639 D got python info of /Users/simon/.pyenv/shims/python from /Users/simon/Library/Application Support/virtualenv/py_info/1/047ae90f408a933ad48bddadac0fc0b38b2fe9c584dc18c2aa07afe05ab44ed7.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 640 D Attempting to release lock 4360126272 on /Users/simon/Library/Application Support/virtualenv/py_info/1/047ae90f408a933ad48bddadac0fc0b38b2fe9c584dc18c2aa07afe05ab44ed7.lock [filelock/_api.py:209]\r\npy38: 640 D Lock 4360126272 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/047ae90f408a933ad48bddadac0fc0b38b2fe9c584dc18c2aa07afe05ab44ed7.lock [filelock/_api.py:212]\r\npy38: 641 D Attempting to acquire lock 4360118256 on /Users/simon/Library/Application Support/virtualenv/py_info/1/280ae2c263cad9615abede0001454291db14a5f307ee1e336366e6047843b90c.lock [filelock/_api.py:172]\r\npy38: 641 D Lock 4360118256 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/280ae2c263cad9615abede0001454291db14a5f307ee1e336366e6047843b90c.lock [filelock/_api.py:176]\r\npy38: 641 D got python info of /Users/simon/.pyenv/versions/3.11.0/bin/python from /Users/simon/Library/Application Support/virtualenv/py_info/1/280ae2c263cad9615abede0001454291db14a5f307ee1e336366e6047843b90c.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 642 D Attempting to release lock 4360118256 on /Users/simon/Library/Application Support/virtualenv/py_info/1/280ae2c263cad9615abede0001454291db14a5f307ee1e336366e6047843b90c.lock [filelock/_api.py:209]\r\npy38: 642 D Lock 4360118256 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/280ae2c263cad9615abede0001454291db14a5f307ee1e336366e6047843b90c.lock [filelock/_api.py:212]\r\npy38: 642 I proposed PathPythonInfo(spec=CPython3.11.0.final.0-64, system=/Users/simon/.pyenv/versions/3.11.0/bin/python, exe=/Users/simon/.pyenv/shims/python, platform=darwin, version='3.11.0 (main, Nov  3 2022, 21:39:22) [Clang 14.0.0 (clang-1400.0.29.202)]', encoding_fs_io=utf-8-utf-8) [virtualenv/discovery/builtin.py:63]\r\npy38: 642 D discover PATH[2]=/opt/homebrew/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 642 D Attempting to acquire lock 4360503600 on /Users/simon/Library/Application Support/virtualenv/py_info/1/b0fa6594d8f4cbf19f97940f81e996739fb7646882a419484c72d19e05852a7e.lock [filelock/_api.py:172]\r\npy38: 642 D Lock 4360503600 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/b0fa6594d8f4cbf19f97940f81e996739fb7646882a419484c72d19e05852a7e.lock [filelock/_api.py:176]\r\npy38: 642 D got python info of /opt/homebrew/bin/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/b0fa6594d8f4cbf19f97940f81e996739fb7646882a419484c72d19e05852a7e.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 642 D Attempting to release lock 4360503600 on /Users/simon/Library/Application Support/virtualenv/py_info/1/b0fa6594d8f4cbf19f97940f81e996739fb7646882a419484c72d19e05852a7e.lock [filelock/_api.py:209]\r\npy38: 642 D Lock 4360503600 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/b0fa6594d8f4cbf19f97940f81e996739fb7646882a419484c72d19e05852a7e.lock [filelock/_api.py:212]\r\npy38: 642 D discover PATH[3]=/opt/homebrew/sbin [virtualenv/discovery/builtin.py:108]\r\npy38: 642 D discover PATH[4]=/usr/local/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 643 D discover PATH[5]=/System/Cryptexes/App/usr/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 643 D discover PATH[6]=/usr/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 643 D Attempting to acquire lock 4360503552 on /Users/simon/Library/Application Support/virtualenv/py_info/1/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [filelock/_api.py:172]\r\npy38: 643 D Lock 4360503552 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [filelock/_api.py:176]\r\npy38: 643 D got python info of /usr/bin/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 643 D Attempting to release lock 4360503552 on /Users/simon/Library/Application Support/virtualenv/py_info/1/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [filelock/_api.py:209]\r\npy38: 643 D Lock 4360503552 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [filelock/_api.py:212]\r\npy38: 643 D Attempting to acquire lock 4360503888 on /Users/simon/Library/Application Support/virtualenv/py_info/1/5edc29c2ed010d6458d71a83433b383a96a8cbd3efe8531bc90c4b8a5b8bcec9.lock [filelock/_api.py:172]\r\npy38: 644 D Lock 4360503888 acquired on /Users/simon/Library/Application Support/virtualenv/py_info/1/5edc29c2ed010d6458d71a83433b383a96a8cbd3efe8531bc90c4b8a5b8bcec9.lock [filelock/_api.py:176]\r\npy38: 644 D got python info of /Library/Developer/CommandLineTools/usr/bin/python3 from /Users/simon/Library/Application Support/virtualenv/py_info/1/5edc29c2ed010d6458d71a83433b383a96a8cbd3efe8531bc90c4b8a5b8bcec9.json [virtualenv/app_data/via_disk_folder.py:129]\r\npy38: 644 D Attempting to release lock 4360503888 on /Users/simon/Library/Application Support/virtualenv/py_info/1/5edc29c2ed010d6458d71a83433b383a96a8cbd3efe8531bc90c4b8a5b8bcec9.lock [filelock/_api.py:209]\r\npy38: 644 D Lock 4360503888 released on /Users/simon/Library/Application Support/virtualenv/py_info/1/5edc29c2ed010d6458d71a83433b383a96a8cbd3efe8531bc90c4b8a5b8bcec9.lock [filelock/_api.py:212]\r\npy38: 644 I proposed PathPythonInfo(spec=CPython3.9.6.final.0-64, system=/Library/Developer/CommandLineTools/usr/bin/python3, exe=/usr/bin/python3, platform=darwin, version='3.9.6 (default, Sep 26 2022, 11:37:49) \\n[Clang 14.0.0 (clang-1400.0.29.202)]', encoding_fs_io=utf-8-utf-8) [virtualenv/discovery/builtin.py:63]\r\npy38: 644 D discover PATH[7]=/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 644 D discover PATH[8]=/usr/sbin [virtualenv/discovery/builtin.py:108]\r\npy38: 644 D discover PATH[9]=/sbin [virtualenv/discovery/builtin.py:108]\r\npy38: 644 D discover PATH[10]=/Applications/VMware Fusion Tech Preview.app/Contents/Public [virtualenv/discovery/builtin.py:108]\r\npy38: 644 D discover PATH[11]=/Users/simon/.local/bin [virtualenv/discovery/builtin.py:108]\r\npy38: 644 W skipped because could not find python interpreter with spec(s): py38 [tox/session/cmd/run/single.py:48]\r\npy38: 644 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 645 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 645 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 645 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 645 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 645 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 645 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 645 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\n.pkg: 645 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\n.pkg: 645 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\n.pkg: 645 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\n.pkg: 645 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: 645 D Attempting to acquire lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:172]\r\npy38: 645 D Lock 4359747520 acquired on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:176]\r\npy38: 645 D Attempting to release lock 4359747520 on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:209]\r\npy38: 645 D Lock 4359747520 released on /Users/simon/source/my-lovely-project/.tox/.pkg/file.lock [filelock/_api.py:212]\r\npy38: SKIP ⚠ in 0.2 seconds\r\n\r\n...........deleted a load here..................\r\n  py38: SKIP (0.20 seconds)\r\n  py39: OK (11.77=setup[10.59]+cmd[1.18] seconds)\r\n  py310: OK (6.89=setup[6.18]+cmd[0.71] seconds)\r\n  py311: OK (12.41=setup[11.47]+cmd[0.94] seconds)\r\n  congratulations :) (31.46 seconds)\r\n```\r\n\r\n## Minimal example\r\n\r\nIf possible, provide a minimal reproducer for the issue:\r\n\r\nCreate a tox.ini specifying an interpreter you don't have and run it with tox4. Observe that you get the 'congratulations' message.\r\n",
+        "labels": [
+          "bug:normal",
+          "help:wanted"
+        ],
+        "comments_count": 5,
+        "created_at": "2022-12-08T17:19:01Z",
+        "updated_at": "2026-07-05T12:37:33Z",
+        "html_url": "https://github.com/tox-dev/tox/issues/2649",
+        "author": "sonotley"
+      },
+      "fix_pr_number": 2793,
+      "fix_pr_title": "Fix --skip-missing-interpreters",
+      "fix_pr_url": "https://github.com/tox-dev/tox/pull/2793",
+      "fix_pr_merged_at": "2022-12-30T04:41:43Z",
+      "merge_commit_sha": "d8c4cb0ffa1999b5d6466e0099dab76f242b1ba8",
+      "pre_fix_sha": "1d739a2641bcb0545815afbabf8b3da9694ec0ff",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/tox/session/cmd/run/single.py",
+        "src/tox/tox_env/python/runner.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/2649.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/tox/session/cmd/run/single.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/tox/tox_env/python/runner.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/tox_env/python/test_python_runner.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tox-dev/tox"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-12-30T04:41:43Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-12-08T17:19:01+00:00, pr_merged_at=2022-12-30T04:41:43+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "34081 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug:normal, help:wanted"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #2793 is the merged same-repository fix for Issue #2649, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files correct skip handling and its CLI configuration post-processing; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "pylint-dev-pylint-issue-8147-pr-11239",
+      "repository": "pylint-dev/pylint",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 8147,
+        "title": "Multiple `output-format` arguments with a file output produces all files, but only the last argument's file is filled.",
+        "body": "### Bug description\n\nAll files are created specified in `--output-format`s, but only the last file has content. This happens with other output formats as well, such as JUnit. This may cause certain systems (CI for example) and people to see perfect code (no news is good news, right?) while problems are shown in a different format.\n\n### Configuration\n\n_No response_\n\n### Command used\n\n```shell\npylint --output-format=text:./pylint.txt --output-format=text:./pylint2.txt <package>\r\n\r\n# You can add more, i.e. --output-format=text:./pylint3.txt\n```\n\n\n### Pylint output\n\n```shell\nMultiple files, last one with content\n```\n\n\n### Expected behavior\n\nAll files with their expected content\r\n\r\n_or_\r\n\r\nOne file, with content\r\n\r\n_or_\r\n\r\nAn error that the argument was supplied multiple times\n\n### Pylint version\n\n```shell\npylint 2.15.9\r\nastroid 2.12.13\r\nPython 3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]\n```\n\n\n### OS / Environment\n\n_No response_\n\n### Additional dependencies\n\n_No response_",
+        "labels": [
+          "Bug :beetle:",
+          "Needs PR"
+        ],
+        "comments_count": 0,
+        "created_at": "2023-01-31T13:49:59Z",
+        "updated_at": "2026-08-09T20:44:33Z",
+        "html_url": "https://github.com/pylint-dev/pylint/issues/8147",
+        "author": "rhtenhove"
+      },
+      "fix_pr_number": 11239,
+      "fix_pr_title": "Fix repeated output formats writing only to the last file",
+      "fix_pr_url": "https://github.com/pylint-dev/pylint/pull/11239",
+      "fix_pr_merged_at": "2026-08-09T20:44:32Z",
+      "merge_commit_sha": "d58d7e717ad9d045c9efd8bc2290590a4c63a979",
+      "pre_fix_sha": "7f0d9a706ad6d549168bad4acb446cf5be36f2ae",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pylint/config/arguments_manager.py",
+        "pylint/config/callback_actions.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whatsnew/fragments/8147.bugfix",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pylint/config/arguments_manager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 0,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pylint/config/callback_actions.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 1,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_self.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 36,
+          "deletions": 0,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pylint-dev/pylint"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-09T20:44:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-01-31T13:49:59+00:00, pr_merged_at=2026-08-09T20:44:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1002 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug :beetle:, Needs PR"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #11239 is the merged same-repository fix for Issue #8147, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Both expected production files contain multiple materially involved methods for callback reset and repeated output formats, so no misleading single-symbol labels are assigned; tests and news are excluded."
+      ]
+    },
+    {
+      "id": "tornadoweb-tornado-issue-3271-pr-3621",
+      "repository": "TornadoWeb/tornado",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3271,
+        "title": "Queue.get(timeout) waits indefinitly for timedelta of zero seconds",
+        "body": "The code snippet mentioned below will wait indefinitely until an element becomes available in the queue, while according to the documentation it should immediately raise a TimeoutError when the queue is empty.\r\n\r\n```\r\nfrom datetime import timedelta\r\nfrom tornado import queues\r\nq = queues.Queue()\r\nq.get(timeout=timedelta(seconds=0))\r\n```\r\n\r\nThis issue happens because `timedelta(seconds=0)` evaluates to a False value in a conditional expression. As such, the [queues._set_timeout()](https://github.com/tornadoweb/tornado/blob/f28b245306b204e5ff312973b994fba82a3af01c/tornado/queues.py#L62) method doesn't set the timeout when `timeout=timedelta(seconds=0)`.",
+        "labels": [
+          "queues"
+        ],
+        "comments_count": 1,
+        "created_at": "2023-05-16T09:39:02Z",
+        "updated_at": "2026-06-22T19:13:34Z",
+        "html_url": "https://github.com/tornadoweb/tornado/issues/3271",
+        "author": "arnaudsjs"
+      },
+      "fix_pr_number": 3621,
+      "fix_pr_title": "Treat a zero timeout as immediate in queues and locks",
+      "fix_pr_url": "https://github.com/tornadoweb/tornado/pull/3621",
+      "fix_pr_merged_at": "2026-06-22T19:13:32Z",
+      "merge_commit_sha": "18e15a5e0093b398a216fb9f85af69a3279b6e64",
+      "pre_fix_sha": "4d892393adb0a434baeaa98a427d23c6c459a4bc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "tornado/locks.py",
+        "tornado/queues.py"
+      ],
+      "changed_files": [
+        {
+          "path": "tornado/locks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tornado/queues.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tornado/test/queues_test.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tornadoweb/tornado"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-22T19:13:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-05-16T09:39:02+00:00, pr_merged_at=2026-06-22T19:13:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "659 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=queues"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #3621 is the merged same-repository fix for Issue #3271, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The queue and lock files jointly correct zero-timeout handling; queues.py has one stable symbol label, while locks.py changes two distinct methods and remains unlabeled; tests are excluded."
+      ]
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import pytest
 from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
+    BenchmarkSymbolTarget,
     BenchmarkTier,
 )
 from repo_issue_intelligence.benchmark_discovery import (
@@ -307,6 +308,12 @@ def test_curate_expansion_accepts_only_explicit_manual_selection(tmp_path: Path)
             CandidateSelectionEntry(
                 candidate_id=candidate.id,
                 case_id="validator-regression",
+                expected_symbols=[
+                    BenchmarkSymbolTarget(
+                        file="src/validator.py",
+                        symbol="validate_payload",
+                    )
+                ],
                 review_notes=["Confirmed that the PR closes the Issue and changes source code."],
             )
         ],
@@ -326,6 +333,12 @@ def test_curate_expansion_accepts_only_explicit_manual_selection(tmp_path: Path)
     assert [case.id for case in expanded.cases] == [
         "existing-case",
         "validator-regression",
+    ]
+    assert expanded.cases[-1].expected_symbols == [
+        BenchmarkSymbolTarget(
+            file="src/validator.py",
+            symbol="validate_payload",
+        )
     ]
     catalog_output = tmp_path / "accepted-candidates.json"
     save_curated_expansion(

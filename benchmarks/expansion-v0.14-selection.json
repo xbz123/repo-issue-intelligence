@@ -1,0 +1,132 @@
+{
+  "name": "real-project-benchmark-expansion-v0.14",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "paramiko-paramiko-issue-175-pr-372",
+      "case_id": "paramiko-channel-window-performance",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "paramiko/channel.py", "symbol": "Channel._set_remote_channel"},
+        {"file": "paramiko/sftp_client.py", "symbol": "SFTPClient.from_transport"},
+        {"file": "paramiko/transport.py", "symbol": "Transport.open_channel"}
+      ],
+      "review_notes": [
+        "PR #372 is the merged same-repository fix for Issue #175, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The five expected files are the complete production patch; tests are excluded, common.py changes a constant, and the util.py helper is introduced by the fix rather than present in the pre-fix index."
+      ]
+    },
+    {
+      "candidate_id": "boto-boto3-issue-1446-pr-4503",
+      "case_id": "boto3-download-fileobj-append-mode",
+      "tier": "generalization",
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #4503 is the merged same-repository fix for Issue #1446, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files implement append-mode detection and transfer configuration; both named helpers are introduced by the fix, so no pre-fix symbol labels are assigned, and tests and release metadata are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-6234-pr-9891",
+      "case_id": "drf-html-dictfield-missing-input",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "rest_framework/fields.py", "symbol": "DictField.get_value"},
+        {"file": "rest_framework/serializers.py", "symbol": "Serializer.get_value"},
+        {"file": "rest_framework/utils/html.py", "symbol": "parse_html_dict"}
+      ],
+      "review_notes": [
+        "PR #9891 is the merged same-repository fix for Issue #6234, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three expected production files carry the missing-value sentinel through HTML dictionary parsing; field and serializer tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "matplotlib-matplotlib-issue-13470-pr-17802",
+      "case_id": "matplotlib-tk-close-root-window",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "lib/matplotlib/backends/_backend_tk.py", "symbol": "FigureManagerTk.destroy"},
+        {"file": "lib/matplotlib/cbook/__init__.py", "symbol": "_get_running_interactive_framework"}
+      ],
+      "review_notes": [
+        "PR #17802 is the merged same-repository fix for Issue #13470, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files contain the Tk manager destruction and running-framework checks; the Tk test module is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-jinja-issue-1413-pr-1664",
+      "case_id": "jinja-namespace-multi-assignment",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "src/jinja2/compiler.py", "symbol": "CodeGenerator.visit_Assign"},
+        {"file": "src/jinja2/parser.py", "symbol": "Parser.parse_assign_target"}
+      ],
+      "review_notes": [
+        "PR #1664 is the merged same-repository fix for Issue #1413, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The parser and compiler files jointly implement namespace multi-assignment; tests, documentation, and changelog entries are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1389-pr-1441",
+      "case_id": "flake8-diff-deprecation",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "src/flake8/main/application.py", "symbol": "Application.parse_configuration_and_cli"},
+        {"file": "src/flake8/main/options.py", "symbol": "register_default_options"}
+      ],
+      "review_notes": [
+        "PR #1441 is the merged same-repository resolution for Issue #1389, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files deprecate and warn on the broken diff behavior; the user documentation change is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-packaging-issue-577-pr-1351",
+      "case_id": "packaging-invalid-wheel-platform-tag",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "src/packaging/tags.py", "symbol": "parse_tag"},
+        {"file": "src/packaging/utils.py", "symbol": "parse_wheel_filename"}
+      ],
+      "review_notes": [
+        "PR #1351 is the merged same-repository fix for Issue #577, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files validate tag components and translate the resulting wheel filename error; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-2649-pr-2793",
+      "case_id": "tox-skip-missing-interpreters",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "src/tox/session/cmd/run/single.py", "symbol": "_evaluate"},
+        {"file": "src/tox/tox_env/python/runner.py", "symbol": "PythonRun.register_config"}
+      ],
+      "review_notes": [
+        "PR #2793 is the merged same-repository fix for Issue #2649, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two expected production files correct skip handling and its CLI configuration post-processing; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-8147-pr-11239",
+      "case_id": "pylint-output-format-files",
+      "tier": "generalization",
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #11239 is the merged same-repository fix for Issue #8147, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Both expected production files contain multiple materially involved methods for callback reset and repeated output formats, so no misleading single-symbol labels are assigned; tests and news are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tornadoweb-tornado-issue-3271-pr-3621",
+      "case_id": "tornado-zero-timeout-wait",
+      "tier": "generalization",
+      "expected_symbols": [
+        {"file": "tornado/queues.py", "symbol": "_set_timeout"}
+      ],
+      "review_notes": [
+        "PR #3621 is the merged same-repository fix for Issue #3271, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The queue and lock files jointly correct zero-timeout handling; queues.py has one stable symbol label, while locks.py changes two distinct methods and remains unlabeled; tests are excluded."
+      ]
+    }
+  ]
+}
