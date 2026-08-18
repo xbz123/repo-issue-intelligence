@@ -275,12 +275,13 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded OpenCode DeepSeek analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current benchmark contains 50 cases across 21 repositories and 39 manually reviewed symbol
-targets across 33 cases. This is materially stronger for error analysis but still not statistically
+The current benchmark contains 60 cases across 31 repositories and 56 manually reviewed symbol
+targets across 41 cases. This is materially stronger for error analysis but still not statistically
 strong enough for a broad quality claim. Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. Manifest version 5 is retained as
 the reproducible input for the corrected 20-case DeepSeek run; version 6 is the retained 32-case
-expansion, version 7 is the qualified-symbol suite, and version 8 is the current 50-case expansion.
+expansion, version 7 is the qualified-symbol suite, version 8 is the retained 50-case expansion,
+and version 9 is the current 60-case reviewed batch toward the planned 200-case suite.
 LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
 resolved calls, shared qualified external-call evidence, title-scoped expansion-only reverse-import

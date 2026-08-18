@@ -1,25 +1,31 @@
 # Real-Project File Localization Benchmark
 
-## Current result: manifest v8 on 50 frozen cases
+## Current result: manifest v9 on 60 frozen cases
 
-Manifest v8 contains 50 reviewed Issue/Fix-PR cases across 21 public Python repositories: 17 main,
-11 calibration, and 22 generalization cases. It records 62 production-file targets and 39 reviewed
-symbol targets across 33 cases. Every case embeds the complete Issue snapshot, merged same-repository
+Manifest v9 contains 60 reviewed Issue/Fix-PR cases across 31 public Python repositories: 17 main,
+11 calibration, and 32 generalization cases. It records 86 production-file targets and 56 reviewed
+symbol targets across 41 cases. Every case embeds the complete Issue snapshot, merged same-repository
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.25 runs finished 50/50 cases. After excluding timestamps and elapsed
+Three complete deterministic v0.26 runs finished 60/60 cases. After excluding timestamps and elapsed
 fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 50/50 | 0.4067 | 0.6900 | 0.7800 | 1.0000 | 0.6038 | 5,357 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6159 | 8,157 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,112 ms |
-| Generalization | 22/22 | 0.4015 | 0.7500 | 0.7955 | 1.0000 | 0.6371 | 4,816 ms |
+| Overall | 60/60 | 0.3811 | 0.6517 | 0.7517 | 0.9717 | 0.6115 | 4,869 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6159 | 7,700 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,071 ms |
+| Generalization | 32/32 | 0.3552 | 0.6594 | 0.7375 | 0.9469 | 0.6412 | 4,326 ms |
 
 The latency column is the mean of the three in-process analysis measurements. It starts after
 repository preparation and does not include clone, fetch, checkout, or Issue retrieval time.
+
+Across the 41 labeled cases, Symbol Recall@1/5/10/20 is
+`0.3049/0.4756/0.5122/0.6341`, with MRR `0.4345`. Four production targets introduced by the new
+batch are absent from the deterministic Top-20: `paramiko/common.py`, `boto3/compat.py`,
+`lib/matplotlib/cbook/__init__.py`, and `pylint/config/callback_actions.py`. They remain in the
+denominator and define concrete retrieval work for the next stage.
 
 v0.25 recognizes an adjacent owner-to-method phrase in an Issue title only when the owner has at
 least two semantic terms, the method contributes a non-owner and non-generic term, the strongest
@@ -113,9 +119,9 @@ characters unless an owner or uniquely resolved path supplies scope. Symbol Reca
 `Werkzeug`, `Celery`, and `pip`), no previously matched symbol regressed, and all 50 file candidate
 lists remained unchanged.
 
-## Current DeepSeek V4 Flash rank-only result
+## Retained manifest-v8 DeepSeek V4 Flash rank-only result
 
-Three authorized OpenCode `deepseek-v4-flash` runs reranked the current v0.25 deterministic Top-20
+Three authorized OpenCode `deepseek-v4-flash` runs reranked the retained v0.25 deterministic Top-20
 candidate pool. The protocol sends no grammar-constrained response format and accepts exactly one
 plain `RANK:` line containing at most three known evidence IDs. All cases, including any fallback,
 remain in the metric denominator. Reasoning is disabled, the first completion budget is 8,192
@@ -148,6 +154,9 @@ new symbols.
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.26-batch1-60-cases-run1.json`
+- `benchmarks/results/deterministic-v0.26-batch1-60-cases-run2.json`
+- `benchmarks/results/deterministic-v0.26-batch1-60-cases-run3.json`
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run1.json`
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run2.json`
 - `benchmarks/results/deterministic-v0.25-qualified-title-50-cases-run3.json`
@@ -186,8 +195,9 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-All 62 reviewed production-file targets appear in the deterministic Top-20 for this frozen suite.
-This is benchmark coverage, not proof that unseen repositories or issues have perfect recall.
+Eighty-two of the 86 reviewed production-file targets appear in the deterministic Top-20. The
+reported macro-average File Recall@20 is `0.9717`; the four missing targets are listed in the current
+result section. This is benchmark coverage, not a population-level recall estimate.
 
 ## Previous 32-case deterministic result
 
@@ -207,12 +217,13 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 ## Current limitations
 
-- The suite is not a balanced population sample: 16 of the 18 newest Issues are from 2026.
-- Only 11/50 cases have multi-file production ground truth.
-- File Recall@20 is `1.0000` on this frozen suite, whose size and case distribution remain limited.
-- Symbol Recall@20 is `0.7121`, so within-file localization remains a major bottleneck.
-- DeepSeek changed at least one position in 21/50 cases across the three current repeated runs
-  despite a fixed best-effort seed.
+- The suite is not a balanced population sample; v0.14 improves temporal coverage but accepts only
+  the first 10 of 150 planned additions.
+- Twenty-one of 60 cases have multi-file production ground truth.
+- File Recall@20 is `0.9717`; four reviewed targets remain outside the current candidate pool.
+- Symbol Recall@20 is `0.6341`, so within-file localization remains a major bottleneck.
+- The retained DeepSeek evidence covers manifest v8 only; manifest v9 has not yet received a
+  three-run external rerank evaluation.
 - Full hypothesis generation reached 140/150 valid final contracts in the current three-run
   real-project evaluation, but run-level success still ranged from 86% to 100%.
 
@@ -220,7 +231,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Expand multi-file and older-issue coverage before treating Top-20 saturation as general evidence.
-4. Expand to older and multi-file Issue/Fix-PR cases while preserving manual ground-truth review.
-5. Repeat the 50-case rank-only run after retrieval changes and report mean, variation, fallback
+3. Investigate the four manifest-v9 Top-20 misses before claiming candidate-pool saturation.
+4. Continue reviewing the remaining 140 primary Issue/Fix-PR candidates in balanced batches.
+5. Repeat the 60-case rank-only run after retrieval changes and report mean, variation, fallback
    taxonomy, valid-response MRR, and overall MRR.

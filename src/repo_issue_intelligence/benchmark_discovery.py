@@ -12,7 +12,12 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
-from .benchmark import BenchmarkCase, BenchmarkManifest, BenchmarkTier
+from .benchmark import (
+    BenchmarkCase,
+    BenchmarkManifest,
+    BenchmarkSymbolTarget,
+    BenchmarkTier,
+)
 from .github_client import REPOSITORY_PATTERN
 from .models import IssueRecord
 from .repository_index import LANGUAGE_BY_SUFFIX
@@ -138,6 +143,7 @@ class CandidateSelectionEntry(BaseModel):
     candidate_id: str
     case_id: str
     tier: BenchmarkTier | None = None
+    expected_symbols: list[BenchmarkSymbolTarget] = Field(default_factory=list)
     review_notes: list[str] = Field(min_length=1)
 
 
@@ -1274,6 +1280,7 @@ def curate_benchmark_expansion(
                 fix_pr_number=candidate.fix_pr_number,
                 pre_fix_sha=candidate.pre_fix_sha,
                 expected_files=candidate.expected_files,
+                expected_symbols=entry.expected_symbols,
             )
         )
 

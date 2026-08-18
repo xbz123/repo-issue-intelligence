@@ -6,10 +6,34 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.14 first 200-case expansion batch
+
+Manifest v9 accepts ten manually reviewed multi-file Issue/Fix-PR pairs from ten repositories:
+Paramiko, Boto3, Django REST Framework, Matplotlib, Jinja, Flake8, Packaging, tox, Pylint, and
+Tornado. Each public Issue is closed, each same-repository PR is merged and explicitly references
+the Issue, and every recorded pre-fix SHA is the parent of the first ordered PR commit outside the
+PR commit set. A local frozen checkout confirmed all 24 production-file targets exist at those
+commits; tests, documentation, changelog/news, and release metadata remain excluded.
+
+The current suite now contains 60 cases across 31 repositories: 17 main, 11 calibration, and 32
+generalization cases. It has 86 reviewed production-file targets, including 21 multi-file cases,
+and 56 reviewed symbol targets across 41 cases. The explicit v0.14 selection records symbol ground
+truth alongside file decisions; files with multiple equally material methods or only a constant
+change remain intentionally unlabeled. All 17 symbol targets added in this batch were also resolved
+against the repository index at their recorded pre-fix commits before acceptance.
+
+Three deterministic v0.26 runs completed 60/60 cases. After removing timestamps and elapsed fields,
+their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical. File
+Recall@1/5/10/20 is `0.3811/0.6517/0.7517/0.9717`, with MRR `0.6115`. On the 41 labeled cases,
+Symbol Recall@1/5/10/20 is `0.3049/0.4756/0.5122/0.6341`, with MRR `0.4345`. Four new production
+targets are absent from the deterministic Top-20: `paramiko/common.py`, `boto3/compat.py`,
+`lib/matplotlib/cbook/__init__.py`, and `pylint/config/callback_actions.py`. These misses are retained
+as expansion evidence and are not filtered out of the benchmark.
+
 ## v0.13 50-case expansion outcome
 
 Manifest v8 adds 18 manually reviewed Issue/Fix-PR pairs from eight repositories: Uvicorn,
-Celery, Flask, Black, pip, mypy, Poetry, and Scrapy. The current suite contains 50 cases across 21
+Celery, Flask, Black, pip, mypy, Poetry, and Scrapy. The retained suite contains 50 cases across 21
 repositories: 17 main, 11 calibration, and 22 generalization. It has 62 reviewed production-file
 targets, including 11 multi-file cases, and 39 reviewed symbol targets across 33 cases.
 
@@ -257,18 +281,18 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)`, and
-excluding pairs already present in manifest v8, the pool contains 200 unique candidates across 38
+After accepting the first ten reviewed candidates into manifest v9, maximum-cardinality matching by
+both `(repository, Issue)` and `(repository, fix PR)` leaves 190 unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 150 primary candidates and 50 reserves;
+- 140 primary candidates and 50 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 52 new multi-file primary candidates, which would raise the suite from 11/50 to 63/200
+- 42 new multi-file primary candidates, which would raise the suite from 21/60 to 63/200
   multi-file cases (31.5%) if all primary candidates pass review;
-- 92 primary Issues created before 2026, including cases from 2013 through 2025;
-- 101 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 80 primary Issues created before 2026;
+- 94 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
