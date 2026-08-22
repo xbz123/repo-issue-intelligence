@@ -98,20 +98,20 @@ class ReverseEvidenceAnalyzer:
 def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     manifest = load_manifest(Path("benchmarks/cases.json"))
 
-    assert manifest.version == 9
-    assert len(manifest.cases) == 60
+    assert manifest.version == 10
+    assert len(manifest.cases) == 70
     assert sum(case.tier is BenchmarkTier.MAIN for case in manifest.cases) == 17
     assert sum(case.tier is BenchmarkTier.CALIBRATION for case in manifest.cases) == 11
-    assert sum(case.tier is BenchmarkTier.GENERALIZATION for case in manifest.cases) == 32
-    assert len({case.repository for case in manifest.cases}) == 31
+    assert sum(case.tier is BenchmarkTier.GENERALIZATION for case in manifest.cases) == 42
+    assert len({case.repository for case in manifest.cases}) == 38
     assert all(case.issue_snapshot.number == case.issue_number for case in manifest.cases)
     assert all(case.issue_snapshot.updated_at == case.issue_updated_at for case in manifest.cases)
     assert all(case.issue_snapshot.title for case in manifest.cases)
     assert all(case.issue_snapshot.body for case in manifest.cases)
-    assert sum(len(case.expected_files) for case in manifest.cases) == 86
-    assert sum(len(case.expected_files) > 1 for case in manifest.cases) == 21
-    assert sum(bool(case.expected_symbols) for case in manifest.cases) == 41
-    assert sum(len(case.expected_symbols) for case in manifest.cases) == 56
+    assert sum(len(case.expected_files) for case in manifest.cases) == 111
+    assert sum(len(case.expected_files) > 1 for case in manifest.cases) == 28
+    assert sum(bool(case.expected_symbols) for case in manifest.cases) == 48
+    assert sum(len(case.expected_symbols) for case in manifest.cases) == 72
 
     qualified_base = load_manifest(
         Path("benchmarks/cases-v0.12-qualified-symbols-32-cases.json")

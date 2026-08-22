@@ -4262,6 +4262,51 @@ def test_locate_candidates_uses_only_prior_git_cochanges(tmp_path: Path) -> None
     )
 
 
+def test_git_cochanges_use_a_fixed_recent_commit_window(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/seed.py", "def handle_regression():\n    return 0\n")
+    write_source(repository, "src/target.py", "def historical_regression():\n    return 0\n")
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repository), "commit", "-qm", "cochange"], check=True)
+    for revision in range(101):
+        write_source(
+            repository,
+            "src/unrelated.py",
+            f"def unrelated():\n    return {revision}\n",
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "add", "src/unrelated.py"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "commit", "-qm", f"unrelated {revision}"],
+            check=True,
+        )
+
+    candidates = locate_candidates(
+        issue("Shared regression", "The traceback points to src/seed.py."),
+        build_repository_map(repository),
+        limit=20,
+    )
+    target = next(
+        candidate for candidate in candidates if candidate.file == "src/target.py"
+    )
+
+    assert not any(
+        "Changed with lexical seed files in" in evidence
+        for evidence in target.evidence
+    )
+
+
 def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     for index in range(25):

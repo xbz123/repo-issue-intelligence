@@ -6,6 +6,29 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.15 second 200-case expansion batch
+
+Manifest v10 accepts ten more manually reviewed Issue/Fix-PR pairs: Paramiko, Django REST
+Framework, NumPy, Pluggy, Ruff, Ansible, Virtualenv, tox, pandas, and uv. Seven repositories are new
+to the suite. Reviewers narrowed the automatic patch-derived file lists for Paramiko, NumPy,
+Pluggy, and pandas so logging-only, documentation-only, annotation-only, and unrelated files do not
+become ground truth. The same decision artifact rejects PyO3's test-only change, SQLAlchemy's
+documentation-only resolution, and a Prefect Issue that was reopened after its merged PR.
+
+The current suite contains 70 cases across 38 repositories: 17 main, 11 calibration, and 42
+generalization cases. It records 111 production-file targets, 28 multi-file cases, and 72 reviewed
+symbol targets across 48 cases. All 16 symbol targets added in this batch resolve in the Python
+repository index at their recorded pre-fix commits. Rust and C targets remain intentionally
+file-only because the current index does not parse their symbols.
+
+Three deterministic v0.27 runs completed 70/70 cases. After removing timestamps and elapsed
+fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
+File Recall@1/5/10/20 is `0.3624/0.6145/0.7074/0.8960`, with MRR `0.5845`. Across the 48 labeled
+cases, Symbol Recall@1/5/10/20 is `0.3021/0.4601/0.4913/0.5955`, with MRR `0.4267`. Nineteen of
+111 production targets are outside the deterministic Top-20. The misses remain in the denominator
+and show that mixed-language and indirect multi-file cases materially reduce the earlier apparent
+candidate-pool saturation.
+
 ## v0.14 first 200-case expansion batch
 
 Manifest v9 accepts ten manually reviewed multi-file Issue/Fix-PR pairs from ten repositories:
@@ -15,7 +38,7 @@ the Issue, and every recorded pre-fix SHA is the parent of the first ordered PR 
 PR commit set. A local frozen checkout confirmed all 24 production-file targets exist at those
 commits; tests, documentation, changelog/news, and release metadata remain excluded.
 
-The current suite now contains 60 cases across 31 repositories: 17 main, 11 calibration, and 32
+That first batch produced a 60-case suite across 31 repositories: 17 main, 11 calibration, and 32
 generalization cases. It has 86 reviewed production-file targets, including 21 multi-file cases,
 and 56 reviewed symbol targets across 41 cases. The explicit v0.14 selection records symbol ground
 truth alongside file decisions; files with multiple equally material methods or only a constant
@@ -281,25 +304,28 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting the first ten reviewed candidates into manifest v9, maximum-cardinality matching by
-both `(repository, Issue)` and `(repository, fix PR)` leaves 190 unique candidates across 38
+After accepting two ten-case batches into manifest v10 and excluding three reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 178
+unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 140 primary candidates and 50 reserves;
+- 130 primary candidates and 40 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 42 new multi-file primary candidates, which would raise the suite from 21/60 to 63/200
-  multi-file cases (31.5%) if all primary candidates pass review;
-- 80 primary Issues created before 2026;
-- 94 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 32 new multi-file primary candidates, which would raise the suite from 28/70 to 60/200
+  multi-file cases (30%) if all primary candidates pass review;
+- 77 primary Issues created before 2026;
+- 82 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
 `status=needs_review`; the queue schema rejects `accepted`. Before any candidate enters a frozen
 manifest, a reviewer must still confirm the Issue/fix relationship, inspect the production diff,
 verify every expected file at the recorded pre-fix commit, decide the tier, and add reviewed symbol
-ground truth where the fix hunk supports it. Rejected primaries should be replaced from the reserve
+ground truth where the fix hunk supports it. A reviewer may narrow the automatic file list but may
+not add an unaudited path. Explicit rejection decisions are fed back into planning so rejected
+candidates do not return to later queues. Rejected primaries should be replaced from the reserve
 queue without weakening the repository cap or the 30% multi-file target.
 
 The raw discovery catalogs remain ignored because they contain repeated, mutable Issue snapshots.
@@ -307,6 +333,7 @@ The compact queue is committed so review order, advisory signals, pre-fix SHA pr
 files, and diversity constraints are auditable without claiming that the 200-case manifest already
 exists.
 
-After the v0.20 package re-export retrieval change, all 62 reviewed production-file targets appear
-in the deterministic Top-20. Future expansion should test whether this saturation survives older,
-multi-file, and cross-subsystem cases without weakening the frozen-case acceptance rules.
+Manifest v10 confirms that the earlier candidate-pool saturation does not survive broader,
+mixed-language, multi-file cases: 19 of 111 reviewed production targets are outside the
+deterministic Top-20. Subsequent batches keep those misses in the denominator and must not weaken
+the frozen-case acceptance rules to improve the headline metric.
