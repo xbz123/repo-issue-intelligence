@@ -1317,6 +1317,17 @@ def curate_benchmark_expansion(
                 f"Selection for {candidate.id} contains files outside the audited patch: "
                 + ", ".join(sorted(unknown_expected_files))
             )
+        expected_file_set = set(expected_files)
+        orphaned_symbols = [
+            target.symbol
+            for target in entry.expected_symbols
+            if target.file not in expected_file_set
+        ]
+        if orphaned_symbols:
+            raise ValueError(
+                f"Selection for {candidate.id} contains symbol targets outside expected files: "
+                + ", ".join(sorted(orphaned_symbols))
+            )
         tier = entry.tier or candidate.suggested_tier
         if tier is None:
             raise ValueError(f"Candidate {candidate.id} requires a benchmark tier")

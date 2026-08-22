@@ -565,6 +565,49 @@ def test_reviewed_rejection_ids_fail_closed_across_manifests() -> None:
         )
 
 
+def test_curated_symbols_must_remain_on_expected_files() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="test",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    selected = _queue_candidate("selected/project", 11, 101, multi_file=True)
+    selection = CandidateSelectionManifest(
+        name="reviewed-expansion",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id=selected.id,
+                case_id="selected-case",
+                expected_files=[selected.expected_files[0]],
+                expected_symbols=[
+                    BenchmarkSymbolTarget(
+                        file=selected.expected_files[-1],
+                        symbol="Removed.symbol",
+                    )
+                ],
+                review_notes=["Only the first file contains the behavioral fix."],
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="symbol targets outside expected files"):
+        curate_benchmark_expansion(base_manifest, [selected], selection)
+
+
 def _queue_candidate(
     repository: str,
     issue_number: int,
