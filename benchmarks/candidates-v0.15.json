@@ -1,0 +1,1852 @@
+{
+  "name": "real-project-benchmark-expansion-v0.15",
+  "version": 1,
+  "curated_at": "2026-08-18T11:57:31.101025Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 9,
+  "candidates": [
+    {
+      "id": "paramiko-paramiko-issue-865-pr-910",
+      "repository": "paramiko/paramiko",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 865,
+        "title": "only rsa host key checked",
+        "body": "I'm testing with Fabric==1.13.1, paramiko==2.1.1, cryptography==1.7.1\r\n\r\nThe default ssh server setup on ubuntu 16.04 (and probably most recent versions of ubuntu and debian) is to generate one of each kind of host key. The default `sshd_config` contains this:\r\n\r\n```\r\nProtocol 2\r\n# HostKeys for protocol version 2\r\nHostKey /etc/ssh/ssh_host_rsa_key\r\nHostKey /etc/ssh/ssh_host_dsa_key\r\nHostKey /etc/ssh/ssh_host_ecdsa_key\r\nHostKey /etc/ssh/ssh_host_ed25519_key\r\n```\r\n\r\nWhen using the openssh client (6.9p1 on MacOS 10.11), it chooses the ecdsa key to put in `known_hosts`, and on later invocations it checks all the host keys the server presents to find the one of the appropriate type to check.\r\n\r\nBut paramiko seems to only look at the rsa one, sees that it's not the same type as what's in known_hosts, and so ignores it. Thus paramiko never notices when the host key changes.\r\n\r\n```\r\n$ ssh testdeploy03.ec2.st-av.net\r\n...\r\n@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @\r\n...\r\nSomeone could be eavesdropping on you right now (man-in-the-middle attack)!\r\nIt is also possible that a host key has just been changed.\r\nThe fingerprint for the ECDSA key sent by the remote host is\r\nSHA256:aB6l8o7WhWdJ02tPavyPBGTFgqe1VaqwuLVfJttiQ/c.\r\n...\r\nOffending ECDSA key in /Users/pierce/.ssh/known_hosts:19\r\nECDSA host key for testdeploy03.ec2.st-av.net has changed and you have requested strict checking.\r\nHost key verification failed.\r\n$ fab -H testdeploy03.ec2.st-av.net basictask\r\n[testdeploy03.ec2.st-av.net] Executing task 'basictask'\r\n[testdeploy03.ec2.st-av.net] run: hostname && echo hi there\r\n[testdeploy03.ec2.st-av.net] out: testdeploy03.ec2.st-av.net\r\n[testdeploy03.ec2.st-av.net] out: hi there\r\n...\r\nDisconnecting from testdeploy03.ec2.st-av.net... done.\r\n```\r\n\r\nBut if I put an incorrect rsa key in known_hosts, paramiko correctly notices that the host key is wrong. Or, if I put an incorrect ecdsa key in known_hosts, and change `sshd_config` to only offer the ecdsa key, paramiko correctly notices that the host key is wrong.\r\n\r\n```\r\n$ fab -H testdeploy03.ec2.st-av.net basictask\r\n[testdeploy03.ec2.st-av.net] Executing task 'basictask'\r\n[testdeploy03.ec2.st-av.net] run: hostname && echo hi there\r\n\r\nFatal error: Host key for testdeploy03.ec2.st-av.net did not match pre-existing key! Server's key was changed recently, or possible man-in-the-middle attack.\r\n\r\nUnderlying exception:\r\n    ('testdeploy03.ec2.st-av.net', <paramiko.ecdsakey.ECDSAKey object at 0x10c805310>, <paramiko.ecdsakey.ECDSAKey object at 0x10c7fb7d0>)\r\n\r\nAborting.\r\n```\r\n\r\nThis also works to hide the problem pointed out in #794 - if the ecdsa-sha2-nistp384/521 key is not the only host key, if there is also a dsa or rsa host key in sshd_config, then paramiko will use the rsa or dsa host key and will seem to work. (But if you had the ecdsa key in known_hosts, it's not being checked.)\r\n\r\n(As a final detail, recent openssh server and client will refuse to actually use the dsa key, I think it's obsolete.)",
+        "labels": [
+          "Keys",
+          "Bug"
+        ],
+        "comments_count": 5,
+        "created_at": "2016-12-16T19:52:39Z",
+        "updated_at": "2026-07-05T13:19:00Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/865",
+        "author": "ploxiln"
+      },
+      "fix_pr_number": 910,
+      "fix_pr_title": "SSHClient: request host key type from known_hosts",
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/910",
+      "fix_pr_merged_at": "2017-06-09T21:35:11Z",
+      "merge_commit_sha": "4526052de13932e91edf43f5a4ccb97dbc69afe9",
+      "pre_fix_sha": "04a70b9bf61684bacac1e82910ac949a96cbf070",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "paramiko/client.py"
+      ],
+      "changed_files": [
+        {
+          "path": "paramiko/client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 21,
+          "changes": 48,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/transport.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "sites/www/changelog.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "tests/test_client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 56,
+          "deletions": 4,
+          "changes": 60,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: paramiko/paramiko"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2017-06-09T21:35:11Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2016-12-16T19:52:39+00:00, pr_merged_at=2017-06-09T21:35:11+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2997 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Keys, Bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #910 is the merged same-repository fix for Issue #865, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The behavioral host-key selection fix is in SSHClient.connect; transport.py only adds agreement logging and is removed from the manually reviewed ground truth."
+      ]
+    },
+    {
+      "id": "encode-django-rest-framework-issue-8409-pr-9866",
+      "repository": "encode/django-rest-framework",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 8409,
+        "title": "UniqueTogetherValidator doesn't enforce uniqueness of NULL values on databases that DO enforce them",
+        "body": "## Checklist\r\n\r\n- [ ] Raised initially as discussion #... (No. Thought an issue would help other people in the future)\r\n- [x] This cannot be dealt with as a third party library. (We prefer new functionality to be [in the form of third party libraries](https://www.django-rest-framework.org/community/third-party-packages/#about-third-party-packages) where possible.)\r\n- [x] I have reduced the issue to the simplest possible case.\r\n\r\nWith https://github.com/encode/django-rest-framework/issues/2452 code was introduced that changed the behavior of `UniqueTogetherValidator` to ignore `NULL` values.\r\n\r\nThe reasoning being that Postgresql (and supposedly the SQL standard) considers each instance of `NULL` unique from every other instance (last paragraph of https://www.postgresql.org/docs/13/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS). Many RDBMs follow this but Oracle DB doesn't.\r\n\r\nOracle DB will enforce multi column unique constraints properly even when some of the values are `NULL`.  But DRF will skip the uniqueness check and a constraint violation will be returned by Oracle. Traceback at the end of the ticket.\r\n\r\nI'm not too sure how such variation between DB backends should be treated. Skipping the `None` check in `UniqueTogetherValidator` seems to work as expected. I guess a setting that controls how `NULL` values are treated could work but it seems a bit out of place.\r\n\r\nThoughts?\r\n\r\n\r\n\r\nTraceback with Oracle DB:\r\n```python\r\nFile \"/.../lib/python3.9/site-packages/rest_framework/mixins.py\", line 19, in create\r\n  self.perform_create(serializer)\r\nFile \"...api.py\", line 585, in perform_create\r\n  serializer.save()\r\nFile \"/.../lib/python3.9/site-packages/rest_framework/serializers.py\", line 205, in save\r\n  self.instance = self.create(validated_data)\r\nFile \"/.../lib/python3.9/site-packages/rest_framework/serializers.py\", line 939, in create\r\n  instance = ModelClass._default_manager.create(**validated_data)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/manager.py\", line 85, in manager_method\r\n  return getattr(self.get_queryset(), name)(*args, **kwargs)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/query.py\", line 453, in create\r\n  obj.save(force_insert=True, using=self.db)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/base.py\", line 739, in save\r\n  self.save_base(using=using, force_insert=force_insert,\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/base.py\", line 776, in save_base\r\n  updated = self._save_table(\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/base.py\", line 881, in _save_table\r\n  results = self._do_insert(cls._base_manager, using, fields, returning_fields, raw)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/base.py\", line 919, in _do_insert\r\n  return manager._insert(\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/manager.py\", line 85, in manager_method\r\n  return getattr(self.get_queryset(), name)(*args, **kwargs)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/query.py\", line 1270, in _insert\r\n  return query.get_compiler(using=using).execute_sql(returning_fields)\r\nFile \"/.../lib/python3.9/site-packages/django/db/models/sql/compiler.py\", line 1416, in execute_sql\r\n  cursor.execute(sql, params)\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/utils.py\", line 98, in execute\r\n  return super().execute(sql, params)\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/utils.py\", line 66, in execute\r\n  return self._execute_with_wrappers(sql, params, many=False, executor=self._execute)\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/utils.py\", line 75, in _execute_with_wrappers\r\n  return executor(sql, params, many, context)\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/utils.py\", line 84, in _execute\r\n  return self.cursor.execute(sql, params)\r\nFile \"/.../lib/python3.9/site-packages/django/db/utils.py\", line 90, in __exit__\r\n  raise dj_exc_value.with_traceback(traceback) from exc_value\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/utils.py\", line 84, in _execute\r\n  return self.cursor.execute(sql, params)\r\nFile \"/.../lib/python3.9/site-packages/django/db/backends/oracle/base.py\", line 523, in execute\r\n  return self.cursor.execute(query, self._param_generator(params))\r\ndjango.db.utils.IntegrityError: ORA-00001: unique constraint (SOME.TABLE__F9A18610_U) violated\r\n```",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2022-03-15T08:16:58Z",
+        "updated_at": "2026-08-06T15:02:12Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/8409",
+        "author": "GertBurger"
+      },
+      "fix_pr_number": 9866,
+      "fix_pr_title": "Add `nulls_distinct` support to `UniqueTogetherValidator`",
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/9866",
+      "fix_pr_merged_at": "2026-08-06T15:01:47Z",
+      "merge_commit_sha": "000bb334f7995a972e700f81fbdbd50a80f38985",
+      "pre_fix_sha": "3f190b7ddc1ae19c9c9a3ed10f987c30b2eb9d5d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "rest_framework/serializers.py",
+        "rest_framework/validators.py"
+      ],
+      "changed_files": [
+        {
+          "path": "rest_framework/serializers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 6,
+          "changes": 19,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "rest_framework/validators.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 6,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_validators.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 143,
+          "deletions": 0,
+          "changes": 143,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: encode/django-rest-framework"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-06T15:01:47Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-03-15T08:16:58+00:00, pr_merged_at=2026-08-06T15:01:47+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "9 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4385 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #9866 is the merged same-repository fix for Issue #8409, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The serializer propagates nulls_distinct into the existing validator, whose call path changes the None-value uniqueness behavior; tests are excluded."
+      ]
+    },
+    {
+      "id": "numpy-numpy-issue-27137-pr-32029",
+      "repository": "numpy/numpy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 27137,
+        "title": "BUG: scalars don't have dlpack support",
+        "body": "### Describe the issue:\r\n\r\nreduction (e.g. xp.sum) are expected to produce arrays, but in numpy they produce scalars, that don't follow array api specifications (e.g. I can't use dlpack on those).\r\n\r\nIn numpy v1, np.array_api correctly returned arrays in this case\r\n\r\n\r\n\r\n### Reproduce the code example:\r\n\r\n```python\r\nimport numpy as np\r\nx = np.zeros([3, 4])\r\n\r\ntype(x.__array_namespace__().sum(x))\r\n# outputs: numpy.float64 expected: numpy.ndarray\r\n```\r\n\r\n\r\n\r\n### Python and NumPy Versions:\r\n\r\n```\r\n2.0.1\r\n3.11.9 (main, Apr  6 2024, 17:59:24) [GCC 11.4.0]\r\n```",
+        "labels": [
+          "00 - Bug",
+          "40 - array API standard"
+        ],
+        "comments_count": 10,
+        "created_at": "2024-08-08T00:04:59Z",
+        "updated_at": "2026-08-03T04:05:49Z",
+        "html_url": "https://github.com/numpy/numpy/issues/27137",
+        "author": "arogozhnikov"
+      },
+      "fix_pr_number": 32029,
+      "fix_pr_title": "ENH: Support DLPack for scalars by exporting read-only data",
+      "fix_pr_url": "https://github.com/numpy/numpy/pull/32029",
+      "fix_pr_merged_at": "2026-08-03T04:05:48Z",
+      "merge_commit_sha": "899d0c20b755a9bfc3b9dba16d6bafc20b95c216",
+      "pre_fix_sha": "f67f65a1ab0d0998896703d6f205912d6975f966",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/release/upcoming_changes/32029.new_feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "numpy/__init__.pyi",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "numpy/_core/_add_newdocs.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "numpy/_core/src/common/npy_dlpack.h",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 0,
+          "changes": 9,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "numpy/_core/src/multiarray/dlpack.c",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 163,
+          "deletions": 34,
+          "changes": 197,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "numpy/_core/src/multiarray/scalartypes.c.src",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 0,
+          "changes": 9,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "numpy/_core/tests/test_dlpack.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 91,
+          "deletions": 0,
+          "changes": 91,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: numpy/numpy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-03T04:05:48Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-08-08T00:04:59+00:00, pr_merged_at=2026-08-03T04:05:48+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "11 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "561 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=00 - Bug, 40 - array API standard"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #32029 is the merged same-repository fix for Issue #27137, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The production behavior is implemented in dlpack.c; _add_newdocs.py is documentation-only and is removed, while the current index does not provide C symbol candidates."
+      ]
+    },
+    {
+      "id": "pytest-dev-pluggy-issue-573-pr-546",
+      "repository": "pytest-dev/pluggy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 573,
+        "title": "`'return' in a 'finally' block` is a SyntaxWarning in Python 3.14",
+        "body": "See [What’s new in Python 3.14 - PEP 765: Disallow return/break/continue that exit a finally block](https://docs.python.org/3.14/whatsnew/3.14.html#whatsnew314-pep765)\n\nWhen warnings are turned to errors, this is causing code like https://github.com/pytest-dev/pluggy/blob/f8aa4a009716a7994f2f6c1947d9fa69feccbdd5/src/pluggy/_callers.py#L110-L141\nto produce errors like: \n```\n=================================== FAILURES ===================================\n_________________________________ test session _________________________________\n[gw0] linux -- Python 3.14.0 /home/runner/work/setuptools/setuptools/.tox/py/bin/python\nmypy exited with status 2.\n===================================== mypy =====================================\n.tox/py/lib/python3.14/site-packages/pluggy/_callers.py:141: error: 'return' in a 'finally' block  [syntax]\nFound 1 error in 1 file (errors prevented further checking)\n```\n(example log: https://github.com/pypa/setuptools/actions/runs/14441580075/job/40492746262?pr=4785#step:11:75)\n",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2025-04-14T18:29:04Z",
+        "updated_at": "2025-05-09T14:01:30Z",
+        "html_url": "https://github.com/pytest-dev/pluggy/issues/573",
+        "author": "Avasam"
+      },
+      "fix_pr_number": 546,
+      "fix_pr_title": "refactor: implement legacy hookwrappers in terms of a modern hook\"",
+      "fix_pr_url": "https://github.com/pytest-dev/pluggy/pull/546",
+      "fix_pr_merged_at": "2025-05-09T14:01:29Z",
+      "merge_commit_sha": "0ceb558860b5e228b67adbe8c19a368802e7d324",
+      "pre_fix_sha": "832b21f282c7a5fba1ce27cf7e6af1f889a393dd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/pluggy/_callers.py"
+      ],
+      "changed_files": [
+        {
+          "path": ".coveragerc",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "changelog/573.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 2,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "scripts/release.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 4,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "scripts/towncrier-draft-to-file.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/pluggy/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 8,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/pluggy/_callers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 82,
+          "deletions": 117,
+          "changes": 199,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/pluggy/_hooks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 5,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/pluggy/_manager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 12,
+          "changes": 25,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/benchmark.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 4,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/conftest.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_details.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 65,
+          "deletions": 10,
+          "changes": 75,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_helpers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 4,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_hookcaller.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 14,
+          "deletions": 14,
+          "changes": 28,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_invocations.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 42,
+          "deletions": 1,
+          "changes": 43,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_multicall.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 5,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_pluginmanager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 70,
+          "deletions": 10,
+          "changes": 80,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pluggy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-05-09T14:01:29Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-04-14T18:29:04+00:00, pr_merged_at=2025-05-09T14:01:29+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "18 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1015 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #546 is the merged same-repository fix for Issue #573, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The return-in-finally behavior is removed from _multicall; version exports, comments, and equivalent changes in the other automatically listed files are excluded."
+      ]
+    },
+    {
+      "id": "astral-sh-ruff-issue-18143-pr-27738",
+      "repository": "astral-sh/ruff",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 18143,
+        "title": "PLC2701 treats `os._exit` as private, unlike SLF001",
+        "body": "### Summary\n\nDespite its name, [`os._exit`](https://docs.python.org/3.9/library/os.html#os._exit) is not private; see #6483. [`import-private-name` (PLC2701)](https://docs.astral.sh/ruff/rules/import-private-name/) treats it as private, which is inconsistent with [`private-member-access` (SLF001)](https://docs.astral.sh/ruff/rules/private-member-access/). The two rules should share the same set of exceptionally non-private module members (which is currently just `os._exit`).\n\n```console\n$ cat >plc2701.py <<'# EOF'\nfrom os import _exit\n# EOF\n\n$ ruff --isolated check plc2701.py --preview --select PLC2701 --output-format concise -q\nplc2701.py:1:16: PLC2701 Private name import `_exit` from external module `os`\n```\n\n### Version\n\nruff 0.11.10 (b35bf8ae0 2025-05-15)",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 5,
+        "created_at": "2025-05-16T20:46:53Z",
+        "updated_at": "2026-08-14T19:28:22Z",
+        "html_url": "https://github.com/astral-sh/ruff/issues/18143",
+        "author": "dscorbett"
+      },
+      "fix_pr_number": 27738,
+      "fix_pr_title": "[`pylint`] Allow `os._exit` imports in `import-private-name` (`PLC2701`)",
+      "fix_pr_url": "https://github.com/astral-sh/ruff/pull/27738",
+      "fix_pr_merged_at": "2026-08-14T19:28:21Z",
+      "merge_commit_sha": "5226c063128b63ecb3f035fd9a0b0b4b007d615c",
+      "pre_fix_sha": "04d59f43abf8e6e6df8643202ef3f03fb39a6ed2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_self/rules/private_member_access.rs",
+        "crates/ruff_linter/src/rules/pylint/helpers.rs",
+        "crates/ruff_linter/src/rules/pylint/rules/import_private_name.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/ruff_linter/resources/test/fixtures/flake8_self/SLF001.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "crates/ruff_linter/resources/test/fixtures/pylint/import_private_name/submodule/__main__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/flake8_self/rules/private_member_access.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 2,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/pylint/helpers.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/pylint/rules/import_private_name.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/pylint/snapshots/ruff_linter__rules__pylint__tests__PLC2701_import_private_name__submodule____main__.py.snap",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 32,
+          "deletions": 1,
+          "changes": 33,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/ruff"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T19:28:21Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-05-16T20:46:53+00:00, pr_merged_at=2026-08-14T19:28:21+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "769 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #27738 is the merged same-repository fix for Issue #18143, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "All three Rust files participate in the shared os._exit exception, but the current repository index intentionally provides file-only ground truth for Rust."
+      ]
+    },
+    {
+      "id": "ansible-ansible-issue-87020-pr-87072",
+      "repository": "ansible/ansible",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 87020,
+        "title": "Tree plugin deprecation notice",
+        "body": "### Summary\n\nHi, \nafter upgrading from Ubuntu 25.10 to 26.04 and getting a new version of ansible (2.20.1), I get plenty of deprecation notices. \n\nWhile most notices tell or hint, what to do instead and how to fix, the tree plugin (for storing output in files per host) just says it is deprecated and will be removed soon, without giving a hint what to use instead. \n\nI also could not find any documentation about it. \n\nThis will run into dysfunction once it is removed. \n\n\n\n### Issue Type\n\nBug Report\n\n### Component Name\n\ntree\n\n### Ansible Version\n\n```console\n$ ansible --version\nnsible [core 2.20.1]\n  config file = /home/hadmut/.GIT/Hadmut_Home/Install/Ansible/ansible.cfg\n  configured module search path = ['/home/hadmut/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']\n  ansible python module location = /usr/lib/python3/dist-packages/ansible\n  ansible collection location = /home/hadmut/.ansible/collections:/usr/share/ansible/collections\n  executable location = /usr/bin/ansible\n  python version = 3.14.4 (main, Apr  8 2026, 04:02:31) [GCC 15.2.0] (/usr/bin/python3)\n  jinja version = 3.1.6\n  pyyaml version = 6.0.3 (with libyaml v0.2.5)\n```\n\n### Configuration\n\n```console\n# if using a version older than ansible-core 2.12 you should omit the '-t all'\n$ ansible-config dump --only-changed -t all\n\nnothing change, the given paths are confidential, and don't matter for this report.\n```\n\n### OS / Environment\n\nUbuntu 26.04\n\n### Steps to Reproduce\n\nANSIBLE_LOAD_CALLBACK_PLUGINS=1 ANSIBLE_CALLBACKS_ENABLED=tree ANSIBLE_CALLBACK_TREE_DIR=${PWD}/Testing  ansible -m ping -u root all -i inventory\n\n### Expected Results\n\nTell me what to use instead of the deprecated plugin\n\n### Actual Results\n\n```console\n[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.\n[DEPRECATION WARNING]: The tree callback plugin is deprecated. This feature will be removed from ansible-core version 2.23.\n```\n\n### Code of Conduct\n\n- [x] I agree to follow the Ansible Code of Conduct",
+        "labels": [
+          "bug",
+          "has_pr"
+        ],
+        "comments_count": 4,
+        "created_at": "2026-05-22T23:06:23Z",
+        "updated_at": "2026-08-14T00:01:38Z",
+        "html_url": "https://github.com/ansible/ansible/issues/87020",
+        "author": "hadmut"
+      },
+      "fix_pr_number": 87072,
+      "fix_pr_title": "Document the tree and oneline deprecation in the plugin documentation",
+      "fix_pr_url": "https://github.com/ansible/ansible/pull/87072",
+      "fix_pr_merged_at": "2026-07-30T16:28:47Z",
+      "merge_commit_sha": "6c75a50d5e9058822644f7627e9aacc0b010d287",
+      "pre_fix_sha": "744a880709d7282446d771ab245efc86408a2ca8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/ansible/plugins/callback/oneline.py",
+        "lib/ansible/plugins/callback/tree.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelogs/fragments/fix-tree-and-oneline-callback-deprecation.yml",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "lib/ansible/config/ansible_builtin_runtime.yml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "lib/ansible/plugins/callback/oneline.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 10,
+          "changes": 14,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "lib/ansible/plugins/callback/tree.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 10,
+          "changes": 14,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: ansible/ansible"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-30T16:28:47Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-05-22T23:06:23+00:00, pr_merged_at=2026-07-30T16:28:47+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2028 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, has_pr"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #87072 is the merged same-repository fix for Issue #87020, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Both callback implementations replace their legacy constructor warnings with runtime deprecation metadata; changelog material is excluded."
+      ]
+    },
+    {
+      "id": "pypa-virtualenv-issue-3171-pr-3173",
+      "repository": "pypa/virtualenv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3171,
+        "title": "Creates broken Python 3.8 environments",
+        "body": "**Issue**\n\nIn short\n\n```\n./venv/bin/virtualenv --python 3.8 bad\n```\n\nwith virtualenv v21.5.0 and running with Python 3.12 creates the venv \"bad\" but includes a pip version 26.1.2. This version doesn't support 3.8 and crashes quickly. I would either expect an error \"creating 3.8 environments not supported anymore\" or a working env.\n\nLonger reproducer:\n\n```\nmkdir REPRO\ncd REPRO\npython3.12 -m venv venv\n./venv/bin/pip install virtualenv\n./venv/bin/virtualenv --python 3.8 bad\n./bad/bin/pip list\n```\n\nThis reliably gets this error:\n\n```\n[tnr1@eu-dar-tnr1-ds8 RE]$ ./bad/bin/pip list\nTraceback (most recent call last):\n  File \"./bad/bin/pip\", line 8, in <module>\n    sys.exit(main())\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/cli/main.py\", line 47, in main\n    from pip._internal.cli.autocompletion import autocomplete\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/cli/autocompletion.py\", line 12, in <module>\n    from pip._internal.cli.main_parser import create_main_parser\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/cli/main_parser.py\", line 11, in <module>\n    from pip._internal.build_env import get_runnable_pip\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/build_env.py\", line 22, in <module>\n    from pip._internal.cli.spinners import open_rich_spinner, open_spinner\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/cli/spinners.py\", line 22, in <module>\n    from pip._internal.utils.logging import get_console, get_indentation\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/utils/logging.py\", line 32, in <module>\n    from pip._internal.utils.misc import StreamWrapper, ensure_dir\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/utils/misc.py\", line 36, in <module>\n    from pip._internal.locations import get_major_minor_version\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/locations/__init__.py\", line 10, in <module>\n    from pip._internal.models.scheme import SCHEME_KEYS, Scheme\n  File \"/tmp/RE/bad/lib/python3.8/site-packages/pip/_internal/models/scheme.py\", line 13, in <module>\n    @dataclass(frozen=True, slots=True)\nTypeError: dataclass() got an unexpected keyword argument 'slots'\n```\n\n**Environment**\n\nProvide at least:\n\n- OS: RHEL8\n- Shell: bash\n- Python version and path: Python 3.12.13 in /usr/bin/python3.12\n- `pip list` of the host python where `virtualenv` is installed:\n\n  ```console\n  [tnr1@eu-dar-tnr1-ds8 REPRO]$ ./venv/bin/pip list\n  Package          Version\n  ---------------- -------\n  distlib          0.4.3\n  filelock         3.29.4\n  pip              23.2.1\n  platformdirs     4.10.0\n  python-discovery 1.4.2\n  virtualenv       21.5.0\n\n  [notice] A new release of pip is available: 23.2.1 -> 26.1.2\n  [notice] To update, run: python3.12 -m pip install --upgrade pip\n  ```\n\n**Output of the virtual environment creation**\n\nMake sure to run the creation with `-vvv --with-traceback`:\n\n```console\n[tnr1@eu-dar-tnr1-ds8 REPRO]$ ./venv/bin/virtualenv --python 3.8 bad -vvv --with-traceback\n96 setup logging to NOTSET [DEBUG report:36]\n96 created app data folder /u/users/tnr1/.cache/virtualenv [DEBUG __init__:65]\n106 find interpreter for spec PythonSpec(major=3, minor=8, free_threaded=False) [INFO _discovery:131]\n109 Attempting to acquire lock 140440503545888 on /home/users/tnr1/.cache/virtualenv/py_info/5/f0d7a494a3f776233427cb85a7e198c7cf4913b50a203c6febc678cc4f5bf265.lock [DEBUG _api:536]\n109 Lock 140440503545888 acquired on /home/users/tnr1/.cache/virtualenv/py_info/5/f0d7a494a3f776233427cb85a7e198c7cf4913b50a203c6febc678cc4f5bf265.lock [DEBUG _api:539]\n109 got python info of /usr/bin/python3.12 from /home/users/tnr1/.cache/virtualenv/py_info/5/f0d7a494a3f776233427cb85a7e198c7cf4913b50a203c6febc678cc4f5bf265.json [DEBUG via_disk_folder:139]\n109 Attempting to release lock 140440503545888 on /home/users/tnr1/.cache/virtualenv/py_info/5/f0d7a494a3f776233427cb85a7e198c7cf4913b50a203c6febc678cc4f5bf265.lock [DEBUG _api:568]\n110 Lock 140440503545888 released on /home/users/tnr1/.cache/virtualenv/py_info/5/f0d7a494a3f776233427cb85a7e198c7cf4913b50a203c6febc678cc4f5bf265.lock [DEBUG _api:572]\n110 filesystem is case-sensitive [DEBUG _compat:18]\n110 proposed PythonInfo(spec=CPython3.12.13.final.0-64-x86_64, system=/usr/bin/python3.12, exe=/tmp/REPRO/venv/bin/python3.12, platform=linux, version='3.12.13 (main, Apr 16 2026, 22:51:04) [GCC 8.5.0 20210514 (Red Hat 8.5.0-28)]', encoding_fs_io=utf-8-utf-8) [INFO _discovery:140]\n110 discover PATH[0]=/u/users/tnr1/.local/bin [DEBUG _discovery:251]\n111 discover PATH[1]=/u/users/tnr1/go/bin [DEBUG _discovery:251]\n111 discover PATH[2]=/usr/share/Modules/bin [DEBUG _discovery:251]\n111 discover PATH[3]=/usr/lib64/ccache [DEBUG _discovery:251]\n111 discover PATH[4]=/usr/local/bin [DEBUG _discovery:251]\n112 discover PATH[5]=/usr/bin [DEBUG _discovery:251]\n115 Attempting to acquire lock 140440499594656 on /home/users/tnr1/.cache/virtualenv/py_info/5/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [DEBUG _api:536]\n115 Lock 140440499594656 acquired on /home/users/tnr1/.cache/virtualenv/py_info/5/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [DEBUG _api:539]\n115 get interpreter info via cmd: /usr/bin/python3 /tmp/REPRO/venv/lib/python3.12/site-packages/python_discovery/_py_info.py 3372cf15dd2031b4e622d1c663572de7 f1a20b08c3cf8be407bd45a3997eb8af [DEBUG _cached_py_info:198]\n133 first subprocess attempt failed for /usr/bin/python3 (failed to query /usr/bin/python3 with code 1 err: '  File \"/tmp/REPRO/venv/lib/python3.12/site-packages/python_discovery/_py_info.py\", line 183\\n    if (tk_lib := tcl.eval(\"set tk_library\")) and os.path.isdir(tk_lib):\\n               ^\\nSyntaxError: invalid syntax\\n'), retrying [DEBUG _cached_py_info:110]\n133 get interpreter info via cmd: /usr/bin/python3 /tmp/REPRO/venv/lib/python3.12/site-packages/python_discovery/_py_info.py 62dc9181c174615f9e32f437aa1bd99a a3d929cfdeacdf248dc92222f9750769 [DEBUG _cached_py_info:198]\n149 Attempting to release lock 140440499594656 on /home/users/tnr1/.cache/virtualenv/py_info/5/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [DEBUG _api:568]\n150 Lock 140440499594656 released on /home/users/tnr1/.cache/virtualenv/py_info/5/31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6.lock [DEBUG _api:572]\n150 failed to query /usr/bin/python3 with code 1 err: '  File \"/tmp/REPRO/venv/lib/python3.12/site-packages/python_discovery/_py_info.py\", line 183\\n    if (tk_lib := tcl.eval(\"set tk_library\")) and os.path.isdir(tk_lib):\\n               ^\\nSyntaxError: invalid syntax\\n' [INFO _cached_py_info:49]\n152 Attempting to acquire lock 140440499594416 on /home/users/tnr1/.cache/virtualenv/py_info/5/df0893f56f349688326838aaeea0de204df53a132722cbd565e54b24a8fec5f6.lock [DEBUG _api:536]\n152 Lock 140440499594416 acquired on /home/users/tnr1/.cache/virtualenv/py_info/5/df0893f56f349688326838aaeea0de204df53a132722cbd565e54b24a8fec5f6.lock [DEBUG _api:539]\n153 got python info of /usr/bin/python3.8 from /home/users/tnr1/.cache/virtualenv/py_info/5/df0893f56f349688326838aaeea0de204df53a132722cbd565e54b24a8fec5f6.json [DEBUG via_disk_folder:139]\n153 Attempting to release lock 140440499594416 on /home/users/tnr1/.cache/virtualenv/py_info/5/df0893f56f349688326838aaeea0de204df53a132722cbd565e54b24a8fec5f6.lock [DEBUG _api:568]\n153 Lock 140440499594416 released on /home/users/tnr1/.cache/virtualenv/py_info/5/df0893f56f349688326838aaeea0de204df53a132722cbd565e54b24a8fec5f6.lock [DEBUG _api:572]\n153 proposed PathPythonInfo(spec=CPython3.8.17.final.0-64-x86_64, exe=/usr/bin/python3.8, platform=linux, version='3.8.17 (default, Aug 10 2023, 12:50:17) \\n[GCC 8.5.0 20210514 (Red Hat 8.5.0-20)]', encoding_fs_io=utf-8-utf-8) [INFO _discovery:140]\n153 accepted PathPythonInfo(spec=CPython3.8.17.final.0-64-x86_64, exe=/usr/bin/python3.8, platform=linux, version='3.8.17 (default, Aug 10 2023, 12:50:17) \\n[GCC 8.5.0 20210514 (Red Hat 8.5.0-20)]', encoding_fs_io=utf-8-utf-8) [DEBUG _discovery:144]\n155 symlink on filesystem does work [DEBUG info:51]\n155 filesystem is case-sensitive [DEBUG info:28]\n186 create virtual environment via CPython3Posix(dest=/tmp/REPRO/bad, clear=False, no_vcs_ignore=False, global=False) [INFO session:77]\n186 create folder /tmp/REPRO/bad/bin [DEBUG _sync:18]\n187 create folder /tmp/REPRO/bad/include [DEBUG _sync:18]\n187 create folder /tmp/REPRO/bad/lib/python3.8/site-packages [DEBUG _sync:18]\n187 create folder /tmp/REPRO/bad/lib64/python3.8/site-packages [DEBUG _sync:18]\n187 write /tmp/REPRO/bad/pyvenv.cfg [DEBUG pyenv_cfg:41]\n187     home = /usr/bin [DEBUG pyenv_cfg:51]\n187     implementation = CPython [DEBUG pyenv_cfg:51]\n187     version_info = 3.8.17.final.0 [DEBUG pyenv_cfg:51]\n187     version = 3.8.17 [DEBUG pyenv_cfg:51]\n187     executable = /usr/bin/python3.8 [DEBUG pyenv_cfg:51]\n187     command = /tmp/REPRO/venv/bin/python3.12 -m virtualenv /tmp/REPRO/bad [DEBUG pyenv_cfg:51]\n187     virtualenv = 21.5.0 [DEBUG pyenv_cfg:51]\n187     include-system-site-packages = false [DEBUG pyenv_cfg:51]\n187     base-prefix = /usr [DEBUG pyenv_cfg:51]\n187     base-exec-prefix = /usr [DEBUG pyenv_cfg:51]\n187     base-executable = /usr/bin/python3.8 [DEBUG pyenv_cfg:51]\n187 symlink /usr/bin/python3.8 to /tmp/REPRO/bad/bin/python [DEBUG _sync:38]\n188 create virtualenv import hook file /tmp/REPRO/bad/lib/python3.8/site-packages/_virtualenv.pth [DEBUG api:117]\n188 create /tmp/REPRO/bad/lib/python3.8/site-packages/_virtualenv.py [DEBUG api:120]\n188 ============================== target debug ============================== [DEBUG session:79]\n189 debug via /tmp/REPRO/bad/bin/python /tmp/REPRO/venv/lib64/python3.12/site-packages/virtualenv/create/debug.py [DEBUG creator:265]\n188 {\n  \"sys\": {\n    \"executable\": \"/tmp/REPRO/bad/bin/python\",\n    \"_base_executable\": \"/tmp/REPRO/bad/bin/python\",\n    \"prefix\": \"/tmp/REPRO/bad\",\n    \"base_prefix\": \"/usr\",\n    \"exec_prefix\": \"/tmp/REPRO/bad\",\n    \"base_exec_prefix\": \"/usr\",\n    \"path\": [\n      \"/usr/lib64/python38.zip\",\n      \"/usr/lib64/python3.8\",\n      \"/usr/lib64/python3.8/lib-dynload\",\n      \"/tmp/REPRO/bad/lib64/python3.8/site-packages\",\n      \"/tmp/REPRO/bad/lib/python3.8/site-packages\"\n    ],\n    \"meta_path\": [\n      \"<class '_virtualenv._Finder'>\",\n      \"<class '_frozen_importlib.BuiltinImporter'>\",\n      \"<class '_frozen_importlib.FrozenImporter'>\",\n      \"<class '_frozen_importlib_external.PathFinder'>\"\n    ],\n    \"fs_encoding\": \"utf-8\",\n    \"io_encoding\": \"utf-8\"\n  },\n  \"version\": \"3.8.17 (default, Aug 10 2023, 12:50:17) \\n[GCC 8.5.0 20210514 (Red Hat 8.5.0-20)]\",\n  \"makefile_filename\": \"/usr/lib64/python3.8/config-3.8-x86_64-linux-gnu/Makefile\",\n  \"os\": \"<module 'os' from '/usr/lib64/python3.8/os.py'>\",\n  \"site\": \"<module 'site' from '/usr/lib64/python3.8/site.py'>\",\n  \"datetime\": \"<module 'datetime' from '/usr/lib64/python3.8/datetime.py'>\",\n  \"math\": \"<module 'math' from '/usr/lib64/python3.8/lib-dynload/math.cpython-38-x86_64-linux-gnu.so'>\",\n  \"json\": \"<module 'json' from '/usr/lib64/python3.8/json/__init__.py'>\"\n} [DEBUG session:80]\n219 add seed packages via FromAppData(download=False, pip=bundle, setuptools=bundle, via=copy, app_data_dir=/home/users/tnr1/.cache/virtualenv) [INFO session:84]\n224 got embed update of distribution setuptools from /home/users/tnr1/.cache/virtualenv/wheel/3.8/embed/3/setuptools.json [DEBUG via_disk_folder:139]\n227 got embed update of distribution setuptools from /home/users/tnr1/.cache/virtualenv/wheel/3.8/embed/3/setuptools.json [DEBUG via_disk_folder:139]\n227 got embed update of distribution pip from /home/users/tnr1/.cache/virtualenv/wheel/3.8/embed/3/pip.json [DEBUG via_disk_folder:139]\n227 got embed update of distribution pip from /home/users/tnr1/.cache/virtualenv/wheel/3.8/embed/3/pip.json [DEBUG via_disk_folder:139]\n228 install setuptools from wheel /tmp/REPRO/venv/lib64/python3.12/site-packages/virtualenv/seed/wheels/embed/setuptools-82.0.1-py3-none-any.whl via CopyPipInstall [DEBUG via_app_data:65]\n228 install pip from wheel /tmp/REPRO/venv/lib64/python3.12/site-packages/virtualenv/seed/wheels/embed/pip-26.1.2-py3-none-any.whl via CopyPipInstall [DEBUG via_app_data:65]\n229 Attempting to acquire lock 140440490315024 on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any.lock [DEBUG _api:536]\n229 Attempting to acquire lock 140440490315600 on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any.lock [DEBUG _api:536]\n229 Lock 140440490315024 acquired on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any.lock [DEBUG _api:539]\n229 Lock 140440490315600 acquired on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any.lock [DEBUG _api:539]\n229 Attempting to release lock 140440490315024 on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any.lock [DEBUG _api:568]\n229 Attempting to release lock 140440490315600 on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any.lock [DEBUG _api:568]\n230 Lock 140440490315600 released on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any.lock [DEBUG _api:572]\n230 Lock 140440490315024 released on /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any.lock [DEBUG _api:572]\n230 copy directory /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any/pip to /tmp/REPRO/bad/lib/python3.8/site-packages/pip [DEBUG _sync:46]\n230 copy /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any/distutils-precedence.pth to /tmp/REPRO/bad/lib/python3.8/site-packages/distutils-precedence.pth [DEBUG _sync:46]\n231 copy directory /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any/_distutils_hack to /tmp/REPRO/bad/lib/python3.8/site-packages/_distutils_hack [DEBUG _sync:46]\n232 copy directory /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any/setuptools to /tmp/REPRO/bad/lib/python3.8/site-packages/setuptools [DEBUG _sync:46]\n343 copy directory /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any/setuptools-82.0.1.dist-info to /tmp/REPRO/bad/lib/python3.8/site-packages/setuptools-82.0.1.dist-info [DEBUG _sync:46]\n344 copy directory /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any/pip-26.1.2.dist-info to /tmp/REPRO/bad/lib/python3.8/site-packages/pip-26.1.2.dist-info [DEBUG _sync:46]\n345 copy /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/setuptools-82.0.1-py3-none-any/setuptools-82.0.1.virtualenv to /tmp/REPRO/bad/lib/python3.8/site-packages/setuptools-82.0.1.virtualenv [DEBUG _sync:46]\n346 generated console scripts  [DEBUG base:69]\n352 copy /home/users/tnr1/.cache/virtualenv/wheel/3.8/image/1/CopyPipInstall/pip-26.1.2-py3-none-any/pip-26.1.2.virtualenv to /tmp/REPRO/bad/lib/python3.8/site-packages/pip-26.1.2.virtualenv [DEBUG _sync:46]\n353 generated console scripts pip-3.8 pip3.8 pip3 pip [DEBUG base:69]\n353 add activators for Bash, CShell, Fish, Nushell, PowerShell, Python, Xonsh [INFO session:90]\n356 write /tmp/REPRO/bad/pyvenv.cfg [DEBUG pyenv_cfg:41]\n356     home = /usr/bin [DEBUG pyenv_cfg:51]\n356     implementation = CPython [DEBUG pyenv_cfg:51]\n357     version_info = 3.8.17.final.0 [DEBUG pyenv_cfg:51]\n357     version = 3.8.17 [DEBUG pyenv_cfg:51]\n357     executable = /usr/bin/python3.8 [DEBUG pyenv_cfg:51]\n357     command = /tmp/REPRO/venv/bin/python3.12 -m virtualenv /tmp/REPRO/bad [DEBUG pyenv_cfg:51]\n357     virtualenv = 21.5.0 [DEBUG pyenv_cfg:51]\n357     include-system-site-packages = false [DEBUG pyenv_cfg:51]\n357     base-prefix = /usr [DEBUG pyenv_cfg:51]\n357     base-exec-prefix = /usr [DEBUG pyenv_cfg:51]\n357     base-executable = /usr/bin/python3.8 [DEBUG pyenv_cfg:51]\n357 created virtual environment CPython3.8.17.final.0-64-x86_64 in 263ms\n  creator CPython3Posix(dest=/tmp/REPRO/bad, clear=False, no_vcs_ignore=False, global=False)\n  seeder FromAppData(download=False, pip=bundle, setuptools=bundle, via=copy, app_data_dir=/home/users/tnr1/.cache/virtualenv)\n    added seed packages: pip==26.1.2, setuptools==82.0.1\n  activators BashActivator,CShellActivator,FishActivator,NushellActivator,PowerShellActivator,PythonActivator,XonshActivator [WARNING __main__:31]\n```\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-06-15T08:26:00Z",
+        "updated_at": "2026-06-16T16:20:04Z",
+        "html_url": "https://github.com/pypa/virtualenv/issues/3171",
+        "author": "ThimoNeubauer"
+      },
+      "fix_pr_number": 3173,
+      "fix_pr_title": "🐛 fix(seed): refuse to seed unsupported Python versions",
+      "fix_pr_url": "https://github.com/pypa/virtualenv/pull/3173",
+      "fix_pr_merged_at": "2026-06-16T16:20:03Z",
+      "merge_commit_sha": "2bbb35c704dac0c816464da56da239cf2eeaf3a1",
+      "pre_fix_sha": "7042705b5f4eddbcace0830fcfd3bcfbddc25635",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/virtualenv/run/plugin/seeders.py",
+        "src/virtualenv/seed/embed/base_embed.py",
+        "src/virtualenv/seed/seeder.py",
+        "src/virtualenv/seed/wheels/embed/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3171.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/explanation.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 3,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/plugin/how-to.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 65,
+          "deletions": 20,
+          "changes": 85,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/plugin/tutorial.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 4,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/compatibility.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/virtualenv/run/plugin/seeders.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 1,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/virtualenv/seed/embed/base_embed.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 23,
+          "deletions": 0,
+          "changes": 23,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/virtualenv/seed/seeder.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/virtualenv/seed/wheels/embed/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 22,
+          "deletions": 4,
+          "changes": 26,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/seed/embed/test_base_embed.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 62,
+          "deletions": 1,
+          "changes": 63,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/unit/seed/wheels/test_wheels_util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 20,
+          "deletions": 1,
+          "changes": 21,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/virtualenv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-16T16:20:03Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-15T08:26:00+00:00, pr_merged_at=2026-06-16T16:20:03+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "16641 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #3173 is the merged same-repository fix for Issue #3171, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four production files jointly reject bundled seeding on unsupported Python versions; newly introduced helpers are not used as pre-fix symbol targets."
+      ]
+    },
+    {
+      "id": "tox-dev-tox-issue-3950-pr-3951",
+      "repository": "tox-dev/tox",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3950,
+        "title": "`TOX_OVERRIDE` does not propagate through config references when overriding a *base configuration*",
+        "body": "## Issue\n\n`TOX_OVERRIDE` does not propagate through config references when overriding a *base configuration* value that is later referenced via `{replace = \"ref\", ...}` (TOML) or `{[testenv]key}` (INI). The override is ignored and the original file value is used instead.\n\n### Acknowledgment\n\nI'm aware this is a sensitive area with several related fixes in the past (#3127, #3348, #3736, #3737). I've reviewed those issues and believe this is a distinct case that wasn't covered by the previous fixes.\n\n## Minimal example\n\n### TOML format (pyproject.toml)\n\n```toml\n[tool.tox.env_run_base]\nextras = [\"RED\"]\n\n[tool.tox.env.test]\nextras = [\n  {replace = \"ref\", of = [\"tool\", \"tox\", \"env_run_base\", \"extras\"], extend = true},\n  \"GREEN\"\n]\n```\n\n```bash\n# Override is ignored:\nTOX_OVERRIDE=\"tool.tox.env_run_base.extras=BLUE\" tox config -e test -k extras\n# Output: extras = green, red  (expected: blue, green)\n\n# Workaround - override the final environment directly:\nTOX_OVERRIDE=\"tool.tox.env.test.extras=BLUE\" tox config -e test -k extras\n# Output: extras = blue  (this works, but defeats the purpose)\n```\n\n### INI format (tox.ini)\n\n```ini\n[testenv]\nextras = RED\n\n[testenv:test]\nextras = {[testenv]extras} GREEN\n```\n\n```bash\n# Override is ignored:\nTOX_OVERRIDE=\"testenv.extras=BLUE\" tox config -e test -k extras\n# Output: extras = RED GREEN  (expected: BLUE GREEN)\n\n# Workaround - override the final environment directly:\nTOX_OVERRIDE=\"testenv:test.extras=BLUE\" tox config -e test -k extras\n# Output: extras = BLUE  (this works, but defeats the purpose)\n```\n\n### Expected Behavior\n\nWhen using `TOX_OVERRIDE=\"tool.tox.env_run_base.extras=BLUE\"` with the TOML config above, the `test` environment should resolve `extras` to `[\"BLUE\", \"GREEN\"]` because the override should apply to `env_run_base.extras` before it's referenced.\n\n### Observed Behavior\n\nThe override is ignored during reference resolution. The `test` environment resolves `extras` to `[\"RED\", \"GREEN\"]`, using the original file value instead of the overridden value.\n\n### Root Cause Analysis\n\nI'm not familiar with the codebase and have relied on LLM code assistance for analysis, so I defer to maintainers whether this is a bug or a behavior that needs documentation. The issue appears to be that reference resolution bypasses the override system:\n\n- **TOML:** `Unroll._replace_ref()` calls `load_raw_from_root()` which directly reads from the parsed TOML dictionary without checking for overrides\n- **INI:** `ReplaceReferenceIni` similarly loads raw configuration values without going through the override machinery\n\nThe override system is designed to work at the `Loader.load()` level, but reference resolution happens at a lower level that accesses raw config data directly.\n\n### Use Case\n\nThis pattern is useful for shared configuration where different environments need to override base values via `TOX_OVERRIDE` (e.g., in CI pipelines or development scripts) while still benefiting from the DRY principle of config references.\n\nI'd be happy to work on a fix (probably relying on LLM code assistants) if the maintainers can provide guidance on the preferred approach. Thank you for maintaining tox!\n\n## Environment\n\n- OS: Linux (Fedora 44, kernel 7.0.10)\n- Python: 3.14.5\n\n<details open>\n<summary>Output of <code>pip list</code> of the host Python, where <code>tox</code> is installed</summary>\n\n```console\n$ pip show tox\nName: tox\nVersion: 4.55.0\nSummary: tox is a generic virtualenv management and test command line tool\nHome-page: http://tox.readthedocs.org\nAuthor: \nAuthor-email: Bernát Gábor <gaborjbernat@gmail.com>\nLicense-Expression: MIT\nLocation: /home/tdaapare/.local/lib/python3.14/site-packages\nRequires: cachetools, colorama, filelock, packaging, platformdirs, pluggy, pyproject-api, python-discovery, tomli-w, virtualenv\nRequired-by:\n```\n\n</details>\n\n## Output of running tox\n\n<details open>\n<summary>Output of <code>TOX_OVERRIDE=\"tool.tox.env_run_base.extras=BLUE\" tox config -e test -k extras</code></summary>\n\n```console\n$ TOX_OVERRIDE=\"tool.tox.env_run_base.extras=BLUE\" tox config -e test -k extras\n[testenv:test]\nextras =\n  green\n  red\n```\n\n**Expected output:**\n```console\n[testenv:test]\nextras =\n  blue\n  green\n```\n\n</details>\n",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2026-06-02T19:24:36Z",
+        "updated_at": "2026-06-03T20:14:49Z",
+        "html_url": "https://github.com/tox-dev/tox/issues/3950",
+        "author": "tales-aparecida"
+      },
+      "fix_pr_number": 3951,
+      "fix_pr_title": "🐛 fix(config): propagate overrides through config references",
+      "fix_pr_url": "https://github.com/tox-dev/tox/pull/3951",
+      "fix_pr_merged_at": "2026-06-03T19:56:28Z",
+      "merge_commit_sha": "9ac5479ec9880f29b36263a3c3af75f8812924b1",
+      "pre_fix_sha": "28972a9932710c58f7c5b6f24d80f99aab134f00",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/tox/config/loader/api.py",
+        "src/tox/config/loader/ini/replace.py",
+        "src/tox/config/loader/toml/_replace.py",
+        "src/tox/config/main.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3950.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/config.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 44,
+          "deletions": 0,
+          "changes": 44,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/tox/config/loader/api.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 35,
+          "deletions": 0,
+          "changes": 35,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/tox/config/loader/ini/replace.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/tox/config/loader/toml/_replace.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/tox/config/main.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/config/loader/ini/replace/test_replace_tox_env.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 26,
+          "deletions": 0,
+          "changes": 26,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/config/loader/test_loader.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 25,
+          "deletions": 1,
+          "changes": 26,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/config/source/test_toml_pyproject.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 42,
+          "deletions": 1,
+          "changes": 43,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tox-dev/tox"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-03T19:56:28Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-02T19:24:36+00:00, pr_merged_at=2026-06-03T19:56:28+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4211 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #3951 is the merged same-repository fix for Issue #3950, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four production files propagate overrides into referenced base configurations; the core API helper is new and therefore remains without a pre-fix symbol label."
+      ]
+    },
+    {
+      "id": "pandas-dev-pandas-issue-66348-pr-66792",
+      "repository": "pandas-dev/pandas",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 66348,
+        "title": "BUG: ASCII mode is broken for `str.match`",
+        "body": "### Pandas version checks\n\n- [x] I have checked that this issue has not already been reported.\n\n- [x] I have confirmed this bug exists on the [latest version](https://pandas.pydata.org/docs/whatsnew/index.html) of pandas.\n\n- [x] I have confirmed this bug exists on the [main branch](https://pandas.pydata.org/docs/dev/getting_started/install.html#installing-the-development-version-of-pandas) of pandas.\n\n\n### Reproducible Example\n\n```python\ndef test_ascii_flag(df: pd.DataFrame):\n    df[pd.col(\"name\").str.match(pat=r'\\w+', flags=re.ASCII)]\n```\n\n### Issue Description\n\nBy always forcing the unicode support trying to use the ASCII mode is broken as they exclude eachother \n\n\n\n### Expected Behavior\n\nASCII mode should be an explicit option\n\n### Installed Versions\n\n<details>\n\nReplace this line with the output of pd.show_versions()\n\n</details>\n",
+        "labels": [
+          "Bug",
+          "Strings"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-07-16T07:05:44Z",
+        "updated_at": "2026-08-15T19:12:42Z",
+        "html_url": "https://github.com/pandas-dev/pandas/issues/66348",
+        "author": "JensHeinrich"
+      },
+      "fix_pr_number": 66792,
+      "fix_pr_title": "BUG: ArrowDtype str methods raised for regex flags and compiled patterns (GH#66348)",
+      "fix_pr_url": "https://github.com/pandas-dev/pandas/pull/66792",
+      "fix_pr_merged_at": "2026-08-15T21:24:35Z",
+      "merge_commit_sha": "9f9b3dfbc0e721569bf80963786281e0ed0bb8e1",
+      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/source/whatsnew/v3.1.0.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/core/arrays/_arrow_string_mixins.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 42,
+          "deletions": 13,
+          "changes": 55,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/core/arrays/arrow/array.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 147,
+          "deletions": 7,
+          "changes": 154,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/core/arrays/string_arrow.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 25,
+          "changes": 29,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/core/strings/object_array.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/tests/extension/test_arrow.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 56,
+          "deletions": 14,
+          "changes": 70,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/tests/strings/test_find_replace.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 8,
+          "changes": 32,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pandas-dev/pandas"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T21:24:35Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-16T07:05:44+00:00, pr_merged_at=2026-08-15T21:24:35+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "843 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, Strings"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #66792 is the merged same-repository fix for Issue #66348, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three Arrow string paths implement regex flag handling; object_array.py changes only a type annotation and is removed from the manually reviewed ground truth."
+      ]
+    },
+    {
+      "id": "astral-sh-uv-issue-21096-pr-21097",
+      "repository": "astral-sh/uv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 21096,
+        "title": "Relative indexes in PEP 723 scripts are resolved against the current working directory",
+        "body": "## Summary\n\nRelative local indexes declared in a PEP 723 script are resolved against the directory where `uv run` is invoked, rather than the directory containing the script.\n\nSo the same script can work when ran from its own directory but fail when ran by path from somewhere else\n\n## Reproduction\n\n```console\n$ tmpdir=\"$(mktemp -d)\"\n$ mkdir -p \"$tmpdir/scripts/links\" \"$tmpdir/elsewhere\"\n$ python3 - \"$tmpdir/scripts/links/ok-1.0.0-py3-none-any.whl\" <<'PY'\nimport sys\nfrom zipfile import ZipFile\n\nwith ZipFile(sys.argv[1], \"w\") as wheel:\n    wheel.writestr(\"ok.py\", \"\")\n    wheel.writestr(\n        \"ok-1.0.0.dist-info/METADATA\",\n        \"Metadata-Version: 2.3\\nName: ok\\nVersion: 1.0.0\\n\",\n    )\n    wheel.writestr(\n        \"ok-1.0.0.dist-info/WHEEL\",\n        \"Wheel-Version: 1.0\\nRoot-Is-Purelib: true\\nTag: py3-none-any\\n\",\n    )\n    wheel.writestr(\"ok-1.0.0.dist-info/RECORD\", \"\")\nPY\n\n$ cat >\"$tmpdir/scripts/main.py\" <<'PY'\n# /// script\n# requires-python = \">=3.11\"\n# dependencies = [\"ok\"]\n#\n# [[tool.uv.index]]\n# name = \"local\"\n# url = \"./links\"\n# format = \"flat\"\n#\n# [tool.uv.sources]\n# ok = { index = \"local\" }\n# ///\n\nimport ok\nprint(\"ok imported\")\nPY\n\n$ cd \"$tmpdir/scripts\"\n$ uv run --offline main.py\nok imported\n\n$ cd \"$tmpdir/elsewhere\"\n$ uv run --offline \"$tmpdir/scripts/main.py\"\nerror: Failed to read `--find-links` directory: .../elsewhere/links\n  Caused by: No such file or directory (os error 2)\n```\n\n## Expected behavior\n\n`./links` is resolved relative to the directory containing `main.py`, so both invocations print:\n\n```shell\nok imported\n```\n\n## Actual behavior\n\nThe second invocation resolves `./links` relative to the current working directory as `elsewhere/links` and fails\n\n### Platform\n\nDarwin 25.5.0 arm64\n\n### Version\n\nuv 0.12.3 (507230998 2026-08-07 aarch64-apple-darwin)\n\n### Python version\n\n3.14.0",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-08-13T17:16:54Z",
+        "updated_at": "2026-08-14T09:03:10Z",
+        "html_url": "https://github.com/astral-sh/uv/issues/21096",
+        "author": "kowanietz"
+      },
+      "fix_pr_number": 21097,
+      "fix_pr_title": "Fix relative indexes in scrolls",
+      "fix_pr_url": "https://github.com/astral-sh/uv/pull/21097",
+      "fix_pr_merged_at": "2026-08-14T09:03:08Z",
+      "merge_commit_sha": "298dda41bff49bbd0a2f397e1662ab09b9cd148e",
+      "pre_fix_sha": "791e7a963a6c73bb4d5e1a22ca9c161390fc7c98",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/uv-settings/src/lib.rs",
+        "crates/uv/src/commands/project/add.rs",
+        "crates/uv/src/commands/project/mod.rs",
+        "crates/uv/src/lib.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/uv-settings/src/lib.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 1,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/commands/project/add.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 2,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/commands/project/mod.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 21,
+          "deletions": 8,
+          "changes": 29,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/lib.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 3,
+          "changes": 14,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/tests/project/edit.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "crates/uv/tests/project/run.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 57,
+          "deletions": 0,
+          "changes": 57,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/uv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T09:03:08Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-13T17:16:54+00:00, pr_merged_at=2026-08-14T09:03:08+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1830 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #21097 is the merged same-repository fix for Issue #21096, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four Rust production files resolve PEP 723 filesystem paths relative to the script directory; Rust remains file-only ground truth in the current index."
+      ]
+    }
+  ]
+}

@@ -175,6 +175,7 @@ GENERIC_QUALIFIED_TITLE_METHOD_TERMS = {
     "set",
 }
 HISTORY_COMMIT_LIMIT = 50
+HISTORY_ANCESTOR_LIMIT = 100
 HISTORY_FILE_LIMIT = 50
 BLAME_SEED_LIMIT = 2
 BLAME_FILE_LIMIT = 20
@@ -1725,21 +1726,18 @@ def _history_relations(
                 "git",
                 "log",
                 "-n",
-                str(HISTORY_COMMIT_LIMIT),
+                str(HISTORY_ANCESTOR_LIMIT),
                 "--full-diff",
                 "--format=%x1e%H",
                 "--name-only",
                 "HEAD",
-                "--",
-                *seed_paths,
             ],
             cwd=root,
             check=False,
             capture_output=True,
             text=True,
-            timeout=5,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError:
         return {}
     if completed.returncode:
         return {}
@@ -1747,12 +1745,18 @@ def _history_relations(
     counts: Counter[str] = Counter()
     latest_commit: dict[str, str] = {}
     seed_set = set(seed_paths)
+    seed_commit_count = 0
     for record in completed.stdout.split("\x1e"):
         lines = [line for line in record.splitlines() if line]
         if len(lines) < 2:
             continue
         commit, *changed_files = lines
         changed = set(changed_files)
+        if not changed.intersection(seed_set):
+            continue
+        seed_commit_count += 1
+        if seed_commit_count > HISTORY_COMMIT_LIMIT:
+            break
         if len(changed) > HISTORY_FILE_LIMIT:
             continue
         for path in changed.intersection(eligible_paths) - seed_set:

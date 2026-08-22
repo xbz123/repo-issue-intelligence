@@ -1,0 +1,237 @@
+{
+  "name": "real-project-benchmark-expansion-v0.15",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "paramiko-paramiko-issue-865-pr-910",
+      "case_id": "paramiko-host-key-type-selection",
+      "tier": "generalization",
+      "expected_files": [
+        "paramiko/client.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/client.py",
+          "symbol": "SSHClient.connect"
+        }
+      ],
+      "review_notes": [
+        "PR #910 is the merged same-repository fix for Issue #865, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The behavioral host-key selection fix is in SSHClient.connect; transport.py only adds agreement logging and is removed from the manually reviewed ground truth."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-8409-pr-9866",
+      "case_id": "drf-unique-together-null-values",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/serializers.py",
+        "rest_framework/validators.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/serializers.py",
+          "symbol": "ModelSerializer.get_unique_together_validators"
+        },
+        {
+          "file": "rest_framework/validators.py",
+          "symbol": "UniqueTogetherValidator.__call__"
+        }
+      ],
+      "review_notes": [
+        "PR #9866 is the merged same-repository fix for Issue #8409, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The serializer propagates nulls_distinct into the existing validator, whose call path changes the None-value uniqueness behavior; tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "numpy-numpy-issue-27137-pr-32029",
+      "case_id": "numpy-scalar-dlpack",
+      "tier": "generalization",
+      "expected_files": [
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #32029 is the merged same-repository fix for Issue #27137, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The production behavior is implemented in dlpack.c; _add_newdocs.py is documentation-only and is removed, while the current index does not provide C symbol candidates."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pluggy-issue-573-pr-546",
+      "case_id": "pluggy-finally-return-syntaxwarning",
+      "tier": "generalization",
+      "expected_files": [
+        "src/pluggy/_callers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/pluggy/_callers.py",
+          "symbol": "_multicall"
+        }
+      ],
+      "review_notes": [
+        "PR #546 is the merged same-repository fix for Issue #573, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The return-in-finally behavior is removed from _multicall; version exports, comments, and equivalent changes in the other automatically listed files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-ruff-issue-18143-pr-27738",
+      "case_id": "ruff-os-exit-private-member",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_self/rules/private_member_access.rs",
+        "crates/ruff_linter/src/rules/pylint/helpers.rs",
+        "crates/ruff_linter/src/rules/pylint/rules/import_private_name.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #27738 is the merged same-repository fix for Issue #18143, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "All three Rust files participate in the shared os._exit exception, but the current repository index intentionally provides file-only ground truth for Rust."
+      ]
+    },
+    {
+      "candidate_id": "ansible-ansible-issue-87020-pr-87072",
+      "case_id": "ansible-callback-deprecation-metadata",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/ansible/plugins/callback/oneline.py",
+        "lib/ansible/plugins/callback/tree.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/ansible/plugins/callback/oneline.py",
+          "symbol": "CallbackModule.__init__"
+        },
+        {
+          "file": "lib/ansible/plugins/callback/tree.py",
+          "symbol": "CallbackModule.__init__"
+        }
+      ],
+      "review_notes": [
+        "PR #87072 is the merged same-repository fix for Issue #87020, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Both callback implementations replace their legacy constructor warnings with runtime deprecation metadata; changelog material is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-virtualenv-issue-3171-pr-3173",
+      "case_id": "virtualenv-unsupported-seed-python",
+      "tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/run/plugin/seeders.py",
+        "src/virtualenv/seed/embed/base_embed.py",
+        "src/virtualenv/seed/seeder.py",
+        "src/virtualenv/seed/wheels/embed/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/virtualenv/run/plugin/seeders.py",
+          "symbol": "SeederSelector.create"
+        },
+        {
+          "file": "src/virtualenv/seed/embed/base_embed.py",
+          "symbol": "BaseEmbed"
+        },
+        {
+          "file": "src/virtualenv/seed/seeder.py",
+          "symbol": "Seeder"
+        },
+        {
+          "file": "src/virtualenv/seed/wheels/embed/__init__.py",
+          "symbol": "get_embed_wheel"
+        }
+      ],
+      "review_notes": [
+        "PR #3173 is the merged same-repository fix for Issue #3171, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four production files jointly reject bundled seeding on unsupported Python versions; newly introduced helpers are not used as pre-fix symbol targets."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-3950-pr-3951",
+      "case_id": "tox-base-config-override-references",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/config/loader/api.py",
+        "src/tox/config/loader/ini/replace.py",
+        "src/tox/config/loader/toml/_replace.py",
+        "src/tox/config/main.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/tox/config/loader/ini/replace.py",
+          "symbol": "ReplaceReferenceIni._resolve_section_proxy"
+        },
+        {
+          "file": "src/tox/config/loader/toml/_replace.py",
+          "symbol": "Unroll._replace_ref"
+        },
+        {
+          "file": "src/tox/config/main.py",
+          "symbol": "Config"
+        }
+      ],
+      "review_notes": [
+        "PR #3951 is the merged same-repository fix for Issue #3950, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four production files propagate overrides into referenced base configurations; the core API helper is new and therefore remains without a pre-fix symbol label."
+      ]
+    },
+    {
+      "candidate_id": "pandas-dev-pandas-issue-66348-pr-66792",
+      "case_id": "pandas-string-match-ascii",
+      "tier": "generalization",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/core/arrays/_arrow_string_mixins.py",
+          "symbol": "ArrowStringArrayMixin._str_match"
+        },
+        {
+          "file": "pandas/core/arrays/arrow/array.py",
+          "symbol": "ArrowExtensionArray._str_extract"
+        },
+        {
+          "file": "pandas/core/arrays/string_arrow.py",
+          "symbol": "ArrowStringArray._preprocess_re_pattern"
+        }
+      ],
+      "review_notes": [
+        "PR #66792 is the merged same-repository fix for Issue #66348, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three Arrow string paths implement regex flag handling; object_array.py changes only a type annotation and is removed from the manually reviewed ground truth."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-uv-issue-21096-pr-21097",
+      "case_id": "uv-pep723-relative-indexes",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/uv-settings/src/lib.rs",
+        "crates/uv/src/commands/project/add.rs",
+        "crates/uv/src/commands/project/mod.rs",
+        "crates/uv/src/lib.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #21097 is the merged same-repository fix for Issue #21096, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The four Rust production files resolve PEP 723 filesystem paths relative to the script directory; Rust remains file-only ground truth in the current index."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "pyo3-pyo3-issue-5344-pr-6311",
+      "reason": "The Issue-specific changes are confined to test modules and test migration inside Rust source files, with no production behavior fix."
+    },
+    {
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-12877-pr-13342",
+      "reason": "The PR resolves the report through documentation and tests only; production-file edits are docstrings rather than runtime behavior."
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22184-pr-22723",
+      "reason": "The merged PR originally closed the Issue, but GitHub shows the Issue was reopened on 2026-08-17 and it is not currently closed."
+    }
+  ]
+}
