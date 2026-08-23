@@ -1,0 +1,1332 @@
+{
+  "name": "real-project-benchmark-expansion-v0.17",
+  "version": 1,
+  "curated_at": "2026-08-23T21:36:56.043102Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 11,
+  "candidates": [
+    {
+      "id": "prefecthq-prefect-issue-22746-pr-22750",
+      "repository": "PrefectHQ/prefect",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 22746,
+        "title": "ui-v2: required array parameter can be emptied and still submits (creates run with `[]`)",
+        "body": "### Bug summary\n\nIn the ui-v2 schema form, a **required** array field (e.g. `list[SomeEnum]`) does not block submission once it has been touched and then emptied. Submitting produces a flow run with `colors: []` instead of the `'colors' is a required property` validation error.\n\nValidation *does* fire correctly when the field is never touched — it's specifically the touched-then-emptied path that slips through. An empty array appears to satisfy the \"required\" check.\n\nThis is not a regression: I reproduced it on `main` as well. I found it while testing #22738, where the new removable chips make it a one-click path to hit.\n\nReproduction flow (the form I actually used also had a single-select `mode`, an optional `list[Color] | None`, and a defaulted `list[Color]` alongside `colors`, hence the extra keys in the output below):\n\n```python\nfrom enum import Enum\nfrom prefect import flow\n\nclass Color(str, Enum):\n    red = \"red\"\n    green = \"green\"\n    blue = \"blue\"\n\n@flow(name=\"chips-demo\")\ndef chips_demo(colors: list[Color]):  # required, no default\n    print(colors)\n\nif __name__ == \"__main__\":\n    chips_demo.serve(name=\"chips-demo-deployment\")\n```\n\n### Reproduction steps\n\n1. Serve the flow above and open the deployment's custom run form (`/deployments/deployment/<id>/run`) in ui-v2.\n2. Under the required `colors` field, select `red`.\n3. Deselect it (click `red` again in the dropdown, or on #22738 click the ✕ on the chip) so the field is empty.\n4. Click **Submit**.\n\n**Expected:** submission is blocked with `'colors' is a required property`.\n\n**Actual:** a flow run is created with `colors: []`.\n\n### Evidence\n\nUntouched required field on `main` — validation fires correctly:\n\n![main: 'colors' is a required property error](https://app.devin.ai/attachments/1d26d304-f40c-49ba-97ff-1e933b62232f/main-required-untouched-error.png)\n\nTouched-then-emptied on `main` — run `74833f26-4bac-4b4a-9745-c33ff532932e` created with `colors: []`:\n\n![main: run created despite empty required field](https://app.devin.ai/attachments/7e0dceb3-f9e4-4bce-9785-d733af96d1cd/main-empty-required-created-run.png)\n\nParameters on the created run, via `GET /flow_runs/<id>`:\n\n```\n{'mode': 'fast', 'optional_colors': None, 'defaulted_colors': ['red'], 'colors': []}\n```\n\n### Version info\n\nReproduced against a local dev setup on `main`: `uv run prefect dev api` (localhost:4200) + `cd ui-v2 && npm run dev` (localhost:5173).\n\n### Additional context\n\nThe deployment's parameter schema has no `minItems` constraint on `colors`, so the validator likely treats a present-but-empty array as satisfying `required`. The fix probably belongs in the ui-v2 schema form validation for array-typed required fields (treat an empty array as missing, or emit `minItems`-style validation).\n\nFound while verifying #22738 — the chips feature itself works correctly and this behavior is independent of it.\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-07T16:09:38Z",
+        "updated_at": "2026-08-10T14:00:37Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22746",
+        "author": "devin-ai-integration[bot]"
+      },
+      "fix_pr_number": 22750,
+      "fix_pr_title": "Block submission when a required array parameter is emptied in ui-v2",
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22750",
+      "fix_pr_merged_at": "2026-08-10T14:00:36Z",
+      "merge_commit_sha": "45a7cbd56fb22e03bfef9c2475a51be1161e2e01",
+      "pre_fix_sha": "af6dccb217d31183941574d05864b3c822763be4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-property.tsx"
+      ],
+      "changed_files": [
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-array-enum.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 200,
+          "deletions": 0,
+          "changes": 200,
+          "eligible_source": false,
+          "exclusion_reason": "test file"
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-property.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 47,
+          "deletions": 5,
+          "changes": 52,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PrefectHQ/prefect"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-10T14:00:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-07T16:09:38+00:00, pr_merged_at=2026-08-10T14:00:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "6 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2877 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #22750 is the merged same-repository fix for Issue #22746, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "SchemaFormProperty blocks submission when a required array is emptied; the paired test file is excluded and TypeScript remains file-only in the current symbol index."
+      ]
+    },
+    {
+      "id": "prefecthq-prefect-issue-22759-pr-22760",
+      "repository": "PrefectHQ/prefect",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 22759,
+        "title": "UI v2 renders nested deployment parameter defaults as [object Object]",
+        "body": "### Bug summary\n\nIn the UI v2 Deployment → Parameters page, nested object-valued deployment defaults are rendered as `[object Object]` instead of displaying their contents.\n\nThe deployment data is persisted and returned correctly by the API. This is a UI regression: UI v1 renders the same value as JSON.\n\n### Minimal example\n\nA flow that accepts a Pydantic model parameter:\n\n```python\nfrom pydantic import BaseModel\nfrom prefect import flow\n\nclass Builder(BaseModel):\n    day: str\n\n@flow\ndef check(builder: Builder) -> None:\n    pass\n```\n\nDeployment defaults:\n\n```yaml\nparameters:\n  builder:\n    day: prev_td\n```\n\nThe deployment API returns the expected value:\n\n```json\n{\n  \"parameters\": {\n    \"builder\": {\n      \"day\": \"prev_td\"\n    }\n  }\n}\n```\n\nIts `parameter_openapi_schema` also defines `builder` as an object.\n\n### Steps to reproduce\n\n1. Deploy a flow with an object/Pydantic-model parameter.\n2. Set a nested object as the deployment default, as in the example above.\n3. Open the deployment in UI v2.\n4. Select the **Parameters** tab.\n\n### Actual behavior\n\nThe value for `builder` is displayed as:\n\n```text\n[object Object]\n```\n\n### Expected behavior\n\nNested parameters should be displayed readably, for example as formatted JSON:\n\n```json\n{\"day\": \"prev_td\"}\n```\n\nor as an expandable/key-value representation:\n\n```text\nbuilder.day: prev_td\n```\n\n### UI v1 comparison\n\nFor the identical deployment and parameter value, UI v1 displays:\n\n```text\nbuilder    { \"day\": \"prev_td\" }\n```\n\nUI v2 displays:\n\n```text\nbuilder    [object Object]\n```\n\n### Environment\n\n- Prefect: `3.8.1`\n- Prefect API: `0.8.4`\n- Server: self-hosted\n- UI: v2\n\n### Additional context\n\nThe parameter is accepted, stored, and returned by the API correctly; this issue is limited to UI v2 presentation. I searched the public issue tracker but did not find an existing issue specifically for rendering nested deployment parameter defaults as `[object Object]`.",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2026-08-07T21:19:06Z",
+        "updated_at": "2026-08-13T16:00:04Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22759",
+        "author": "xcRRRRt"
+      },
+      "fix_pr_number": 22760,
+      "fix_pr_title": "Fix nested deployment parameter rendering",
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22760",
+      "fix_pr_merged_at": "2026-08-13T16:00:03Z",
+      "merge_commit_sha": "a8f32d9285ed17c5ce0a5594573992235d1daac1",
+      "pre_fix_sha": "b535a27ea1b567bd0363b94617fc2502a56d23c8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx"
+      ],
+      "changed_files": [
+        {
+          "path": "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.stories.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test file"
+        },
+        {
+          "path": "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 36,
+          "deletions": 0,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test file"
+        },
+        {
+          "path": "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 29,
+          "deletions": 10,
+          "changes": 39,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PrefectHQ/prefect"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-13T16:00:03Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-07T21:19:06+00:00, pr_merged_at=2026-08-13T16:00:03+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1927 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #22760 is the merged same-repository fix for Issue #22759, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The deployment parameter table formats nested object values consistently for display and search; Storybook and test files are excluded, and the new helper is not a pre-fix symbol."
+      ]
+    },
+    {
+      "id": "encode-django-rest-framework-issue-7279-pr-9837",
+      "repository": "encode/django-rest-framework",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 7279,
+        "title": "ListField validation errors are inconsistent with ListSerializer",
+        "body": "Validation errors when using ListSerializer are returned as a list with non-failing entries empty:\r\n```\r\n[\r\n{},\r\n{\"foo\": [\"error\"]},\r\n{},\r\n{\"foo\": [\"another error\"]}\r\n]\r\n```\r\nWhen using ListField the same information is unexpectedly returned as a dictionary:\r\n```\r\n{\r\n\"1\": {\"foo\": [\"error\"]},\r\n\"3\": {\"foo\": [\"another error\"]}\r\n}\r\n```\r\nThe current ListField error handling was implemented in #5655 along with DictField, which explains this behavior but I think it would be more obvious for ListField to behave like ListSerializer and return a list instead.",
+        "labels": [
+          "Needs design decision"
+        ],
+        "comments_count": 14,
+        "created_at": "2020-04-18T18:56:58Z",
+        "updated_at": "2026-08-09T13:52:04Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/7279",
+        "author": "markopy"
+      },
+      "fix_pr_number": 9837,
+      "fix_pr_title": "Change errors for list serializers (`many=True`) to dict format",
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/9837",
+      "fix_pr_merged_at": "2026-07-25T17:45:17Z",
+      "merge_commit_sha": "e6f4d85466ef76044253283b8290d91a9d6f18d1",
+      "pre_fix_sha": "365d409adb43ebad7d8a42cab2407ec841d8038e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "rest_framework/serializers.py"
+      ],
+      "changed_files": [
+        {
+          "path": "rest_framework/serializers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 5,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_serializer_bulk_update.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 10,
+          "changes": 14,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_serializer_lists.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 77,
+          "deletions": 0,
+          "changes": 77,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: encode/django-rest-framework"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-25T17:45:17Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-04-18T18:56:58+00:00, pr_merged_at=2026-07-25T17:45:17+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "8 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "555 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Needs design decision"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #9837 is the merged same-repository fix for Issue #7279, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "ListSerializer.to_internal_value aligns many=True validation errors with ListField's dictionary shape; both regression-test files are excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h2-issue-1257-pr-1259",
+      "repository": "python-hyper/h2",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1257,
+        "title": "\"IndexError: index out of range\" in _reject_surrounding_whitespace",
+        "body": "Hello,\r\n\r\nI am working on integrating fuzzer to project `h2`. My goal is to include it in the `oss-fuzz` project. I believe that this can be a valuable contribution to the library, the importance of which is becoming more and more higher, among others due to the use by `httpx` - the library which popularity also growing. \r\n\r\nI identified the first problems and I would like to know if such problems are interesting for your project and your are interested to handle them.\r\n\r\n```python\r\nimport h2.connection\r\nimport h2.config\r\nfrom h2.exceptions import ProtocolError\r\n\r\npayload = b'\\x00\\x00\\x08\\x01\\x05\\xef\\x00\\x00@\\x00\\x00\\x05\\x00\\x00\\x00\\x00\\x04\\x8c\\x00'\r\nconfig = h2.config.H2Configuration()\r\nconn = h2.connection.H2Connection(config=config)\r\ntry:\r\n    conn.receive_data(payload)\r\n    conn.data_to_send()\r\nexcept ProtocolError:\r\n    pass\r\n```\r\n\r\n```\r\nTraceback (most recent call last):\r\n  File \"/tmp/h2-fuzz/test2.py\", line 9, in <module>\r\n    conn.receive_data(payload)\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/connection.py\", line 1463, in receive_data\r\n    events.extend(self._receive_frame(frame))\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/connection.py\", line 1486, in _receive_frame\r\n    frames, events = self._frame_dispatch_table[frame.__class__](frame)\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/connection.py\", line 1560, in _receive_headers_frame\r\n    frames, stream_events = stream.receive_headers(\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/stream.py\", line 1057, in receive_headers\r\n    events[0].headers = self._process_received_headers(\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/stream.py\", line 1300, in _process_received_headers\r\n    return list(headers)\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 492, in inner\r\n    for header in headers:\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 437, in _validate_host_authority_header\r\n    for header in headers:\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 331, in _reject_pseudo_header_fields\r\n    for header in headers:\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 287, in _reject_connection_header\r\n    for header in headers:\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 271, in _reject_te\r\n    for header in headers:\r\n  File \"/tmp/tmp.mokMU0wrkK/lib/python3.9/site-packages/h2/utilities.py\", line 255, in _reject_surrounding_whitespace\r\n    if header[0][0] in _WHITESPACE or header[0][-1] in _WHITESPACE:\r\nIndexError: index out of range\r\n```\r\n\r\n",
+        "labels": [],
+        "comments_count": 5,
+        "created_at": "2021-09-02T19:59:04Z",
+        "updated_at": "2021-09-09T17:16:32Z",
+        "html_url": "https://github.com/python-hyper/h2/issues/1257",
+        "author": "ad-m"
+      },
+      "fix_pr_number": 1259,
+      "fix_pr_title": "reject empty header names",
+      "fix_pr_url": "https://github.com/python-hyper/h2/pull/1259",
+      "fix_pr_merged_at": "2021-09-09T17:16:32Z",
+      "merge_commit_sha": "48bfc0014da06f67a9bca4382d56401daf63c835",
+      "pre_fix_sha": "13589e3c03640ce462dea28b7176aab7b80572d4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/h2/utilities.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 0,
+          "changes": 16,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "test/test_invalid_headers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 18,
+          "deletions": 0,
+          "changes": 18,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h2"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2021-09-09T17:16:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2021-09-02T19:59:04+00:00, pr_merged_at=2021-09-09T17:16:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2674 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1259 is the merged same-repository fix for Issue #1257, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "validate_headers wires in rejection of empty header names; the helper is new at the fix commit and the test file is excluded."
+      ]
+    },
+    {
+      "id": "pallets-markupsafe-issue-310-pr-311",
+      "repository": "pallets/markupsafe",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 310,
+        "title": "`striptags` doesn't remove tags containing newlines",
+        "body": "Tags and comments containing a newline `\\n` are not removed with `.striptags()`\r\n\r\nMinimal example:\r\n\r\n```python\r\nimport markupsafe\r\nmarkupsafe.Markup(\"<!--\\n<br\\n>\\n-->\").striptags()\r\n```\r\n\r\nExpected output: `\"\"`\r\nActual output: `\"<!-- <br > -->\"`\r\n\r\nThis did work in 2.0.1, regression was introduced in #293 \r\n\r\nEnvironment:\r\n\r\n- Python version: 3.9\r\n- MarkupSafe version: 2.1.1\r\n\r\nSimplest fix seems to be to change https://github.com/pallets/markupsafe/blob/54588b629f6ccf1404e426ac2150a799da18e35b/src/markupsafe/__init__.py#L16-L17\r\n\r\nto\r\n```python\r\n_strip_comments_re = re.compile(r\"<!--.*?-->\", re.DOTALL)\r\n_strip_tags_re = re.compile(r\"<.*?>\", re.DOTALL)\r\n```\r\n\r\nI'm happy to make a PR if that solution seems acceptable.",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2022-06-13T13:37:20Z",
+        "updated_at": "2022-06-28T00:04:07Z",
+        "html_url": "https://github.com/pallets/markupsafe/issues/310",
+        "author": "ZedThree"
+      },
+      "fix_pr_number": 311,
+      "fix_pr_title": "Match newlines when stripping tags",
+      "fix_pr_url": "https://github.com/pallets/markupsafe/pull/311",
+      "fix_pr_merged_at": "2022-06-13T15:19:18Z",
+      "merge_commit_sha": "58fafb063997c5025c98cf9a025dee3e20d01674",
+      "pre_fix_sha": "0e366be90424816156802b41997b37b5dadd0851",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/markupsafe/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_markupsafe.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/markupsafe"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-06-13T15:19:18Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-06-13T13:37:20+00:00, pr_merged_at=2022-06-13T15:19:18+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "729 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #311 is the merged same-repository fix for Issue #310, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The fix changes the module-level stripping expressions to match newlines; Markup.striptags is not directly changed, so this case remains file-only and tests/release notes are excluded."
+      ]
+    },
+    {
+      "id": "pycqa-flake8-issue-1617-pr-1618",
+      "repository": "PyCQA/flake8",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1617,
+        "title": "Flake8 4.0.1 Behavior Not As Expected Regarding User-Level Configuration Files",
+        "body": "### how did you install flake8?\n\n```console\nss@gp:~$ sudo -H python3 -m pip install --upgrade flake8\r\nRequirement already satisfied: flake8 in /usr/local/lib/python3.8/dist-packages (4.0.1)\r\nRequirement already satisfied: pyflakes<2.5.0,>=2.4.0 in /usr/local/lib/python3.8/dist-packages (from flake8) (2.4.0)\r\nRequirement already satisfied: pycodestyle<2.9.0,>=2.8.0 in /usr/local/lib/python3.8/dist-packages (from flake8) (2.8.0)\r\nRequirement already satisfied: mccabe<0.7.0,>=0.6.0 in /usr/local/lib/python3.8/dist-packages (from flake8) (0.6.1)\n```\n\n\n### unmodified output of `flake8 --bug-report`\n\n```json\n{\r\n  \"dependencies\": [],\r\n  \"platform\": {\r\n    \"python_implementation\": \"CPython\",\r\n    \"python_version\": \"3.8.10\",\r\n    \"system\": \"Linux\"\r\n  },\r\n  \"plugins\": [\r\n    {\r\n      \"is_local\": false,\r\n      \"plugin\": \"mccabe\",\r\n      \"version\": \"0.6.1\"\r\n    },\r\n    {\r\n      \"is_local\": false,\r\n      \"plugin\": \"pycodestyle\",\r\n      \"version\": \"2.8.0\"\r\n    },\r\n    {\r\n      \"is_local\": false,\r\n      \"plugin\": \"pyflakes\",\r\n      \"version\": \"2.4.0\"\r\n    }\r\n  ],\r\n  \"version\": \"4.0.1\"\r\n}\n```\n\n\n### describe the problem\n\n#### commands ran\r\n```\r\nss@gp:~$ uname -a\r\nLinux Gal-Pro 5.4.0-7642-generic #46~1598628707~20.04~040157c~dev-Ubuntu SMP Fri Aug 28 17:55:30  x86_64 x86_64 x86_64 GNU/Linux\r\n\r\nss@gp:~$ lsb_release -id\r\nDistributor ID: Ubuntu\r\nDescription:    Ubuntu 20.04.4 LTS\r\n\r\nss@gp:~$ flake8 --version\r\n4.0.1 (mccabe: 0.6.1, pycodestyle: 2.8.0, pyflakes: 2.4.0) CPython 3.8.10 on Linux\r\n\r\nss@gp:~$ cat foo.py \r\n#!/usr/bin/env python3\r\n\"\"\"\r\nThis line has 80 characters ....................................................\r\nThis line has 79 characters ...................................................\r\n\"\"\"\r\n\r\nss@gp:~$ ls -l ~/.config/flake8 ~/.flake8\r\nls: cannot access '/home/ssiano/.flake8': No such file or directory\r\n-rw-rw-r-- 1 ssiano ssiano 30 Jul 13 11:15 /home/ssiano/.config/flake8\r\n\r\nss@gp:~$ cat ~/.config/flake8\r\n[flake8]\r\nmax-line-length = 78\r\n\r\nss@gp:~$ flake8 foo.py \r\nfoo.py:3:80: E501 line too long (80 > 79 characters)\r\n\r\nss@gp:~$ mv ~/.config/flake8 ~/.flake8\r\n\r\nss@gp:~$ flake8 foo.py \r\nfoo.py:3:79: E501 line too long (80 > 78 characters)\r\nfoo.py:4:79: E501 line too long (79 > 78 characters)\r\n\r\nss@gp:~$ flake8 --isolated foo.py                                                                                                                                                                                                                           \r\nfoo.py:3:80: E501 line too long (80 > 79 characters)\r\n```\r\n\r\n#### what I expected to happen\r\nI expected Flake8 4.0.1 to ignore user-level config files, as described [in the Flake8 4.0.0 release notes](https://flake8.pycqa.org/en/latest/release-notes/4.0.0.html#new-dependency-information).\r\n\r\nFlake8 did ignore `~/.config/flake8`, but it did not ignore `~/.flake8`.\r\n\r\nAlso, I thought the `--isolated` option would be removed, but it is still present, and it did result in Flake8 ignoring `~/.flake8`.",
+        "labels": [],
+        "comments_count": 5,
+        "created_at": "2022-07-13T18:48:12Z",
+        "updated_at": "2023-07-13T08:32:16Z",
+        "html_url": "https://github.com/PyCQA/flake8/issues/1617",
+        "author": "ssiano"
+      },
+      "fix_pr_number": 1618,
+      "fix_pr_title": "ignore config files in the home directory",
+      "fix_pr_url": "https://github.com/PyCQA/flake8/pull/1618",
+      "fix_pr_merged_at": "2022-07-13T20:47:36Z",
+      "merge_commit_sha": "e8f9eb369a7b300a0517e2f783396f8bec19643a",
+      "pre_fix_sha": "fb439e15454f4762b06109aa8712d740f0b52c6d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/flake8/options/config.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/flake8/options/config.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 14,
+          "deletions": 1,
+          "changes": 15,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/test_options_config.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyCQA/flake8"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-07-13T20:47:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-07-13T18:48:12+00:00, pr_merged_at=2022-07-13T20:47:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2983 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1618 is the merged same-repository fix for Issue #1617, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "_find_config_file stops discovering configuration in the home directory; the new stat helper is not a pre-fix symbol and tests are excluded."
+      ]
+    },
+    {
+      "id": "pallets-jinja-issue-1781-pr-1782",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1781,
+        "title": "unique filter does not work when chain with a filter that returns async generator",
+        "body": "`unique()` filter does not work when chain with a filter that returns async generator\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.11\r\n- Jinja version: 3.1.2\r\n\r\nThe template:\r\n```\r\n{%- set commit_authors = commits | rejectattr(\"author\", \"eq\", \"mergify[bot]\") | unique(false, \"email_author\")| list -%}\r\n```\r\n\r\nThe backtrace:\r\n```\r\n  File \"xxxxxx.py\", line 2314, in render_template\r\n    return await env.from_string(template).render_async(**infos)\r\n  File \"jinja2/environment.py\", line 1324, in render_async\r\n    return self.environment.handle_exception()\r\n  File \"jinja2/environment.py\", line 936, in handle_exception\r\n    raise rewrite_traceback_stack(source=source)\r\n  File \"jinja2/environment.py\", line 1321, in <listcomp>\r\n    [n async for n in self.root_render_func(ctx)]  # type: ignore\r\n  File \"<template>\", line 7, in top-level template code\r\n  File \"jinja2/async_utils.py\", line 65, in auto_await\r\n    return await t.cast(\"t.Awaitable[V]\", value)\r\n  File \"jinja2/filters.py\", line 1329, in do_list\r\n    return await auto_to_list(value)\r\n  File \"jinja2/async_utils.py\", line 84, in auto_to_list\r\n    return [x async for x in auto_aiter(value)]\r\n  File \"jinja2/async_utils.py\", line 84, in <listcomp>\r\n    return [x async for x in auto_aiter(value)]\r\n  File \"jinja2/async_utils.py\", line 77, in auto_aiter\r\n    for item in t.cast(\"t.Iterable[V]\", iterable):\r\n  File \"jinja2/filters.py\", line 437, in do_unique\r\n    for item in value:\r\nTypeError: 'async_generator' object is not iterable\r\n```",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2022-12-23T09:03:01Z",
+        "updated_at": "2025-01-03T00:18:58Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1781",
+        "author": "sileht"
+      },
+      "fix_pr_number": 1782,
+      "fix_pr_title": "make unique filter async aware",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1782",
+      "fix_pr_merged_at": "2024-12-19T15:26:24Z",
+      "merge_commit_sha": "20be10e566a505cc47bdec5fa6ad56d5fbdfb4ae",
+      "pre_fix_sha": "a4abbfd7538e9ff216244266579232585033136c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/filters.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/jinja2/filters.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 1,
+          "changes": 14,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_async_filters.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-19T15:26:24Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-12-23T09:03:01+00:00, pr_merged_at=2024-12-19T15:26:24+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1491 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1782 is the merged same-repository fix for Issue #1781, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "do_unique becomes async-aware in the single production file; the async regression test and release note are excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h2-issue-1278-pr-1299",
+      "repository": "python-hyper/h2",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1278,
+        "title": "Max inbound stream error logging is incorrect",
+        "body": "In the `_recv_headers_frame` code, a check is made on the number if inbound streams. If this is above the limit, then a TooManyStreamsError is raised.\r\n\r\nThe error text and logged value is incorrect and has likely been copy pasted from the other similar error check.\r\n\r\n```\r\n    def _receive_headers_frame(self, frame):\r\n        \"\"\"\r\n        Receive a headers frame on the connection.\r\n        \"\"\"\r\n        # If necessary, check we can open the stream. Also validate that the\r\n        # stream ID is valid.\r\n        if frame.stream_id not in self.streams:\r\n            max_open_streams = self.local_settings.max_concurrent_streams\r\n            if (self.open_inbound_streams + 1) > max_open_streams:\r\n                raise TooManyStreamsError(\r\n                    \"Max outbound streams is %d, %d open\" %\r\n                    (max_open_streams, self.open_outbound_streams)\r\n                )\r\n```\r\n\r\nThis should say \"Max inbound streams\"\r\nand log `(max_open_streams, self.open_inbound_streams)`\r\n\r\nIt would probably also be beneficial to take a local copy of the outbound stream count and use that in the log message as the property accessor has side effects.\r\n\r\nhttps://github.com/python-hyper/h2/blob/bc005afad8302549facf5afde389a16759b2ccdb/src/h2/connection.py#L1545\r\n\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2023-03-10T12:21:40Z",
+        "updated_at": "2025-02-22T16:40:23Z",
+        "html_url": "https://github.com/python-hyper/h2/issues/1278",
+        "author": "stephenc-pace"
+      },
+      "fix_pr_number": 1299,
+      "fix_pr_title": "fix error value when opening a new stream",
+      "fix_pr_url": "https://github.com/python-hyper/h2/pull/1299",
+      "fix_pr_merged_at": "2025-02-22T16:40:22Z",
+      "merge_commit_sha": "500a3488d4920d051a5851bc4555dc35f1a64bed",
+      "pre_fix_sha": "c6ed27c2272a178fc3a8f443b52f970a19c15404",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/connection.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/h2/connection.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 4,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h2"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-02-22T16:40:22Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-03-10T12:21:40+00:00, pr_merged_at=2025-02-22T16:40:22+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1269 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1299 is the merged same-repository fix for Issue #1278, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "H2Connection._receive_headers_frame reports the correct inbound stream count and direction; send_headers also avoids an accessor side effect, so the file captures both material hunks while the primary Issue symptom supplies the single symbol target."
+      ]
+    },
+    {
+      "id": "tox-dev-tox-issue-3075-pr-3748",
+      "repository": "tox-dev/tox",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3075,
+        "title": "Tox 4 trying to reuse env where it didn't in tox 3",
+        "body": "## Issue\r\n\r\nGiven this config:\r\n```ini\r\n[testenv:black]\r\ndeps =\r\n    black==23.3.0\r\ncommands = {envpython} -m black . --check\r\n\r\n[testenv:tip-black]\r\ndeps = black\r\ncommands = {[testenv:black]commands}\r\n```\r\n\r\nin tox 3.28.0, both executions (via `tox -e <env>`) worked and ran in different environments. We'd get the following line in the output from the `black` env:\r\n```\r\nblack run-test: commands[0] | /home/james/c/tox_test/.tox/black/bin/python -m black . --check\r\n```\r\nvs the following in the `tip-black` env:\r\n```\r\ntip-black run-test: commands[0] | /home/james/c/tox_test/.tox/tip-black/bin/python -m black . --check\r\n```\r\nNotice the path differences.\r\n\r\nHowever, in tox 4.6.4, I get this for `black`:\r\n```\r\nblack: commands[0]> .tox/black/bin/python -m black . --check\r\n```\r\nand an error for `tip-black`:\r\n```\r\ntip-black: commands[0]> .tox/black/bin/python -m black . --check\r\ntip-black: failed with /home/james/c/tox_test/.tox/black/bin/python (resolves to /home/james/c/tox_test/.tox/black/bin/python) is not allowed, use allowlist_externals to allow it\r\n```\r\n\r\nWhy is it trying to reuse the `black` environment for `tip-black`? It didn't do that in tox 3.\r\n\r\n## Environment\r\n\r\n- OS: Ubuntu 23.04\r\n\r\n## Full outputs\r\ntox 3.28.0, `black` env:\r\n```console\r\nGLOB sdist-make: /home/james/c/tox_test/setup.py\r\nblack inst-nodeps: /home/james/c/tox_test/.tox/.tmp/package/1/UNKNOWN-0.0.0.zip\r\nblack installed: black==23.3.0,click==8.1.6,importlib-metadata==6.7.0,mypy-extensions==1.0.0,packaging==23.1,pathspec==0.11.2,platformdirs==3.10.0,tomli==2.0.1,typed-ast==1.5.5,typing_extensions==4.7.1,UNKNOWN @ file:///home/james/c/tox_test/.tox/.tmp/package/1/UNKNOWN-0.0.0.zip,zipp==3.15.0\r\nblack run-test-pre: PYTHONHASHSEED='772606141'\r\nblack run-test: commands[0] | /home/james/c/tox_test/.tox/black/bin/python -m black . --check\r\nAll done! ✨ 🍰 ✨\r\n1 file would be left unchanged.\r\n___________________________________ summary ____________________________________\r\n  black: commands succeeded\r\n  congratulations :)\r\n```\r\ntox 3.28.0, `tip-black` env:\r\n```console\r\nGLOB sdist-make: /home/james/c/tox_test/setup.py\r\ntip-black create: /home/james/c/tox_test/.tox/tip-black\r\ntip-black installdeps: black\r\ntip-black inst: /home/james/c/tox_test/.tox/.tmp/package/1/UNKNOWN-0.0.0.zip\r\ntip-black installed: black==23.3.0,click==8.1.6,importlib-metadata==6.7.0,mypy-extensions==1.0.0,packaging==23.1,pathspec==0.11.2,platformdirs==3.10.0,tomli==2.0.1,typed-ast==1.5.5,typing_extensions==4.7.1,UNKNOWN @ file:///home/james/c/tox_test/.tox/.tmp/package/1/UNKNOWN-0.0.0.zip,zipp==3.15.0\r\ntip-black run-test-pre: PYTHONHASHSEED='1485184410'\r\ntip-black run-test: commands[0] | /home/james/c/tox_test/.tox/tip-black/bin/python -m black . --check\r\nAll done! ✨ 🍰 ✨\r\n1 file would be left unchanged.\r\n___________________________________ summary ____________________________________\r\n  tip-black: commands succeeded\r\n  congratulations :)\r\n```\r\ntox 4.6.4, `black` env:\r\n```console\r\nblack: install_deps> python -I -m pip install black==23.3.0\r\n.pkg: install_requires> python -I -m pip install 'setuptools>=40.8.0' wheel\r\n.pkg: _optional_hooks> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: get_requires_for_build_sdist> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: get_requires_for_build_wheel> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: install_requires_for_build_wheel> python -I -m pip install wheel\r\n.pkg: prepare_metadata_for_build_wheel> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: build_sdist> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\nblack: install_package> python -I -m pip install --force-reinstall --no-deps /home/james/c/tox_test/.tox/.tmp/package/1/UNKNOWN-0.0.0.tar.gz\r\nblack: commands[0]> .tox/black/bin/python -m black . --check\r\n.pkg: _exit> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n  black: OK (2.56=setup[2.49]+cmd[0.07] seconds)\r\n  congratulations :) (2.60 seconds)\r\n```\r\ntox 4.6.4, `tip-black` env:\r\n```console\r\ntip-black: install_deps> python -I -m pip install black\r\n.pkg: _optional_hooks> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: get_requires_for_build_sdist> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: get_requires_for_build_wheel> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: prepare_metadata_for_build_wheel> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n.pkg: build_sdist> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\ntip-black: install_package> python -I -m pip install --force-reinstall --no-deps /home/james/c/tox_test/.tox/.tmp/package/2/UNKNOWN-0.0.0.tar.gz\r\ntip-black: commands[0]> .tox/black/bin/python -m black . --check\r\ntip-black: failed with /home/james/c/tox_test/.tox/black/bin/python (resolves to /home/james/c/tox_test/.tox/black/bin/python) is not allowed, use allowlist_externals to allow it\r\n.pkg: _exit> python /home/james/.pyenv/versions/3.7.16/envs/cloud-init37/lib/python3.7/site-packages/pyproject_api/_backend.py True setuptools.build_meta __legacy__\r\n  tip-black: FAIL code 1 (1.39 seconds)\r\n  evaluation failed :( (1.43 seconds)\r\n```",
+        "labels": [
+          "bug:minor",
+          "bug:normal",
+          "area:testenv-creation",
+          "level:hard",
+          "help:wanted"
+        ],
+        "comments_count": 2,
+        "created_at": "2023-08-02T20:49:58Z",
+        "updated_at": "2026-06-11T06:10:00Z",
+        "html_url": "https://github.com/tox-dev/tox/issues/3075",
+        "author": "TheRealFalcon"
+      },
+      "fix_pr_number": 3748,
+      "fix_pr_title": "🐛 fix(config): resolve cross-section refs in caller context",
+      "fix_pr_url": "https://github.com/tox-dev/tox/pull/3748",
+      "fix_pr_merged_at": "2026-02-18T06:50:15Z",
+      "merge_commit_sha": "8c2ea49ee01cd512b5526a712be7d25e7a1b5973",
+      "pre_fix_sha": "bdcd9d85556d8e53baa1167a8e65f7921ce11f96",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/tox/config/loader/ini/replace.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3075.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/tox/config/loader/ini/replace.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 7,
+          "changes": 15,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/config/loader/ini/replace/test_replace_tox_env.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 3,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/session/cmd/test_show_config.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 0,
+          "changes": 24,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tox-dev/tox"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-02-18T06:50:15Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-08-02T20:49:58+00:00, pr_merged_at=2026-02-18T06:50:15+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "6207 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug:minor, bug:normal, area:testenv-creation, level:hard, help:wanted"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #3748 is the merged same-repository fix for Issue #3075, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "ReplaceReferenceIni._config_value_sources resolves cross-section references in the caller context; changelog and tests are excluded."
+      ]
+    },
+    {
+      "id": "sqlalchemy-alembic-issue-1311-pr-1312",
+      "repository": "sqlalchemy/alembic",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1311,
+        "title": "`alembic init --package` doesn't show adding `__init__.py` path correctly",
+        "body": "**Describe the bug**\r\n```bash\r\n> alembic init alembic --package\r\n  Creating directory '$PWD/alembic' ...  done\r\n  Creating directory '$PWD/alembic/versions' ...  done\r\n  Generating $PWD/alembic/script.py.mako ...  done\r\n  Generating $PWD/alembic/env.py ...  done\r\n  File '$PWD/alembic.ini' already exists, skipping\r\n  Generating $PWD/alembic/README ...  done\r\n  Adding {path!r} ...  done\r\n  Adding {path!r} ...  done\r\n  Please edit configuration/connection/logging settings in '$PWD/alembic.ini' before proceeding.\r\n```\r\n\r\n**Expected behavior**\r\n```bash\r\n> alembic init alembic --package\r\n  Creating directory '$PWD/alembic' ...  done\r\n  Creating directory '$PWD/alembic/versions' ...  done\r\n  Generating $PWD/alembic/script.py.mako ...  done\r\n  Generating $PWD/alembic/env.py ...  done\r\n  File '$PWD/alembic.ini' already exists, skipping\r\n  Generating $PWD/alembic/README ...  done\r\n  Adding '$PWD/alembic/__init__.py' ...  done\r\n  Adding '$PWD/alembic/versions/__init__.py' ...  done\r\n  Please edit configuration/connection/logging settings in '$PWD/alembic.ini' before proceeding.\r\n```\r\n\r\n**To Reproduce**\r\n```bash\r\n> alembic init alembic --package\r\n```\r\n\r\n~**Error**~\r\n\r\n**Versions.**\r\n - OS: Ubuntu 22.04 x86_64\r\n - Python: 3.10.12\r\n - Alembic: 1.12.0\r\n - SQLAlchemy: 2.0.20\r\n - ~Database:~\r\n - ~DBAPI:~\r\n\r\n~**Additional context**~\r\n",
+        "labels": [
+          "bug",
+          "command interface"
+        ],
+        "comments_count": 1,
+        "created_at": "2023-09-14T07:31:58Z",
+        "updated_at": "2023-09-14T21:23:40Z",
+        "html_url": "https://github.com/sqlalchemy/alembic/issues/1311",
+        "author": "ProgramRipper"
+      },
+      "fix_pr_number": 1312,
+      "fix_pr_title": "fix(command): `init --package` path display",
+      "fix_pr_url": "https://github.com/sqlalchemy/alembic/pull/1312",
+      "fix_pr_merged_at": "2023-09-14T21:23:38Z",
+      "merge_commit_sha": "0db60d74e5805f55b4c2e603f5479996e3afa894",
+      "pre_fix_sha": "8542a09459daa9a75a73ab8e4c109686255e4f34",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "alembic/command.py"
+      ],
+      "changed_files": [
+        {
+          "path": "alembic/command.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: sqlalchemy/alembic"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2023-09-14T21:23:38Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-09-14T07:31:58+00:00, pr_merged_at=2023-09-14T21:23:38+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1336 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, command interface"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1312 is the merged same-repository fix for Issue #1311, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The module-level init command prints the package path correctly for --package; the one-line production diff is the complete fix."
+      ]
+    }
+  ]
+}

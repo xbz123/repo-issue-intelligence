@@ -6,6 +6,29 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.17 fourth 200-case expansion batch
+
+Manifest v12 accepts ten reviewed Issue/Fix-PR pairs from Prefect, Django REST Framework, h2,
+MarkupSafe, Flake8, Jinja, tox, and Alembic. The batch spans eight repositories and Issues created
+from 2020 through 2026. It adds ten single-file production targets and seven pre-fix Python symbol
+targets; two Prefect TypeScript cases and MarkupSafe's module-level regex fix remain file-only.
+
+Reviewers remove test and Storybook paths from the Prefect cases and reject Tornado #3182/#3523
+because its entire patch is under `demos/`. Two other valid Jinja candidates remain undecided in
+the queue rather than being mislabeled as rejections. All seven Python symbol targets resolve in
+the repository index at their frozen pre-fix commits.
+
+The suite now contains 90 cases across 43 repositories: 17 main, 11 calibration, and 62
+generalization cases. It records 135 production-file targets, 31 multi-file cases, and 87 reviewed
+symbol targets across 63 cases.
+
+Three deterministic v0.27 runs completed 90/90 cases. After removing timestamps and elapsed
+fields, their candidate files, candidate symbols, per-case metrics, tier metrics, and aggregates
+were identical. File Recall@1/5/10/20 is `0.3652/0.6372/0.7131/0.8635`, with MRR `0.5704`.
+Across the 63 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2619/0.4299/0.4537/0.5331`, with MRR `0.3714`. Twenty-five of 135 production targets remain
+outside the deterministic Top-20 and stay in the denominator.
+
 ## v0.16 third 200-case expansion batch
 
 Manifest v11 accepts ten reviewed Issue/Fix-PR pairs from Paramiko, Prefect, h2, Boto3, Django REST
@@ -329,19 +352,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting three ten-case batches into manifest v11 and excluding six reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 166
+After accepting four ten-case batches into manifest v12 and excluding seven reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 155
 unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 120 primary candidates and 40 reserves;
+- 110 primary candidates and 40 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 29 new multi-file primary candidates, which would raise the suite from 31/80 to 60/200
+- 29 new multi-file primary candidates, which would raise the suite from 31/90 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 70 primary Issues created before 2026;
-- 72 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 61 primary Issues created before 2026;
+- 61 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -358,7 +381,7 @@ The compact queue is committed so review order, advisory signals, pre-fix SHA pr
 files, and diversity constraints are auditable without claiming that the 200-case manifest already
 exists.
 
-Manifest v11 confirms that the earlier candidate-pool saturation does not survive broader,
-mixed-language, multi-file cases: 22 of 125 reviewed production targets are outside the
+Manifest v12 confirms that the earlier candidate-pool saturation does not survive broader,
+mixed-language, multi-file cases: 25 of 135 reviewed production targets are outside the
 deterministic Top-20. Subsequent batches keep those misses in the denominator and must not weaken
 the frozen-case acceptance rules to improve the headline metric.
