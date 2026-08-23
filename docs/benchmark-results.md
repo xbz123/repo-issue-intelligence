@@ -223,8 +223,8 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-One hundred ten of the 135 reviewed production-file targets appear in the deterministic Top-20.
-The reported macro-average File Recall@20 is `0.8635`; the 25 missing targets are grouped in the current
+One hundred twenty of the 148 reviewed production-file targets appear in the deterministic Top-20.
+The reported macro-average File Recall@20 is `0.8538`; the 28 missing targets are grouped in the current
 result section. This is benchmark coverage, not a population-level recall estimate.
 
 ## Previous 32-case deterministic result
