@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -610,6 +611,80 @@ def test_repository_map_cache_separates_pre_fix_shas(tmp_path: Path) -> None:
     assert _repository_map_cache_path(cache_root, second_case).is_file()
 
 
+def test_repository_map_cache_records_complete_interpreter_identity(
+    tmp_path: Path,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+    cache_root = tmp_path / "cache"
+
+    _load_or_build_repository_map(
+        case,
+        repository,
+        ["src/token_router.py", "src/token_service.py"],
+        cache_root,
+    )
+    payload = json.loads(
+        _repository_map_cache_path(cache_root, case).read_text(encoding="utf-8")
+    )
+
+    assert payload["python_identity"] == (
+        f"{sys.implementation.name}-"
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}."
+        f"{sys.version_info.releaselevel}.{sys.version_info.serial}-"
+        f"{sys.implementation.cache_tag or 'no-cache-tag'}"
+    )
+
+
+def test_repository_map_cache_rebuilds_runtime_and_schema_mismatches(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+    included_files = ["src/token_router.py", "src/token_service.py"]
+    cache_root = tmp_path / "cache"
+    build_calls = 0
+
+    def counting_build(root, included_files=None):
+        nonlocal build_calls
+        build_calls += 1
+        return build_repository_map(root, included_files=included_files)
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.build_repository_map",
+        counting_build,
+    )
+    _load_or_build_repository_map(case, repository, included_files, cache_root)
+    cache_path = _repository_map_cache_path(cache_root, case)
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    payload["python_identity"] = "other-runtime"
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, runtime_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        included_files,
+        cache_root,
+    )
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    payload["cache_schema_version"] = 1
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, schema_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        included_files,
+        cache_root,
+    )
+
+    assert runtime_hit is False
+    assert schema_hit is False
+    assert build_calls == 3
+
+
 def test_repository_map_cache_write_failure_does_not_fail_case(
     tmp_path: Path,
     monkeypatch,
@@ -636,6 +711,34 @@ def test_repository_map_cache_write_failure_does_not_fail_case(
         "src/token_service.py",
     ]
     assert not list((tmp_path / "cache").rglob("*.tmp"))
+
+
+def test_repository_map_cache_cleanup_failure_does_not_fail_case(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+
+    def fail_replace(source, destination):
+        raise OSError("read-only cache")
+
+    def fail_unlink(self, missing_ok=False):
+        raise OSError("locked temporary file")
+
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.os.replace", fail_replace)
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.Path.unlink", fail_unlink)
+
+    repository_map, cache_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        ["src/token_router.py", "src/token_service.py"],
+        tmp_path / "cache",
+    )
+
+    assert cache_hit is False
+    assert len(repository_map.files) == 2
 
 
 def test_prepare_repository_skips_fetch_when_commit_exists(

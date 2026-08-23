@@ -200,8 +200,10 @@ Repository indexing is restricted to `git ls-files`; live Issue edits and ignore
 reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
 network request. The runner also keeps an ignored repository-map cache under the benchmark
 workspace, keyed by repository, exact pre-fix SHA, tracked/materialized file scope, index schema,
-and Python version. Missing, stale, or invalid cache entries are rebuilt, and each case records
-whether it was a cold miss or warm hit. Cache write failures do not fail the benchmark.
+and complete interpreter identity. Missing, stale, or invalid cache entries are rebuilt, and each
+case records whether it was a cold miss or warm hit. Cache write failures do not fail the benchmark.
+The ignored cache is a local performance aid, not tamper-evident storage; remove its directory to
+force a rebuild after manual changes or suspected filesystem corruption.
 
 Discover and curate additional Issue/Fix-PR cases:
 

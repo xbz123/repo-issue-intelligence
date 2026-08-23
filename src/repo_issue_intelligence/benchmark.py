@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Sequence
+from contextlib import suppress
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -37,7 +38,7 @@ from .repository_index import (
 )
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
-REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 1
+REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 2
 REPOSITORY_MAP_CACHE_DIRECTORY = ".repository-map-cache"
 
 
@@ -224,7 +225,7 @@ class BenchmarkRun(BaseModel):
 class _RepositoryMapCacheEntry(BaseModel):
     cache_schema_version: int
     index_schema_version: int
-    python_version: str
+    python_identity: str
     repository: str
     pre_fix_sha: str
     tracked_files: list[str]
@@ -339,7 +340,12 @@ def _load_or_build_repository_map(
         included_files,
     )
     indexed_files = repository_map_input_files(repository_root, tracked_files)
-    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    python_identity = (
+        f"{sys.implementation.name}-"
+        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}."
+        f"{sys.version_info.releaselevel}.{sys.version_info.serial}-"
+        f"{sys.implementation.cache_tag or 'no-cache-tag'}"
+    )
     cache_path = _repository_map_cache_path(cache_root.resolve(), case)
     try:
         cached = _RepositoryMapCacheEntry.model_validate_json(
@@ -352,7 +358,7 @@ def _load_or_build_repository_map(
         cached is not None
         and cached.cache_schema_version == REPOSITORY_MAP_CACHE_SCHEMA_VERSION
         and cached.index_schema_version == REPOSITORY_MAP_INDEX_VERSION
-        and cached.python_version == python_version
+        and cached.python_identity == python_identity
         and cached.repository == case.repository
         and cached.pre_fix_sha == case.pre_fix_sha
         and cached.tracked_files == tracked_files
@@ -373,7 +379,7 @@ def _load_or_build_repository_map(
     entry = _RepositoryMapCacheEntry(
         cache_schema_version=REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
         index_schema_version=REPOSITORY_MAP_INDEX_VERSION,
-        python_version=python_version,
+        python_identity=python_identity,
         repository=case.repository,
         pre_fix_sha=case.pre_fix_sha,
         tracked_files=tracked_files,
@@ -400,7 +406,8 @@ def _load_or_build_repository_map(
         pass
     finally:
         if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+            with suppress(OSError):
+                temporary_path.unlink(missing_ok=True)
     return repository_map, False
 
 
