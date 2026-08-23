@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import repo_issue_intelligence.investigator as investigator_module
 from repo_issue_intelligence.investigator import (
     _content_matches_identifier,
     _expansion_relation_bonus,
@@ -4305,6 +4306,34 @@ def test_git_cochanges_use_a_fixed_recent_commit_window(tmp_path: Path) -> None:
         "Changed with lexical seed files in" in evidence
         for evidence in target.evidence
     )
+
+
+def test_git_cochanges_timeout_without_lazy_fetch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    (repository / ".git").mkdir(parents=True)
+    observed: dict[str, object] = {}
+
+    def timeout_run(*args: object, **kwargs: object) -> None:
+        observed.update(kwargs)
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(investigator_module.subprocess, "run", timeout_run)
+
+    relations = investigator_module._history_relations(
+        repository,
+        ["src/seed.py"],
+        {"src/seed.py", "src/target.py"},
+        {"src/seed.py": False, "src/target.py": False},
+    )
+
+    assert relations == {}
+    assert observed["timeout"] == 30
+    observed_env = observed["env"]
+    assert isinstance(observed_env, dict)
+    assert observed_env["GIT_NO_LAZY_FETCH"] == "1"
 
 
 def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> None:

@@ -431,7 +431,7 @@ and bounded ordering gain on this frozen pool, not deterministic generation, new
 or root-cause accuracy.
 
 The first two 200-case expansion batches accept 20 manually reviewed cases and raise multi-file
-coverage to 28/70. The second batch records three explicit rejections and narrows three automatic
+coverage to 28/70. The second batch records three explicit rejections and narrows four automatic
 file lists after diff review, so rejected or unrelated paths cannot silently re-enter later queues.
 Nineteen of the 111 reviewed production targets remain outside the deterministic Top-20, and the
 current index provides file-only ground truth for Rust and C. Superseded manifests and retained

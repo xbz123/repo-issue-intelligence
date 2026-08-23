@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import io
+import os
 import re
 import subprocess
 import tokenize
@@ -1735,9 +1736,11 @@ def _history_relations(
             cwd=root,
             check=False,
             capture_output=True,
+            env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
             text=True,
+            timeout=30,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return {}
     if completed.returncode:
         return {}
@@ -1810,6 +1813,7 @@ def _blame_relations(
                 cwd=root,
                 check=False,
                 capture_output=True,
+                env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
                 text=True,
                 timeout=2,
             )
@@ -1837,6 +1841,7 @@ def _blame_relations(
                     cwd=root,
                     check=False,
                     capture_output=True,
+                    env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
                     text=True,
                     timeout=2,
                 )

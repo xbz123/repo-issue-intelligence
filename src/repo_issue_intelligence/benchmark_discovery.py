@@ -1275,12 +1275,6 @@ def curate_benchmark_expansion(
             "Candidates cannot be both selected and rejected: "
             + ", ".join(sorted(overlapping_ids))
         )
-    unknown_rejected_ids = set(rejected_ids) - set(candidates_by_id)
-    if unknown_rejected_ids:
-        raise ValueError(
-            "Unknown rejected candidate IDs: "
-            + ", ".join(sorted(unknown_rejected_ids))
-        )
     case_ids = [entry.case_id for entry in selection.selections]
     if len(case_ids) != len(set(case_ids)):
         raise ValueError("Selection contains duplicate benchmark case IDs")

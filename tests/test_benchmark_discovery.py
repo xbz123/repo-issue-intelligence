@@ -460,6 +460,15 @@ def test_curate_expansion_records_rejections_without_accepting_them() -> None:
     assert [candidate.id for candidate in curated.candidates] == [selected.id]
     assert expanded.cases[-1].id == "selected-case"
 
+    replayed_curated, replayed_expanded = curate_benchmark_expansion(
+        base_manifest,
+        [selected],
+        selection,
+    )
+
+    assert replayed_curated.candidates == curated.candidates
+    assert replayed_expanded == expanded
+
     queue = build_candidate_review_queue(
         base_manifest,
         [selected, rejected],
