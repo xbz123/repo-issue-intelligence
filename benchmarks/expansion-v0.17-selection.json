@@ -1,0 +1,178 @@
+{
+  "name": "real-project-benchmark-expansion-v0.17",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "prefecthq-prefect-issue-22746-pr-22750",
+      "case_id": "prefect-required-array-empty",
+      "tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-property.tsx"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #22750 is the merged same-repository fix for Issue #22746, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "SchemaFormProperty blocks submission when a required array is emptied; the paired test file is excluded and TypeScript remains file-only in the current symbol index."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22759-pr-22760",
+      "case_id": "prefect-nested-parameter-rendering",
+      "tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #22760 is the merged same-repository fix for Issue #22759, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The deployment parameter table formats nested object values consistently for display and search; Storybook and test files are excluded, and the new helper is not a pre-fix symbol."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-7279-pr-9837",
+      "case_id": "drf-listserializer-error-shape",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/serializers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/serializers.py",
+          "symbol": "ListSerializer.to_internal_value"
+        }
+      ],
+      "review_notes": [
+        "PR #9837 is the merged same-repository fix for Issue #7279, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "ListSerializer.to_internal_value aligns many=True validation errors with ListField's dictionary shape; both regression-test files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1257-pr-1259",
+      "case_id": "h2-empty-header-name",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/utilities.py",
+          "symbol": "validate_headers"
+        }
+      ],
+      "review_notes": [
+        "PR #1259 is the merged same-repository fix for Issue #1257, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "validate_headers wires in rejection of empty header names; the helper is new at the fix commit and the test file is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-markupsafe-issue-310-pr-311",
+      "case_id": "markupsafe-striptags-newlines",
+      "tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #311 is the merged same-repository fix for Issue #310, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The fix changes the module-level stripping expressions to match newlines; Markup.striptags is not directly changed, so this case remains file-only and tests/release notes are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1617-pr-1618",
+      "case_id": "flake8-home-config-discovery",
+      "tier": "generalization",
+      "expected_files": [
+        "src/flake8/options/config.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/flake8/options/config.py",
+          "symbol": "_find_config_file"
+        }
+      ],
+      "review_notes": [
+        "PR #1618 is the merged same-repository fix for Issue #1617, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "_find_config_file stops discovering configuration in the home directory; the new stat helper is not a pre-fix symbol and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-jinja-issue-1781-pr-1782",
+      "case_id": "jinja-async-unique-filter",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/filters.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/filters.py",
+          "symbol": "do_unique"
+        }
+      ],
+      "review_notes": [
+        "PR #1782 is the merged same-repository fix for Issue #1781, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "do_unique becomes async-aware in the single production file; the async regression test and release note are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1278-pr-1299",
+      "case_id": "h2-open-stream-error-direction",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/connection.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/connection.py",
+          "symbol": "H2Connection._receive_headers_frame"
+        }
+      ],
+      "review_notes": [
+        "PR #1299 is the merged same-repository fix for Issue #1278, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "H2Connection._receive_headers_frame reports the correct inbound stream count and direction; send_headers also avoids an accessor side effect, so the file captures both material hunks while the primary Issue symptom supplies the single symbol target."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-3075-pr-3748",
+      "case_id": "tox-cross-section-reference-context",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/config/loader/ini/replace.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/tox/config/loader/ini/replace.py",
+          "symbol": "ReplaceReferenceIni._config_value_sources"
+        }
+      ],
+      "review_notes": [
+        "PR #3748 is the merged same-repository fix for Issue #3075, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "ReplaceReferenceIni._config_value_sources resolves cross-section references in the caller context; changelog and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "sqlalchemy-alembic-issue-1311-pr-1312",
+      "case_id": "alembic-init-package-path-display",
+      "tier": "generalization",
+      "expected_files": [
+        "alembic/command.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "alembic/command.py",
+          "symbol": "init"
+        }
+      ],
+      "review_notes": [
+        "PR #1312 is the merged same-repository fix for Issue #1311, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The module-level init command prints the package path correctly for --package; the one-line production diff is the complete fix."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "tornadoweb-tornado-issue-3182-pr-3523",
+      "reason": "The fix only changes demos/file_upload/file_uploader.py; demo code is outside the benchmark's production ground-truth scope."
+    }
+  ]
+}

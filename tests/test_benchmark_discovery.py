@@ -117,18 +117,32 @@ def test_classify_changed_files_excludes_non_ground_truth_paths() -> None:
             {"filename": "src/new_validator.py", "status": "added", "changes": 20},
             {"filename": "docs_src/tutorial.py", "status": "modified", "changes": 5},
             {"filename": "testing/example.py", "status": "modified", "changes": 6},
+            {
+                "filename": "demos/file_upload/file_uploader.py",
+                "status": "modified",
+                "changes": 7,
+            },
+            {
+                "filename": "ui/schema-form-input.test.tsx",
+                "status": "modified",
+                "changes": 8,
+            },
+            {
+                "filename": "ui/schema-form-input.stories.tsx",
+                "status": "modified",
+                "changes": 9,
+            },
         ]
     )
 
     assert files[0].eligible_source is True
-    assert [item.eligible_source for item in files[1:]] == [
-        False,
-        False,
-        False,
-        False,
-        False,
-    ]
+    assert all(not item.eligible_source for item in files[1:])
     assert files[3].exclusion_reason == "file does not exist at the pre-fix commit"
+    assert files[6].exclusion_reason == (
+        "test, documentation, example, generated, or vendored path"
+    )
+    assert files[7].exclusion_reason == "test file"
+    assert files[8].exclusion_reason == "test file"
 
 
 def test_audit_candidate_derives_pre_fix_sha_and_requires_review() -> None:

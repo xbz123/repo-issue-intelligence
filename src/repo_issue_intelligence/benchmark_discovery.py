@@ -40,6 +40,8 @@ EXCLUDED_PATH_PARTS = {
     "benchmarks",
     "changelog",
     "changes",
+    "demo",
+    "demos",
     "doc",
     "docs",
     "example",
@@ -297,7 +299,15 @@ def _is_excluded_source_path(path: str) -> str | None:
         for part in parts[:-1]
     ):
         return "test, documentation, example, generated, or vendored path"
-    if filename == "conftest.py" or filename.startswith("test_") or filename.endswith("_test.py"):
+    if (
+        filename == "conftest.py"
+        or filename.startswith("test_")
+        or filename.endswith("_test.py")
+        or any(
+            marker in filename
+            for marker in (".spec.", ".stories.", ".story.", ".test.")
+        )
+    ):
         return "test file"
     if Path(path).suffix.lower() not in LANGUAGE_BY_SUFFIX:
         return "unsupported source suffix"
