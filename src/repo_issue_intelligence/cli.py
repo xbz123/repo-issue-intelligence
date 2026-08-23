@@ -26,6 +26,7 @@ from .benchmark_discovery import (
     inspect_candidate,
     load_candidate_selection,
     load_candidate_sources,
+    reviewed_rejection_ids,
     save_benchmark_candidate,
     save_candidate_catalog,
     save_candidate_review_queue,
@@ -574,9 +575,19 @@ def benchmark_plan(
         BenchmarkTier,
         typer.Option("--default-tier"),
     ] = BenchmarkTier.GENERALIZATION,
+    review_decisions: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--review-decisions",
+            help="Selection manifests whose reviewed rejections must be excluded.",
+        ),
+    ] = None,
 ) -> None:
     """Build a deterministic manual-review queue without accepting candidates."""
     try:
+        excluded_candidate_ids = reviewed_rejection_ids(
+            [load_candidate_selection(path) for path in review_decisions or []]
+        )
         queue = build_candidate_review_queue(
             load_manifest(base_manifest),
             load_candidate_sources(candidate_sources),
@@ -585,6 +596,7 @@ def benchmark_plan(
             max_primary_per_repository=max_primary_per_repository,
             target_multi_file_share=target_multi_file_share,
             default_tier=default_tier,
+            excluded_candidate_ids=excluded_candidate_ids,
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error

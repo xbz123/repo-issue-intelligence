@@ -11,6 +11,7 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkTier,
 )
 from repo_issue_intelligence.benchmark_discovery import (
+    CandidateRejectionEntry,
     CandidateSelectionEntry,
     CandidateSelectionManifest,
     CandidateStatus,
@@ -21,6 +22,7 @@ from repo_issue_intelligence.benchmark_discovery import (
     discover_candidates,
     linked_pull_request_numbers,
     load_candidate_sources,
+    reviewed_rejection_ids,
     save_curated_expansion,
 )
 from repo_issue_intelligence.models import IssueRecord
@@ -348,6 +350,271 @@ def test_curate_expansion_accepts_only_explicit_manual_selection(tmp_path: Path)
         manifest_output=tmp_path / "expanded-cases.json",
     )
     assert load_candidate_sources([catalog_output]) == curated.candidates
+
+
+def test_curate_expansion_can_narrow_audited_expected_files() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="test-benchmark",
+        version=2,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="example/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    candidate = audit_candidate(
+        "example/project",
+        issue(),
+        pull_request(),
+        [
+            {"filename": "src/fix.py", "status": "modified", "changes": 4},
+            {"filename": "src/unrelated.py", "status": "modified", "changes": 2},
+        ],
+        {"sha": MERGE_SHA, "parents": [{"sha": PRE_FIX_SHA}]},
+        pull_commits(),
+        max_source_files=5,
+        suggested_tier=BenchmarkTier.GENERALIZATION,
+    )
+    selection = CandidateSelectionManifest(
+        name="narrowed-expansion",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id=candidate.id,
+                case_id="narrowed-case",
+                expected_files=["src/fix.py"],
+                review_notes=["Only fix.py contains the reviewed behavioral fix."],
+            )
+        ],
+    )
+
+    curated, expanded = curate_benchmark_expansion(
+        base_manifest,
+        [candidate],
+        selection,
+    )
+
+    assert curated.candidates[0].expected_files == ["src/fix.py"]
+    assert expanded.cases[-1].expected_files == ["src/fix.py"]
+
+    selection.selections[0].expected_files = ["src/not-in-the-patch.py"]
+    with pytest.raises(ValueError, match="outside the audited patch"):
+        curate_benchmark_expansion(base_manifest, [candidate], selection)
+
+
+def test_curate_expansion_records_rejections_without_accepting_them() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="test-benchmark",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    selected = _queue_candidate("selected/project", 11, 101, multi_file=False)
+    rejected = _queue_candidate("rejected/project", 12, 102, multi_file=False)
+    selection = CandidateSelectionManifest(
+        name="reviewed-expansion",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id=selected.id,
+                case_id="selected-case",
+                tier=BenchmarkTier.GENERALIZATION,
+                review_notes=["Behavioral fix confirmed."],
+            )
+        ],
+        rejections=[
+            CandidateRejectionEntry(
+                candidate_id=rejected.id,
+                reason="The patch only changes tests.",
+            )
+        ],
+    )
+
+    curated, expanded = curate_benchmark_expansion(
+        base_manifest,
+        [selected, rejected],
+        selection,
+    )
+
+    assert [candidate.id for candidate in curated.candidates] == [selected.id]
+    assert expanded.cases[-1].id == "selected-case"
+
+    replayed_curated, replayed_expanded = curate_benchmark_expansion(
+        base_manifest,
+        [selected],
+        selection,
+    )
+
+    assert replayed_curated.candidates == curated.candidates
+    assert replayed_expanded == expanded
+
+    queue = build_candidate_review_queue(
+        base_manifest,
+        [selected, rejected],
+        target_total_cases=2,
+        reserve_cases=0,
+        target_multi_file_share=0,
+        excluded_candidate_ids={entry.candidate_id for entry in selection.rejections},
+    )
+    assert [entry.candidate_id for entry in queue.entries] == [selected.id]
+
+    with pytest.raises(ValueError, match="Unknown excluded candidate IDs"):
+        build_candidate_review_queue(
+            base_manifest,
+            [selected, rejected],
+            target_total_cases=2,
+            reserve_cases=0,
+            target_multi_file_share=0,
+            excluded_candidate_ids={"missing-candidate"},
+        )
+
+    selection.rejections.append(
+        CandidateRejectionEntry(
+            candidate_id=selected.id,
+            reason="A candidate cannot have both decisions.",
+        )
+    )
+    with pytest.raises(ValueError, match="both selected and rejected"):
+        curate_benchmark_expansion(base_manifest, [selected, rejected], selection)
+
+
+def test_reviewed_rejection_ids_fail_closed_across_manifests() -> None:
+    first = CandidateSelectionManifest(
+        name="first-review",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id="selected-candidate",
+                case_id="selected-case",
+                tier=BenchmarkTier.GENERALIZATION,
+                review_notes=["Accepted after review."],
+            )
+        ],
+        rejections=[
+            CandidateRejectionEntry(
+                candidate_id="rejected-candidate",
+                reason="Rejected after review.",
+            )
+        ],
+    )
+    duplicate = CandidateSelectionManifest(
+        name="duplicate-review",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id="another-candidate",
+                case_id="another-case",
+                tier=BenchmarkTier.GENERALIZATION,
+                review_notes=["Accepted after review."],
+            )
+        ],
+        rejections=[
+            CandidateRejectionEntry(
+                candidate_id="rejected-candidate",
+                reason="The same rejection must not be repeated.",
+            )
+        ],
+    )
+    conflict = duplicate.model_copy(
+        update={
+            "rejections": [
+                CandidateRejectionEntry(
+                    candidate_id="selected-candidate",
+                    reason="This conflicts with the earlier acceptance.",
+                )
+            ]
+        },
+        deep=True,
+    )
+    rejection_only = CandidateSelectionManifest(
+        name="rejection-only-review",
+        version=1,
+        rejections=[
+            CandidateRejectionEntry(
+                candidate_id="rejection-only-candidate",
+                reason="A review batch may reject every candidate.",
+            )
+        ],
+    )
+
+    assert reviewed_rejection_ids([first]) == frozenset({"rejected-candidate"})
+    assert reviewed_rejection_ids([rejection_only]) == frozenset(
+        {"rejection-only-candidate"}
+    )
+    with pytest.raises(ValueError, match="duplicate rejected candidate IDs"):
+        reviewed_rejection_ids([first, duplicate])
+    with pytest.raises(ValueError, match="across review decisions"):
+        reviewed_rejection_ids([first, conflict])
+    with pytest.raises(ValueError, match="at least one selected candidate"):
+        curate_benchmark_expansion(
+            BenchmarkManifest.model_construct(name="test", version=1, cases=[]),
+            [],
+            rejection_only,
+        )
+
+
+def test_curated_symbols_must_remain_on_expected_files() -> None:
+    base_issue = issue(1)
+    base_manifest = BenchmarkManifest(
+        name="test",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="existing-case",
+                tier=BenchmarkTier.MAIN,
+                repository="existing/project",
+                issue_number=1,
+                issue_updated_at=base_issue.updated_at,
+                issue_snapshot=base_issue,
+                fix_pr_number=2,
+                pre_fix_sha="d" * 40,
+                expected_files=["src/existing.py"],
+            )
+        ],
+    )
+    selected = _queue_candidate("selected/project", 11, 101, multi_file=True)
+    selection = CandidateSelectionManifest(
+        name="reviewed-expansion",
+        version=1,
+        selections=[
+            CandidateSelectionEntry(
+                candidate_id=selected.id,
+                case_id="selected-case",
+                expected_files=[selected.expected_files[0]],
+                expected_symbols=[
+                    BenchmarkSymbolTarget(
+                        file=selected.expected_files[-1],
+                        symbol="Removed.symbol",
+                    )
+                ],
+                review_notes=["Only the first file contains the behavioral fix."],
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="symbol targets outside expected files"):
+        curate_benchmark_expansion(base_manifest, [selected], selection)
 
 
 def _queue_candidate(

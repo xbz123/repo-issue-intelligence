@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import repo_issue_intelligence.investigator as investigator_module
 from repo_issue_intelligence.investigator import (
     _content_matches_identifier,
     _expansion_relation_bonus,
@@ -4260,6 +4261,79 @@ def test_locate_candidates_uses_only_prior_git_cochanges(tmp_path: Path) -> None
         "Blame-selected seed line changed with this file" in evidence
         for evidence in target.evidence
     )
+
+
+def test_git_cochanges_use_a_fixed_recent_commit_window(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/seed.py", "def handle_regression():\n    return 0\n")
+    write_source(repository, "src/target.py", "def historical_regression():\n    return 0\n")
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.email", "test@example.com"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repository), "config", "user.name", "Test User"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(repository), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repository), "commit", "-qm", "cochange"], check=True)
+    for revision in range(101):
+        write_source(
+            repository,
+            "src/unrelated.py",
+            f"def unrelated():\n    return {revision}\n",
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "add", "src/unrelated.py"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(repository), "commit", "-qm", f"unrelated {revision}"],
+            check=True,
+        )
+
+    candidates = locate_candidates(
+        issue("Shared regression", "The traceback points to src/seed.py."),
+        build_repository_map(repository),
+        limit=20,
+    )
+    target = next(
+        candidate for candidate in candidates if candidate.file == "src/target.py"
+    )
+
+    assert not any(
+        "Changed with lexical seed files in" in evidence
+        for evidence in target.evidence
+    )
+
+
+def test_git_cochanges_timeout_without_lazy_fetch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    (repository / ".git").mkdir(parents=True)
+    observed: dict[str, object] = {}
+
+    def timeout_run(*args: object, **kwargs: object) -> None:
+        observed.update(kwargs)
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(investigator_module.subprocess, "run", timeout_run)
+
+    relations = investigator_module._history_relations(
+        repository,
+        ["src/seed.py"],
+        {"src/seed.py", "src/target.py"},
+        {"src/seed.py": False, "src/target.py": False},
+    )
+
+    assert relations == {}
+    assert observed["timeout"] == 30
+    observed_env = observed["env"]
+    assert isinstance(observed_env, dict)
+    assert observed_env["GIT_NO_LAZY_FETCH"] == "1"
 
 
 def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> None:

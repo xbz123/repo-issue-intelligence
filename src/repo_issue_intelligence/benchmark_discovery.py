@@ -5,6 +5,7 @@ import math
 import re
 from collections import defaultdict
 from collections.abc import Sequence
+from collections.abc import Set as AbstractSet
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -143,15 +144,22 @@ class CandidateSelectionEntry(BaseModel):
     candidate_id: str
     case_id: str
     tier: BenchmarkTier | None = None
+    expected_files: list[str] | None = Field(default=None, min_length=1)
     expected_symbols: list[BenchmarkSymbolTarget] = Field(default_factory=list)
     review_notes: list[str] = Field(min_length=1)
+
+
+class CandidateRejectionEntry(BaseModel):
+    candidate_id: str
+    reason: str = Field(min_length=1)
 
 
 class CandidateSelectionManifest(BaseModel):
     name: str
     version: int = Field(ge=1)
     manifest_name: str | None = None
-    selections: list[CandidateSelectionEntry] = Field(min_length=1)
+    selections: list[CandidateSelectionEntry] = Field(default_factory=list)
+    rejections: list[CandidateRejectionEntry] = Field(default_factory=list)
 
 
 class CuratedCandidateCatalog(BaseModel):
@@ -808,6 +816,7 @@ def _maximum_issue_pr_matching(
 def _reviewable_candidate_edges(
     base_manifest: BenchmarkManifest,
     candidates: Sequence[BenchmarkCandidate],
+    excluded_candidate_ids: AbstractSet[str],
 ) -> tuple[int, list[BenchmarkCandidate]]:
     existing_issue_keys = {
         (case.repository.lower(), case.issue_number) for case in base_manifest.cases
@@ -819,6 +828,7 @@ def _reviewable_candidate_edges(
         candidate
         for candidate in candidates
         if candidate.status is CandidateStatus.NEEDS_REVIEW
+        and candidate.id not in excluded_candidate_ids
         and candidate.pre_fix_sha
         and candidate.expected_files
         and not _blocking_check_failures(candidate)
@@ -1049,8 +1059,17 @@ def build_candidate_review_queue(
     max_primary_per_repository: int = 5,
     target_multi_file_share: float = 0.30,
     default_tier: BenchmarkTier = BenchmarkTier.GENERALIZATION,
+    excluded_candidate_ids: AbstractSet[str] = frozenset(),
 ) -> CandidateReviewQueue:
     """Prioritize candidates without accepting them as benchmark ground truth."""
+    unknown_excluded_ids = set(excluded_candidate_ids) - {
+        candidate.id for candidate in candidates
+    }
+    if unknown_excluded_ids:
+        raise ValueError(
+            "Unknown excluded candidate IDs: "
+            + ", ".join(sorted(unknown_excluded_ids))
+        )
     base_case_count = len(base_manifest.cases)
     if target_total_cases <= base_case_count:
         raise ValueError("target_total_cases must exceed the base manifest case count")
@@ -1065,6 +1084,7 @@ def build_candidate_review_queue(
     available_reviewable, edges = _reviewable_candidate_edges(
         base_manifest,
         candidates,
+        excluded_candidate_ids,
     )
     ranked = sorted(edges, key=_candidate_review_rank)
     maximum_matching = _maximum_issue_pr_matching(ranked)
@@ -1209,17 +1229,52 @@ def load_candidate_selection(path: Path) -> CandidateSelectionManifest:
     return CandidateSelectionManifest.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def reviewed_rejection_ids(
+    decisions: Sequence[CandidateSelectionManifest],
+) -> frozenset[str]:
+    rejected_ids = [
+        rejection.candidate_id
+        for decision in decisions
+        for rejection in decision.rejections
+    ]
+    if len(rejected_ids) != len(set(rejected_ids)):
+        raise ValueError("Review decisions contain duplicate rejected candidate IDs")
+    selected_ids = {
+        selection.candidate_id
+        for decision in decisions
+        for selection in decision.selections
+    }
+    overlapping_ids = selected_ids.intersection(rejected_ids)
+    if overlapping_ids:
+        raise ValueError(
+            "Candidates cannot be both selected and rejected across review decisions: "
+            + ", ".join(sorted(overlapping_ids))
+        )
+    return frozenset(rejected_ids)
+
+
 def curate_benchmark_expansion(
     base_manifest: BenchmarkManifest,
     candidates: Sequence[BenchmarkCandidate],
     selection: CandidateSelectionManifest,
 ) -> tuple[CuratedCandidateCatalog, BenchmarkManifest]:
+    if not selection.selections:
+        raise ValueError("Curation requires at least one selected candidate")
     candidates_by_id = {candidate.id: candidate for candidate in candidates}
     if len(candidates_by_id) != len(candidates):
         raise ValueError("Candidate sources contain duplicate candidate IDs")
     selected_ids = [entry.candidate_id for entry in selection.selections]
     if len(selected_ids) != len(set(selected_ids)):
         raise ValueError("Selection contains duplicate candidate IDs")
+    rejected_ids = [entry.candidate_id for entry in selection.rejections]
+    if len(rejected_ids) != len(set(rejected_ids)):
+        raise ValueError("Selection contains duplicate rejected candidate IDs")
+    overlapping_ids = set(selected_ids).intersection(rejected_ids)
+    if overlapping_ids:
+        raise ValueError(
+            "Candidates cannot be both selected and rejected: "
+            + ", ".join(sorted(overlapping_ids))
+        )
     case_ids = [entry.case_id for entry in selection.selections]
     if len(case_ids) != len(set(case_ids)):
         raise ValueError("Selection contains duplicate benchmark case IDs")
@@ -1245,6 +1300,28 @@ def curate_benchmark_expansion(
             )
         if candidate.pre_fix_sha is None or not candidate.expected_files:
             raise ValueError(f"Candidate {candidate.id} is missing benchmark ground truth")
+        expected_files = entry.expected_files or candidate.expected_files
+        if len(expected_files) != len(set(expected_files)):
+            raise ValueError(
+                f"Selection for {candidate.id} contains duplicate expected files"
+            )
+        unknown_expected_files = set(expected_files) - set(candidate.expected_files)
+        if unknown_expected_files:
+            raise ValueError(
+                f"Selection for {candidate.id} contains files outside the audited patch: "
+                + ", ".join(sorted(unknown_expected_files))
+            )
+        expected_file_set = set(expected_files)
+        orphaned_symbols = [
+            target.symbol
+            for target in entry.expected_symbols
+            if target.file not in expected_file_set
+        ]
+        if orphaned_symbols:
+            raise ValueError(
+                f"Selection for {candidate.id} contains symbol targets outside expected files: "
+                + ", ".join(sorted(orphaned_symbols))
+            )
         tier = entry.tier or candidate.suggested_tier
         if tier is None:
             raise ValueError(f"Candidate {candidate.id} requires a benchmark tier")
@@ -1263,6 +1340,7 @@ def curate_benchmark_expansion(
             candidate.model_copy(
                 update={
                     "suggested_tier": tier,
+                    "expected_files": expected_files,
                     "status": CandidateStatus.ACCEPTED,
                     "review_notes": entry.review_notes,
                 },
@@ -1279,7 +1357,7 @@ def curate_benchmark_expansion(
                 issue_snapshot=candidate.issue_snapshot,
                 fix_pr_number=candidate.fix_pr_number,
                 pre_fix_sha=candidate.pre_fix_sha,
-                expected_files=candidate.expected_files,
+                expected_files=expected_files,
                 expected_symbols=entry.expected_symbols,
             )
         )
