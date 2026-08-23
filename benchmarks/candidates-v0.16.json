@@ -1,0 +1,1395 @@
+{
+  "name": "real-project-benchmark-expansion-v0.16",
+  "version": 1,
+  "curated_at": "2026-08-23T16:44:49.389096Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 10,
+  "candidates": [
+    {
+      "id": "paramiko-paramiko-issue-2009-pr-2013",
+      "repository": "paramiko/paramiko",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 2009,
+        "title": "open_sftp() can block up to an hour",
+        "body": "Hey all, I want to report a bug that @VakarisZ and me found.\r\n\r\nIt comes from `open_sftp` function on SSHClient which can block up to an hour, if a machine is killed after connecting\r\n\r\nTo reproduce it just connect to a VM machine, set breakpoint before calling `open_sftp`, pause the VM machine and run the `open_sftp`. It will wait up to an hour until it timeouts. I have waited 14 minutes and then unpaused the VM which unblocked the `open_sftp` function.\r\n\r\nWhat I purpose for a solution is that we add timeout argument to `open_sftp`.\r\n\r\nHere is a snippet code I used to reproduce the block:\r\n\r\n```import paramiko\r\nimport datetime\r\nimport pdb\r\n\r\nssh = paramiko.SSHClient()\r\nssh.set_missing_host_key_policy(paramiko.WarningPolicy)\r\n\r\nssh.connect(\"x.x.x.x\", port=22, username=username, password=password, timeout=10,\r\n            auth_timeout=10, banner_timeout=5)\r\n\r\nprint(datetime.datetime.now())\r\n\r\npdb.set_trace()\r\n\r\nwith ssh.open_sftp() as ftp:\r\n    print(datetime.datetime.now())\r\n\r\n\r\nprint(datetime.datetime.now())\r\n```\r\n\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2022-03-18T15:35:10Z",
+        "updated_at": "2023-03-10T19:07:59Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/2009",
+        "author": "ilija-lazoroski"
+      },
+      "fix_pr_number": 2013,
+      "fix_pr_title": "Add a timeout for opening an SSH channel",
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/2013",
+      "fix_pr_merged_at": "2023-03-10T19:07:59Z",
+      "merge_commit_sha": "cbfdc10c8f94e7242420ad43cede3c96c33edc53",
+      "pre_fix_sha": "6379b018ac49b1e869f1248b1d6743d316b5a37b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "paramiko/client.py",
+        "paramiko/transport.py"
+      ],
+      "changed_files": [
+        {
+          "path": "paramiko/client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/transport.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 0,
+          "changes": 24,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: paramiko/paramiko"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2023-03-10T19:07:59Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-03-18T15:35:10+00:00, pr_merged_at=2023-03-10T19:07:59+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1029 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #2013 is the merged same-repository fix for Issue #2009, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "SSHClient.connect exposes the channel timeout and Transport applies it while opening channels; both production files are material, while tests are excluded and transport.py remains file-only because two methods change."
+      ]
+    },
+    {
+      "id": "prefecthq-prefect-issue-22525-pr-22774",
+      "repository": "PrefectHQ/prefect",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 22525,
+        "title": "Block-edit UI cannot persist explicit null for an Optional[str] field with a non-null default",
+        "body": "### First check\n\n- [x] I added a descriptive title to this issue.\n- [x] I used the GitHub search to find a similar issue and didn't find it.\n- [x] I searched the Prefect documentation for this issue.\n- [x] I checked that this issue is related to Prefect and not one of its dependencies.\n\n### Bug summary\n\nClearing an optional (`Optional[str]`) block field to empty in the block-edit UI and saving does **not** persist an explicit `null` for that field — it silently reverts the field to its Pydantic class default instead, with no error or warning. For a field whose non-null default has real behavioral meaning (not just a placeholder), this can silently change runtime behavior after what looks like a no-op edit.\n\n### Root cause (traced in `ui-v2` source)\n\n1. `ui-v2/src/components/schemas/schema-form-input-string.tsx`:\n   ```ts\n   function handleChange(value: string | undefined) {\n     onValueChange(value || undefined);\n   }\n   ```\n   Clearing the textarea yields `value = \"\"`. Since `||` treats `\"\"` as falsy, `\"\" || undefined` evaluates to `undefined` — **never** `null`. There is no code path in this widget that can report `null`.\n\n2. `ui-v2/src/components/schemas/schema-form-input-object.tsx`, in the debounced flush that merges child property changes into the object's values:\n   ```ts\n   for (const { key, value } of patches.current) {\n     newValues[key] = value;\n     if (value === undefined) {\n       delete newValues[key];\n     }\n   }\n   ```\n   Any property reported as `undefined` has its **key deleted** from the values object entirely, rather than being set to `null`.\n\n3. `ui-v2/src/components/blocks/block-document-edit-page/block-document-edit-page.tsx`, on submit:\n   ```ts\n   updateBlockDocument(\n     { id: blockDocument.id, data: values, merge_existing_data: false },\n     ...\n   )\n   ```\n   `merge_existing_data: false` performs a full replace of the block document's data with whatever `values` currently contains — now missing the key.\n\n4. Server-side, a full-document Pydantic validation on save fills in the field's declared class default for any key absent from the submitted data — there is no validator/mechanism that can tell \"explicitly cleared\" apart from \"never set.\"\n\nNet effect: **it is currently impossible to persist an explicit `null` for an `Optional[str]` block field with a non-`None` default through the block-edit UI.** The only way to do it is via the Python SDK (`SomeBlock(some_field=None).save(..., overwrite=True)`), which sends the key with an explicit `null` and bypasses the UI's string-widget serialization entirely.\n\n### Reproduction\n\n1. Define a block with an `Optional[str]` field with a non-`None` default, e.g.:\n   ```python\n   from prefect.blocks.core import Block\n   from typing import Optional\n\n   class MyBlock(Block):\n       format_rule: Optional[str] = \"value.split(',')\"\n   ```\n2. Save an instance with `format_rule=None` via Python: `MyBlock(format_rule=None).save(\"my-block\")`.\n3. Confirm via the block-documents API that `data.format_rule` is `null`.\n4. Open the block in the UI editor (`/blocks/block/<id>/edit`). Click into the `format_rule` textarea (it renders empty, since `value ?? \"\"` displays `null` the same as no value) and save.\n5. Re-check the block-documents API: `format_rule` key is now **absent** from `data` entirely (not `null`), and loading the block via the Python SDK now returns the class default (`\"value.split(',')\"`) instead of `None`.\n\n(I have not separately confirmed whether saving the form *without* interacting with the `format_rule` field at all — only editing some other field — also reproduces this. Since the textarea's `onChange` only fires on user interaction, that path may or may not trigger the same key-deletion; the confirmed repro is interacting with the field itself.)\n\n### Expected behavior\n\nEither:\n- The string input widget should be able to report an explicit `null` distinct from `undefined`, and the object-flush logic should preserve an explicitly-`null` value in the submitted document (not delete the key); or\n- At minimum, the block-edit UI should not silently strip/alter fields the user never touched — only fields actually changed by the user should be able to affect the saved document.\n\n### Additional context\n\nThis surfaced during real debugging of a healthcare-integration block (an HL7-code-extraction rule config) where the non-null default (`\"value.split(',')\"`) is only safe for one input shape, and `None` is required for a different, equally valid input shape (real HL7 field repetition, parsed into a list rather than a delimited string). A UI edit to an unrelated field on the same block silently reverted this to the default, breaking extraction for that site with no error — only a downstream symptom (fewer extracted values than expected).\n\nThis is likely related to (but distinct from) two older, closed issues about block-document editing that also stemmed from `merge_existing_data` semantics:\n- #7264 — \"Allow removal of field values for previously created block documents\"\n- #7516 — \"Block attribute cannot be reverted to a default empty value from the UI\" (fixed by introducing `merge_existing_data: false`, which appears to be the direct cause of *this* issue — full-replace-on-save means any field the widget layer can't correctly serialize as explicit `null` gets silently defaulted instead of preserved)\n\n### Version info\n\n```\nPrefect: 3.6.24\n```\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-07-16T03:42:11Z",
+        "updated_at": "2026-08-10T14:50:29Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22525",
+        "author": "MikeRossDev"
+      },
+      "fix_pr_number": 22774,
+      "fix_pr_title": "Persist explicit null values from the schema form null branch",
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22774",
+      "fix_pr_merged_at": "2026-08-10T14:50:27Z",
+      "merge_commit_sha": "70deffd7e022a4c97c8db88c25e3a3e60480c8d1",
+      "pre_fix_sha": "fc2add9829b99be48dd45e7d61a8518e27b8954d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-null.tsx",
+        "ui-v2/src/components/schemas/schema-form-input.tsx"
+      ],
+      "changed_files": [
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 78,
+          "deletions": 0,
+          "changes": 78,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-null.test.tsx",
+          "status": "added",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 0,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "file does not exist at the pre-fix commit"
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-null.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 17,
+          "deletions": 1,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 74,
+          "deletions": 1,
+          "changes": 75,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PrefectHQ/prefect"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-10T14:50:27Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-16T03:42:11+00:00, pr_merged_at=2026-08-10T14:50:27+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "5402 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #22774 is the merged same-repository fix for Issue #22525, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two TSX components persist explicit null values through the schema form; test files are removed from ground truth and TypeScript remains file-only in the current symbol index."
+      ]
+    },
+    {
+      "id": "prefecthq-prefect-issue-22753-pr-22754",
+      "repository": "PrefectHQ/prefect",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 22753,
+        "title": "V2 UI Custom Run crashes when an anyOf schema combines date and string enum",
+        "body": "## Bug summary\n\nThe V2 Custom Run page crashes with **`Invalid time value`** when an `anyOf` parameter contains both a date-formatted string and a string enum, and the deployment's value is an enum member.\n\nThe same deployment renders normally in the legacy V1 UI, which shows the `date` and `str` alternatives. The issue is isolated to the V2 form.\n\n### Minimal reproduction\n\n```python\nfrom datetime import date\nfrom typing import Literal\n\nfrom pydantic import BaseModel\nfrom prefect import flow\n\n\nclass Builder(BaseModel):\n    day: date | Literal[\n        \"today\",\n        \"prev\",\n        \"prev_td\",\n        \"prev_td_if_not_td_today\",\n    ] = \"prev_td\"\n\n\n@flow\ndef check(builder: Builder) -> None:\n    pass\n\n\nif __name__ == \"__main__\":\n    check.serve(\n        name=\"ui-anyof-date-enum-repro\",\n        parameters={\"builder\": {\"day\": \"prev_td\"}},\n    )\n```\n\nOpen the deployment's **Custom Run** page in the V2 UI. The generated parameter schema is:\n\n```json\n{\n  \"anyOf\": [\n    { \"format\": \"date\", \"type\": \"string\" },\n    {\n      \"enum\": [\"today\", \"prev\", \"prev_td\", \"prev_td_if_not_td_today\"],\n      \"type\": \"string\"\n    }\n  ]\n}\n```\n\n### Actual behavior\n\nThe V2 UI displays its error state:\n\n> Something went wrong\n>\n> Invalid time value\n\nIt automatically retries but remains unusable.\n\n### Expected behavior\n\nThe UI should select the enum branch for `\"prev_td\"`, render an enum control, and allow the flow run to be created.\n\n### Source-level cause\n\n[`getIndexForAnyOfPropertyValue`](https://github.com/PrefectHQ/prefect/blob/main/ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts#L47-L50) selects string alternatives using only `definition.type === \"string\"`. Both alternatives have that type, so it selects the first, date-formatted branch.\n\n[`SchemaFormInputStringFormatDate`](https://github.com/PrefectHQ/prefect/blob/main/ui-v2/src/components/schemas/schema-form-input-string-format-date.tsx#L28-L31) then parses `\"prev_td\"` as a date; rendering formats that invalid date and throws `Invalid time value`.\n\nA regression test should cover a string enum value with `anyOf: [{ type: \"string\", format: \"date\" }, { type: \"string\", enum: [...] }]` and assert that the enum branch is selected.\n\n### Related work\n\n[#20631](https://github.com/PrefectHQ/prefect/pull/20631) fixed a different `anyOf` tab-selection issue involving typeless Prefect-kind values. The current `main` implementation still uses type-only matching for ordinary string values, so it does not cover this case.\n\n## Version info\n\n```text\nVersion:              3.8.1\nAPI version:          0.8.4\nPython version:       3.14.6\nPydantic version:     2.13.4\nServer type:          server\n```\n\n## Additional context\n\nThe failure was observed in the V2 UI error state. The same deployment opens successfully in the legacy V1 UI, which renders the `date` and `str` alternatives without a crash. Screenshots are available if needed.\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-07T16:31:25Z",
+        "updated_at": "2026-08-10T14:00:11Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22753",
+        "author": "xcRRRRt"
+      },
+      "fix_pr_number": 22754,
+      "fix_pr_title": "Select the matching enum branch for anyOf string values in ui-v2 schema forms",
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22754",
+      "fix_pr_merged_at": "2026-08-10T14:00:09Z",
+      "merge_commit_sha": "5834fdf147c1d5b45b53833ff6311ecb83e6c5e5",
+      "pre_fix_sha": "af6dccb217d31183941574d05864b3c822763be4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-any-of.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-string-format-date.tsx",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "changed_files": [
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 46,
+          "deletions": 2,
+          "changes": 48,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-any-of.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 21,
+          "deletions": 3,
+          "changes": 24,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-string-format-date.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 0,
+          "changes": 16,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-string-format-date.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.test.ts",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 75,
+          "deletions": 1,
+          "changes": 76,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 45,
+          "deletions": 3,
+          "changes": 48,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PrefectHQ/prefect"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-10T14:00:09Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-07T16:31:25+00:00, pr_merged_at=2026-08-10T14:00:09+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "6 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "6 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2911 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #22754 is the merged same-repository fix for Issue #22753, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three production files jointly select the matching anyOf enum branch and synchronize controlled values; paired test files are excluded and TypeScript remains file-only."
+      ]
+    },
+    {
+      "id": "python-hyper-h2-issue-474-pr-1321",
+      "repository": "python-hyper/h2",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 474,
+        "title": "Rewrite frame_buffer to use bytearray()",
+        "body": "Good artists copy, great artists steal. One of @njsmith's great decisions with [h11](https://github.com/njsmith/h11) was to write his [buffer](https://github.com/njsmith/h11/blob/master/h11/_receivebuffer.py) in terms of bytearray. This has some major efficiency gains on Python 3.4.\r\n\r\nAn easy win for us would be to rewrite the buffering internals of our frame buffer using h11's, while removing the things that h11's buffer implements that we don't need (in particular, any line-oriented constructs). Before we do it, we should write a benchmark of the buffering performance under reasonable HTTP/2 conditions to see what kind of improvements we see.\r\n\r\nWhile I'm here: @fijal, the comments in h11's framebuffer say:\r\n\r\n```python\r\n# Note that starting in Python 3.4, deleting the initial n bytes from a\r\n# bytearray is amortized O(n), thanks to some excellent work by Antoine\r\n# Martin:\r\n#\r\n#     https://bugs.python.org/issue19087\r\n\r\n...\r\n\r\n# make sure PyPy also has the optimization\r\n```\r\n\r\nDoes it?",
+        "labels": [
+          "Enhancement",
+          "Easy",
+          "Performance"
+        ],
+        "comments_count": 2,
+        "created_at": "2017-03-07T11:51:49Z",
+        "updated_at": "2026-07-28T19:44:37Z",
+        "html_url": "https://github.com/python-hyper/h2/issues/474",
+        "author": "Lukasa"
+      },
+      "fix_pr_number": 1321,
+      "fix_pr_title": "Remove consumed frames in place",
+      "fix_pr_url": "https://github.com/python-hyper/h2/pull/1321",
+      "fix_pr_merged_at": "2026-07-28T19:44:36Z",
+      "merge_commit_sha": "9a7ff7430df669fa8e90b6121f3cc1ed64d1115a",
+      "pre_fix_sha": "6cce763997eca5b826f3e435a611b7a7fc73f633",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/frame_buffer.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/h2/frame_buffer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 1,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_basic_logic.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 18,
+          "deletions": 0,
+          "changes": 18,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h2"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-28T19:44:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2017-03-07T11:51:49+00:00, pr_merged_at=2026-07-28T19:44:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1004 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Enhancement, Easy, Performance"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1321 is the merged same-repository fix for Issue #474, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "FrameBuffer.__next__ consumes parsed frame bytes in place to avoid retaining copied buffers; its regression test is excluded."
+      ]
+    },
+    {
+      "id": "boto-boto3-issue-1464-pr-1511",
+      "repository": "boto/boto3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1464,
+        "title": "'NoneType' object has no attribute 'type_name' when tagging",
+        "body": "Hi\r\nI want to tag a newly created `table`.\r\n```\r\ndynamodb_resource = boto3.resource('dynamodb')\r\ntable = dynamodb_resource.create_table(... )\r\ndynamodb_resource.meta.client.tag_resource(ResourceArn=table.table_arn,\r\n                                          Tags=[\r\n                                              {\r\n                                                  \"Key\": \"project\",\r\n                                                  \"Value\": \"val\"\r\n                                              }\r\n                                          ])\t\r\n```\r\n\r\nThe tag_resource call results in \r\n```\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/botocore/client.py\", line 317, in _api_call\r\n    return self._make_api_call(operation_name, kwargs)\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/botocore/client.py\", line 609, in _make_api_call\r\n    model=operation_model, context=request_context\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/botocore/hooks.py\", line 227, in emit\r\n    return self._emit(event_name, kwargs)\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/botocore/hooks.py\", line 210, in _emit\r\n    response = handler(**kwargs)\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/boto3/dynamodb/transform.py\", line 203, in inject_attribute_value_output\r\n    'AttributeValue')\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/boto3/dynamodb/transform.py\", line 252, in transform\r\n    model, params, transformation, target_shape)\r\n  File \"/home/georgi/.virtualenvs/para_api-tKuPD0ya/lib/python3.6/site-packages/boto3/dynamodb/transform.py\", line 256, in _transform_parameters\r\n    type_name = model.type_name\r\nAttributeError: 'NoneType' object has no attribute 'type_name'\r\n```\r\n\r\npython: 3.6.3\r\nboto3: 1.5.25",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 5,
+        "created_at": "2018-02-25T19:40:20Z",
+        "updated_at": "2026-07-05T13:00:57Z",
+        "html_url": "https://github.com/boto/boto3/issues/1464",
+        "author": "jorotenev"
+      },
+      "fix_pr_number": 1511,
+      "fix_pr_title": "Handle dynamo operations with no output",
+      "fix_pr_url": "https://github.com/boto/boto3/pull/1511",
+      "fix_pr_merged_at": "2018-04-13T17:46:18Z",
+      "merge_commit_sha": "98f18a41b66e19ec626e5d88066448c73ce9c0a1",
+      "pre_fix_sha": "5c773d9e5eb0ca33c1ebef9e32e7773d89c5aff4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "boto3/dynamodb/transform.py"
+      ],
+      "changed_files": [
+        {
+          "path": ".changes/next-release/bugfix-dynamodb-48781.json",
+          "status": "added",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "boto3/dynamodb/transform.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 3,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/functional/dynamodb/test_table.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 0,
+          "changes": 15,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/unit/dynamodb/test_transform.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 0,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: boto/boto3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2018-04-13T17:46:18Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2018-02-25T19:40:20+00:00, pr_merged_at=2018-04-13T17:46:18+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1911 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1511 is the merged same-repository fix for Issue #1464, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "TransformationInjector.inject_attribute_value_output guards operations whose model has no output shape; release metadata and tests are excluded."
+      ]
+    },
+    {
+      "id": "encode-django-rest-framework-issue-6010-pr-9981",
+      "repository": "encode/django-rest-framework",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 6010,
+        "title": "Crash when using ListSerializer for an update on a model that has Unique together constraints",
+        "body": "## Checklist\r\n\r\n- [x] I have verified that that issue exists against the `master` branch of Django REST framework.\r\n- [x] I have searched for similar issues in both open and closed tickets and cannot find a duplicate.\r\n- [x] This is not a usage question. (Those should be directed to the [discussion group](https://groups.google.com/forum/#!forum/django-rest-framework) instead.)\r\n- [x] This cannot be dealt with as a third party library. (We prefer new functionality to be [in the form of third party libraries](http://www.django-rest-framework.org/topics/third-party-resources/#about-third-party-packages) where possible.)\r\n- [x] I have reduced the issue to the simplest possible case.\r\n- [ ] I have included a failing test as a pull request. (If you are unable to do so we can still accept the issue.)\r\n\r\n\r\nWhen using a [custom ListSerializer to update data](http://www.django-rest-framework.org/api-guide/serializers/#customizing-multiple-update) and providing the instance as a queryset, if the model has some unique together constraint, the is_valid call crashes\r\n## Steps to reproduce\r\nCreate a model with a unique together constraint\r\nCreate a serializer for this model\r\n(Probably not needed) Create a custom list serializer with the `update` method overwritten and provide it to your model serializer with `list_serializer_class`\r\nNow use the model serializer to serialize a list of data and provide both `many=True` and `instance=YourModel.objects.all()` to your serializer `__init__`\r\nCall `serializer.is_valid(raise_exception=True)`\r\n\r\n## Expected behavior\r\nIt should pass `is_valid` or at least not crash\r\n\r\n## Actual behavior\r\nIt crashes in the [unique together validator](https://github.com/encode/django-rest-framework/blob/master/rest_framework/validators.py#L154) because `instance` was not popped in the [many_init](https://github.com/encode/django-rest-framework/blob/master/rest_framework/serializers.py#L145) so the child will receive a queryset instead of a model instance\r\n\r\n## How to fix\r\nPopping `instance` from the kwargs in [many_init](https://github.com/encode/django-rest-framework/blob/master/rest_framework/serializers.py#L145) should do the trick but I'm not sure this won't introduce unforeseen problems\r\nMoreover, the validators will probably fail because they will consider the call as a create rather than an update so here is that",
+        "labels": [
+          "Cleanup"
+        ],
+        "comments_count": 11,
+        "created_at": "2018-05-30T18:08:36Z",
+        "updated_at": "2026-08-06T08:57:57Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/6010",
+        "author": "PhilipGarnero"
+      },
+      "fix_pr_number": 9981,
+      "fix_pr_title": "Raise clear error for unsupported unique-together list updates",
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/9981",
+      "fix_pr_merged_at": "2026-08-06T08:57:26Z",
+      "merge_commit_sha": "7508e0cf122d5250a2cba824a3c537a288acb489",
+      "pre_fix_sha": "cf582fb58e9e5ffcc8ed78a2cb9aaa8f4865666a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "rest_framework/validators.py"
+      ],
+      "changed_files": [
+        {
+          "path": "rest_framework/validators.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_validators.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 30,
+          "deletions": 0,
+          "changes": 30,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: encode/django-rest-framework"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-06T08:57:26Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2018-05-30T18:08:36+00:00, pr_merged_at=2026-08-06T08:57:26+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2368 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Cleanup"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #9981 is the merged same-repository fix for Issue #6010, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "UniqueTogetherValidator.__call__ raises a clear error for unsupported list updates; the validator test file is excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-92-pr-109",
+      "repository": "python-hyper/h11",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 92,
+        "title": "Handle multiple Content-Length headers with the same value",
+        "body": "From RFC 7230 Section 3.3.2:\r\n\r\n```\r\nIf a message is received that has multiple Content-Length header\r\n   fields with field-values consisting of the same decimal value, or a\r\n   single Content-Length header field with a field value containing a\r\n   list of identical decimal values (e.g., \"Content-Length: 42, 42\"),\r\n   indicating that duplicate Content-Length header fields have been\r\n   generated or combined by an upstream message processor, then the\r\n   recipient MUST either reject the message as invalid or replace the\r\n   duplicated field-values with a single valid Content-Length field\r\n   containing that decimal value prior to determining the message body\r\n   length or forwarding the message.\r\n```\r\n\r\nCurrently h11 will error out if multiple `Content-Length` headers are sent even when equal in value. Perhaps we should collapse the multiple headers into only one or allow the duplicate to pass through if the values are the same?",
+        "labels": [],
+        "comments_count": 4,
+        "created_at": "2020-01-08T19:18:38Z",
+        "updated_at": "2020-10-05T14:25:14Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/92",
+        "author": "sethmlarson"
+      },
+      "fix_pr_number": 109,
+      "fix_pr_title": "Content length handling",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/109",
+      "fix_pr_merged_at": "2020-10-05T14:25:14Z",
+      "merge_commit_sha": "fdab13398ef521f63f1d44051f2abdeeb70c18db",
+      "pre_fix_sha": "0d92213c370cbc97964ad87de48c2262468f6d13",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "h11/_headers.py"
+      ],
+      "changed_files": [
+        {
+          "path": "h11/_headers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 14,
+          "deletions": 6,
+          "changes": 20,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/tests/test_headers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-10-05T14:25:14Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-01-08T19:18:38+00:00, pr_merged_at=2020-10-05T14:25:14+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "941 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #109 is the merged same-repository fix for Issue #92, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "normalize_and_validate accepts duplicate equal Content-Length values while retaining rejection of conflicting values; tests are excluded."
+      ]
+    },
+    {
+      "id": "pallets-jinja-issue-1253-pr-1665",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1253,
+        "title": "What's wrong with this Jinja template when using {% elif %}",
+        "body": "I have the following **Jinja** template:\r\n\r\n```jinja\r\n{% if new_data_set_created is defined %}\r\n    {% if new_data_set_created == True %}\r\n        The new image data set <strong>{{ form_data[\"data_set_name\"] }}</strong> has been created.\r\n        {% set form_data = {\"data_set_name\": \"\", \"client\": \"\", \"project\": \"\"} %}\r\n    {% else %}\r\n        The new image data set <strong>{{ form_data[\"data_set_name\"] }}</strong> could not be created.<br />\r\n    {% endif %}\r\n{% elif deleted_data_set is defined %}\r\n    The image data set <strong>{{ deleted_data_set }}</strong> has been deleted from DB and from disk.\r\n    {% set form_data = {\"data_set_name\": \"\", \"client\": \"\", \"project\": \"\"} %}\r\n{% else %}\r\n    {% set form_data = {\"data_set_name\": \"\", \"client\": \"\", \"project\": \"\"} %}\r\n{% endif %}\r\n```\r\n\r\nHowever, when rendering this template via **Flask** I get the error message that `form_data` in line 3 of this code section is undefined (which is not the case, I double-checked that):\r\n\r\n    jinja2.exceptions.UndefinedError: 'form_data' is undefined\r\n\r\nNow when I remove the `elif` block from that code section above (i.e. lines 8-10) then the very same template does work again and line 3 does not lead to an error any more.\r\n\r\nI am calling this template like so:\r\n\r\n```python\r\nreturn render_template(\r\n    \"image-data-sets.html\",\r\n    new_data_set_created=True,\r\n    form_data=request.form,\r\n    data_sets=ImageDataSet.query.all(),\r\n    clients=clients,\r\n)\r\n```\r\n\r\nI double-checked that `request.form` (and thus `form_data` within the template) is not `None`. And as said, I don't make any changes to this call, I just remove those lines from the template and then it's working.\r\n\r\nSo my question: Why does removing the `elif` block fix this issue, and why is this error raised in the first place? What's wrong with my `if-elif-else-endif` block? Is this a bug or am I missing something?",
+        "labels": [],
+        "comments_count": 4,
+        "created_at": "2020-07-01T20:22:37Z",
+        "updated_at": "2025-01-05T00:20:53Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1253",
+        "author": "haimat"
+      },
+      "fix_pr_number": 1665,
+      "fix_pr_title": "Fix bug involving calling set on a template parameter within all branches of an if block",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1665",
+      "fix_pr_merged_at": "2024-12-21T17:46:55Z",
+      "merge_commit_sha": "c8fdce1e0333f1122b244b03a48535fdd7b03d91",
+      "pre_fix_sha": "fbc3a696c729d177340cc089531de7e2e5b6f065",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/idtracking.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/jinja2/idtracking.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 10,
+          "changes": 17,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_regression.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 0,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-21T17:46:55Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-07-01T20:22:37+00:00, pr_merged_at=2024-12-21T17:46:55+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1886 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #1665 is the merged same-repository fix for Issue #1253, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Symbols.branch_update fixes load inference when every conditional branch sets a template parameter; tests and release notes are excluded."
+      ]
+    },
+    {
+      "id": "matplotlib-matplotlib-issue-18171-pr-18172",
+      "repository": "matplotlib/matplotlib",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 18171,
+        "title": "webAgg backend incorrectly reports middle clicks as right clicks",
+        "body": "<!--To help us understand and resolve your issue, please fill out the form to the best of your ability.-->\r\n<!--You can feel free to delete the sections that do not apply.-->\r\n\r\n### Bug report\r\n\r\n**Bug summary**\r\nThe webAgg backend reports middle click events as right click events. This is caused by these lines:\r\n\r\n\r\n\r\n\r\nhttps://github.com/matplotlib/matplotlib/blob/ede8e566e5c7e7a12fdd66231ba02f363aab8913/lib/matplotlib/backends/backend_webagg_core.py#L263-L269\r\n\r\nI don't think I entirely understand the issue described by that comment but I'd argue that it is better to allow users to make the choice to listen for middle clicks rather than to report middle click as right click. Also there does not seem be anything in MouseEvent docstring about this: https://matplotlib.org/3.3.0/api/backend_bases_api.html#matplotlib.backend_bases.MouseEvent\r\n\r\nI ran into this when using the ipympl backend (xref https://github.com/matplotlib/ipympl/issues/254)\r\n**Code for reproduction**\r\n\r\n\r\n<!--A minimum code snippet required to reproduce the bug.\r\nPlease make sure to minimize the number of dependencies required, and provide\r\nany necessary plotted data.\r\nAvoid using threads, as Matplotlib is (explicitly) not thread-safe.-->\r\nIn the notebook:\r\n```python\r\nimport ipywidgets as widget\r\nimport matplotlib.pyplot as plt\r\n%matplotlib widget\r\n\r\nout = widgets.Output()\r\n@out.capture()\r\ndef callback(event):\r\n    print(event.button)\r\n    \r\nplt.ioff(); fig,ax = plt.subplots(); plt.ion()\r\nfig.canvas.mpl_connect('button_press_event', callback)\r\nfs = 15\r\nax.text(0.1,0.1,'left click here', fontsize=fs)\r\nax.text(0.5,0.5,'middle click here', fontsize=fs)\r\nax.text(0.7,0.8,'right click here', fontsize=fs)\r\nwidgets.HBox([out,fig.canvas])\r\n```\r\n\r\n**Actual outcome**\r\n\r\n<!--The output produced by the above code, which may be a screenshot, console output, etc.-->\r\n![jupyter](https://user-images.githubusercontent.com/10111092/89341927-082bf080-d670-11ea-90b5-45d42fb9a829.gif)\r\n\r\n\r\n**Expected outcome**\r\nin ipython it gives this\r\n![ipython](https://user-images.githubusercontent.com/10111092/89341944-0feb9500-d670-11ea-8401-bad707be58b3.gif)\r\n\r\n<!--A description of the expected outcome from the code snippet-->\r\n<!--If this used to work in an earlier version of Matplotlib, please note the version it used to work on-->\r\n\r\n**Matplotlib version**\r\n<!--Please specify your platform and versions of the relevant libraries you are using:-->\r\n  * Operating system: Ubuntu 20.04\r\n  * Matplotlib version: 3.30\r\n  * Matplotlib backend (`print(matplotlib.get_backend())`): 'module://ipympl.backend_nbagg'\r\n  * Python version: 3.8.5\r\n  * Jupyter version (if applicable): jupyterlab 2.2.0\r\n\r\n\r\n<!--Please tell us how you installed matplotlib and python e.g., from source, pip, conda-->\r\n<!--If you installed from conda, please specify which channel you used if not the default-->\r\n\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2020-08-04T20:41:04Z",
+        "updated_at": "2026-08-11T17:50:45Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/18171",
+        "author": "ianhi"
+      },
+      "fix_pr_number": 18172,
+      "fix_pr_title": "allow webAgg to report middle click events",
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/18172",
+      "fix_pr_merged_at": "2020-08-05T03:34:09Z",
+      "merge_commit_sha": "dffc19c2f96d9ae245a17946292e938d0243416a",
+      "pre_fix_sha": "ede8e566e5c7e7a12fdd66231ba02f363aab8913",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/api/next_api_changes/behavior/18172-IHI.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "lib/matplotlib/backends/backend_webagg_core.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 8,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: matplotlib/matplotlib"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-08-05T03:34:09Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-08-04T20:41:04+00:00, pr_merged_at=2020-08-05T03:34:09+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2858 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #18172 is the merged same-repository fix for Issue #18171, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "FigureCanvasWebAggCore._handle_mouse stops remapping middle-button events to right-button events; the API change note is excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-134-pr-140",
+      "repository": "python-hyper/h11",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 134,
+        "title": "Increase/Decrease status code ranges",
+        "body": "Thank you for all the development. \r\n\r\nI have seen in h11/h11/_events.py / the handled status codes ranges are between `[200, 600)`. \r\n\r\n```\r\n@dataclass(init=False, frozen=True)\r\nclass Response(_ResponseBase):\r\n    \"\"\"The beginning of an HTTP response.\r\n    Fields:\r\n    .. attribute:: status_code\r\n       The status code of this response, as an integer. For an\r\n       :class:`Response`, this is always in the range [200,\r\n       600).\r\n    .. attribute:: headers\r\n       Request headers, represented as a list of (name, value) pairs. See\r\n       :ref:`the header normalization rules <headers-format>` for details.\r\n    .. attribute:: http_version\r\n       The HTTP protocol version, represented as a byte string like\r\n       ``b\"1.1\"``. See :ref:`the HTTP version normalization rules\r\n       <http_version-format>` for details.\r\n    .. attribute:: reason\r\n       The reason phrase of this response, as a byte string. For example:\r\n       ``b\"OK\"``, or ``b\"Not Found\"``.\r\n    \"\"\"\r\n\r\n    def __post_init__(self) -> None:\r\n        if not (200 <= self.status_code < 600):\r\n            raise LocalProtocolError(\r\n                \"Response status_code should be in range [200, 600), not {}\".format(\r\n                    self.status_code\r\n                )\r\n            )\r\n```\r\n\r\nAs this is the standard to follow, it's great to have it, but there are some http servers that don't follow the standard. What you think about adding the possibility to setup the status code ranges or increasing them for possible exceptional cases?",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2021-08-06T10:50:19Z",
+        "updated_at": "2022-07-10T03:10:46Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/134",
+        "author": "kujaomega"
+      },
+      "fix_pr_number": 140,
+      "fix_pr_title": "Expand the allowed status codes to 999",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/140",
+      "fix_pr_merged_at": "2022-01-19T18:27:21Z",
+      "merge_commit_sha": "96c0a3369356d40f4bed0fa967f48f77100f38ca",
+      "pre_fix_sha": "6578c26465f836f64c9a8a6b4edc1920038ee8ff",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "h11/_events.py"
+      ],
+      "changed_files": [
+        {
+          "path": "h11/_events.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 3,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-01-19T18:27:21Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2021-08-06T10:50:19+00:00, pr_merged_at=2022-01-19T18:27:21+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1522 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "PR #140 is the merged same-repository fix for Issue #134, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Response.__post_init__ expands the accepted response status range through 999; the single production file contains the complete behavior change."
+      ]
+    }
+  ]
+}

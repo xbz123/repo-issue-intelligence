@@ -406,6 +406,21 @@ def test_curate_expansion_can_narrow_audited_expected_files() -> None:
     assert curated.candidates[0].expected_files == ["src/fix.py"]
     assert expanded.cases[-1].expected_files == ["src/fix.py"]
 
+    wide_candidate = candidate.model_copy(
+        update={
+            "expected_files": [f"src/fix_{index}.py" for index in range(6)],
+        },
+        deep=True,
+    )
+    wide_selection = selection.model_copy(deep=True)
+    wide_selection.selections[0].expected_files = None
+    with pytest.raises(ValueError, match="more than 5 expected production files"):
+        curate_benchmark_expansion(
+            base_manifest,
+            [wide_candidate],
+            wide_selection,
+        )
+
     selection.selections[0].expected_files = ["src/not-in-the-patch.py"]
     with pytest.raises(ValueError, match="outside the audited patch"):
         curate_benchmark_expansion(base_manifest, [candidate], selection)
