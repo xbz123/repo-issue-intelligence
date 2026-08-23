@@ -1,35 +1,39 @@
 # Real-Project File Localization Benchmark
 
-## Current result: manifest v12 on 90 frozen cases
+## Current result: manifest v13 on 100 frozen cases
 
-Manifest v12 contains 90 reviewed Issue/Fix-PR cases across 43 public repositories: 17 main,
-11 calibration, and 62 generalization cases. It records 135 production-file targets and 87 reviewed
-symbol targets across 63 cases. Every case embeds the complete Issue snapshot, merged same-repository
+Manifest v13 contains 100 reviewed Issue/Fix-PR cases across 46 public repositories: 17 main,
+11 calibration, and 72 generalization cases. It records 148 production-file targets and 97 reviewed
+symbol targets across 72 cases. Every case embeds the complete Issue snapshot, merged same-repository
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.27 runs finished 90/90 cases. After excluding timestamps and elapsed
-fields, their candidates, symbols, per-case metrics, tier metrics, and aggregates were identical.
+Three complete deterministic v0.27 runs finished 100/100 cases. After excluding timestamps,
+elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
+and aggregates were identical.
 
-| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Analysis per case |
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Cold / warm analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 90/90 | 0.3652 | 0.6372 | 0.7131 | 0.8635 | 0.5704 | 25,250 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 35,575 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 8,827 ms |
-| Generalization | 62/62 | 0.3446 | 0.6347 | 0.6884 | 0.8019 | 0.5671 | 25,332 ms |
+| Overall | 100/100 | 0.3620 | 0.6318 | 0.7085 | 0.8538 | 0.5651 | 7,526 / 4,426 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 9,583 / 5,968 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 2,369 / 1,531 ms |
+| Generalization | 72/72 | 0.3431 | 0.6275 | 0.6854 | 0.7970 | 0.5602 | 7,829 / 4,505 ms |
 
-The latency column is the mean of the three in-process analysis measurements. It starts after
-repository preparation and does not include clone, fetch, checkout, or Issue retrieval time.
+The cold column is run 1 with 98 cache misses and two same-SHA hits; the warm column averages runs
+2 and 3, each with 100 cache hits. Warm repository-map reuse reduced the overall in-process mean by
+41.19%, from 7,526 to 4,426 ms per case. Measurements start after repository preparation and do not
+include clone, fetch, checkout, or Issue retrieval time.
 
-Across the 63 labeled cases, Symbol Recall@1/5/10/20 is
-`0.2619/0.4299/0.4537/0.5331`, with MRR `0.3714`. Twenty-five production targets are absent from the
+Across the 72 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2500/0.3970/0.4178/0.4873`, with MRR `0.3527`. Twenty-eight production targets are absent from the
 deterministic Top-20. Six are retained-suite misses: `paramiko/common.py`, `boto3/compat.py`,
 `lib/matplotlib/cbook/__init__.py`, `src/tox/tox_env/python/runner.py`,
 `pylint/config/callback_actions.py`, and `tornado/locks.py`. The second batch adds 13 misses across
 NumPy's C DLPack implementation, Ruff's shared Rust helper, Ansible's oneline callback, three
 Virtualenv seed paths, three pandas Arrow string paths, and all four uv Rust paths. The third batch
 adds both Prefect null-form TSX files and Jinja's `idtracking.py`; the fourth adds two more Prefect
-TSX files and tox's cross-section resolver. They remain in the denominator and define concrete
+TSX files and tox's cross-section resolver. The fifth adds Pylint's class checker, Pandas `isin`,
+and Paramiko's dependency declaration. They remain in the denominator and define concrete
 retrieval work for the next stage.
 
 v0.27 also makes Git co-change evidence reproducible. It scans the 100 most recent commits reachable
@@ -166,6 +170,9 @@ new symbols.
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.27-batch5-100-cases-run1.json`
+- `benchmarks/results/deterministic-v0.27-batch5-100-cases-run2.json`
+- `benchmarks/results/deterministic-v0.27-batch5-100-cases-run3.json`
 - `benchmarks/results/deterministic-v0.27-batch4-90-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-batch4-90-cases-run2.json`
 - `benchmarks/results/deterministic-v0.27-batch4-90-cases-run3.json`
@@ -238,13 +245,13 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 ## Current limitations
 
-- The suite is not a balanced population sample; v0.14-v0.17 accept only the first 40 of 150
+- The suite is not a balanced population sample; v0.14-v0.18 accept only the first 50 of 150
   planned additions.
-- Thirty-one of 90 cases have multi-file production ground truth.
-- File Recall@20 is `0.8635`; 25 reviewed targets remain outside the current candidate pool.
-- Symbol Recall@20 is `0.5331`, so within-file localization remains a major bottleneck.
+- Thirty-three of 100 cases have multi-file production ground truth.
+- File Recall@20 is `0.8538`; 28 reviewed targets remain outside the current candidate pool.
+- Symbol Recall@20 is `0.4873`, so within-file localization remains a major bottleneck.
 - TypeScript, Rust, and C participate in file localization but have no parsed symbol or cross-language graph.
-- The retained DeepSeek evidence covers manifest v8 only; manifest v12 has not yet received a
+- The retained DeepSeek evidence covers manifest v8 only; manifest v13 has not yet received a
   three-run external rerank evaluation.
 - Full hypothesis generation reached 140/150 valid final contracts in the current three-run
   real-project evaluation, but run-level success still ranged from 86% to 100%.
@@ -253,7 +260,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Investigate the 25 manifest-v12 Top-20 misses, prioritizing non-Python and multi-file paths.
-4. Continue reviewing the remaining 110 primary Issue/Fix-PR candidates in balanced batches.
-5. Repeat the 90-case rank-only run after retrieval changes and report mean, variation, fallback
+3. Investigate the 28 manifest-v13 Top-20 misses, prioritizing non-Python and multi-file paths.
+4. Continue reviewing the remaining 100 primary Issue/Fix-PR candidates in balanced batches.
+5. Repeat the 100-case rank-only run after retrieval changes and report mean, variation, fallback
    taxonomy, valid-response MRR, and overall MRR.
