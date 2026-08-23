@@ -1,0 +1,195 @@
+{
+  "name": "real-project-benchmark-expansion-v0.18",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "pallets-jinja-issue-1701-pr-1702",
+      "case_id": "jinja-native-block-concat",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/runtime.py",
+          "symbol": "BlockReference.__call__"
+        }
+      ],
+      "review_notes": [
+        "Issue #1701 reproduces an integer concatenation TypeError through synchronous NativeEnvironment rendering, and merged PR #1702 fixes the BlockReference concat path from the recorded pre-fix SHA.",
+        "The production scope is only src/jinja2/runtime.py; CHANGES.rst and tests/test_nativetypes.py are excluded, and the synchronous BlockReference.__call__ path is the single pre-fix symbol target."
+      ]
+    },
+    {
+      "candidate_id": "pallets-jinja-issue-1705-pr-1706",
+      "case_id": "jinja-packageloader-missing-path",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/loaders.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/loaders.py",
+          "symbol": "PackageLoader.__init__"
+        }
+      ],
+      "review_notes": [
+        "Issue #1705 provides a missing-template-directory reproduction and traceback; merged PR #1706 adds the specific PackageLoader error at the recorded pre-fix boundary.",
+        "The production fix is confined to src/jinja2/loaders.py::PackageLoader.__init__; CHANGES.rst and the loader regression test are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-724-pr-1430",
+      "case_id": "pytest-asyncio-unclosed-event-loop",
+      "tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pytest_asyncio/plugin.py",
+          "symbol": "_temporary_event_loop_policy"
+        }
+      ],
+      "review_notes": [
+        "Issue #724 supplies a minimal async-fixture reproduction whose later asyncio.run call reports an unclosed event loop; merged PR #1430 corrects policy and runner lifecycle handling.",
+        "The old _temporary_event_loop_policy call creates and preserves the leaking loop, so it is the single pre-fix symbol target; changelog and Pytester regression files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-6643-pr-6644",
+      "case_id": "requests-leading-double-slash",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/adapters.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/adapters.py",
+          "symbol": "HTTPAdapter.request_url"
+        }
+      ],
+      "review_notes": [
+        "Issue #6643 demonstrates urllib3 reinterpreting a //v:h request target, and merged PR #6644 trims excess leading separators from the exact recorded pre-fix commit.",
+        "The production change is confined to src/requests/adapters.py::HTTPAdapter.request_url; the added adapter regression test is excluded."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-9798-pr-11159",
+      "case_id": "pylint-setattr-outside-init",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/classes/class_checker.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/checkers/classes/class_checker.py",
+          "symbol": "ClassChecker._check_attribute_defined_outside_init"
+        }
+      ],
+      "review_notes": [
+        "Issue #9798 provides a concrete setattr false-negative reproduction, and the first commit of merged PR #11159 has the recorded pre-fix SHA as its parent outside the PR commit set.",
+        "The production fix is ClassChecker._check_attribute_defined_outside_init; test fixtures, regression data, custom_dict.txt, and whatsnew fragments are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1948-pr-1949",
+      "case_id": "flake8-fstring-escaped-braces",
+      "tier": "generalization",
+      "expected_files": [
+        "src/flake8/processor.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/flake8/processor.py",
+          "symbol": "FileProcessor.build_logical_line_tokens"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #1949 directly closes Issue #1948 and changes only the production processor plus an excluded integration regression test from the recorded pre-fix SHA.",
+        "The fix handles escaped-brace F-string tokens while building logical lines, making FileProcessor.build_logical_line_tokens the reviewed pre-fix symbol target."
+      ]
+    },
+    {
+      "candidate_id": "pandas-dev-pandas-issue-59609-pr-66794",
+      "case_id": "pandas-isin-mixed-numeric-precision",
+      "tier": "generalization",
+      "expected_files": [
+        "pandas/core/algorithms.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/core/algorithms.py",
+          "symbol": "isin"
+        }
+      ],
+      "review_notes": [
+        "Issue #59609 has a concrete UInt64 and NumPy-array precision-loss reproducer, and merged PR #66794 changes pandas/core/algorithms.py::isin from the recorded pre-fix boundary.",
+        "PR #66794 also references Issue #61676; only Issue #59609 is retained so one fix is not counted twice, while tests and the v3.1 whatsnew entry are excluded."
+      ]
+    },
+    {
+      "candidate_id": "paramiko-paramiko-issue-1369-pr-1379",
+      "case_id": "paramiko-cryptography-25-ecdh",
+      "tier": "generalization",
+      "expected_files": [
+        "paramiko/ecdsakey.py",
+        "paramiko/kex_ecdh_nist.py",
+        "setup.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/ecdsakey.py",
+          "symbol": "ECDSAKey._decode_key"
+        },
+        {
+          "file": "paramiko/kex_ecdh_nist.py",
+          "symbol": "KexNistp256"
+        }
+      ],
+      "review_notes": [
+        "Issue #1369 reports CryptographyDeprecationWarning frames in ECDH key exchange, and merged PR #1379 replaces deprecated elliptic-curve APIs in both runtime modules from the recorded pre-fix SHA.",
+        "setup.py remains ground truth because the cryptography minimum-version change is required by the new APIs; .travis.yml and tests/test_kex.py are excluded."
+      ]
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-4945-pr-5055",
+      "case_id": "urllib3-url-auth-decode",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/util/url.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/urllib3/util/url.py",
+          "symbol": "Url"
+        }
+      ],
+      "review_notes": [
+        "Issue #4945 provides a URL credential decoding reproduction, and merged PR #5055 adds the decoding behavior inside the existing Url class from the recorded pre-fix SHA.",
+        "The automatic three-file set is narrowed to src/urllib3/util/url.py: request.py is documentation-only and socks.py is auxiliary reuse from another fix, not Issue #4945 ground truth."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-uv-issue-21122-pr-21131",
+      "case_id": "uv-cyclonedx-component-hashes",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/uv-resolver/src/lock/export/cyclonedx_json.rs",
+        "crates/uv/src/commands/project/export.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #21122 reproduces CycloneDX exports omitting distribution hashes already present in uv.lock, and merged PR #21131 implements the hash conversion and CLI plumbing from the recorded pre-fix SHA.",
+        "Both Rust production files are required while the export snapshot test is excluded; symbol ground truth remains empty because the current index does not extract Rust symbols."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "pandas-dev-pandas-issue-61676-pr-66794",
+      "reason": "PR #66794 is already represented by the overlapping Issue #59609 case; accepting Issue #61676 would count the same fix twice."
+    }
+  ]
+}
