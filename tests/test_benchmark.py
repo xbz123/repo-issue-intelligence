@@ -1,8 +1,10 @@
+import json
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
 from repo_issue_intelligence.benchmark import (
+    REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
     BenchmarkCase,
     BenchmarkManifest,
     BenchmarkRun,
@@ -10,6 +12,8 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkTier,
     BenchmarkVariant,
     _aggregate,
+    _load_or_build_repository_map,
+    _repository_map_cache_path,
     evaluate_case,
     load_manifest,
     prepare_repository,
@@ -353,6 +357,20 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     assert run.initial_output_tokens == 8_192
     assert run.max_output_tokens == 20_000
     assert run.reasoning_effort == "none"
+    assert run.model == "deepseek-v4-flash"
+    assert (
+        run.repository_map_cache_schema_version
+        == REPOSITORY_MAP_CACHE_SCHEMA_VERSION
+    )
+    assert run.results[0].repository_map_cache_hit is False
+
+    warm_run = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.HYBRID,
+        analyzer=ReverseEvidenceAnalyzer(),
+    )
+    assert warm_run.results[0].repository_map_cache_hit is True
 
     historical_payload = run.model_dump(mode="json")
     historical_payload["variant"] = "hybrid-full"
@@ -425,6 +443,199 @@ def test_tracked_repository_files_exclude_ignored_artifacts(tmp_path: Path) -> N
 
     assert included_files == [".gitignore", "src/target.py"]
     assert [record.path for record in repository_map.files] == ["src/target.py"]
+
+
+def test_repository_map_cache_reuses_valid_map_and_rebinds_root(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    first_repository = create_repository(tmp_path / "first")
+    second_repository = create_repository(tmp_path / "second")
+    included_files = ["src/token_router.py", "src/token_service.py"]
+    cache_root = tmp_path / "cache"
+    build_calls = 0
+
+    def counting_build(root, included_files=None):
+        nonlocal build_calls
+        build_calls += 1
+        return build_repository_map(root, included_files=included_files)
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.build_repository_map",
+        counting_build,
+    )
+
+    first_map, first_hit = _load_or_build_repository_map(
+        case,
+        first_repository,
+        included_files,
+        cache_root,
+    )
+    second_map, second_hit = _load_or_build_repository_map(
+        case,
+        second_repository,
+        included_files,
+        cache_root,
+    )
+
+    assert first_hit is False
+    assert second_hit is True
+    assert build_calls == 1
+    assert second_map.root == str(second_repository.resolve())
+    assert first_map.model_copy(update={"root": second_map.root}) == second_map
+
+
+def test_repository_map_cache_rebuilds_corrupt_and_stale_entries(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+    included_files = ["src/token_router.py", "src/token_service.py"]
+    cache_root = tmp_path / "cache"
+    build_calls = 0
+
+    def counting_build(root, included_files=None):
+        nonlocal build_calls
+        build_calls += 1
+        return build_repository_map(root, included_files=included_files)
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.build_repository_map",
+        counting_build,
+    )
+    _load_or_build_repository_map(case, repository, included_files, cache_root)
+    cache_path = _repository_map_cache_path(cache_root, case)
+    cache_path.write_text("{truncated", encoding="utf-8")
+
+    _, corrupt_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        included_files,
+        cache_root,
+    )
+    (repository / "src" / "later.py").write_text(
+        "def later():\n    return None\n",
+        encoding="utf-8",
+    )
+    _, stale_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        [*included_files, "src/later.py"],
+        cache_root,
+    )
+
+    assert corrupt_hit is False
+    assert stale_hit is False
+    assert build_calls == 3
+
+
+def test_repository_map_cache_rebuilds_incomplete_or_duplicate_maps(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+    included_files = ["src/token_router.py", "src/token_service.py"]
+    cache_root = tmp_path / "cache"
+    build_calls = 0
+
+    def counting_build(root, included_files=None):
+        nonlocal build_calls
+        build_calls += 1
+        return build_repository_map(root, included_files=included_files)
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.build_repository_map",
+        counting_build,
+    )
+    _load_or_build_repository_map(case, repository, included_files, cache_root)
+    cache_path = _repository_map_cache_path(cache_root, case)
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    payload["repository_map"]["files"].pop()
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, incomplete_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        included_files,
+        cache_root,
+    )
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    payload["repository_map"]["files"].append(
+        payload["repository_map"]["files"][0]
+    )
+    cache_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    _, duplicate_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        included_files,
+        cache_root,
+    )
+
+    assert incomplete_hit is False
+    assert duplicate_hit is False
+    assert build_calls == 3
+
+
+def test_repository_map_cache_separates_pre_fix_shas(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    first_case = benchmark_case(updated_at)
+    second_case = first_case.model_copy(update={"pre_fix_sha": "b" * 40})
+    repository = create_repository(tmp_path)
+    included_files = ["src/token_router.py", "src/token_service.py"]
+    cache_root = tmp_path / "cache"
+
+    _, first_hit = _load_or_build_repository_map(
+        first_case,
+        repository,
+        included_files,
+        cache_root,
+    )
+    _, second_hit = _load_or_build_repository_map(
+        second_case,
+        repository,
+        included_files,
+        cache_root,
+    )
+
+    assert first_hit is False
+    assert second_hit is False
+    assert _repository_map_cache_path(cache_root, first_case).is_file()
+    assert _repository_map_cache_path(cache_root, second_case).is_file()
+
+
+def test_repository_map_cache_write_failure_does_not_fail_case(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at)
+    repository = create_repository(tmp_path)
+
+    def fail_replace(source, destination):
+        raise OSError("read-only cache")
+
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.os.replace", fail_replace)
+
+    repository_map, cache_hit = _load_or_build_repository_map(
+        case,
+        repository,
+        ["src/token_router.py", "src/token_service.py"],
+        tmp_path / "cache",
+    )
+
+    assert cache_hit is False
+    assert [record.path for record in repository_map.files] == [
+        "src/token_router.py",
+        "src/token_service.py",
+    ]
+    assert not list((tmp_path / "cache").rglob("*.tmp"))
 
 
 def test_prepare_repository_skips_fetch_when_commit_exists(

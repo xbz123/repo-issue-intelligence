@@ -211,7 +211,12 @@ evidence IDs.
 Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
 frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
-files exist, and indexes only paths returned by `git ls-files`. It runs deterministic retrieval
+files exist, and indexes only paths returned by `git ls-files`. Repository maps are cached outside
+the checkout and reused only when repository identity, exact SHA, tracked/materialized file scope,
+index/cache schema, and Python version all match. Cached maps rebind their absolute root to the
+current checkout; corrupt or stale entries rebuild through an atomic replacement and cannot change
+benchmark success semantics. Per-case results retain the cache hit/miss state so cold and warm
+latency remain auditable. It runs deterministic retrieval
 and optionally asks OpenCode `deepseek-v4-flash` to rerank selected evidence IDs. The benchmark
 does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
 receives a plain chat-completions request without `response_format`; the response contract is one

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
+import sys
+import tempfile
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -11,7 +14,7 @@ from statistics import fmean
 from time import perf_counter, sleep
 from typing import Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from .evidence import (
     DEFAULT_MAX_LINES_PER_SNIPPET,
@@ -25,10 +28,17 @@ from .models import (
     EvidenceRerankResult,
     EvidenceSnippet,
     IssueRecord,
+    RepositoryMap,
 )
-from .repository_index import build_repository_map
+from .repository_index import (
+    REPOSITORY_MAP_INDEX_VERSION,
+    build_repository_map,
+    repository_map_input_files,
+)
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 1
+REPOSITORY_MAP_CACHE_DIRECTORY = ".repository-map-cache"
 
 
 class BenchmarkTier(StrEnum):
@@ -145,6 +155,7 @@ class BenchmarkCaseResult(BaseModel):
     symbol_recall_at_20: float | None = None
     symbol_reciprocal_rank: float | None = None
     analysis_elapsed_ms: float = 0
+    repository_map_cache_hit: bool | None = None
     llm_attempts: int = 0
     llm_fallback_used: bool = False
     llm_fallback_reason: str | None = None
@@ -203,10 +214,22 @@ class BenchmarkRun(BaseModel):
     reasoning_effort: str | None = None
     temperature: float | None = None
     seed: int | None = None
+    repository_map_cache_schema_version: int | None = None
     created_at: datetime
     results: list[BenchmarkCaseResult]
     overall: BenchmarkAggregate
     by_tier: dict[str, BenchmarkAggregate]
+
+
+class _RepositoryMapCacheEntry(BaseModel):
+    cache_schema_version: int
+    index_schema_version: int
+    python_version: str
+    repository: str
+    pre_fix_sha: str
+    tracked_files: list[str]
+    materialized_files: list[str]
+    repository_map: RepositoryMap
 
 
 def load_manifest(path: Path) -> BenchmarkManifest:
@@ -272,6 +295,113 @@ def prepare_repository(case: BenchmarkCase, workspace: Path) -> Path:
 def tracked_repository_files(repository_root: Path) -> list[str]:
     output = _run_git(["ls-files", "-z"], cwd=repository_root)
     return [value for value in output.split("\0") if value]
+
+
+def _normalized_repository_files(
+    repository_root: Path,
+    included_files: Sequence[str],
+) -> tuple[list[str], list[str]]:
+    repository_root = repository_root.resolve()
+    tracked_files = sorted(set(included_files))
+    materialized_files: list[str] = []
+    for value in tracked_files:
+        relative = Path(value)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"Repository file must be relative to the root: {value}")
+        path = (repository_root / relative).resolve()
+        if not path.is_relative_to(repository_root):
+            raise ValueError(f"Repository file must stay within the root: {value}")
+        if path.is_file():
+            materialized_files.append(value)
+    return tracked_files, materialized_files
+
+
+def _repository_map_cache_path(cache_root: Path, case: BenchmarkCase) -> Path:
+    repository = case.repository.replace("/", "--")
+    return (
+        cache_root
+        / repository
+        / case.pre_fix_sha
+        / f"index-v{REPOSITORY_MAP_INDEX_VERSION}"
+        / "map.json"
+    )
+
+
+def _load_or_build_repository_map(
+    case: BenchmarkCase,
+    repository_root: Path,
+    included_files: Sequence[str],
+    cache_root: Path,
+) -> tuple[RepositoryMap, bool]:
+    repository_root = repository_root.resolve()
+    tracked_files, materialized_files = _normalized_repository_files(
+        repository_root,
+        included_files,
+    )
+    indexed_files = repository_map_input_files(repository_root, tracked_files)
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    cache_path = _repository_map_cache_path(cache_root.resolve(), case)
+    try:
+        cached = _RepositoryMapCacheEntry.model_validate_json(
+            cache_path.read_text(encoding="utf-8")
+        )
+    except (OSError, UnicodeError, ValidationError):
+        cached = None
+
+    if (
+        cached is not None
+        and cached.cache_schema_version == REPOSITORY_MAP_CACHE_SCHEMA_VERSION
+        and cached.index_schema_version == REPOSITORY_MAP_INDEX_VERSION
+        and cached.python_version == python_version
+        and cached.repository == case.repository
+        and cached.pre_fix_sha == case.pre_fix_sha
+        and cached.tracked_files == tracked_files
+        and cached.materialized_files == materialized_files
+        and [record.path for record in cached.repository_map.files] == indexed_files
+    ):
+        return (
+            cached.repository_map.model_copy(
+                update={"root": str(repository_root)}
+            ),
+            True,
+        )
+
+    repository_map = build_repository_map(
+        repository_root,
+        included_files=tracked_files,
+    )
+    entry = _RepositoryMapCacheEntry(
+        cache_schema_version=REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
+        index_schema_version=REPOSITORY_MAP_INDEX_VERSION,
+        python_version=python_version,
+        repository=case.repository,
+        pre_fix_sha=case.pre_fix_sha,
+        tracked_files=tracked_files,
+        materialized_files=materialized_files,
+        repository_map=repository_map,
+    )
+    temporary_path: Path | None = None
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=cache_path.parent,
+            prefix=f".{cache_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            json.dump(entry.model_dump(mode="json"), temporary, indent=2)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_path, cache_path)
+    except OSError:
+        pass
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    return repository_map, False
 
 
 def _unique_files(values: Sequence[str]) -> list[str]:
@@ -383,6 +513,7 @@ def evaluate_case(
     max_llm_attempts: int = 2,
     llm_retry_delay_seconds: float = 0,
     included_files: Sequence[str] | None = None,
+    repository_map_cache: Path | None = None,
 ) -> BenchmarkCaseResult:
     if issue != case.issue_snapshot:
         raise ValueError(f"Issue #{case.issue_number} does not match the frozen snapshot")
@@ -390,9 +521,24 @@ def evaluate_case(
         raise ValueError("Hybrid benchmark requires an EvidenceReranker")
 
     started = perf_counter()
+    repository_map_cache_hit = None
+    if repository_map_cache is None:
+        repository_map = build_repository_map(
+            repository_root,
+            included_files=included_files,
+        )
+    else:
+        if included_files is None:
+            raise ValueError("Repository-map caching requires tracked repository files")
+        repository_map, repository_map_cache_hit = _load_or_build_repository_map(
+            case,
+            repository_root,
+            included_files,
+            repository_map_cache,
+        )
     report = investigate(
         issue,
-        build_repository_map(repository_root, included_files=included_files),
+        repository_map,
     )
     candidate_locations = {candidate.file: candidate for candidate in report.candidates}
     candidate_files = _unique_files([candidate.file for candidate in report.candidates])
@@ -508,6 +654,7 @@ def evaluate_case(
             else None
         ),
         analysis_elapsed_ms=round((perf_counter() - started) * 1000, 3),
+        repository_map_cache_hit=repository_map_cache_hit,
         llm_attempts=llm_attempts,
         llm_fallback_used=fallback_used,
         llm_fallback_reason=fallback_reason,
@@ -706,6 +853,8 @@ def run_benchmark(
     if not selected:
         raise ValueError("No benchmark cases matched the requested case IDs")
 
+    workspace = workspace.expanduser().resolve()
+    repository_map_cache = workspace / REPOSITORY_MAP_CACHE_DIRECTORY
     results: list[BenchmarkCaseResult] = []
     for case in selected:
         try:
@@ -721,6 +870,7 @@ def run_benchmark(
                 max_llm_attempts=max_llm_attempts,
                 llm_retry_delay_seconds=llm_delay_seconds,
                 included_files=tracked_repository_files(repository_root),
+                repository_map_cache=repository_map_cache,
             )
         except Exception as error:
             result = BenchmarkCaseResult(
@@ -779,6 +929,7 @@ def run_benchmark(
         ),
         temperature=getattr(analyzer, "temperature", None),
         seed=getattr(analyzer, "seed", None),
+        repository_map_cache_schema_version=REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
         created_at=datetime.now(UTC),
         results=results,
         overall=_aggregate(results),
