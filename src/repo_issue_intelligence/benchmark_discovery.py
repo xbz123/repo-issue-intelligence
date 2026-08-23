@@ -78,6 +78,7 @@ REQUIRED_BLOCKING_CHECK_CODES = frozenset(
         "bounded_source_files",
     }
 )
+MAX_CURATED_SOURCE_FILES = 5
 
 
 class CandidateStatus(StrEnum):
@@ -1304,6 +1305,11 @@ def curate_benchmark_expansion(
         if len(expected_files) != len(set(expected_files)):
             raise ValueError(
                 f"Selection for {candidate.id} contains duplicate expected files"
+            )
+        if len(expected_files) > MAX_CURATED_SOURCE_FILES:
+            raise ValueError(
+                f"Selection for {candidate.id} contains more than "
+                f"{MAX_CURATED_SOURCE_FILES} expected production files"
             )
         unknown_expected_files = set(expected_files) - set(candidate.expected_files)
         if unknown_expected_files:

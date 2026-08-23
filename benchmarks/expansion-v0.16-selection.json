@@ -1,0 +1,195 @@
+{
+  "name": "real-project-benchmark-expansion-v0.16",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "paramiko-paramiko-issue-2009-pr-2013",
+      "case_id": "paramiko-sftp-open-channel-timeout",
+      "tier": "generalization",
+      "expected_files": [
+        "paramiko/client.py",
+        "paramiko/transport.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/client.py",
+          "symbol": "SSHClient.connect"
+        }
+      ],
+      "review_notes": [
+        "PR #2013 is the merged same-repository fix for Issue #2009, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "SSHClient.connect exposes the channel timeout and Transport applies it while opening channels; both production files are material, while tests are excluded and transport.py remains file-only because two methods change."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22525-pr-22774",
+      "case_id": "prefect-schema-null-value-persistence",
+      "tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-null.tsx",
+        "ui-v2/src/components/schemas/schema-form-input.tsx"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #22774 is the merged same-repository fix for Issue #22525, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The two TSX components persist explicit null values through the schema form; test files are removed from ground truth and TypeScript remains file-only in the current symbol index."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22753-pr-22754",
+      "case_id": "prefect-schema-anyof-enum-selection",
+      "tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/schema-form-input-any-of.tsx",
+        "ui-v2/src/components/schemas/schema-form-input-string-format-date.tsx",
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "PR #22754 is the merged same-repository fix for Issue #22753, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "The three production files jointly select the matching anyOf enum branch and synchronize controlled values; paired test files are excluded and TypeScript remains file-only."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-474-pr-1321",
+      "case_id": "h2-frame-buffer-in-place-consumption",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/frame_buffer.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/frame_buffer.py",
+          "symbol": "FrameBuffer.__next__"
+        }
+      ],
+      "review_notes": [
+        "PR #1321 is the merged same-repository fix for Issue #474, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "FrameBuffer.__next__ consumes parsed frame bytes in place to avoid retaining copied buffers; its regression test is excluded."
+      ]
+    },
+    {
+      "candidate_id": "boto-boto3-issue-1464-pr-1511",
+      "case_id": "boto3-dynamodb-empty-output",
+      "tier": "generalization",
+      "expected_files": [
+        "boto3/dynamodb/transform.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "boto3/dynamodb/transform.py",
+          "symbol": "TransformationInjector.inject_attribute_value_output"
+        }
+      ],
+      "review_notes": [
+        "PR #1511 is the merged same-repository fix for Issue #1464, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "TransformationInjector.inject_attribute_value_output guards operations whose model has no output shape; release metadata and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-6010-pr-9981",
+      "case_id": "drf-unique-together-list-update",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/validators.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/validators.py",
+          "symbol": "UniqueTogetherValidator.__call__"
+        }
+      ],
+      "review_notes": [
+        "PR #9981 is the merged same-repository fix for Issue #6010, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "UniqueTogetherValidator.__call__ raises a clear error for unsupported list updates; the validator test file is excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-92-pr-109",
+      "case_id": "h11-duplicate-content-length",
+      "tier": "generalization",
+      "expected_files": [
+        "h11/_headers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "h11/_headers.py",
+          "symbol": "normalize_and_validate"
+        }
+      ],
+      "review_notes": [
+        "PR #109 is the merged same-repository fix for Issue #92, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "normalize_and_validate accepts duplicate equal Content-Length values while retaining rejection of conflicting values; tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-jinja-issue-1253-pr-1665",
+      "case_id": "jinja-branch-set-tracking",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/idtracking.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/idtracking.py",
+          "symbol": "Symbols.branch_update"
+        }
+      ],
+      "review_notes": [
+        "PR #1665 is the merged same-repository fix for Issue #1253, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Symbols.branch_update fixes load inference when every conditional branch sets a template parameter; tests and release notes are excluded."
+      ]
+    },
+    {
+      "candidate_id": "matplotlib-matplotlib-issue-18171-pr-18172",
+      "case_id": "matplotlib-webagg-middle-click",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/matplotlib/backends/backend_webagg_core.py",
+          "symbol": "FigureCanvasWebAggCore._handle_mouse"
+        }
+      ],
+      "review_notes": [
+        "PR #18172 is the merged same-repository fix for Issue #18171, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "FigureCanvasWebAggCore._handle_mouse stops remapping middle-button events to right-button events; the API change note is excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-134-pr-140",
+      "case_id": "h11-status-code-999",
+      "tier": "generalization",
+      "expected_files": [
+        "h11/_events.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "h11/_events.py",
+          "symbol": "Response.__post_init__"
+        }
+      ],
+      "review_notes": [
+        "PR #140 is the merged same-repository fix for Issue #134, and the parent of its first ordered commit matches the recorded pre-fix SHA outside the PR commit set.",
+        "Response.__post_init__ expands the accepted response status range through 999; the single production file contains the complete behavior change."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "pandas-dev-pandas-issue-66436-pr-66473",
+      "reason": "The candidate omits the material pandas/_libs/tslibs/strptime.pyx fix while retaining compatibility constants; accepting its recorded files would exclude the Issue's primary Python 3.15 segfault fix from ground truth."
+    },
+    {
+      "candidate_id": "ansible-ansible-issue-87362-pr-87361",
+      "reason": "All seven production files materially apply the URL credential-masking fix, exceeding the benchmark's five-file acceptance boundary; narrowing the case would make ground truth incomplete."
+    },
+    {
+      "candidate_id": "sphinx-doc-sphinx-issue-3099-pr-14213",
+      "reason": "The material sphinxlatexliterals.sty production fix is absent from the candidate's audited files because the suffix is unsupported; accepting only latex.py would make the long-verbatim fix ground truth incomplete."
+    }
+  ]
+}

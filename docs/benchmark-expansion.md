@@ -6,6 +6,31 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.16 third 200-case expansion batch
+
+Manifest v11 accepts ten reviewed Issue/Fix-PR pairs from Paramiko, Prefect, h2, Boto3, Django REST
+Framework, h11, Jinja, and Matplotlib. The batch spans eight repositories and Issues created from
+2017 through 2026. It adds 14 production-file targets, including three multi-file cases, and eight
+pre-fix Python symbol targets; the two Prefect UI cases remain intentionally file-only.
+
+Reviewers removed test paths from the Prefect candidates. The same selection rejects
+a pandas candidate whose automatic files omit the material `.pyx` fix, an Ansible change with seven
+equally material production files beyond the five-file acceptance boundary, and a Sphinx candidate
+whose automatic audit omits the material `.sty` resource. These cases are not narrowed into
+incomplete ground truth.
+
+The suite now contains 80 cases across 41 repositories: 17 main, 11 calibration, and 52
+generalization cases. It records 125 production-file targets, 31 multi-file cases, and 80 reviewed
+symbol targets across 56 cases. All eight Python symbol targets added in this batch resolve in the
+repository index at their recorded pre-fix commits.
+
+Three deterministic v0.27 runs completed 80/80 cases. After removing timestamps and elapsed
+fields, their candidate files, candidate symbols, per-case metrics, tier metrics, and aggregates
+were identical. File Recall@1/5/10/20 is `0.3733/0.6294/0.7148/0.8840`, with MRR `0.5865`.
+Across the 56 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2768/0.4301/0.4568/0.5461`, with MRR `0.3880`. Twenty-two of 125 production targets remain
+outside the deterministic Top-20 and stay in the denominator.
+
 ## v0.15 second 200-case expansion batch
 
 Manifest v10 accepts ten more manually reviewed Issue/Fix-PR pairs: Paramiko, Django REST
@@ -304,19 +329,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting two ten-case batches into manifest v10 and excluding three reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 178
+After accepting three ten-case batches into manifest v11 and excluding six reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 166
 unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 130 primary candidates and 40 reserves;
+- 120 primary candidates and 40 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 32 new multi-file primary candidates, which would raise the suite from 28/70 to 60/200
+- 29 new multi-file primary candidates, which would raise the suite from 31/80 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 77 primary Issues created before 2026;
-- 82 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 70 primary Issues created before 2026;
+- 72 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -333,7 +358,7 @@ The compact queue is committed so review order, advisory signals, pre-fix SHA pr
 files, and diversity constraints are auditable without claiming that the 200-case manifest already
 exists.
 
-Manifest v10 confirms that the earlier candidate-pool saturation does not survive broader,
-mixed-language, multi-file cases: 19 of 111 reviewed production targets are outside the
+Manifest v11 confirms that the earlier candidate-pool saturation does not survive broader,
+mixed-language, multi-file cases: 22 of 125 reviewed production targets are outside the
 deterministic Top-20. Subsequent batches keep those misses in the denominator and must not weaken
 the frozen-case acceptance rules to improve the headline metric.
