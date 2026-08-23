@@ -213,7 +213,7 @@ frozen pre-fix SHA, reusing a locally cached commit without a network request, l
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
 files exist, and indexes only paths returned by `git ls-files`. Repository maps are cached outside
 the checkout and reused only when repository identity, exact SHA, tracked/materialized file scope,
-index/cache schema, and Python version all match. Cached maps rebind their absolute root to the
+index/cache schema, and complete interpreter identity all match. Cached maps rebind their absolute root to the
 current checkout; corrupt or stale entries rebuild through an atomic replacement and cannot change
 benchmark success semantics. Per-case results retain the cache hit/miss state so cold and warm
 latency remain auditable. It runs deterministic retrieval
