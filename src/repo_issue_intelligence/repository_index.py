@@ -60,6 +60,10 @@ FRAMEWORK_IMPORTS = {
     "langgraph": "LangGraph",
 }
 
+# Bump this whenever repository-map construction semantics change. Benchmark
+# caches use the value as a fail-closed invalidation boundary.
+REPOSITORY_MAP_INDEX_VERSION = 1
+
 
 @dataclass(frozen=True)
 class _ModuleBinding:
@@ -800,6 +804,18 @@ def _repository_files(
         for filename in filenames:
             path = current / filename
             yield path, path.relative_to(root)
+
+
+def repository_map_input_files(
+    root: Path,
+    included_files: Iterable[str],
+) -> list[str]:
+    root = root.resolve()
+    return [
+        str(relative)
+        for path, relative in _repository_files(root, included_files)
+        if path.suffix.lower() in LANGUAGE_BY_SUFFIX
+    ]
 
 
 def _python_source_roots(files: Iterable[FileRecord]) -> frozenset[str]:

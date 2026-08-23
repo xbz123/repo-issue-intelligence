@@ -405,6 +405,15 @@ def benchmark(
         f"Recall@20={run.overall.file_recall_at_20:.4f}, "
         f"MRR={run.overall.mean_reciprocal_rank:.4f}"
     )
+    cache_hits = sum(
+        result.repository_map_cache_hit is True for result in run.results
+    )
+    cache_misses = sum(
+        result.repository_map_cache_hit is False for result in run.results
+    )
+    console.print(
+        f"Repository-map cache: {cache_hits} hit(s), {cache_misses} miss(es)"
+    )
     if run.overall.symbol_cases:
         console.print(
             f"Symbol benchmark: {run.overall.symbol_cases} labeled cases; "
