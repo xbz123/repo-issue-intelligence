@@ -1,0 +1,1481 @@
+{
+  "name": "real-project-benchmark-expansion-v0.18",
+  "version": 1,
+  "curated_at": "2026-08-23T22:36:14.209759Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 12,
+  "candidates": [
+    {
+      "id": "pallets-jinja-issue-1701-pr-1702",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1701,
+        "title": "TypeError: sequence item 0: expected str instance, int found",
+        "body": "```python\r\nimport jinja2\r\nfrom jinja2.nativetypes import NativeEnvironment\r\nNativeEnvironment().from_string('{% block test %}{% for i in range(1) %}{{ loop.index }}{% endfor %}{% endblock %}{{ self.test() }}').render()\r\n```\r\n\r\n```\r\nTraceback (most recent call last):\r\n  File \"<stdin>\", line 1, in <module>\r\n  File \"/home/phemmer/.local/lib/python3.10/site-packages/jinja2/nativetypes.py\", line 112, in render\r\n    return self.environment.handle_exception()\r\n  File \"/home/phemmer/.local/lib/python3.10/site-packages/jinja2/environment.py\", line 936, in handle_exception\r\n    raise rewrite_traceback_stack(source=source)\r\n  File \"/home/phemmer/.local/lib/python3.10/site-packages/jinja2/nativetypes.py\", line 25, in native_concat\r\n    head = list(islice(values, 2))\r\n  File \"<template>\", line 1, in top-level template code\r\nTypeError: sequence item 0: expected str instance, int found\r\n```\r\n\r\nEnvironment:\r\n\r\n- Python version: Python 3.10.5\r\n\r\n- Jinja version: 3.1.2\r\n",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2022-08-09T04:46:50Z",
+        "updated_at": "2025-01-03T00:18:59Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1701",
+        "author": "phemmer"
+      },
+      "fix_pr_number": 1702,
+      "fix_pr_title": "Use correct concat function for blocks evaluation",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1702",
+      "fix_pr_merged_at": "2024-12-19T15:15:37Z",
+      "merge_commit_sha": "a4abbfd7538e9ff216244266579232585033136c",
+      "pre_fix_sha": "791dd3b0415b99faac229d42a81db1d7096b003c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/jinja2/runtime.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 2,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_nativetypes.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 0,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-19T15:15:37Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-08-09T04:46:50+00:00, pr_merged_at=2024-12-19T15:15:37+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "965 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1701 reproduces an integer concatenation TypeError through synchronous NativeEnvironment rendering, and merged PR #1702 fixes the BlockReference concat path from the recorded pre-fix SHA.",
+        "The production scope is only src/jinja2/runtime.py; CHANGES.rst and tests/test_nativetypes.py are excluded, and the synchronous BlockReference.__call__ path is the single pre-fix symbol target."
+      ]
+    },
+    {
+      "id": "pallets-jinja-issue-1705-pr-1706",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1705,
+        "title": "The error message from PackageLoader could be more helpful",
+        "body": "When following [the basics of setting up jinja2](https://jinja.palletsprojects.com/en/3.1.x/api/#basics), if you don't create the appropriate `templates` directory in your package, you get this error message:\r\n\r\n```\r\nValueError: The 'mypackage' package was not installed in a way that PackageLoader understands.\r\n```\r\n\r\nThis could be significantly improved by explaining the actual problem: The PackageLoader could not find a suitable \"templates\" directory.\r\n\r\nTo replicate, add this to `mypackage.py`:\r\n\r\n```python\r\nfrom jinja2 import Environment, PackageLoader\r\n\r\n\r\nenv = Environment(loader=PackageLoader(\"mypackage\"))\r\n```\r\n\r\nIf you run `python mypackage.py` you will see a traceback similar to this:\r\n\r\n```python\r\nTraceback (most recent call last):\r\n  File \"mypackage/mypackage.py\", line 4, in <module>\r\n    env = Environment(loader=PackageLoader(\"mypackage\"))\r\n  File \".virtualenvs/mypackage/lib/python3.10/site-packages/jinja2/loaders.py\", line 291, in __init__\r\n    import_module(package_name)\r\n  File \".pyenv/versions/3.10.3/lib/python3.10/importlib/__init__.py\", line 126, in import_module\r\n    return _bootstrap._gcd_import(name[level:], package, level)\r\n  File \"<frozen importlib._bootstrap>\", line 1050, in _gcd_import\r\n  File \"<frozen importlib._bootstrap>\", line 1027, in _find_and_load\r\n  File \"<frozen importlib._bootstrap>\", line 1006, in _find_and_load_unlocked\r\n  File \"<frozen importlib._bootstrap>\", line 688, in _load_unlocked\r\n  File \"<frozen importlib._bootstrap_external>\", line 883, in exec_module\r\n  File \"<frozen importlib._bootstrap>\", line 241, in _call_with_frames_removed\r\n  File \"mypackage/mypackage.py\", line 4, in <module>\r\n    env = Environment(loader=PackageLoader(\"mypackage\"))\r\n  File \".virtualenvs/mypackage/lib/python3.10/site-packages/jinja2/loaders.py\", line 323, in __init__\r\n    raise ValueError(\r\nValueError: The 'mypackage' package was not installed in a way that PackageLoader understands.\r\n\r\n```\r\n\r\nSeeing an error message that explained that jinja2 couldn't find an appropriate \"templates\" directory would be much better.\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.10.3\r\n- Jinja version: 3.1.2\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2022-08-11T13:36:14Z",
+        "updated_at": "2025-01-04T00:18:34Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1705",
+        "author": "LilyFirefly"
+      },
+      "fix_pr_number": 1706,
+      "fix_pr_title": "Improve the PackageLoader error message",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1706",
+      "fix_pr_merged_at": "2024-12-20T04:17:25Z",
+      "merge_commit_sha": "53c75915c929eeb8582e70fdee9fc262f5c4ae58",
+      "pre_fix_sha": "58a358f0928df381c003be244b930367c68dbb85",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/loaders.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/jinja2/loaders.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 7,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_loader.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-20T04:17:25Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-08-11T13:36:14+00:00, pr_merged_at=2024-12-20T04:17:25+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2139 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1705 provides a missing-template-directory reproduction and traceback; merged PR #1706 adds the specific PackageLoader error at the recorded pre-fix boundary.",
+        "The production fix is confined to src/jinja2/loaders.py::PackageLoader.__init__; CHANGES.rst and the loader regression test are excluded."
+      ]
+    },
+    {
+      "id": "pytest-dev-pytest-asyncio-issue-724-pr-1430",
+      "repository": "pytest-dev/pytest-asyncio",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 724,
+        "title": "ResourceWarning: unclosed event loop",
+        "body": "using pytest-asyncio asyncio 0.23.2\r\n\r\n```python\r\nimport pytest\r\n\r\nimport pytest_asyncio\r\n\r\n\r\n@pytest_asyncio.fixture()\r\nasync def demo():\r\n    yield\r\n\r\n\r\n@pytest.mark.asyncio\r\nasync def test_aiohttp_test_client_json(demo):\r\n    pass\r\n\r\n\r\ndef test_redirect():\r\n\r\n    import asyncio\r\n    async def amain():\r\n        pass\r\n    asyncio.run(amain())\r\n\r\n    import gc\r\n    gc.collect()\r\n```\r\n\r\nresults in\r\n\r\n```\r\nREQUESTS_CA_BUNDLE=/home/graingert/projects/vcrpy/.tox/py311-aiohttp/lib/python3.11/site-packages/pytest_httpbin/certs/cacert.pem ./.tox/py311-aiohttp/bin/pytest tests/integration/test_aiohttp.py -s\r\n================================================================================ test session starts =================================================================================\r\nplatform linux -- Python 3.11.7+, pytest-7.4.3, pluggy-1.3.0\r\nrootdir: /home/graingert/projects/vcrpy\r\nconfigfile: pyproject.toml\r\nplugins: aiohttp-1.0.5, httpbin-2.0.0, cov-4.1.0, asyncio-0.23.2\r\nasyncio: mode=Mode.STRICT\r\ncollected 2 items                                                                                                                                                                    \r\n\r\ntests/integration/test_aiohttp.py ..\r\n\r\n================================================================================== warnings summary ==================================================================================\r\ntests/integration/test_aiohttp.py::test_redirect\r\n  /usr/lib/python3.11/asyncio/base_events.py:692: ResourceWarning: unclosed event loop <_UnixSelectorEventLoop running=False closed=False debug=False>\r\n    _warn(f\"unclosed event loop {self!r}\", ResourceWarning, source=self)\r\n  Enable tracemalloc to get traceback where the object was allocated.\r\n  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.\r\n\r\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\r\n============================================================================ 2 passed, 1 warning in 0.02s ===========================================================================\r\n```",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 16,
+        "created_at": "2023-12-15T12:37:12Z",
+        "updated_at": "2026-05-26T09:58:36Z",
+        "html_url": "https://github.com/pytest-dev/pytest-asyncio/issues/724",
+        "author": "graingert"
+      },
+      "fix_pr_number": 1430,
+      "fix_pr_title": "Fix unclosed event loop",
+      "fix_pr_url": "https://github.com/pytest-dev/pytest-asyncio/pull/1430",
+      "fix_pr_merged_at": "2026-05-01T08:11:30Z",
+      "merge_commit_sha": "31772d220191ec3c347cd7f8ea8298c5d40c5041",
+      "pre_fix_sha": "af62924bd1ae2840be1466a349331fdc584b924a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog.d/724.fixed.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "pytest_asyncio/plugin.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 14,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_set_event_loop.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 34,
+          "deletions": 0,
+          "changes": 34,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pytest-asyncio"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-01T08:11:30Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-12-15T12:37:12+00:00, pr_merged_at=2026-05-01T08:11:30+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2136 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #724 supplies a minimal async-fixture reproduction whose later asyncio.run call reports an unclosed event loop; merged PR #1430 corrects policy and runner lifecycle handling.",
+        "The old _temporary_event_loop_policy call creates and preserves the leaking loop, so it is the single pre-fix symbol target; changelog and Pytester regression files are excluded."
+      ]
+    },
+    {
+      "id": "psf-requests-issue-6643-pr-6644",
+      "repository": "psf/requests",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 6643,
+        "title": "Leading slash in uri followed by column fails",
+        "body": "Leading slash in uri followed by column fails.\r\n\r\n## Expected Result\r\n\r\n```python\r\nrequests.get('http://127.0.0.1:10000//v:h')\r\n<Response [200]>\r\n```\r\n\r\n## Actual Result\r\n\r\n```python\r\nTraceback (most recent call last):\r\n  File \"/usr/local/lib/python3.11/site-packages/urllib3/util/url.py\", line 425, in parse_url\r\n    host, port = _HOST_PORT_RE.match(host_port).groups()  # type: ignore[union-attr]\r\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nAttributeError: 'NoneType' object has no attribute 'groups'\r\n\r\nThe above exception was the direct cause of the following exception:\r\n\r\nTraceback (most recent call last):\r\n  File \"<stdin>\", line 1, in <module>\r\n  File \"/usr/local/lib/python3.11/site-packages/requests/api.py\", line 73, in get\r\n    return request(\"get\", url, params=params, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/requests/api.py\", line 59, in request\r\n    return session.request(method=method, url=url, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/requests/sessions.py\", line 589, in request\r\n    resp = self.send(prep, **send_kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/requests/sessions.py\", line 703, in send\r\n    r = adapter.send(request, **kwargs)\r\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/requests/adapters.py\", line 486, in send\r\n    resp = conn.urlopen(\r\n           ^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 711, in urlopen\r\n    parsed_url = parse_url(url)\r\n                 ^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/site-packages/urllib3/util/url.py\", line 451, in parse_url\r\n    raise LocationParseError(source_url) from e\r\nurllib3.exceptions.LocationParseError: Failed to parse: //v:h\r\n```\r\n\r\n## Reproduction Steps\r\n\r\n```python\r\nimport requests\r\nrequests.get('http://127.0.0.1:10000//v:h')\r\n\r\n```\r\n\r\n## System Information\r\n\r\n    $ python -m requests.help\r\n\r\n```json\r\n{\r\n  \"chardet\": {\r\n    \"version\": null\r\n  },\r\n  \"charset_normalizer\": {\r\n    \"version\": \"3.3.2\"\r\n  },\r\n  \"cryptography\": {\r\n    \"version\": \"\"\r\n  },\r\n  \"idna\": {\r\n    \"version\": \"3.6\"\r\n  },\r\n  \"implementation\": {\r\n    \"name\": \"CPython\",\r\n    \"version\": \"3.11.8\"\r\n  },\r\n  \"platform\": {\r\n    \"release\": \"5.10.209-198.812.amzn2.x86_64\",\r\n    \"system\": \"Linux\"\r\n  },\r\n  \"pyOpenSSL\": {\r\n    \"openssl_version\": \"\",\r\n    \"version\": null\r\n  },\r\n  \"requests\": {\r\n    \"version\": \"2.31.0\"\r\n  },\r\n  \"system_ssl\": {\r\n    \"version\": \"300000b0\"\r\n  },\r\n  \"urllib3\": {\r\n    \"version\": \"2.2.1\"\r\n  },\r\n  \"using_charset_normalizer\": true,\r\n  \"using_pyopenssl\": false\r\n}\r\n```\r\n\r\n<!-- This command is only available on Requests v2.16.4 and greater. Otherwise,\r\nplease provide some basic information about your system (Python version,\r\noperating system, &c). -->\r\n",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2024-02-21T21:47:35Z",
+        "updated_at": "2026-05-10T21:38:07Z",
+        "html_url": "https://github.com/psf/requests/issues/6643",
+        "author": "pha6d"
+      },
+      "fix_pr_number": 6644,
+      "fix_pr_title": "Trim excess leading path separators",
+      "fix_pr_url": "https://github.com/psf/requests/pull/6644",
+      "fix_pr_merged_at": "2024-02-23T00:49:42Z",
+      "merge_commit_sha": "3587a5f869ea7ae2ba6b20d281d810b65aa2418e",
+      "pre_fix_sha": "7a13c041dbef42f9f3feb14110f02626f6892e9a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/requests/adapters.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/requests/adapters.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_adapters.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: psf/requests"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-02-23T00:49:42Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-02-21T21:47:35+00:00, pr_merged_at=2024-02-23T00:49:42+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2956 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #6643 demonstrates urllib3 reinterpreting a //v:h request target, and merged PR #6644 trims excess leading separators from the exact recorded pre-fix commit.",
+        "The production change is confined to src/requests/adapters.py::HTTPAdapter.request_url; the added adapter regression test is excluded."
+      ]
+    },
+    {
+      "id": "pylint-dev-pylint-issue-9798-pr-11159",
+      "repository": "pylint-dev/pylint",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 9798,
+        "title": "FN `attribute-defined-outside-init` with `setattr()`",
+        "body": "### Bug description\n\n```python\n# pylint: disable=missing-module-docstring, too-few-public-methods\r\nclass NoAttributesDefinedInInit:\r\n    \"\"\"Both assignments should raise.\"\"\"\r\n    def later(self):\r\n        \"\"\"Only the first assignment raises.\"\"\"\r\n        self.a = \"a\"\r\n        setattr(self, \"b\", \"b\")\n```\n\n\n### Configuration\n\n_No response_\n\n### Command used\n\n```shell\npylint a.py\n```\n\n\n### Pylint output\n\n```python\n************* Module a\r\npylint/a.py:6:8: W0201: Attribute 'a' defined outside __init__ (attribute-defined-outside-init)\r\n\r\n------------------------------------------------------------------\r\nYour code has been rated at 7.50/10 (previous run: 7.50/10, +0.00)\n```\n\n\n### Expected behavior\n\nTwo messages. You shouldn't be able to get around the lint warning by using `setattr()` (unless the attribute was already defined in `__init__()`.\n\n### Pylint version\n\n```shell\npylint 3.3.0-dev0\r\nastroid 3.3.0-dev0\r\nPython 3.12.1\n```\n\n\n### OS / Environment\n\n_No response_\n\n### Additional dependencies\n\n_No response_",
+        "labels": [
+          "Help wanted 🙏",
+          "False Negative 🦋",
+          "Hacktoberfest",
+          "Needs PR"
+        ],
+        "comments_count": 0,
+        "created_at": "2024-07-15T15:10:59Z",
+        "updated_at": "2026-08-15T10:47:50Z",
+        "html_url": "https://github.com/pylint-dev/pylint/issues/9798",
+        "author": "jacobtylerwalls"
+      },
+      "fix_pr_number": 11159,
+      "fix_pr_title": "Detect setattr attributes outside init",
+      "fix_pr_url": "https://github.com/pylint-dev/pylint/pull/11159",
+      "fix_pr_merged_at": "2026-08-15T10:47:48Z",
+      "merge_commit_sha": "5632ffeb3d74ec998145da60400acea8f8041737",
+      "pre_fix_sha": "5a5ab6b529869f201ea55f473aeebce9845e751a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pylint/checkers/classes/class_checker.py"
+      ],
+      "changed_files": [
+        {
+          "path": "custom_dict.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "doc/whatsnew/fragments/9798.false_negative",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pylint/checkers/classes/class_checker.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 148,
+          "deletions": 32,
+          "changes": 180,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/checkers/unittest_classes.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 52,
+          "deletions": 0,
+          "changes": 52,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/a/attribute_defined_outside_init.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 116,
+          "deletions": 0,
+          "changes": 116,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/a/attribute_defined_outside_init.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/regrtest_data/attribute_defined_setattr_parent/child.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/regrtest_data/attribute_defined_setattr_parent/parent.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_self.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 0,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pylint-dev/pylint"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T10:47:48Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-07-15T15:10:59+00:00, pr_merged_at=2026-08-15T10:47:48+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "19 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1016 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Help wanted 🙏, False Negative 🦋, Hacktoberfest, Needs PR"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #9798 provides a concrete setattr false-negative reproduction, and the first commit of merged PR #11159 has the recorded pre-fix SHA as its parent outside the PR commit set.",
+        "The production fix is ClassChecker._check_attribute_defined_outside_init; test fixtures, regression data, custom_dict.txt, and whatsnew fragments are excluded."
+      ]
+    },
+    {
+      "id": "pycqa-flake8-issue-1948-pr-1949",
+      "repository": "PyCQA/flake8",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1948,
+        "title": "`logical_line` for call with f-string can result in invalid ast under Python 3.12",
+        "body": "### how did you install flake8?\n\n```console\n$ pip install flake8\n```\n\n\n### unmodified output of `flake8 --bug-report`\n\n```json\n{}\n```\n\n\n### describe the problem\n\n#### what I expected to happen\r\n\r\nSome of the plugins in [`hacking`](https://pypi.org/project/hacking) use a combo of `ast.parse` and `logical_line` to generate an AST for an individual line that is then fed into an `ast.NodeVisitor` subclass. These work just fine on Python 3.11 and earlier, but I've noticed they fail under specific circumstances on Python 3.12. I've included a minimal reproducer below. There's a chance I am \"holding it wrong\" but I'd like to confirm this first.\r\n\r\n#### sample code\r\n\r\n`test.py`\r\n\r\n```python\r\nimport unittest\r\n\r\n\r\nclass TestFoo(unittest.TestCase):\r\n\r\n    def test_foo(self):\r\n        response_key = 'foo'\r\n        response_val = 'bar'\r\n        body_output = ''\r\n        self.assertEqual(\r\n            f'{{\"{response_key}\": \"{response_val}\"}}', body_output\r\n        )\r\n```\r\n\r\n`checks.py`:\r\n\r\n```\r\nclass NoneArgChecker(ast.NodeVisitor):\r\n    def __init__(self, func_name, num_args=2):\r\n        self.func_name = func_name\r\n        self.num_args = num_args\r\n        self.none_found = False\r\n\r\n    def visit_Call(self, node):\r\n        # snipped\r\n        ...\r\n\r\n\r\ndef foo(logical_line, noqa):\r\n    if noqa:\r\n        return\r\n\r\n    for func_name in (\r\n        'assertEqual', 'assertIs', 'assertNotEqual', 'assertIsNot'\r\n    ):\r\n        try:\r\n            start = logical_line.index('.%s(' % func_name) + 1\r\n        except ValueError:\r\n            continue\r\n        checker = NoneArgChecker(func_name)\r\n        # print(logical_line)\r\n        checker.visit(ast.parse(logical_line))\r\n        continue\r\n        if checker.none_found:\r\n            yield start, \"H203: Use assertIs(Not)None to check for None\"\r\n```\r\n\r\n`tox.ini`:\r\n\r\n```ini\r\n[flake8:local-plugins]\r\nextension =\r\n    X123 = checks:foo\r\npaths = .\r\n```\r\n\r\n#### commands ran\r\n\r\n```console\r\n$ flake8 test.py\r\nwow.py:1:23: E999 SyntaxError: invalid syntax. Perhaps you forgot a comma?\r\n```\r\n\r\nIf I comment out the `print` statement, I see different results for Python 3.12 compared Pythons 3.10 and 3.11. Under 3.12:\r\n\r\n```\r\nself.assertEqual(f'x{x{response_key}xxxx{response_val}xx}', body_output)\r\n```\r\n\r\nUnder 3.10 and 3.11:\r\n\r\n```\r\nself.assertEqual(f'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', body_output)\r\n```\r\n\r\n### additional information\r\n\r\nThe E999 error is associated with line 1 of the file, despite the error actually coming from a plugin. This led me on a wild goose chase as I tried to figure out why flake8 thought my file was invalid Python but Python itself did not. I suspect this might also be user error and I should be handling the potential exception from `ast.parse` in my plugin but again, I just wanted to confirm that this was expected practice.",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2024-07-31T16:57:16Z",
+        "updated_at": "2024-08-04T20:30:55Z",
+        "html_url": "https://github.com/PyCQA/flake8/issues/1948",
+        "author": "stephenfin"
+      },
+      "fix_pr_number": 1949,
+      "fix_pr_title": "Handle escaped braces in f-strings",
+      "fix_pr_url": "https://github.com/PyCQA/flake8/pull/1949",
+      "fix_pr_merged_at": "2024-08-04T19:56:53Z",
+      "merge_commit_sha": "939ea3d8d9d5d7d9f348420036af52df74f5ca09",
+      "pre_fix_sha": "2a811cc4d2aaed3e8eb5a9f04f08ccc8af7c0791",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/flake8/processor.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/flake8/processor.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 1,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/integration/test_plugins.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 35,
+          "deletions": 0,
+          "changes": 35,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyCQA/flake8"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-08-04T19:56:53Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-07-31T16:57:16+00:00, pr_merged_at=2024-08-04T19:56:53+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2812 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #1949 directly closes Issue #1948 and changes only the production processor plus an excluded integration regression test from the recorded pre-fix SHA.",
+        "The fix handles escaped-brace F-string tokens while building logical lines, making FileProcessor.build_logical_line_tokens the reviewed pre-fix symbol target."
+      ]
+    },
+    {
+      "id": "pandas-dev-pandas-issue-59609-pr-66794",
+      "repository": "pandas-dev/pandas",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 59609,
+        "title": "BUG: isin check with numpy array works incorrectly when using UInt64 dtype",
+        "body": "### Pandas version checks\r\n\r\n- [X] I have checked that this issue has not already been reported.\r\n\r\n- [X] I have confirmed this bug exists on the [latest version](https://pandas.pydata.org/docs/whatsnew/index.html) of pandas.\r\n\r\n- [ ] I have confirmed this bug exists on the [main branch](https://pandas.pydata.org/docs/dev/getting_started/install.html#installing-the-development-version-of-pandas) of pandas.\r\n\r\n\r\n### Reproducible Example\r\n\r\n```python\r\nimport pandas as pd\r\nimport numpy as np\r\n\r\npd.Series([635554097106142143],dtype=\"UInt64\").isin(np.array([635554097106142079]))\r\n```\r\n\r\n\r\n### Issue Description\r\n\r\nThe isin check returns `True`, although clearly 635554097106142143 ≠ 635554097106142079\r\n\r\nPresumably during the check the values are converted to a dtype with smaller precision.\r\n\r\n### Expected Behavior\r\n\r\nNot using the `UInt64` dtype as well as not checking against a numpy array produce the expected result\r\n\r\nI.e. both\r\n\r\n```python\r\npd.Series([635554097106142143],dtype=\"int64\").isin(np.array([635554097106142079]))\r\n```\r\n\r\nand\r\n\r\n```python\r\npd.Series([635554097106142143],dtype=\"UInt64\").isin([635554097106142079])\r\n```\r\n\r\nEvaluate to `False`\r\n\r\n### Installed Versions\r\n\r\n<details>\r\n\r\nNSTALLED VERSIONS\r\n------------------\r\ncommit                : d9cdd2ee5a58015ef6f4d15c7226110c9aab8140\r\npython                : 3.12.5.final.0\r\npython-bits           : 64\r\nOS                    : Linux\r\nOS-release            : 5.19.0-46-generic\r\nVersion               : #47~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Wed Jun 21 15:35:31 UTC 2\r\nmachine               : x86_64\r\nprocessor             : x86_64\r\nbyteorder             : little\r\nLC_ALL                : None\r\nLANG                  : en_US.UTF-8\r\nLOCALE                : en_US.UTF-8\r\n\r\npandas                : 2.2.2\r\nnumpy                 : 2.0.0\r\npytz                  : 2023.3.post1\r\ndateutil              : 2.8.2\r\nsetuptools            : 69.0.3\r\npip                   : 24.0\r\nCython                : None\r\npytest                : 7.4.3\r\nhypothesis            : None\r\nsphinx                : None\r\nblosc                 : None\r\nfeather               : None\r\nxlsxwriter            : None\r\nlxml.etree            : 5.2.2\r\nhtml5lib              : None\r\npymysql               : None\r\npsycopg2              : None\r\njinja2                : 3.1.2\r\nIPython               : 8.18.1\r\npandas_datareader     : None\r\nadbc-driver-postgresql: None\r\nadbc-driver-sqlite    : None\r\nbs4                   : 4.12.3\r\nbottleneck            : None\r\ndataframe-api-compat  : None\r\nfastparquet           : None\r\nfsspec                : 2023.10.0\r\ngcsfs                 : None\r\nmatplotlib            : 3.9.1\r\nnumba                 : 0.60.0\r\nnumexpr               : None\r\nodfpy                 : None\r\nopenpyxl              : None\r\npandas_gbq            : None\r\npyarrow               : 17.0.0\r\npyreadstat            : None\r\npython-calamine       : None\r\npyxlsb                : None\r\ns3fs                  : None\r\nscipy                 : 1.14.0\r\nsqlalchemy            : None\r\ntables                : None\r\ntabulate              : None\r\nxarray                : 2024.1.1\r\nxlrd                  : None\r\nzstandard             : None\r\ntzdata                : 2023.3\r\nqtpy                  : None\r\npyqt5                 : None\r\n\r\n\r\n</details>\r\n",
+        "labels": [
+          "Bug",
+          "NA - MaskedArrays",
+          "isin"
+        ],
+        "comments_count": 1,
+        "created_at": "2024-08-26T11:23:22Z",
+        "updated_at": "2026-08-15T21:23:57Z",
+        "html_url": "https://github.com/pandas-dev/pandas/issues/59609",
+        "author": "qltwis"
+      },
+      "fix_pr_number": 66794,
+      "fix_pr_title": "BUG: isin gave false matches above 2**53 across mixed numeric dtypes",
+      "fix_pr_url": "https://github.com/pandas-dev/pandas/pull/66794",
+      "fix_pr_merged_at": "2026-08-15T21:23:55Z",
+      "merge_commit_sha": "7188e5ed04be1475619cee8f67079d1c30705050",
+      "pre_fix_sha": "63c18fa41de4a2d4513013ebf63d2f5808d1744d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pandas/core/algorithms.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/source/whatsnew/v3.1.0.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/core/algorithms.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 38,
+          "deletions": 5,
+          "changes": 43,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/tests/test_algos.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 138,
+          "deletions": 0,
+          "changes": 138,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pandas-dev/pandas"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T21:23:55Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-08-26T11:23:22+00:00, pr_merged_at=2026-08-15T21:23:55+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "3267 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, NA - MaskedArrays, isin"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        },
+        {
+          "code": "unique_fix_pr",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR #66794 already has another reviewable Issue; select only one case during manual audit."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #59609 has a concrete UInt64 and NumPy-array precision-loss reproducer, and merged PR #66794 changes pandas/core/algorithms.py::isin from the recorded pre-fix boundary.",
+        "PR #66794 also references Issue #61676; only Issue #59609 is retained so one fix is not counted twice, while tests and the v3.1 whatsnew entry are excluded."
+      ]
+    },
+    {
+      "id": "paramiko-paramiko-issue-1369-pr-1379",
+      "repository": "paramiko/paramiko",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1369,
+        "title": "CryptographyDeprecationWarnings with cryptography 2.5 release",
+        "body": "See the last bullet point here\r\nhttps://github.com/pyca/cryptography/blob/master/CHANGELOG.rst#25---2019-01-22\r\n\r\nThe warnings I see launching my app that uses paramiko:\r\n```\r\n<VENV_LCOATION>/lib/python3.6/site-packages/paramiko/kex_ecdh_nist.py:39: CryptographyDeprecationWarning: encode_point has been deprecated on EllipticCurvePublicNumbers and will be removed in a future version. Please use EllipticCurvePublicKey.public_bytes to obtain both compressed and uncompressed point encoding.\r\n  m.add_string(self.Q_C.public_numbers().encode_point())\r\n<VENV_LCOATION>/lib/python3.6/site-packages/paramiko/kex_ecdh_nist.py:96: CryptographyDeprecationWarning: Support for unsafe construction of public numbers from encoded data will be removed in a future version. Please use EllipticCurvePublicKey.from_encoded_point\r\n  self.curve, Q_S_bytes\r\n<VENV_LCOATION>/lib/python3.6/site-packages/paramiko/kex_ecdh_nist.py:111: CryptographyDeprecationWarning: encode_point has been deprecated on EllipticCurvePublicNumbers and will be removed in a future version. Please use EllipticCurvePublicKey.public_bytes to obtain both compressed and uncompressed point encoding.\r\n  hm.add_string(self.Q_C.public_numbers().encode_point())\r\n```\r\n\r\n`pipenv graph` output for package versions\r\n```\r\nparamiko==2.4.2\r\n  - bcrypt [required: >=3.1.3, installed: 3.1.6]\r\n    - cffi [required: >=1.1, installed: 1.11.5]\r\n      - pycparser [required: Any, installed: 2.19]\r\n    - six [required: >=1.4.1, installed: 1.12.0]\r\n  - cryptography [required: >=1.5, installed: 2.5]\r\n    - asn1crypto [required: >=0.21.0, installed: 0.24.0]\r\n    - cffi [required: >=1.8,!=1.11.3, installed: 1.11.5]\r\n      - pycparser [required: Any, installed: 2.19]\r\n    - six [required: >=1.4.1, installed: 1.12.0]\r\n  - pyasn1 [required: >=0.1.7, installed: 0.4.5]\r\n  - pynacl [required: >=1.0.1, installed: 1.3.0]\r\n    - cffi [required: >=1.4.1, installed: 1.11.5]\r\n      - pycparser [required: Any, installed: 2.19]\r\n    - six [required: Any, installed: 1.12.0]\r\n```",
+        "labels": [],
+        "comments_count": 12,
+        "created_at": "2019-01-22T20:18:01Z",
+        "updated_at": "2020-03-26T11:46:06Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/1369",
+        "author": "joshsleeper"
+      },
+      "fix_pr_number": 1379,
+      "fix_pr_title": "Move to cryptography 2.5 and stop using deprecated APIs.",
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/1379",
+      "fix_pr_merged_at": "2019-05-31T23:43:19Z",
+      "merge_commit_sha": "e5f47b5182c16c0e3bf5d91b2965f63f3c9ca6de",
+      "pre_fix_sha": "cf7d49d66f3b1fbc8b0853518a54050182b3b5eb",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "paramiko/ecdsakey.py",
+        "paramiko/kex_ecdh_nist.py",
+        "setup.py"
+      ],
+      "changed_files": [
+        {
+          "path": ".travis.yml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "paramiko/ecdsakey.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "paramiko/kex_ecdh_nist.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 29,
+          "deletions": 8,
+          "changes": 37,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "setup.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_kex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 6,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: paramiko/paramiko"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2019-05-31T23:43:19Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2019-01-22T20:18:01+00:00, pr_merged_at=2019-05-31T23:43:19+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2014 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1369 reports CryptographyDeprecationWarning frames in ECDH key exchange, and merged PR #1379 replaces deprecated elliptic-curve APIs in both runtime modules from the recorded pre-fix SHA.",
+        "setup.py remains ground truth because the cryptography minimum-version change is required by the new APIs; .travis.yml and tests/test_kex.py are excluded."
+      ]
+    },
+    {
+      "id": "urllib3-urllib3-issue-4945-pr-5055",
+      "repository": "urllib3/urllib3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 4945,
+        "title": "parse_url doesn't %-decode user/password",
+        "body": "### Subject\n\nAs far as I understand[^rfc], reserved characters need to %-encoded in URLs.\n\n[^rfc]: [RFC 3986 section 3.2.1.](https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.1): `userinfo    = *( unreserved / pct-encoded / sub-delims / \":\" )`\n\nSo, if you have user \"u{er\" with password \"pa}}word\" for example.com, you would encode it as `http://u%7Ber:pass%7D%7Dword@example.com`. However, parse_url doesn't decode those parts:\n\n```py\n>>> import urllib3\n>>> urllib3.util.parse_url(\"http://u%7Ber:pass%7D%7Dword@example.com\").auth\n'u%7Ber:pass%7D%7Dword'\n```\n\nEven worse, it encodes them for invalid URLs if you try to work around it:\n\n```py\n>>> urllib3.util.parse_url(\"http://u{er:pass}}word@example.com\").auth\n'u%7Ber:pass%7D%7Dword'\n```\n\nTherefore, if you use it to parse an URL pass `url.auth` into `make_headers(basic_auth=url.auth)`, you get a 401 and a downtime (ask me how I know).\n\n\n### Environment\n\n```\nOS macOS-26.4-x86_64-i386-64bit-Mach-O\nPython 3.14.3\nOpenSSL 3.5.5 27 Jan 2026\nurllib3 2.6.3\n```\n\n### Steps to Reproduce\n\nSee above.\n\n### Expected Behavior\n\n`urllib3.util.parse_url(\"http://u%7Ber:pass%7D%7Dword@example.com\").auth` should return `u{er:pa}}word`.\n\n`yarl` and `httpx.URL` get this right.\n\n### Actual Behavior\n\nIt returns `u%7Ber:pass%7D%7Dword`\n\nThis behavior is shared by the stdlib and ada_url.",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2026-03-26T08:11:06Z",
+        "updated_at": "2026-06-30T18:39:37Z",
+        "html_url": "https://github.com/urllib3/urllib3/issues/4945",
+        "author": "hynek"
+      },
+      "fix_pr_number": 5055,
+      "fix_pr_title": "Add auth decoding properties for URL class",
+      "fix_pr_url": "https://github.com/urllib3/urllib3/pull/5055",
+      "fix_pr_merged_at": "2026-06-30T18:39:36Z",
+      "merge_commit_sha": "5cf0247049a4baa02e830666de53431e5b575694",
+      "pre_fix_sha": "29ae1419530857dc43f5d28907da5d6fbc229739",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/util/url.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog/4945.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/urllib3/contrib/socks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 5,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/urllib3/util/request.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/urllib3/util/url.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 39,
+          "deletions": 0,
+          "changes": 39,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "test/test_util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 49,
+          "deletions": 0,
+          "changes": 49,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: urllib3/urllib3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-30T18:39:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-03-26T08:11:06+00:00, pr_merged_at=2026-06-30T18:39:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "11 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1331 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #4945 provides a URL credential decoding reproduction, and merged PR #5055 adds the decoding behavior inside the existing Url class from the recorded pre-fix SHA.",
+        "The automatic three-file set is narrowed to src/urllib3/util/url.py: request.py is documentation-only and socks.py is auxiliary reuse from another fix, not Issue #4945 ground truth."
+      ]
+    },
+    {
+      "id": "astral-sh-uv-issue-21122-pr-21131",
+      "repository": "astral-sh/uv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 21122,
+        "title": "`uv export --format cyclonedx1.5` omits component hashes that `uv.lock` already carries",
+        "body": "## Summary\n\nThe CycloneDX export emits no hashes for any component, even though `uv.lock` records `sha256` per sdist and per wheel by default and the `requirements.txt` export propagates them. `uv export --no-hashes` is documented as \"Omit hashes in the generated output,\" which implies hashes are on by default. For `cyclonedx1.5` there are none to omit, so the flag is a no-op there.\n\n## Platform\n\nmacOS 14 arm64\n\n## Version\n\nuv 0.12.4\n\n## Reproduction\n\n```console\n$ uv init edgetest && cd edgetest\n$ uv add requests\n\n# uv.lock carries hashes\n$ grep -c 'hash = \"sha256:' uv.lock\n184\n\n# the requirements export propagates them\n$ uv export --format requirements.txt --hashes | grep -c 'sha256:'\n184\n\n# the CycloneDX export does not, with or without --hashes\n$ uv export --format cyclonedx1.5 | jq '[.components[] | select(.hashes)] | length'\n0\n$ uv export --format cyclonedx1.5 --hashes | jq '[.components[] | select(.hashes)] | length'\n0\n\n# and not on externalReferences either\n$ uv export --format cyclonedx1.5 | jq '[.components[]? | (.externalReferences // [])[]? | select(.hashes)] | length'\n0\n```\n\nThe export emits every component without hashes:\n\n```console\n$ uv export --format cyclonedx1.5 | jq -c '.components[0]'\n{\"bom-ref\":\"certifi-2@2026.7.22\",\"name\":\"certifi\",\"type\":\"library\",\n \"purl\":\"pkg:pypi/certifi@2026.7.22\",\"version\":\"2026.7.22\", …}\n```\n\nThe dependency graph, `purl`s, and the `uv:package:marker` properties are all present and correct. Hashes are the only lockfile data that does not survive.\n\n## Expected\n\nComponents carry the hashes from `uv.lock`, in either place CycloneDX defines for them:\n\n- `components[].hashes[]`, or\n- a `hashes` array on the component's distribution `externalReference`.\n\n`--no-hashes` should suppress them, matching its behavior for `requirements.txt`.\n\n## Why it matters\n\nHashes are the field that makes an SBOM verifiable rather than merely descriptive. A consumer uses them to confirm the artifact they received is the artifact the SBOM describes. Published baselines ask for them explicitly:\n\n- **CISA's 2026 Minimum Elements for an SBOM** (July 2026) lists Component Hash Value and Component Hash Algorithm among its 17 data fields.\n- **OWASP SCVS V1.0 V2.18**: \"Components defined in SBOM have one or more file hashes (SHA-256, SHA-512, etc).\"\n\n## Notes\n\n- The hash issues that exist (#6944, #9225, #10987) all concern the `requirements.txt` export. Neither #6012 nor the implementing PR #16523 scopes hash support in or out.\n",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-08-14T03:02:51Z",
+        "updated_at": "2026-08-14T16:36:38Z",
+        "html_url": "https://github.com/astral-sh/uv/issues/21122",
+        "author": "anthonymastreanvae"
+      },
+      "fix_pr_number": 21131,
+      "fix_pr_title": "Include hashes in cyclonedx exports",
+      "fix_pr_url": "https://github.com/astral-sh/uv/pull/21131",
+      "fix_pr_merged_at": "2026-08-14T16:36:36Z",
+      "merge_commit_sha": "b82b0383fc3471227aa864f18d2c1c8efac8b9f1",
+      "pre_fix_sha": "298dda41bff49bbd0a2f397e1662ab09b9cd148e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/uv-resolver/src/lock/export/cyclonedx_json.rs",
+        "crates/uv/src/commands/project/export.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/uv-resolver/src/lock/export/cyclonedx_json.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 77,
+          "deletions": 4,
+          "changes": 81,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/commands/project/export.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/tests/project/export.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 209,
+          "deletions": 30,
+          "changes": 239,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/uv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T16:36:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-14T03:02:51+00:00, pr_merged_at=2026-08-14T16:36:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2482 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #21122 reproduces CycloneDX exports omitting distribution hashes already present in uv.lock, and merged PR #21131 implements the hash conversion and CLI plumbing from the recorded pre-fix SHA.",
+        "Both Rust production files are required while the export snapshot test is excluded; symbol ground truth remains empty because the current index does not extract Rust symbols."
+      ]
+    }
+  ]
+}

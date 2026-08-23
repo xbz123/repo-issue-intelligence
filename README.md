@@ -172,7 +172,7 @@ Run the frozen real-project benchmark:
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.27-batch4-90-cases-run1.json
+  --output benchmarks/results/deterministic-v0.27-batch5-100-cases-run1.json
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
@@ -191,9 +191,9 @@ fall back immediately. This isolates file ordering from hypothesis generation an
 unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
 and the completion budget starts at 8,192 tokens with one 20,000-token truncation retry. The full
 frozen Issue and selected deterministic candidate snippets are sent without project-defined input
-character caps. Current manifest version 12 embeds 90 complete Issue
-snapshots across 43 repositories, corrected pre-fix SHAs, and 87 manually reviewed symbol targets
-across 63 cases. Older deterministic and DeepSeek artifacts remain committed as historical
+character caps. Current manifest version 13 embeds 100 complete Issue
+snapshots across 46 repositories, corrected pre-fix SHAs, and 97 manually reviewed symbol targets
+across 72 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
 variants.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
@@ -231,6 +231,7 @@ uv run rii benchmark-plan benchmarks/cases.json \
   --review-decisions benchmarks/expansion-v0.15-selection.json \
   --review-decisions benchmarks/expansion-v0.16-selection.json \
   --review-decisions benchmarks/expansion-v0.17-selection.json \
+  --review-decisions benchmarks/expansion-v0.18-selection.json \
   --output benchmarks/expansion-v200-review-queue.json
 ```
 
@@ -326,18 +327,18 @@ See `docs/architecture.md` for system boundaries and
 
 ## Evaluation
 
-The current frozen benchmark contains 90 closed issues with linked fix PRs across 43 projects:
-17 main, 11 calibration, and 62 generalization cases. It records 135 reviewed production-file
-targets and 87 reviewed symbols across 63 cases. Each case uses a committed Issue snapshot and the
+The current frozen benchmark contains 100 closed issues with linked fix PRs across 46 projects:
+17 main, 11 calibration, and 72 generalization cases. It records 148 reviewed production-file
+targets and 97 reviewed symbols across 72 cases. Each case uses a committed Issue snapshot and the
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v12 deterministic v0.27 runs completed 90/90 cases and produced identical candidates,
-symbols, and metrics after excluding timestamps and elapsed fields. File Recall@1 is `0.3652`,
-Recall@5 `0.6372`, Recall@10 `0.7131`, Recall@20 `0.8635`, and MRR `0.5704`. Symbol Recall@1 is
-`0.2619`, Recall@5 `0.4299`, Recall@10 `0.4537`, Recall@20 `0.5331`, and symbol MRR `0.3714`.
-The fourth reviewed batch adds older single-file Python and TypeScript targets and raises the number
-of production targets absent from the current deterministic Top-20 to 25.
+Three manifest-v13 deterministic v0.27 runs completed 100/100 cases and produced identical
+candidates, symbols, and metrics after excluding timestamps, elapsed fields, and cache provenance.
+File Recall@1 is `0.3620`, Recall@5 `0.6318`, Recall@10 `0.7085`, Recall@20 `0.8538`, and MRR
+`0.5651`. Symbol Recall@1 is `0.2500`, Recall@5 `0.3970`, Recall@10 `0.4178`, Recall@20 `0.4873`,
+and symbol MRR `0.3527`. The fifth reviewed batch adds two audited multi-file fixes and three new
+repositories, while raising the number of production targets absent from Top-20 to 28.
 
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
@@ -437,12 +438,12 @@ orders were identical across all repeats. The result therefore supports a reliab
 and bounded ordering gain on this frozen pool, not deterministic generation, new-file discovery,
 or root-cause accuracy.
 
-The first four 200-case expansion batches accept 40 manually reviewed cases; multi-file coverage is
-31/90 because the fourth batch contains only single-file production fixes. Its decision artifact
-rejects one demo-only Tornado change and removes test/Storybook files from Prefect cases. Twenty-five
-of the 135 reviewed production targets remain outside the deterministic Top-20, and the current index provides
+The first five 200-case expansion batches accept 50 manually reviewed cases; multi-file coverage is
+33/100. The fifth batch narrows an automatic three-file urllib3 candidate to its single material
+production file and rejects a duplicate Pandas Issue tied to an already selected fix PR. Twenty-eight
+of the 148 reviewed production targets remain outside the deterministic Top-20, and the current index provides
 file-only symbol ground truth for TypeScript, Rust, and C. Superseded manifests and retained
-50-case DeepSeek runs remain provenance only and must not be mixed with manifest-v12 metrics.
+50-case DeepSeek runs remain provenance only and must not be mixed with manifest-v13 metrics.
 
 See [`docs/benchmark-results.md`](docs/benchmark-results.md) for the protocol, per-tier results,
 limitations, and next retrieval improvements.

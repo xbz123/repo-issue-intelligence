@@ -6,6 +6,34 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.18 fifth 200-case expansion batch
+
+Manifest v13 accepts ten reviewed Issue/Fix-PR pairs from Jinja, pytest-asyncio, Requests, Pylint,
+Flake8, pandas, Paramiko, urllib3, and uv. It introduces pytest-asyncio, Requests, and urllib3 as
+new repositories, adds 13 production-file targets, and records ten pre-fix Python symbol targets
+across nine cases. The two-file uv Rust case remains intentionally file-only.
+
+Reviewers narrow urllib3 #4945 from three automatic files to the material `url.py` change because
+`request.py` is documentation-only and `socks.py` is auxiliary reuse from another fix. The batch
+also rejects Pandas Issue #61676 for PR #66794 because Issue #59609 already represents that same
+fix. Paramiko retains `setup.py`: raising the minimum cryptography version is required by the new
+runtime APIs rather than being unrelated packaging churn.
+
+The suite now contains 100 cases across 46 repositories: 17 main, 11 calibration, and 72
+generalization cases. It records 148 production-file targets, 33 multi-file cases, and 97 reviewed
+symbol targets across 72 cases.
+
+Three deterministic v0.27 runs completed 100/100 cases. After removing timestamps, elapsed fields,
+and cache provenance, their candidate files, candidate symbols, per-case metrics, tier metrics, and
+aggregates were identical. File Recall@1/5/10/20 is `0.3620/0.6318/0.7085/0.8538`, with MRR
+`0.5651`. Across the 72 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2500/0.3970/0.4178/0.4873`, with MRR `0.3527`. Twenty-eight of 148 production targets remain
+outside the deterministic Top-20 and stay in the denominator.
+
+Run 1 rebuilt 98 schema-v2 repository maps and reused two same-SHA entries; runs 2 and 3 recorded
+100/100 hits. Warm reuse reduced mean in-process analysis time from 7,526 to 4,426 ms per case, a
+41.19% reduction, without changing any non-timing result.
+
 ## v0.17 fourth 200-case expansion batch
 
 Manifest v12 accepts ten reviewed Issue/Fix-PR pairs from Prefect, Django REST Framework, h2,
@@ -352,19 +380,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting four ten-case batches into manifest v12 and excluding seven reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 155
+After accepting five ten-case batches into manifest v13 and excluding eight reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 145
 unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 110 primary candidates and 40 reserves;
+- 100 primary candidates and 40 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 29 new multi-file primary candidates, which would raise the suite from 31/90 to 60/200
+- 27 new multi-file primary candidates, which would raise the suite from 33/100 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 61 primary Issues created before 2026;
-- 61 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 54 primary Issues created before 2026;
+- 54 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -381,7 +409,7 @@ The compact queue is committed so review order, advisory signals, pre-fix SHA pr
 files, and diversity constraints are auditable without claiming that the 200-case manifest already
 exists.
 
-Manifest v12 confirms that the earlier candidate-pool saturation does not survive broader,
-mixed-language, multi-file cases: 25 of 135 reviewed production targets are outside the
+Manifest v13 confirms that the earlier candidate-pool saturation does not survive broader,
+mixed-language, multi-file cases: 28 of 148 reviewed production targets are outside the
 deterministic Top-20. Subsequent batches keep those misses in the denominator and must not weaken
 the frozen-case acceptance rules to improve the headline metric.
