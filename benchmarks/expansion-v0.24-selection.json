@@ -1,0 +1,191 @@
+{
+  "name": "real-project-benchmark-expansion-v0.24",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "urllib3-urllib3-issue-5099-pr-5103",
+      "case_id": "urllib3-pyopenssl-x509-deprecation",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/contrib/pyopenssl.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #5099 reports pyOpenSSL deprecation failures from X509.get_subject, and merged PR #5103 replaces the lookup with cryptography's X.509 API while removing a related password-callback warning.",
+        "Retain the pyopenssl production file as file-level ground truth because the pre-fix map contains three conditional WrappedSocket.getpeercert definitions; lock and changelog files are excluded, and unmerged PR #5121 is not a second fix case."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-11228-pr-11262",
+      "case_id": "pylint-docparams-raise-nonexception",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/extensions/_check_docs_utils.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/extensions/_check_docs_utils.py",
+          "symbol": "possible_exc_types"
+        }
+      ],
+      "review_notes": [
+        "Issue #11228 reproduces docparams crashing when an inferred raise target is a function or module instead of an exception class, and merged PR #11262 guards the ancestry lookup.",
+        "Retain possible_exc_types; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-11231-pr-11232",
+      "case_id": "pylint-typed-dict-instance-name",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/base/name_checker/checker.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/checkers/base/name_checker/checker.py",
+          "symbol": "NameChecker._should_check_class_regex"
+        }
+      ],
+      "review_notes": [
+        "Issue #11231 reports a TypedDict instance being checked with class naming rules, and merged PR #11232 excludes the instance path without changing functional TypedDict or EnumMeta handling.",
+        "Retain NameChecker._should_check_class_regex; tests and changelog are excluded, and regression-source PR #10673 is not another fix case."
+      ]
+    },
+    {
+      "candidate_id": "pandas-dev-pandas-issue-66639-pr-66790",
+      "case_id": "pandas-read-csv-sep-none-fallback",
+      "tier": "generalization",
+      "expected_files": [
+        "pandas/io/parsers/readers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/io/parsers/readers.py",
+          "symbol": "TextFileReader._clean_options"
+        }
+      ],
+      "review_notes": [
+        "Issue #66639 reports read_csv with sep=None no longer falling back to the Python engine, and merged PR #66790 restores fallback while rejecting explicitly incompatible engines.",
+        "Retain TextFileReader._clean_options; docs, whatsnew, and tests are excluded, and Issues #66641, #66644, and #66723 are not counted separately."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-ruff-issue-27631-pr-27687",
+      "case_id": "ruff-subprocess-keyword-arguments",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #27631 reports subprocess shell-injection checks missing keyword arguments, and merged PR #27687 adds keyword-aware argument lookup in the existing Rust rule.",
+        "Retain the Rust production file as file-only ground truth; mdtest and other regression tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "paramiko-paramiko-issue-713-pr-889",
+      "case_id": "paramiko-aes-ctr-pycrypto-iv",
+      "tier": "generalization",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/transport.py",
+          "symbol": "Transport._get_cipher"
+        }
+      ],
+      "review_notes": [
+        "Issue #713 reports AES-CTR construction failing because PyCrypto receives an IV it does not accept, and merged PR #889 omits the IV for CTR mode.",
+        "Retain Transport._get_cipher; tests and changelog are excluded, and unmerged duplicate PR #714 is not counted."
+      ]
+    },
+    {
+      "candidate_id": "pallets-markupsafe-issue-358-pr-376",
+      "case_id": "markupsafe-wrapper-return-type",
+      "tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/markupsafe/__init__.py",
+          "symbol": "_simple_escaping_wrapper"
+        }
+      ],
+      "review_notes": [
+        "Issue #358 reports wrapped Markup string methods being typed as returning str, and merged PR #376 gives the wrapper a ParamSpec-preserving decorator type and explicit method bindings.",
+        "Retain _simple_escaping_wrapper; changelog is excluded and related Issue #364 must not become a duplicate case."
+      ]
+    },
+    {
+      "candidate_id": "pallets-markupsafe-issue-417-pr-418",
+      "case_id": "markupsafe-striptags-comment-space",
+      "tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/markupsafe/__init__.py",
+          "symbol": "Markup.striptags"
+        }
+      ],
+      "review_notes": [
+        "Issue #417 reproduces comments leaving spurious whitespace in Markup.striptags, and merged PR #418 restores stripping comments and tags before collapsing spaces.",
+        "Retain Markup.striptags; tests and changelog are excluded. Existing MarkupSafe cases in the same file cover different defects."
+      ]
+    },
+    {
+      "candidate_id": "pypa-build-issue-966-pr-1087",
+      "case_id": "build-backend-failure-debug-hint",
+      "tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/build/__main__.py",
+          "symbol": "_handle_build_error"
+        }
+      ],
+      "review_notes": [
+        "Issue #966 reports backend logs disappearing with temporary build directories, and merged PR #1087 emits a failure hint for preserving or locating the working directories.",
+        "Retain _handle_build_error; documentation, tests, and changelog are excluded. The required env and extraction flags already exist at the recorded pre-fix SHA."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-98-pr-99",
+      "case_id": "h11-specific-reader-errors",
+      "tier": "generalization",
+      "expected_files": [
+        "h11/_readers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "h11/_readers.py",
+          "symbol": "_decode_header_lines"
+        }
+      ],
+      "review_notes": [
+        "Issue #98 asks for actionable RemoteProtocolError messages, and merged PR #99 adds specific invalid header, request, status, and chunk details to reader validation.",
+        "Retain _decode_header_lines as the representative pre-fix symbol while file ground truth covers the other reader hunks; existing h11 cases target different protocol defects."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-4859-pr-4862",
+      "reason": "PR #4862 fixes Issues #4857, #4858, and #4859 together, so Issue #4859 cannot form a unique Issue-to-Fix-PR benchmark pair."
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-319-pr-1309",
+      "reason": "PR #1309 fixes Issues #1308, #1247, and #319 together and identifies #1308 as the parent report, so #319 would duplicate one fix."
+    },
+    {
+      "candidate_id": "pallets-jinja-issue-2015-pr-2017",
+      "reason": "PR #2017 only corrects docstring example variable names and changes no production runtime behavior."
+    }
+  ]
+}

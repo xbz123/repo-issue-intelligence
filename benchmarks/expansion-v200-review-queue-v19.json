@@ -1,21 +1,21 @@
 {
   "name": "python-real-issue-file-localization-200-case-review-queue",
   "version": 1,
-  "generated_at": "2026-08-24T09:50:19.190660Z",
+  "generated_at": "2026-08-24T11:43:55.483664Z",
   "base_manifest_name": "python-real-issue-file-localization",
-  "base_manifest_version": 18,
+  "base_manifest_version": 19,
   "target_total_cases": 200,
-  "base_case_count": 150,
-  "requested_new_cases": 50,
+  "base_case_count": 160,
+  "requested_new_cases": 40,
   "reserve_cases": 25,
   "max_primary_per_repository": 5,
   "target_multi_file_share": 0.23,
   "required_new_multi_file_cases": 1,
-  "available_reviewable_records": 193,
-  "available_unique_cases": 78,
+  "available_reviewable_records": 190,
+  "available_unique_cases": 67,
   "available_unique_multi_file_cases": 1,
   "primary_multi_file_cases": 1,
-  "primary_repositories": 35,
+  "primary_repositories": 32,
   "entries": [
     {
       "review_order": 1,
@@ -46,141 +46,6 @@
     },
     {
       "review_order": 2,
-      "candidate_id": "urllib3-urllib3-issue-5099-pr-5103",
-      "priority": "primary",
-      "repository": "urllib3/urllib3",
-      "issue_number": 5099,
-      "fix_pr_number": 5103,
-      "issue_title": "Test failures with `pyopenssl==26.3.0`: `DeprecationWarning: X509.get_subject is deprecated. You should use cryptography's X.509 APIs instead.`",
-      "issue_created_at": "2026-07-04T16:57:10Z",
-      "suggested_case_id": "urllib3-urllib3-issue-5099",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "e18a0d1a159210a5b64354a435b6e5437c80e0d6",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/urllib3/contrib/pyopenssl.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 3,
-      "candidate_id": "pylint-dev-pylint-issue-11228-pr-11262",
-      "priority": "primary",
-      "repository": "pylint-dev/pylint",
-      "issue_number": 11228,
-      "fix_pr_number": 11262,
-      "issue_title": "`AttributeError: 'FunctionDef' object has no attribute 'ancestors'` in docparams checker",
-      "issue_created_at": "2026-08-04T01:13:11Z",
-      "suggested_case_id": "pylint-dev-pylint-issue-11228",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "d4ade4ae762534f203d57c3cbcb94e4d7d3d7f0d",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "pylint/extensions/_check_docs_utils.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 4,
-      "candidate_id": "pylint-dev-pylint-issue-11231-pr-11232",
-      "priority": "primary",
-      "repository": "pylint-dev/pylint",
-      "issue_number": 11231,
-      "fix_pr_number": 11232,
-      "issue_title": "False positive invalid-name (C0103) for module-level TypedDict instantiation, regression from PR #10673",
-      "issue_created_at": "2026-08-05T08:45:12Z",
-      "suggested_case_id": "pylint-dev-pylint-issue-11231",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "2704876d736917a36ba5674bed9c9251434d096f",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "pylint/checkers/base/name_checker/checker.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 5,
-      "candidate_id": "pandas-dev-pandas-issue-66639-pr-66790",
-      "priority": "primary",
-      "repository": "pandas-dev/pandas",
-      "issue_number": 66639,
-      "fix_pr_number": 66790,
-      "issue_title": "BUG: read_csv(sep=None) raises TypeError instead of falling back to the python engine",
-      "issue_created_at": "2026-08-06T16:58:16Z",
-      "suggested_case_id": "pandas-dev-pandas-issue-66639",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "pandas/io/parsers/readers.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 6,
-      "candidate_id": "astral-sh-ruff-issue-27631-pr-27687",
-      "priority": "primary",
-      "repository": "astral-sh/ruff",
-      "issue_number": 27631,
-      "fix_pr_number": 27687,
-      "issue_title": "False negatives when passing `subprocess` command as keyword argument",
-      "issue_created_at": "2026-08-10T14:49:19Z",
-      "suggested_case_id": "astral-sh-ruff-issue-27631",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "8f11b10b926b1625cf35a5babb44854e2bbd423d",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 7,
       "candidate_id": "prefecthq-prefect-issue-22807-pr-22808",
       "priority": "primary",
       "repository": "PrefectHQ/prefect",
@@ -207,7 +72,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 8,
+      "review_order": 3,
       "candidate_id": "tox-dev-tox-issue-4021-pr-4022",
       "priority": "primary",
       "repository": "tox-dev/tox",
@@ -234,7 +99,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 9,
+      "review_order": 4,
       "candidate_id": "prefecthq-prefect-issue-22812-pr-22813",
       "priority": "primary",
       "repository": "PrefectHQ/prefect",
@@ -261,7 +126,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 10,
+      "review_order": 5,
       "candidate_id": "pylint-dev-pylint-issue-11267-pr-11268",
       "priority": "primary",
       "repository": "pylint-dev/pylint",
@@ -288,62 +153,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 11,
-      "candidate_id": "hypothesisworks-hypothesis-issue-4859-pr-4862",
-      "priority": "primary",
-      "repository": "HypothesisWorks/hypothesis",
-      "issue_number": 4859,
-      "fix_pr_number": 4862,
-      "issue_title": "`st.from_regex` incorrectly combines negative character classes with positive members",
-      "issue_created_at": "2026-08-13T19:22:57Z",
-      "suggested_case_id": "hypothesisworks-hypothesis-issue-4859",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "a15954b165af42884b655dcf7e9338cb107711da",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 8,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 12,
-      "candidate_id": "paramiko-paramiko-issue-713-pr-889",
-      "priority": "primary",
-      "repository": "paramiko/paramiko",
-      "issue_number": 713,
-      "fix_pr_number": 889,
-      "issue_title": "Paramiko passes IV to pycrypto when using MODE_CTR",
-      "issue_created_at": "2016-03-31T14:18:11Z",
-      "suggested_case_id": "paramiko-paramiko-issue-713",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "7a9d633486991b11e4c212e6937ceea42c1e539f",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "paramiko/transport.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 13,
+      "review_order": 6,
       "candidate_id": "encode-django-rest-framework-issue-6202-pr-9902",
       "priority": "primary",
       "repository": "encode/django-rest-framework",
@@ -371,7 +181,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 14,
+      "review_order": 7,
       "candidate_id": "paramiko-paramiko-issue-2038-pr-2039",
       "priority": "primary",
       "repository": "paramiko/paramiko",
@@ -399,63 +209,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 15,
-      "candidate_id": "pallets-markupsafe-issue-358-pr-376",
-      "priority": "primary",
-      "repository": "pallets/markupsafe",
-      "issue_number": 358,
-      "fix_pr_number": 376,
-      "issue_title": "Return type for methods covered by `_simple_escaping_wrapper` is wrong",
-      "issue_created_at": "2023-03-12T11:42:03Z",
-      "suggested_case_id": "pallets-markupsafe-issue-358",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "910ffffbcc991f5bc38345bb7134844700504db5",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/markupsafe/__init__.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 16,
-      "candidate_id": "pallets-markupsafe-issue-417-pr-418",
-      "priority": "primary",
-      "repository": "pallets/markupsafe",
-      "issue_number": 417,
-      "fix_pr_number": 418,
-      "issue_title": "Markup.striptags: comments now get replaced with a space",
-      "issue_created_at": "2024-01-24T15:34:43Z",
-      "suggested_case_id": "pallets-markupsafe-issue-417",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "73e6a4886564a554c4a19983d29c97f9fc95457d",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/markupsafe/__init__.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 17,
+      "review_order": 8,
       "candidate_id": "python-attrs-attrs-issue-1400-pr-1529",
       "priority": "primary",
       "repository": "python-attrs/attrs",
@@ -483,7 +237,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 18,
+      "review_order": 9,
       "candidate_id": "pytest-dev-pytest-asyncio-issue-1101-pr-1373",
       "priority": "primary",
       "repository": "pytest-dev/pytest-asyncio",
@@ -512,7 +266,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 19,
+      "review_order": 10,
       "candidate_id": "encode-django-rest-framework-issue-9741-pr-9742",
       "priority": "primary",
       "repository": "encode/django-rest-framework",
@@ -540,7 +294,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 20,
+      "review_order": 11,
       "candidate_id": "psf-requests-issue-7219-pr-7220",
       "priority": "primary",
       "repository": "psf/requests",
@@ -568,7 +322,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 21,
+      "review_order": 12,
       "candidate_id": "pylint-dev-pylint-issue-11271-pr-11275",
       "priority": "primary",
       "repository": "pylint-dev/pylint",
@@ -596,7 +350,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 22,
+      "review_order": 13,
       "candidate_id": "paramiko-paramiko-issue-67-pr-153",
       "priority": "primary",
       "repository": "paramiko/paramiko",
@@ -624,15 +378,15 @@
       "status": "needs_review"
     },
     {
-      "review_order": 23,
-      "candidate_id": "python-hyper-h2-issue-319-pr-1309",
+      "review_order": 14,
+      "candidate_id": "python-hyper-h2-issue-1247-pr-1309",
       "priority": "primary",
       "repository": "python-hyper/h2",
-      "issue_number": 319,
+      "issue_number": 1247,
       "fix_pr_number": 1309,
-      "issue_title": "hyper should validate header fields on a header block with the CONNECT method",
-      "issue_created_at": "2016-09-19T19:46:37Z",
-      "suggested_case_id": "python-hyper-h2-issue-319",
+      "issue_title": "”Header block missing mandatory :path header” when using CONNECT as per the HTTP/2 specification",
+      "issue_created_at": "2021-02-24T06:31:53Z",
+      "suggested_case_id": "python-hyper-h2-issue-1247",
       "suggested_tier": "generalization",
       "pre_fix_sha": "9268b7235f345e6a335733d56d298594e8069aa3",
       "pre_fix_sha_source": "first_pull_commit_parent",
@@ -647,96 +401,13 @@
         "issue_has_body"
       ],
       "review_flags": [
-        "failed:diagnostic_signal"
+        "failed:diagnostic_signal",
+        "failed:unique_fix_pr"
       ],
       "status": "needs_review"
     },
     {
-      "review_order": 24,
-      "candidate_id": "python-hyper-h11-issue-98-pr-99",
-      "priority": "primary",
-      "repository": "python-hyper/h11",
-      "issue_number": 98,
-      "fix_pr_number": 99,
-      "issue_title": "RemoteProtocolError's messaging is not specific",
-      "issue_created_at": "2020-03-13T05:59:56Z",
-      "suggested_case_id": "python-hyper-h11-issue-98",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "68e32dbb475d5241f077afaa278b6ef248b1f9bd",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "h11/_readers.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 25,
-      "candidate_id": "pallets-jinja-issue-2015-pr-2017",
-      "priority": "primary",
-      "repository": "pallets/jinja",
-      "issue_number": 2015,
-      "fix_pr_number": 2017,
-      "issue_title": "Incorrect list comprehension",
-      "issue_created_at": "2024-08-11T11:34:51Z",
-      "suggested_case_id": "pallets-jinja-issue-2015",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "13c42b3aabe57511537e14cf4736a5730b1a8782",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/jinja2/filters.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 26,
-      "candidate_id": "pypa-build-issue-966-pr-1087",
-      "priority": "primary",
-      "repository": "pypa/build",
-      "issue_number": 966,
-      "fix_pr_number": 1087,
-      "issue_title": "keep backend logs?",
-      "issue_created_at": "2025-12-16T00:49:53Z",
-      "suggested_case_id": "pypa-build-issue-966",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "254be0cc5be82b0871b8d4702b9fca4cabc87eb4",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/build/__main__.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 27,
+      "review_order": 15,
       "candidate_id": "encode-django-rest-framework-issue-9927-pr-9928",
       "priority": "primary",
       "repository": "encode/django-rest-framework",
@@ -764,7 +435,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 28,
+      "review_order": 16,
       "candidate_id": "tox-dev-tox-issue-3929-pr-3931",
       "priority": "primary",
       "repository": "tox-dev/tox",
@@ -792,7 +463,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 29,
+      "review_order": 17,
       "candidate_id": "python-hyper-h2-issue-1316-pr-1317",
       "priority": "primary",
       "repository": "python-hyper/h2",
@@ -820,7 +491,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 30,
+      "review_order": 18,
       "candidate_id": "scikit-learn-scikit-learn-issue-34621-pr-34632",
       "priority": "primary",
       "repository": "scikit-learn/scikit-learn",
@@ -848,35 +519,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 31,
-      "candidate_id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
-      "priority": "primary",
-      "repository": "scikit-learn/scikit-learn",
-      "issue_number": 34719,
-      "fix_pr_number": 34726,
-      "issue_title": "CI Add bot comment when linting job fails early",
-      "issue_created_at": "2026-08-11T05:00:17Z",
-      "suggested_case_id": "scikit-learn-scikit-learn-issue-34719",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "e27ccf58592fcfe8c7ca87f53dde840c436093b2",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "build_tools/get_comment.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 6,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 32,
+      "review_order": 19,
       "candidate_id": "pyo3-pyo3-issue-6318-pr-6320",
       "priority": "primary",
       "repository": "PyO3/pyo3",
@@ -904,7 +547,36 @@
       "status": "needs_review"
     },
     {
-      "review_order": 33,
+      "review_order": 20,
+      "candidate_id": "hypothesisworks-hypothesis-issue-4857-pr-4862",
+      "priority": "primary",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 4857,
+      "fix_pr_number": 4862,
+      "issue_title": "`st.from_regex` can incorrectly raise `IncompatibleWithAlphabet` with kleene star",
+      "issue_created_at": "2026-08-13T18:38:14Z",
+      "suggested_case_id": "hypothesisworks-hypothesis-issue-4857",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "a15954b165af42884b655dcf7e9338cb107711da",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal",
+        "failed:unique_fix_pr"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 21,
       "candidate_id": "sphinx-doc-sphinx-issue-3099-pr-3104",
       "priority": "primary",
       "repository": "sphinx-doc/sphinx",
@@ -932,7 +604,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 34,
+      "review_order": 22,
       "candidate_id": "urllib3-urllib3-issue-1362-pr-5020",
       "priority": "primary",
       "repository": "urllib3/urllib3",
@@ -960,35 +632,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 35,
-      "candidate_id": "urllib3-urllib3-issue-2580-pr-5140",
-      "priority": "primary",
-      "repository": "urllib3/urllib3",
-      "issue_number": 2580,
-      "fix_pr_number": 5140,
-      "issue_title": "Allow tweaking the presentation style of logged errors",
-      "issue_created_at": "2022-03-10T08:27:04Z",
-      "suggested_case_id": "urllib3-urllib3-issue-2580",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "627636551e0e0159996b0f28dd21a60372cc5b10",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/urllib3/connectionpool.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 5,
-      "passed_advisory_checks": [
-        "bug_signal",
-        "diagnostic_signal",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:closing_reference"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 36,
+      "review_order": 23,
       "candidate_id": "pypa-packaging-issue-774-pr-825",
       "priority": "primary",
       "repository": "pypa/packaging",
@@ -1016,7 +660,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 37,
+      "review_order": 24,
       "candidate_id": "scipy-scipy-issue-23076-pr-24923",
       "priority": "primary",
       "repository": "scipy/scipy",
@@ -1044,7 +688,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 38,
+      "review_order": 25,
       "candidate_id": "tornadoweb-tornado-issue-3510-pr-3511",
       "priority": "primary",
       "repository": "TornadoWeb/tornado",
@@ -1072,7 +716,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 39,
+      "review_order": 26,
       "candidate_id": "boto-botocore-issue-3651-pr-3652",
       "priority": "primary",
       "repository": "boto/botocore",
@@ -1100,7 +744,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 40,
+      "review_order": 27,
       "candidate_id": "astral-sh-uv-issue-21089-pr-21094",
       "priority": "primary",
       "repository": "astral-sh/uv",
@@ -1128,7 +772,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 41,
+      "review_order": 28,
       "candidate_id": "aio-libs-multidict-issue-292-pr-1204",
       "priority": "primary",
       "repository": "aio-libs/multidict",
@@ -1158,7 +802,35 @@
       "status": "needs_review"
     },
     {
-      "review_order": 42,
+      "review_order": 29,
+      "candidate_id": "pypa-build-issue-198-pr-1080",
+      "priority": "primary",
+      "repository": "pypa/build",
+      "issue_number": 198,
+      "fix_pr_number": 1080,
+      "issue_title": "Machine-readable build report",
+      "issue_created_at": "2020-12-07T18:02:21Z",
+      "suggested_case_id": "pypa-build-issue-198",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "714175afba330b51a7eb47f9153173dc75210d48",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 30,
       "candidate_id": "pypa-setuptools-issue-3085-pr-5007",
       "priority": "primary",
       "repository": "pypa/setuptools",
@@ -1186,7 +858,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 43,
+      "review_order": 31,
       "candidate_id": "pycqa-flake8-issue-1747-pr-1854",
       "priority": "primary",
       "repository": "PyCQA/flake8",
@@ -1214,7 +886,35 @@
       "status": "needs_review"
     },
     {
-      "review_order": 44,
+      "review_order": 32,
+      "candidate_id": "python-hyper-h11-issue-158-pr-159",
+      "priority": "primary",
+      "repository": "python-hyper/h11",
+      "issue_number": 158,
+      "fix_pr_number": 159,
+      "issue_title": "Remove test files when publishing package",
+      "issue_created_at": "2023-04-02T03:00:34Z",
+      "suggested_case_id": "python-hyper-h11-issue-158",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "cdccbeff44a39426b58010eb454a75015ec6f8bc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "setup.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 4,
+      "passed_advisory_checks": [
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 33,
       "candidate_id": "matplotlib-matplotlib-issue-28220-pr-32195",
       "priority": "primary",
       "repository": "matplotlib/matplotlib",
@@ -1242,7 +942,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 45,
+      "review_order": 34,
       "candidate_id": "aio-libs-yarl-issue-1455-pr-1456",
       "priority": "primary",
       "repository": "aio-libs/yarl",
@@ -1270,7 +970,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 46,
+      "review_order": 35,
       "candidate_id": "apache-airflow-issue-54983-pr-68107",
       "priority": "primary",
       "repository": "apache/airflow",
@@ -1298,7 +998,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 47,
+      "review_order": 36,
       "candidate_id": "sqlalchemy-sqlalchemy-issue-13132-pr-13155",
       "priority": "primary",
       "repository": "sqlalchemy/sqlalchemy",
@@ -1326,7 +1026,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 48,
+      "review_order": 37,
       "candidate_id": "pypa-virtualenv-issue-3181-pr-3184",
       "priority": "primary",
       "repository": "pypa/virtualenv",
@@ -1354,7 +1054,35 @@
       "status": "needs_review"
     },
     {
-      "review_order": 49,
+      "review_order": 38,
+      "candidate_id": "pallets-markupsafe-issue-460-pr-461",
+      "priority": "primary",
+      "repository": "pallets/markupsafe",
+      "issue_number": 460,
+      "fix_pr_number": 461,
+      "issue_title": "Please could `markupsafe._speedups` declare support (or lack thereof) for free-threaded Python?",
+      "issue_created_at": "2024-08-18T01:11:39Z",
+      "suggested_case_id": "pallets-markupsafe-issue-460",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "b43c029eb1541645454623d46cd6b92df8acbaaa",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "multi_file": false,
+      "advisory_score": 3,
+      "passed_advisory_checks": [
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:bug_signal",
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 39,
       "candidate_id": "pytest-dev-pluggy-issue-37-pr-42",
       "priority": "primary",
       "repository": "pytest-dev/pluggy",
@@ -1382,7 +1110,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 50,
+      "review_order": 40,
       "candidate_id": "boto-boto3-issue-3787-pr-3863",
       "priority": "primary",
       "repository": "boto/boto3",
@@ -1410,7 +1138,63 @@
       "status": "needs_review"
     },
     {
-      "review_order": 51,
+      "review_order": 41,
+      "candidate_id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
+      "priority": "reserve",
+      "repository": "scikit-learn/scikit-learn",
+      "issue_number": 34719,
+      "fix_pr_number": 34726,
+      "issue_title": "CI Add bot comment when linting job fails early",
+      "issue_created_at": "2026-08-11T05:00:17Z",
+      "suggested_case_id": "scikit-learn-scikit-learn-issue-34719",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "e27ccf58592fcfe8c7ca87f53dde840c436093b2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "build_tools/get_comment.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 6,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "closing_reference",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:diagnostic_signal"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 42,
+      "candidate_id": "urllib3-urllib3-issue-2580-pr-5140",
+      "priority": "reserve",
+      "repository": "urllib3/urllib3",
+      "issue_number": 2580,
+      "fix_pr_number": 5140,
+      "issue_title": "Allow tweaking the presentation style of logged errors",
+      "issue_created_at": "2022-03-10T08:27:04Z",
+      "suggested_case_id": "urllib3-urllib3-issue-2580",
+      "suggested_tier": "generalization",
+      "pre_fix_sha": "627636551e0e0159996b0f28dd21a60372cc5b10",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/connectionpool.py"
+      ],
+      "multi_file": false,
+      "advisory_score": 5,
+      "passed_advisory_checks": [
+        "bug_signal",
+        "diagnostic_signal",
+        "issue_has_body"
+      ],
+      "review_flags": [
+        "failed:closing_reference"
+      ],
+      "status": "needs_review"
+    },
+    {
+      "review_order": 43,
       "candidate_id": "psf-requests-issue-6646-pr-7309",
       "priority": "reserve",
       "repository": "psf/requests",
@@ -1438,7 +1222,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 52,
+      "review_order": 44,
       "candidate_id": "pyo3-pyo3-issue-5344-pr-5602",
       "priority": "reserve",
       "repository": "PyO3/pyo3",
@@ -1466,7 +1250,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 53,
+      "review_order": 45,
       "candidate_id": "scipy-scipy-issue-24495-pr-25602",
       "priority": "reserve",
       "repository": "scipy/scipy",
@@ -1494,7 +1278,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 54,
+      "review_order": 46,
       "candidate_id": "psf-requests-issue-7434-pr-7436",
       "priority": "reserve",
       "repository": "psf/requests",
@@ -1522,7 +1306,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 55,
+      "review_order": 47,
       "candidate_id": "scipy-scipy-issue-25657-pr-25658",
       "priority": "reserve",
       "repository": "scipy/scipy",
@@ -1550,7 +1334,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 56,
+      "review_order": 48,
       "candidate_id": "scipy-scipy-issue-25732-pr-25755",
       "priority": "reserve",
       "repository": "scipy/scipy",
@@ -1578,7 +1362,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 57,
+      "review_order": 49,
       "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4853",
       "priority": "reserve",
       "repository": "HypothesisWorks/hypothesis",
@@ -1607,7 +1391,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 58,
+      "review_order": 50,
       "candidate_id": "python-attrs-attrs-issue-240-pr-1541",
       "priority": "reserve",
       "repository": "python-attrs/attrs",
@@ -1635,35 +1419,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 59,
-      "candidate_id": "pypa-build-issue-198-pr-1080",
-      "priority": "reserve",
-      "repository": "pypa/build",
-      "issue_number": 198,
-      "fix_pr_number": 1080,
-      "issue_title": "Machine-readable build report",
-      "issue_created_at": "2020-12-07T18:02:21Z",
-      "suggested_case_id": "pypa-build-issue-198",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "714175afba330b51a7eb47f9153173dc75210d48",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "src/build/__main__.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 4,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal",
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 60,
+      "review_order": 51,
       "candidate_id": "hypothesisworks-hypothesis-issue-3176-pr-4835",
       "priority": "reserve",
       "repository": "HypothesisWorks/hypothesis",
@@ -1691,7 +1447,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 61,
+      "review_order": 52,
       "candidate_id": "pypa-build-issue-557-pr-1084",
       "priority": "reserve",
       "repository": "pypa/build",
@@ -1719,7 +1475,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 62,
+      "review_order": 53,
       "candidate_id": "urllib3-urllib3-issue-2936-pr-5054",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -1747,35 +1503,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 63,
-      "candidate_id": "python-hyper-h11-issue-158-pr-159",
-      "priority": "reserve",
-      "repository": "python-hyper/h11",
-      "issue_number": 158,
-      "fix_pr_number": 159,
-      "issue_title": "Remove test files when publishing package",
-      "issue_created_at": "2023-04-02T03:00:34Z",
-      "suggested_case_id": "python-hyper-h11-issue-158",
-      "suggested_tier": "generalization",
-      "pre_fix_sha": "cdccbeff44a39426b58010eb454a75015ec6f8bc",
-      "pre_fix_sha_source": "first_pull_commit_parent",
-      "expected_files": [
-        "setup.py"
-      ],
-      "multi_file": false,
-      "advisory_score": 4,
-      "passed_advisory_checks": [
-        "closing_reference",
-        "issue_has_body"
-      ],
-      "review_flags": [
-        "failed:bug_signal",
-        "failed:diagnostic_signal"
-      ],
-      "status": "needs_review"
-    },
-    {
-      "review_order": 64,
+      "review_order": 54,
       "candidate_id": "pycqa-flake8-issue-1823-pr-1824",
       "priority": "reserve",
       "repository": "PyCQA/flake8",
@@ -1803,7 +1531,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 65,
+      "review_order": 55,
       "candidate_id": "urllib3-urllib3-issue-3289-pr-5057",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -1831,7 +1559,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 66,
+      "review_order": 56,
       "candidate_id": "pypa-packaging-issue-781-pr-1346",
       "priority": "reserve",
       "repository": "pypa/packaging",
@@ -1859,7 +1587,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 67,
+      "review_order": 57,
       "candidate_id": "urllib3-urllib3-issue-3546-pr-5120",
       "priority": "reserve",
       "repository": "urllib3/urllib3",
@@ -1887,7 +1615,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 68,
+      "review_order": 58,
       "candidate_id": "apache-airflow-issue-58618-pr-58981",
       "priority": "reserve",
       "repository": "apache/airflow",
@@ -1915,7 +1643,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 69,
+      "review_order": 59,
       "candidate_id": "tornadoweb-tornado-issue-3562-pr-3563",
       "priority": "reserve",
       "repository": "TornadoWeb/tornado",
@@ -1943,7 +1671,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 70,
+      "review_order": 60,
       "candidate_id": "pytest-dev-pytest-asyncio-issue-1419-pr-1421",
       "priority": "reserve",
       "repository": "pytest-dev/pytest-asyncio",
@@ -1971,7 +1699,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 71,
+      "review_order": 61,
       "candidate_id": "pypa-packaging-issue-1220-pr-1224",
       "priority": "reserve",
       "repository": "pypa/packaging",
@@ -1999,7 +1727,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 72,
+      "review_order": 62,
       "candidate_id": "tornadoweb-tornado-issue-3637-pr-3646",
       "priority": "reserve",
       "repository": "TornadoWeb/tornado",
@@ -2027,7 +1755,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 73,
+      "review_order": 63,
       "candidate_id": "sqlalchemy-sqlalchemy-issue-13462-pr-13463",
       "priority": "reserve",
       "repository": "sqlalchemy/sqlalchemy",
@@ -2055,7 +1783,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 74,
+      "review_order": 64,
       "candidate_id": "python-hyper-h11-issue-28-pr-93",
       "priority": "reserve",
       "repository": "python-hyper/h11",
@@ -2083,7 +1811,7 @@
       "status": "needs_review"
     },
     {
-      "review_order": 75,
+      "review_order": 65,
       "candidate_id": "psf-requests-issue-4795-pr-7427",
       "priority": "reserve",
       "repository": "psf/requests",

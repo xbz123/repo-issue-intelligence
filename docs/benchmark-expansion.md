@@ -6,6 +6,42 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.25 direct completion of the 200-case suite
+
+At the user's direction, the expansion skips separate 170/180/190 evaluation releases after the
+160-case intermediate and directly audits the remaining pool. Manifest v20 accepts 40 additional
+Issue/Fix-PR pairs and reaches 200 frozen cases. The final batch records 21 explicit rejections for
+multi-Issue PRs, wrong or partial fixes, test/CI-only changes, documentation or formatting changes,
+and incomplete automatic production scope. Four archived queue candidates remain unselected rather
+than being mislabeled as ground truth.
+
+The selection standard is evidence-first: a public closed Issue, one canonical merged same-repo
+fix PR, the parent of its first ordered commit as pre-fix SHA, complete material production-file
+scope, unique Issue/PR identities, and only pre-fix symbols that resolve uniquely inside an expected
+file. Tests, docs, changelog, generated outputs, workflows, snapshots, and auxiliary benchmarks are
+excluded unless they are the shipped behavior. New or ambiguous symbols and non-Python fixes remain
+file-only. Repository and file concentration break ties between equally valid candidates, but no
+accepted failure is removed to improve metrics.
+
+The completed suite contains 200 cases across 58 repositories: 17 main, 11 calibration, and 172
+generalization cases. It records 265 production-file targets, 45 multi-file cases, and 177 reviewed
+symbol targets across 143 cases. Case IDs, `(repository, Issue)`, and `(repository, fix PR)` are all
+unique. The final 40 accepted cases add no multi-file fix because the last automatic multi-file
+record omitted a material C header; the earlier 30% aspiration is therefore reported as infeasible
+under the final ground-truth standard rather than filled with incomplete cases.
+
+Three deterministic v0.27 runs completed 200/200 cases with zero failures. After removing
+timestamps, elapsed fields, and cache provenance, all candidate files, candidate symbols, per-case
+metrics, tier metrics, and aggregates were identical. The retained 160 cases were unchanged from
+manifest v19. File Recall@1/5/10/20 is `0.3510/0.6567/0.7555/0.8665`, with MRR `0.5396`. Across the
+143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
+`0.3349`. Top-20 coverage is 219 of 265 production targets; all 46 misses remain in the denominator.
+
+Run 1 reused 162 repository maps and rebuilt 38; runs 2 and 3 recorded 200/200 hits. Warm reuse
+reduced mean in-process analysis time from 6,619 to 4,435 ms per case, a 32.99% reduction, without
+changing any non-timing result. `benchmarks/expansion-v200-review-queue-v19.json` archives the final
+160-to-200 review pool; there is no active expansion queue after manifest v20.
+
 ## v0.23 tenth 200-case expansion batch
 
 Manifest v18 accepts ten reviewed Issue/Fix-PR pairs from tox, urllib3, Ansible, Ruff,
@@ -548,7 +584,7 @@ multi-symbol edits, semantic test-to-source relationships, or cross-language beh
 repository to a larger share only after its initial cases pass checkout validation and add failure
 modes not already represented.
 
-## Pending 200-case review queue
+## Archived final 200-case review queue
 
 On 2026-08-16, a broader discovery pass inspected 40 additional public repositories. The initial
 four catalogs contained 684 audit records, of which 193 passed every blocking check. Targeted
@@ -556,34 +592,31 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting ten ten-case batches into manifest v18 and excluding thirty-six reviewed
-rejections, maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)`
-leaves 78 unique candidates across 35
-repositories.
-`benchmarks/expansion-v200-review-queue.json` prioritizes:
+After accepting the 160-case intermediate into manifest v19, maximum-cardinality matching by both
+`(repository, Issue)` and `(repository, fix PR)` leaves 67 unique candidates across 32 repositories.
+`benchmarks/expansion-v200-review-queue-v19.json` archives:
 
-- 50 primary candidates and 25 reserves;
+- 40 primary candidates and 25 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- the last remaining multi-file candidate, which would raise the suite from 45/150 to the auditable
+- the last remaining multi-file candidate, which would raise the suite from 45/160 to the auditable
   ceiling of 46/200 (23%) if it passes review;
-- 27 primary Issues created before 2026;
-- 11 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 23 primary Issues created before 2026;
+- five primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
-This is a review queue, not benchmark ground truth. Every entry is serialized with
+This archived queue is not benchmark ground truth. Every entry is serialized with
 `status=needs_review`; the queue schema rejects `accepted`. Before any candidate enters a frozen
 manifest, a reviewer must still confirm the Issue/fix relationship, inspect the production diff,
 verify every expected file at the recorded pre-fix commit, decide the tier, and add reviewed symbol
 ground truth where the fix hunk supports it. A reviewer may narrow the automatic file list but may
 not add an unaudited path. Explicit rejection decisions are fed back into planning so rejected
-candidates do not return to later queues. Rejected primaries should be replaced from the reserve
-queue without weakening the repository cap or the evidence-backed 23% multi-file ceiling.
+candidates do not return to later queues. Final accepted and rejected decisions are recorded in
+`benchmarks/expansion-v0.25-selection.json`; unselected entries remain non-ground-truth provenance.
 
 The raw discovery catalogs remain ignored because they contain repeated, mutable Issue snapshots.
-The compact queue is committed so review order, advisory signals, pre-fix SHA provenance, expected
-files, and diversity constraints are auditable without claiming that the 200-case manifest already
-exists.
+The v19 compact queue is archived so review order, advisory signals, pre-fix SHA provenance,
+expected files, and diversity constraints remain auditable now that the 200-case manifest exists.
 
 Historical manifest v13 confirmed that the earlier candidate-pool saturation does not survive broader,
 mixed-language, multi-file cases: 28 of 148 reviewed production targets are outside the
