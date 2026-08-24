@@ -1,0 +1,190 @@
+{
+  "name": "real-project-benchmark-expansion-v0.21",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "aio-libs-yarl-issue-1485-pr-1512",
+      "case_id": "yarl-malformed-bracket-host",
+      "tier": "generalization",
+      "expected_files": [
+        "yarl/_parse.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "yarl/_parse.py",
+          "symbol": "split_url"
+        }
+      ],
+      "review_notes": [
+        "Issue #1485 reproduces an IndexError while parsing malformed bracketed IPv6-like hosts, and merged PR #1512 guards empty bracketed_host values and raises ValueError.",
+        "Retain yarl/_parse.py::split_url; changelog and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pluggy-issue-629-pr-632",
+      "case_id": "pluggy-python314-varnames",
+      "tier": "generalization",
+      "expected_files": [
+        "src/pluggy/_hooks.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/pluggy/_hooks.py",
+          "symbol": "varnames"
+        }
+      ],
+      "review_notes": [
+        "Issue #629 reports pluggy failing on Python 3.14 when deferred annotations are resolved through inspect.signature, and merged PR #632 rewrites varnames to inspect code metadata directly.",
+        "Retain src/pluggy/_hooks.py::varnames; changelog and testing paths are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-attrs-attrs-issue-1575-pr-1593",
+      "case_id": "attrs-classvar-forwardref",
+      "tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/attr/_make.py",
+          "symbol": "_is_class_var"
+        }
+      ],
+      "review_notes": [
+        "Issue #1575 reproduces attrs treating an unimported Python 3.14 ClassVar forward reference as an instance field, and merged PR #1593 unwraps ForwardRef.__forward_arg__ in _is_class_var.",
+        "Retain src/attr/_make.py::_is_class_var; changelog and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-virtualenv-issue-3089-pr-3092",
+      "case_id": "virtualenv-venv-gitignore-race",
+      "tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/create/via_global_ref/venv.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/virtualenv/create/via_global_ref/venv.py",
+          "symbol": "Venv.get_host_create_cmd"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #3092 fixes Issue #3089 by disabling Python 3.13+ subprocess venv SCM-ignore creation, preventing competing .gitignore writes.",
+        "Retain src/virtualenv/create/via_global_ref/venv.py::Venv.get_host_create_cmd; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-7375-pr-7376",
+      "case_id": "requests-urllib3-version-suffix",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/__init__.py",
+          "symbol": "check_compatibility"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #7376 fixes Issue #7375 by limiting the urllib3 version split to three components so suffixes such as 2.6.3.build1 do not break compatibility checks.",
+        "Retain src/requests/__init__.py::check_compatibility; the same file also contains a separate historical chardet-bound fix, not a duplicate case."
+      ]
+    },
+    {
+      "candidate_id": "scipy-scipy-issue-25406-pr-25450",
+      "case_id": "scipy-fitpack-surfit-double-free",
+      "tier": "generalization",
+      "expected_files": [
+        "scipy/interpolate/src/_fitpackmodule.c"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Merged PR #25450 directly fixes Issue #25406 by nulling each freed FITPACK work buffer before later allocation-failure cleanup.",
+        "Retain the single C production file; no Python symbol target is assigned."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22804-pr-22806",
+      "case_id": "prefect-anyof-copy-new-run",
+      "tier": "generalization",
+      "expected_files": [
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Merged PR #22806 directly closes Issue #22804 and fixes AnyOf branch selection by falling back to the first or open-dict branch when copying a run.",
+        "The automatic three-file list is narrowed to the TypeScript utility; both .test.tsx/.test.ts files are regression tests, and TypeScript symbol ground truth remains file-only."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-uv-issue-21066-pr-21073",
+      "case_id": "uv-venv-stale-interpreter-cache",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/uv-python/src/interpreter.rs",
+        "crates/uv/src/commands/project/mod.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Merged PR #21073 fixes Issue #21066 by adding Interpreter::clear_cache and invoking it after a stale interpreter version conflict is detected.",
+        "Both Rust production files are necessary; Rust symbol ground truth remains empty."
+      ]
+    },
+    {
+      "candidate_id": "numpy-numpy-issue-32069-pr-32091",
+      "case_id": "numpy-mask-aware-unwrap",
+      "tier": "generalization",
+      "expected_files": [
+        "numpy/lib/_function_base_impl.py",
+        "numpy/ma/extras.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "numpy/lib/_function_base_impl.py",
+          "symbol": "unwrap"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #32091 directly closes Issue #32069: the base implementation removes the masked-array fallback and numpy.ma adds a mask-aware unwrap implementation.",
+        "Both Python production files are required; docs, tests, and .pyi stubs are excluded. The new numpy.ma unwrap has no pre-fix symbol target."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-uv-issue-21083-pr-21085",
+      "case_id": "uv-check-no-install-project",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/uv-cli/src/lib.rs",
+        "crates/uv/src/commands/project/check.rs",
+        "crates/uv/src/lib.rs",
+        "crates/uv/src/settings.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Merged PR #21085 directly fixes Issue #21083 by wiring --no-install-project and UV_NO_INSTALL_PROJECT through CLI, settings, check behavior, and the command entry point.",
+        "All four Rust production files are necessary; project/check.rs tests are excluded and Rust symbols remain file-only."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "python-hyper-h2-issue-1308-pr-1309",
+      "reason": "PR #1309 explicitly fixes Issues #1308, #1247, and #319 for the same CONNECT pseudo-header defect; selecting #1308 would reuse one fix across multiple Issue records."
+    },
+    {
+      "candidate_id": "scikit-learn-scikit-learn-issue-34170-pr-34657",
+      "reason": "PR #34657 only updates RidgeClassifier and RidgeClassifierCV docstrings; it changes no production behavior, so _ridge.py would be documentation-only ground truth."
+    },
+    {
+      "candidate_id": "numpy-numpy-issue-30494-pr-30593",
+      "reason": "PR #30593 is a partial implementation rather than the PR that closed Issue #30494, and the automatic file list omits material hash-table source and header changes."
+    },
+    {
+      "candidate_id": "astral-sh-ruff-issue-21870-pr-27190",
+      "reason": "The automatic list contains only rule registration files and cannot include the newly added while_one.rs implementation, so it cannot represent the complete production fix at the pre-fix snapshot."
+    }
+  ]
+}

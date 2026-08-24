@@ -6,6 +6,38 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.21 eighth 200-case expansion batch
+
+Manifest v16 accepts ten reviewed Issue/Fix-PR pairs from Yarl, Pluggy, attrs, Virtualenv,
+Requests, SciPy, Prefect, uv, and NumPy. It adds 15 production-file targets, including three
+multi-file fixes, and six pre-fix Python symbol targets. SciPy C, Prefect TypeScript, and uv Rust
+cases remain intentionally file-only; NumPy's newly added masked unwrap has no pre-fix symbol.
+
+Review rejects h2 #1308/#1309 because one PR represents three overlapping CONNECT Issues,
+scikit-learn #34170/#34657 because the patch is docstring-only, NumPy #30494/#30593 because the
+Issue was closed by another PR and material hash-table files are omitted, and Ruff #21870/#27190
+because the newly added rule implementation cannot exist in the pre-fix ground truth. Valid Jinja
+and tox cases remain undecided to avoid same-file over-sampling and generated-artifact ambiguity.
+All six accepted Python symbol targets resolve in their frozen maps.
+
+The suite now contains 130 cases across 53 repositories: 17 main, 11 calibration, and 102
+generalization cases. It records 191 production-file targets, 42 multi-file cases, and 127 reviewed
+symbol targets across 95 cases.
+
+Three deterministic v0.27 runs completed 130/130 cases. After removing timestamps, elapsed fields,
+and cache provenance, their candidate files, candidate symbols, per-case metrics, tier metrics, and
+aggregates were identical. The retained 120 cases were unchanged from manifest v15. File
+Recall@1/5/10/20 is `0.3400/0.6335/0.7315/0.8562`, with MRR `0.5474`. Across the 95 labeled cases,
+Symbol Recall@1/5/10/20 is `0.2263/0.3939/0.4202/0.4833`, with MRR `0.3428`. Six new production
+targets are outside Top-20, so coverage is 155 of 191 and 36 misses remain in the denominator.
+
+Run 1 reused 120 repository maps and rebuilt ten; runs 2 and 3 recorded 130/130 hits. Warm reuse
+reduced mean in-process analysis time from 4,894 to 3,665 ms per case, a 25.11% reduction, without
+changing any non-timing result.
+
+The regenerated queue contains 70 primary and 25 reserve candidates across 37 repositories. Its
+primary set includes all 18 remaining multi-file candidates required to reach 60/200 (30%).
+
 ## v0.20 seventh 200-case expansion batch
 
 Manifest v15 accepts ten reviewed Issue/Fix-PR pairs from Jinja, Yarl, Boto3, Ansible, attrs,
@@ -450,19 +482,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting seven ten-case batches into manifest v15 and excluding sixteen reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 119
+After accepting eight ten-case batches into manifest v16 and excluding twenty reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 107
 unique candidates across 37
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 80 primary candidates and 30 reserves;
+- 70 primary candidates and 25 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 21 new multi-file primary candidates, which would raise the suite from 39/120 to 60/200
+- 18 new multi-file primary candidates, which would raise the suite from 42/130 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 32 primary Issues created before 2026;
-- 36 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 31 primary Issues created before 2026;
+- 28 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with

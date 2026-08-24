@@ -1,0 +1,1482 @@
+{
+  "name": "real-project-benchmark-expansion-v0.21",
+  "version": 1,
+  "curated_at": "2026-08-24T07:09:09.952484Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 15,
+  "candidates": [
+    {
+      "id": "aio-libs-yarl-issue-1485-pr-1512",
+      "repository": "aio-libs/yarl",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1485,
+        "title": "Unhandled exception (IndexError) in URL parsing",
+        "body": "### Please confirm the following\n\n- [x] I agree to follow the [aio-libs Code of Conduct][CoC]\n\n[CoC]: ../../.github/blob/master/CODE_OF_CONDUCT.md\n\n- [x] I have checked the [current issues][issue search] for duplicates.\n\n[issue search]: ../search?q=is%3Aissue&type=issues\n\n- [x] I understand this is open source software provided for free and that I might not receive a timely response.\n- [x] I am positive I am **NOT** reporting a (potential) security\nvulnerability, to the best of my knowledge. *(These must be shared by\nsubmitting [this report form][vulnerability report form] instead, if\nany hesitation exists.)*\n\n[vulnerability report form]: ../security/advisories/new\n\n- [ ] I am willing to submit a pull request with reporoducers as xfailing test cases or even entire fix. *(Assign this issue to me.)*\n\n### Describe the bug\n\nWe were fuzzing `URL()` parser and have found IndexError.\n\n### To Reproduce\n\n1. install yarl 1.18.3:\n```\npip install --force-reinstall -v \"yarl==1.18.3\"\n```\n2. reproduce IndexError:\n```\nfrom yarl import URL\nURL(\"//]'z[\")\n```\n\n### Expected behavior\n\nParse string without an error\n\n### Logs/tracebacks\n\n```python-traceback\nTraceback (most recent call last):\n  File \"<stdin>\", line 1, in <module>\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_url.py\", line 355, in __new__\n    return pre_encoded_url(val) if encoded else encode_url(val)\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_url.py\", line 147, in encode_url\n    scheme, netloc, path, query, fragment = split_url(url_str)\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_parse.py\", line 72, in split_url\n    if bracketed_host[0] == \"v\":\nIndexError: string index out of range\n```\n\n### Python Version\n\n```console\n$ python --version\nPython 3.10.12\n```\n\n### multidict Version\n\n```console\n$ python -m pip show multidict\nVersion: 6.2.0\n```\n\n### propcache Version\n\n```console\n$ python -m pip show propcache\nVersion: 0.3.0\n```\n\n### yarl Version\n\n```console\n$ python -m pip show yarl\nVersion: 1.18.3\n```\n\n### OS\n\nUbuntu:22.04\n\n### Additional context\n\n_No response_",
+        "labels": [
+          "bug",
+          "good first issue"
+        ],
+        "comments_count": 2,
+        "created_at": "2025-03-18T10:35:30Z",
+        "updated_at": "2025-06-09T22:15:13Z",
+        "html_url": "https://github.com/aio-libs/yarl/issues/1485",
+        "author": "lenix123"
+      },
+      "fix_pr_number": 1512,
+      "fix_pr_title": ":bug: Raises meaningful exception when IPv6 URL is malformed",
+      "fix_pr_url": "https://github.com/aio-libs/yarl/pull/1512",
+      "fix_pr_merged_at": "2025-06-09T22:15:12Z",
+      "merge_commit_sha": "bf9f5ba94c60d4d842bc30406e63417c2f3e8131",
+      "pre_fix_sha": "07d0ba3b7bad907787478ca3637fa03d07a2f8ad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "yarl/_parse.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES/1512.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 0,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_url.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 20,
+          "deletions": 3,
+          "changes": 23,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "yarl/_parse.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: aio-libs/yarl"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-06-09T22:15:12Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-03-18T10:35:30+00:00, pr_merged_at=2025-06-09T22:15:12+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2062 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, good first issue"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1485 reproduces an IndexError while parsing malformed bracketed IPv6-like hosts, and merged PR #1512 guards empty bracketed_host values and raises ValueError.",
+        "Retain yarl/_parse.py::split_url; changelog and tests are excluded."
+      ]
+    },
+    {
+      "id": "pytest-dev-pluggy-issue-629-pr-632",
+      "repository": "pytest-dev/pluggy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 629,
+        "title": "`pluggy` requires `from __future__ import annotations` although it shouldn't in Python 3.14",
+        "body": "This file is valid _in Python 3.14_, meaning, `python conftest.py` does not error:\n\n`conftest.py`:\n```python\nfrom typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from _pytest.config import Config\n\ndef pytest_configure(config: Config) -> None: ...\n```\n\nIn Python 3.13, it requires `from __future__ import annotations`.\n\nNow, running `pytest` with the above `conftest.py` raises the following error. For some reason, `pluggy` seems to want to read the annotations and fails because `Config` is not available in non-type-checking mode.\n\nPotential workarounds include:\n- `Config` -> `\"Config\"` (but ruff undoes that)\n- remove `if TYPE_CHECKING` (but ruff undoes that)\n- add `from __future__ import annotations`\n\nAll of those work, but none of those should be necessary.\n\n```\n(.3.14) C:\\Git\\Temp>pytest\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"C:\\Git\\Temp\\.3.14\\Scripts\\pytest.exe\\__main__.py\", line 10, in <module>\n    sys.exit(console_main())\n             ~~~~~~~~~~~~^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 221, in console_main\n    code = main()\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 191, in main\n    config = _prepareconfig(new_args, plugins)\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 358, in _prepareconfig\n    config: Config = pluginmanager.hook.pytest_cmdline_parse(\n                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        pluginmanager=pluginmanager, args=args\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_hooks.py\", line 512, in __call__\n    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_manager.py\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 167, in _multicall\n    raise exception\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 139, in _multicall\n    teardown.throw(exception)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\helpconfig.py\", line 124, in pytest_cmdline_parse\n    config = yield\n             ^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 1155, in pytest_cmdline_parse\n    self.parse(args)\n    ~~~~~~~~~~^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 1525, in parse\n    self.hook.pytest_load_initial_conftests(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        early_config=self, args=args, parser=self._parser\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_hooks.py\", line 512, in __call__\n    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_manager.py\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 167, in _multicall\n    raise exception\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 139, in _multicall\n    teardown.throw(exception)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\warnings.py\", line 128, in pytest_load_initial_conftests\n    return (yield)\n            ^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 139, in _multicall\n    teardown.throw(exception)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\capture.py\", line 173, in pytest_load_initial_conftests\n    yield\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 1239, in pytest_load_initial_conftests\n    self.pluginmanager._set_initial_conftests(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        args=args,\n        ^^^^^^^^^^\n    ...<8 lines>...\n        ),\n        ^^\n    )\n    ^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 599, in _set_initial_conftests\n    self._try_load_conftest(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        anchor,\n        ^^^^^^^\n    ...<2 lines>...\n        consider_namespace_packages=consider_namespace_packages,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 637, in _try_load_conftest\n    self._loadconftestmodules(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        anchor,\n        ^^^^^^^\n    ...<2 lines>...\n        consider_namespace_packages=consider_namespace_packages,\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 677, in _loadconftestmodules\n    mod = self._importconftest(\n        conftestpath,\n    ...<2 lines>...\n        consider_namespace_packages=consider_namespace_packages,\n    )\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 753, in _importconftest\n    self.consider_conftest(mod, registration_name=conftestpath_plugin_name)\n    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 834, in consider_conftest\n    self.register(conftestmodule, name=registration_name)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\_pytest\\config\\__init__.py\", line 519, in register\n    plugin_name = super().register(plugin, name)\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_manager.py\", line 161, in register\n    hookimpl = HookImpl(plugin, plugin_name, method, hookimpl_opts)\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_hooks.py\", line 664, in __init__\n    argnames, kwargnames = varnames(self.function)\n                           ~~~~~~~~^^^^^^^^^^^^^^^\n  File \"C:\\Git\\Temp\\.3.14\\Lib\\site-packages\\pluggy\\_hooks.py\", line 313, in varnames\n    sig = inspect.signature(\n        func.__func__ if inspect.ismethod(func) else func  # type:ignore[arg-type]\n    )\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\inspect.py\", line 3312, in signature       \n    return Signature.from_callable(obj, follow_wrapped=follow_wrapped,\n           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                                   globals=globals, locals=locals, eval_str=eval_str,\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                                   annotation_format=annotation_format)\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\inspect.py\", line 3027, in from_callable   \n    return _signature_from_callable(obj, sigcls=cls,\n                                    follow_wrapper_chains=follow_wrapped,\n                                    globals=globals, locals=locals, eval_str=eval_str,\n                                    annotation_format=annotation_format)\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\inspect.py\", line 2502, in _signature_from_callable\n    return _signature_from_function(sigcls, obj,\n                                    skip_bound_arg=skip_bound_arg,\n                                    globals=globals, locals=locals, eval_str=eval_str,\n                                    annotation_format=annotation_format)\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\inspect.py\", line 2325, in _signature_from_function\n    annotations = get_annotations(func, globals=globals, locals=locals, eval_str=eval_str,\n                                  format=annotation_format)\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\annotationlib.py\", line 890, in get_annotations\n    ann = _get_dunder_annotations(obj)\n  File \"C:\\Users\\bers\\AppData\\Roaming\\uv\\python\\cpython-3.14.0-windows-x86_64-none\\Lib\\annotationlib.py\", line 1059, in _get_dunder_annotations\n    ann = getattr(obj, \"__annotations__\", None)\n  File \"C:\\Git\\Temp\\conftest.py\", line 7, in __annotate__\n    def pytest_configure(config: Config) -> None: ...\n                                 ^^^^^^\nNameError: name 'Config' is not defined\n```",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2025-11-21T11:43:40Z",
+        "updated_at": "2026-05-27T08:00:09Z",
+        "html_url": "https://github.com/pytest-dev/pluggy/issues/629",
+        "author": "bersbersbers"
+      },
+      "fix_pr_number": 632,
+      "fix_pr_title": "[NO-SQUASH-MERGE] fix varnames on py3.14 deferred annotations",
+      "fix_pr_url": "https://github.com/pytest-dev/pluggy/pull/632",
+      "fix_pr_merged_at": "2026-05-27T08:00:08Z",
+      "merge_commit_sha": "5d7bd2cc083571466f44f9683136b7d8f62b88bf",
+      "pre_fix_sha": "59e66fdb231bf47ce5e0b8ed75b788820b135c34",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/pluggy/_hooks.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog/629.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "changelog/632.removal.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/pluggy/_hooks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 73,
+          "deletions": 39,
+          "changes": 112,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/benchmark.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 89,
+          "deletions": 0,
+          "changes": 89,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_helpers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 158,
+          "deletions": 0,
+          "changes": 158,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_hookcaller.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 3,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_warnings.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 43,
+          "deletions": 0,
+          "changes": 43,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pluggy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-27T08:00:08Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-11-21T11:43:40+00:00, pr_merged_at=2026-05-27T08:00:08+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "11 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "9123 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #629 reports pluggy failing on Python 3.14 when deferred annotations are resolved through inspect.signature, and merged PR #632 rewrites varnames to inspect code metadata directly.",
+        "Retain src/pluggy/_hooks.py::varnames; changelog and testing paths are excluded."
+      ]
+    },
+    {
+      "id": "python-attrs-attrs-issue-1575-pr-1593",
+      "repository": "python-attrs/attrs",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1575,
+        "title": "attrs doesn't recognize ClassVar if not imported in Python 3.14",
+        "body": "The following code\n\n```python\nfrom typing import TYPE_CHECKING\n\nimport attrs\n\nif TYPE_CHECKING:\n    from typing import ClassVar\n\n@attrs.define\nclass T:\n    t: ClassVar[str]\n\nT()\n```\n\nresults in:\n```python\nTraceback (most recent call last):\n  File \"/tmp/test.py\", line 12, in <module>\n    T()\n    ~^^\nTypeError: T.__init__() missing 1 required positional argument: 't'\n```\n\nSince the `if TYPE_CHECKING` block doesn't run, `ClassVar` isn't defined and attrs can't evaluate the ForwardRef or doesn't recognize `ClassVar`:\n\n```python\n>>> attrs.fields_dict(T)[\"t\"]\nAttribute(name='t', default=NOTHING, validator=None, repr=True, eq=True, eq_key=None, order=True, order_key=None, hash=None, init=True, metadata=mappingproxy({}), type=ForwardRef('ClassVar[str]', is_class=True, owner=<class '__main__.T'>), converter=None, kw_only=False, inherited=False, on_setattr=None, alias='t')\n```\n\nBefore Python 3.14, `T`'s definition would only run if you used a string annotation or `from __future__ import annotations` (which if used with 3.14, the above code runs fine), but with the new annotations behavior the class definition runs fine and this error appears. This is actually issue for dataclasses too, as I get the same error with them.\n\nI'm not sure if this is fixable, but decided to report it, because it catches you by surprise",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-06-28T23:45:08Z",
+        "updated_at": "2026-07-31T13:30:58Z",
+        "html_url": "https://github.com/python-attrs/attrs/issues/1575",
+        "author": "FlyingWolFox"
+      },
+      "fix_pr_number": 1593,
+      "fix_pr_title": "Fix ClassVar forward reference detection",
+      "fix_pr_url": "https://github.com/python-attrs/attrs/pull/1593",
+      "fix_pr_merged_at": "2026-07-31T13:30:57Z",
+      "merge_commit_sha": "97f8d175656bc03c373a1c9038048a4d312c307c",
+      "pre_fix_sha": "358dec2c61e0213dd454a3240664cfb9924f3b56",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog.d/1593.change.md",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/attr/_make.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_annotations.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 18,
+          "deletions": 0,
+          "changes": 18,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-attrs/attrs"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-31T13:30:57Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-28T23:45:08+00:00, pr_merged_at=2026-07-31T13:30:57+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1324 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1575 reproduces attrs treating an unimported Python 3.14 ClassVar forward reference as an instance field, and merged PR #1593 unwraps ForwardRef.__forward_arg__ in _is_class_var.",
+        "Retain src/attr/_make.py::_is_class_var; changelog and tests are excluded."
+      ]
+    },
+    {
+      "id": "pypa-virtualenv-issue-3089-pr-3092",
+      "repository": "pypa/virtualenv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3089,
+        "title": "test_create_no_seed[*-venv-*] flaky gitignore check?",
+        "body": "**Issue**\nWhen trying to update virtualenv to 21.1.0 in Fedora, we hit this test failure:\n\n```\nFAILED tests/unit/create/test_creator.py::test_create_no_seed[root-venv-symlinks-global] - AssertionError: assert ['# created by virtualenv automatically', '*'] == ['# Created by venv; see https://docs.python.org/3/library/venv.html', '*']\n  \n  At index 0 diff: '# created by virtualenv automatically' != '# Created by venv; see https://docs.python.org/3/library/venv.html'\n  \n  Full diff:\n    [\n  -     '# Created by venv; see https://docs.python.org/3/library/venv.html',\n  +     '# created by virtualenv automatically',\n        '*',\n    ]\n========== 1 failed, 181 passed, 21 skipped, 74 deselected in 19.93s ===========\n```\n\nThis happens only sometimes, not always. Approximately 50:50.\n\n**Environment**\n\nProvide at least:\n\n- OS: Fedora Linux 44\n- Shell: Bash\n- Python version and path: Python 3.14.3\n- `pip list` of the host python where `virtualenv` is installed:\n\n```\nPackage           Version\n----------------- ------------\ndistlib           0.4.0\nfilelock          3.20.3\nflaky             3.8.1\nhatch-vcs         0.5.0\nhatchling         1.29.0\niniconfig         2.3.0\npackaging         26.0\npathspec          1.0.3\npip               26.0.1\nplatformdirs      4.9.1\npluggy            1.6.0\nPygments          2.19.1\npytest            8.4.2\npytest-env        0.6.2\npytest-mock       3.15.1\npytest-randomly   4.0.1\npytest-timeout    2.4.0\npython-dateutil   2.9.0.post0\npython-discovery  1.1.0\nsetuptools        80.10.2\nsetuptools-scm    9.2.2\nsix               1.17.0\ntime-machine      2.16.0\ntrove-classifiers 2026.1.14.14\nvirtualenv        21.1.0\n  ```",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 4,
+        "created_at": "2026-03-06T11:22:54Z",
+        "updated_at": "2026-03-09T17:20:01Z",
+        "html_url": "https://github.com/pypa/virtualenv/issues/3089",
+        "author": "hroncok"
+      },
+      "fix_pr_number": 3092,
+      "fix_pr_title": "🐛 fix(create): prevent venv from racing virtualenv on gitignore creation",
+      "fix_pr_url": "https://github.com/pypa/virtualenv/pull/3092",
+      "fix_pr_merged_at": "2026-03-09T17:20:00Z",
+      "merge_commit_sha": "e1af35dc7808e75410c55490c35421f461af2920",
+      "pre_fix_sha": "0cd0e09526863f46f91a4afc057f179fdacf3878",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/virtualenv/create/via_global_ref/venv.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3089.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/virtualenv/create/via_global_ref/venv.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/create/test_creator.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 5,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/virtualenv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-03-09T17:20:00Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-03-06T11:22:54+00:00, pr_merged_at=2026-03-09T17:20:00+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1653 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #3092 fixes Issue #3089 by disabling Python 3.13+ subprocess venv SCM-ignore creation, preventing competing .gitignore writes.",
+        "Retain src/virtualenv/create/via_global_ref/venv.py::Venv.get_host_create_cmd; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "psf-requests-issue-7375-pr-7376",
+      "repository": "psf/requests",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 7375,
+        "title": "Tweak urllib3 version checker",
+        "body": "Hello,\n\nTiny corner case issue: building urllib3 on my side, I append a marker in the version string to distinguish theses builds, eg.: 2.6.3.build1\n\nWould you consider a small change in requests and split the version string the same way it is done for chardet or charset normalizer ? It would prevent the check from failing on the `major, minor, patch = urllib3_version` line.\n\n```diff\ndiff --git a/src/requests/__init__.py b/src/requests/__init__.py\n@@ -56,7 +56,7 @@ except ImportError:\n \n \n def check_compatibility(urllib3_version, chardet_version, charset_normalizer_version):\n-    urllib3_version = urllib3_version.split(\".\")\n+    urllib3_version = urllib3_version.split(\".\")[:3]\n     assert urllib3_version != [\"dev\"]  # Verify urllib3 isn't installed from git.\n \n     # Sometimes, urllib3 only reports its version as 16.1.\n```\n\nRegards.",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-04-20T13:22:54Z",
+        "updated_at": "2026-04-20T16:24:33Z",
+        "html_url": "https://github.com/psf/requests/issues/7375",
+        "author": "dsanader"
+      },
+      "fix_pr_number": 7376,
+      "fix_pr_title": "Consider urllib3 version has 3 numbers at most (#7375)",
+      "fix_pr_url": "https://github.com/psf/requests/pull/7376",
+      "fix_pr_merged_at": "2026-04-20T16:24:32Z",
+      "merge_commit_sha": "b294b08fe3b08df9f646f64d1250f96193dab066",
+      "pre_fix_sha": "5f3ff9b9e4d3d44960467e7877e06e9efa22f20b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/requests/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: psf/requests"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-04-20T16:24:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-04-20T13:22:54+00:00, pr_merged_at=2026-04-20T16:24:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "844 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #7376 fixes Issue #7375 by limiting the urllib3 version split to three components so suffixes such as 2.6.3.build1 do not break compatibility checks.",
+        "Retain src/requests/__init__.py::check_compatibility; the same file also contains a separate historical chardet-bound fix, not a duplicate case."
+      ]
+    },
+    {
+      "id": "scipy-scipy-issue-25406-pr-25450",
+      "repository": "scipy/scipy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 25406,
+        "title": "[BUG] Double-free of wrk1/wrk2/iwrk in fitpack_surfit on allocation failure",
+        "body": "## Bug Description\n\nIn `scipy/interpolate/src/_fitpackmodule.c`, after the Fortran `surfit()` call, `wrk1`/`wrk2`/`iwrk` are freed but NOT set to NULL. If a subsequent `PyArray_SimpleNew` fails, `goto fail` frees them again.\n\n## Location\n\n`scipy/interpolate/src/_fitpackmodule.c:1578-1580, 1610-1618`\n\n## Code\n\n```c\nfree(wrk1);    // line 1578: freed\nfree(wrk2);    // line 1579: freed  \nfree(iwrk);    // line 1580: freed\n// NOT set to NULL!\n\n// ... if PyArray_SimpleNew fails later:\ngoto fail;\n\nfail:\n    free(wrk1);   // line 1610: DOUBLE FREE\n    free(wrk2);   // line 1615: DOUBLE FREE\n    free(iwrk);   // line 1618: DOUBLE FREE\n```\n\n## Impact\n\nDouble-free causes heap corruption. On modern allocators (glibc, jemalloc), this typically causes:\n- Immediate crash (`double free detected`)\n- Silent heap corruption leading to later crashes\n- Potential security vulnerability (CWE-415)\n\nTriggers when `PyArray_SimpleNew` fails due to OOM after the Fortran call.\n\n## Suggested Fix\n\n```c\nfree(wrk1); wrk1 = NULL;\nfree(wrk2); wrk2 = NULL;\nfree(iwrk); iwrk = NULL;\n```\n\n## Environment\n\n- SciPy version: current main\n- Affected: `scipy.interpolate.bisplrep` / surface fitting with OOM",
+        "labels": [
+          "defect",
+          "scipy.interpolate"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-06-18T02:41:53Z",
+        "updated_at": "2026-08-10T22:39:16Z",
+        "html_url": "https://github.com/scipy/scipy/issues/25406",
+        "author": "Fuyugithub"
+      },
+      "fix_pr_number": 25450,
+      "fix_pr_title": "BUG: interpolate: fix double-free of wrk buffers in fitpack_surfit",
+      "fix_pr_url": "https://github.com/scipy/scipy/pull/25450",
+      "fix_pr_merged_at": "2026-06-22T16:23:32Z",
+      "merge_commit_sha": "784359ab16789414d84dd9e9e7922f08ee1172fb",
+      "pre_fix_sha": "1add120eb5d929b34374e3c83e8052bcd17f8f96",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "scipy/interpolate/src/_fitpackmodule.c"
+      ],
+      "changed_files": [
+        {
+          "path": "scipy/interpolate/src/_fitpackmodule.c",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: scipy/scipy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-22T16:23:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-18T02:41:53+00:00, pr_merged_at=2026-06-22T16:23:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1181 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=defect, scipy.interpolate"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #25450 directly fixes Issue #25406 by nulling each freed FITPACK work buffer before later allocation-failure cleanup.",
+        "Retain the single C production file; no Python symbol target is assigned."
+      ]
+    },
+    {
+      "id": "prefecthq-prefect-issue-22804-pr-22806",
+      "repository": "PrefectHQ/prefect",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 22804,
+        "title": "V2 UI feedback: Bug or incorrect behavior - Copy to new run not working",
+        "body": "### UI switch feedback\n\n- From UI: V2 UI\n- To UI: V1 UI\n- Current path: /dashboard\n- Reason: Bug or incorrect behavior\nIn Deployments/Runs, I selected a failed flow run. From the top-right menu, I selected \"Copy to new run.\" After clicking \"Submit,\" it showed an error.\n### Additional notes\n\n<img width=\"518\" height=\"421\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/e2838ea7-ef49-40ec-aa3a-ad01c627f9ac\" />",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-11T13:09:02Z",
+        "updated_at": "2026-08-11T15:02:14Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22804",
+        "author": "ladocz"
+      },
+      "fix_pr_number": 22806,
+      "fix_pr_title": "fix(ui-v2): select a valid anyOf branch for record values in schema forms",
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22806",
+      "fix_pr_merged_at": "2026-08-11T15:02:13Z",
+      "merge_commit_sha": "01a43518b3b5bcf30b7444127517eda5a3ce304e",
+      "pre_fix_sha": "7d377adfd43019a26cc901d7f50491489a86377f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "changed_files": [
+        {
+          "path": "ui-v2/src/components/schemas/schema-form-input-any-of.test.tsx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 55,
+          "deletions": 0,
+          "changes": 55,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.test.ts",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 79,
+          "deletions": 0,
+          "changes": 79,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 33,
+          "deletions": 6,
+          "changes": 39,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PrefectHQ/prefect"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-11T15:02:13Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-11T13:09:02+00:00, pr_merged_at=2026-08-11T15:02:13+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "422 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #22806 directly closes Issue #22804 and fixes AnyOf branch selection by falling back to the first or open-dict branch when copying a run.",
+        "The automatic three-file list is narrowed to the TypeScript utility; both .test.tsx/.test.ts files are regression tests, and TypeScript symbol ground truth remains file-only."
+      ]
+    },
+    {
+      "id": "astral-sh-uv-issue-21066-pr-21073",
+      "repository": "astral-sh/uv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 21066,
+        "title": "UV recreates the venv on every run.",
+        "body": "### Summary\n\n```\nuv run -v executor-runner\nDEBUG Found workspace root: `/mnt/hdd/Toolkits/Tools/AutotestServices`\nDEBUG Adding root workspace member: `/mnt/hdd/Toolkits/Tools/AutotestServices`\nDEBUG Found workspace configuration at `/mnt/hdd/Toolkits/Tools/AutotestServices/pyproject.toml`\nDEBUG Searching for user configuration in: `/home/tester/.config/uv/uv.toml`\nDEBUG uv 0.12.3 (x86_64-unknown-linux-gnu)\nDEBUG Found project root: `/mnt/hdd/Toolkits/Tools/AutotestServices`\nDEBUG Discovered project `autotestservices` at: /mnt/hdd/Toolkits/Tools/AutotestServices\nDEBUG Reading Python requests from version file at `/mnt/hdd/Toolkits/Tools/AutotestServices/.python-version`\nDEBUG Using Python request `3.12` from version file at `.python-version`\nDEBUG Checking for Python environment at: `.venv`\nDEBUG The interpreter in the project environment has a different version (3.12.2) than it was created with (3.12.13)\nDEBUG Searching for Python 3.12 in managed installations or search path\nDEBUG Searching for managed installations at `/home/tester/.local/share/uv/python`\nDEBUG Found `cpython-3.12.13-linux-x86_64-gnu` at `/usr/local/bin/python3.12` (first executable in the search path)\nUsing CPython 3.12.13 interpreter at: /usr/local/bin/python3.12\nRemoved virtual environment at: .venv\nCreating virtual environment at: .venv\nDEBUG Using base executable for virtual environment: /usr/local/bin/python3.12\nDEBUG Using request connect timeout of 10s and read timeout of 30s\nDEBUG Found static `requires-dist` for: /mnt/hdd/Toolkits/Tools/AutotestServices/\nDEBUG Existing `uv.lock` satisfies workspace requirements\nResolved 182 packages in 0.89ms\n```\nAfter recreating the venv, it remains at version 3.12.2.\n```\n(autotestservices) tester@2101a367:/mnt/hdd/Toolkits/Tools/AutotestServices$ python\nPython 3.12.2 (main, Jun 27 2024, 19:25:41) [GCC 11.4.0] on linux\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\n>>> \n\n```\nOur scripts download the git repository to Vitrual Machine, run `uv sync` in it, and then run `uv run pytest`, and the same situation repeats as above, but it also fails with an error:\n```\nwarning: `VIRTUAL_ENV=/mnt/hdd/Toolkits/Tools/AutotestServices/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\nUsing CPython 3.12.13 interpreter at: /usr/local/bin/python3.12\nerror: failed to remove file\n       `/mnt/hdd/Repositories/autotests_git/.venv/CACHEDIR.TAG`:\n       Permission denied (os error 13)\n```\nIs something broken in UV for Linux?\n\n### Platform\n\nUbuntu 22.04 amd64\n\n### Version\n\nuv 0.12.3 (x86_64-unknown-linux-gnu)\n\n### Python version\n\nuv run python --version Using CPython 3.12.13 interpreter at: /usr/local/bin/python3.12 Removed virtual environment at: .venv Creating virtual environment at: .venv Installed 170 packages in 136ms Python 3.12.2",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 7,
+        "created_at": "2026-08-12T13:24:41Z",
+        "updated_at": "2026-08-13T18:48:25Z",
+        "html_url": "https://github.com/astral-sh/uv/issues/21066",
+        "author": "Wintreist"
+      },
+      "fix_pr_number": 21073,
+      "fix_pr_title": "Heal interpreter metadata cache entries when creating a virtual environment indicates corruption",
+      "fix_pr_url": "https://github.com/astral-sh/uv/pull/21073",
+      "fix_pr_merged_at": "2026-08-13T18:48:24Z",
+      "merge_commit_sha": "aad7fc2bcc6b3bd589788c469c80e6e9b276e12c",
+      "pre_fix_sha": "1ddd31e53ef669ecd2df5c737fb8d6e973798e8b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/uv-python/src/interpreter.rs",
+        "crates/uv/src/commands/project/mod.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/uv-python/src/interpreter.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 132,
+          "deletions": 41,
+          "changes": 173,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/commands/project/mod.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 23,
+          "deletions": 2,
+          "changes": 25,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/uv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-13T18:48:24Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-12T13:24:41+00:00, pr_merged_at=2026-08-13T18:48:24+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2886 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #21073 fixes Issue #21066 by adding Interpreter::clear_cache and invoking it after a stale interpreter version conflict is detected.",
+        "Both Rust production files are necessary; Rust symbol ground truth remains empty."
+      ]
+    },
+    {
+      "id": "numpy-numpy-issue-32069-pr-32091",
+      "repository": "numpy/numpy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 32069,
+        "title": "ENH: implement a mask aware `np.unwrap` for masked arrays in the `np.ma` module",
+        "body": "### Proposed new feature or change:\n\nIn https://github.com/numpy/numpy/pull/31848 it was noticed that `unwrap` does not have a proper implementation for masked arrays. Currently the behavior is to completely unmask the array and return back an ndarray. The problem with that is that unwrap runs the loop over whatever garbage happen to be sitting in the masked slots as if it were real data which is wrong.\n\nIf we go calculate unwrap through the non-gufunc fallback instead, the mask survives, but diff/cumsum only know how to propagate masks positionally and they have no idea that unwrap needs the delta to the nearest valid sample. So a masked gap just gets treated as \"no correction needed here,\" which can silently miss a real wrap and leave everything after the gap offset by a full period.\n\nIt should be possible to implement a proper mask-aware `np.ma.unwrap`. I have left a TODO in the code in that PR as a comment.",
+        "labels": [
+          "01 - Enhancement",
+          "component: numpy.ma"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-07-23T00:05:42Z",
+        "updated_at": "2026-08-01T12:57:40Z",
+        "html_url": "https://github.com/numpy/numpy/issues/32069",
+        "author": "ikrommyd"
+      },
+      "fix_pr_number": 32091,
+      "fix_pr_title": "ENH: implement unwrap for masked arrays under `np.ma`",
+      "fix_pr_url": "https://github.com/numpy/numpy/pull/32091",
+      "fix_pr_merged_at": "2026-08-01T12:57:39Z",
+      "merge_commit_sha": "83a7e03f8abe060d2d585cc2bb17c7b80fffb504",
+      "pre_fix_sha": "15f9211465d8ed5671f71f7d1fa2471f6daaabad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "numpy/lib/_function_base_impl.py",
+        "numpy/ma/extras.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/release/upcoming_changes/32091.new_feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "doc/release/upcoming_changes/9959.improvement.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 3,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "doc/source/reference/routines.ma.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "numpy/lib/_function_base_impl.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 5,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "numpy/lib/tests/test_function_base.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 5,
+          "changes": 11,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "numpy/ma/__init__.pyi",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "numpy/ma/extras.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 117,
+          "deletions": 1,
+          "changes": 118,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "numpy/ma/extras.pyi",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 44,
+          "deletions": 0,
+          "changes": 44,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "numpy/ma/tests/test_extras.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 212,
+          "deletions": 0,
+          "changes": 212,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "numpy/typing/tests/data/reveal/ma.pyi",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: numpy/numpy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-01T12:57:39Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-23T00:05:42+00:00, pr_merged_at=2026-08-01T12:57:39+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "9 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "924 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=01 - Enhancement, component: numpy.ma"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #32091 directly closes Issue #32069: the base implementation removes the masked-array fallback and numpy.ma adds a mask-aware unwrap implementation.",
+        "Both Python production files are required; docs, tests, and .pyi stubs are excluded. The new numpy.ma unwrap has no pre-fix symbol target."
+      ]
+    },
+    {
+      "id": "astral-sh-uv-issue-21083-pr-21085",
+      "repository": "astral-sh/uv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 21083,
+        "title": "uv check --no-install-project",
+        "body": "### Summary\n\nMy project has extension modules that are heavy to build and require external non-Python dependencies. I do have *.pyi files for these extensions. I've setup `ty` such that I can install Python dependencies in .venv with `uv sync --no-install-project` and run `ty check` afterwards.\n\nI would like to use `astral-sh/ty-pre-commit` hook, however I cannot figure out how to make it work without uv tying to install the project in  .venv. I'm guessing that `uv check` uses the `uv sync` machinery to setup/update .venv.\n\n`uv check`  inherits most option related to extras/group installation from `uv sync`, but offers no control over the project installation. Therefore, IMHO it would make sense for `uv check` to accept a  `--no-install-project` flag just as `uv sync` does. \n\n### Example\n\n```console\n$ uv check --no-install-project ...\n```",
+        "labels": [
+          "enhancement",
+          "uv check"
+        ],
+        "comments_count": 3,
+        "created_at": "2026-08-13T13:25:11Z",
+        "updated_at": "2026-08-14T18:38:15Z",
+        "html_url": "https://github.com/astral-sh/uv/issues/21083",
+        "author": "dalcinl"
+      },
+      "fix_pr_number": 21085,
+      "fix_pr_title": "Allow `uv check` without installing the project",
+      "fix_pr_url": "https://github.com/astral-sh/uv/pull/21085",
+      "fix_pr_merged_at": "2026-08-13T14:05:23Z",
+      "merge_commit_sha": "d549b375c9cccdfe67c6eb28fa06122cc4c2de79",
+      "pre_fix_sha": "76d653943c6c82d3cca03227c24e98b1d0320aed",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/uv-cli/src/lib.rs",
+        "crates/uv/src/commands/project/check.rs",
+        "crates/uv/src/lib.rs",
+        "crates/uv/src/settings.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/uv-cli/src/lib.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 0,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/commands/project/check.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 1,
+          "changes": 12,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/lib.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/src/settings.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 0,
+          "changes": 15,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/uv/tests/project/check.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 150,
+          "deletions": 0,
+          "changes": 150,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/uv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-13T14:05:23Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-13T13:25:11+00:00, pr_merged_at=2026-08-13T14:05:23+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "850 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement, uv check"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #21085 directly fixes Issue #21083 by wiring --no-install-project and UV_NO_INSTALL_PROJECT through CLI, settings, check behavior, and the command entry point.",
+        "All four Rust production files are necessary; project/check.rs tests are excluded and Rust symbols remain file-only."
+      ]
+    }
+  ]
+}
