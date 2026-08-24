@@ -380,6 +380,18 @@ File Recall@1 is `0.3510`, Recall@5 `0.6567`, Recall@10 `0.7555`, Recall@20 `0.8
 and symbol MRR `0.3349`. Forty-six of 265 production targets remain outside Top-20 and stay in the
 denominator.
 
+Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed 600/600 valid
+rank requests in one attempt with zero fallback. Mean File Recall@1/5/10/20 was
+`0.5722/0.7844/0.8286/0.8790`, with MRR `0.7479`; population standard deviation was `0.0041` for
+Recall@1 and `0.0013` for MRR. The Top-40 pool covered 229/265 production targets and the final
+Top-20 covered 222/265, recovering `tornado/locks.py`, Pylint `class_checker.py`, and SciPy
+`_matfuncs.py` in every run without losing an existing deterministic Top-20 ground-truth target. Symbol
+Recall@20 remained `0.4645`; mean symbol MRR rose to `0.4856` through file reordering. Only 135/200
+complete candidate orders were identical across all repeats, so seed 1337 remains best effort.
+The three runs used 10,348,059 input tokens and 5,908 output tokens. See the compact
+[`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
+the duplicate raw run files remain outside Git.
+
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
 method within the file, and a production symbol. The evidence is used only for within-file symbol
