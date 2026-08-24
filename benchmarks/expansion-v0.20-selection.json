@@ -1,0 +1,213 @@
+{
+  "name": "real-project-benchmark-expansion-v0.20",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "pallets-jinja-issue-2021-pr-2022",
+      "case_id": "jinja-tuple-unpacking-determinism",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/compiler.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/compiler.py",
+          "symbol": "CodeGenerator.pop_assign_tracking"
+        }
+      ],
+      "review_notes": [
+        "Issue #2021 reports nondeterministic compiled output for tuple-unpacking assignments, and merged PR #2022 fixes the ordering in CodeGenerator.pop_assign_tracking.",
+        "Retain src/jinja2/compiler.py::CodeGenerator.pop_assign_tracking only; CHANGES.rst and tests/test_compile.py are excluded."
+      ]
+    },
+    {
+      "candidate_id": "aio-libs-yarl-issue-1467-pr-1468",
+      "case_id": "yarl-with-suffix-reencoding",
+      "tier": "generalization",
+      "expected_files": [
+        "yarl/_url.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "yarl/_url.py",
+          "symbol": "URL.with_suffix"
+        }
+      ],
+      "review_notes": [
+        "Issue #1467 reports that URL.with_suffix re-encodes the existing path name, and merged PR #1468 changes URL.with_suffix to quote only the new suffix.",
+        "Retain yarl/_url.py::URL.with_suffix; CHANGES/1468.bugfix.rst and tests/test_url.py are excluded."
+      ]
+    },
+    {
+      "candidate_id": "boto-boto3-issue-4526-pr-4527",
+      "case_id": "boto3-gzipfile-mode-type",
+      "tier": "generalization",
+      "expected_files": [
+        "boto3/compat.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "boto3/compat.py",
+          "symbol": "is_append_mode"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #4527 fixes Issue #4526 by guarding is_append_mode against a non-string GzipFile mode; its pre-fix SHA is the head of the earlier append-mode PR #4503.",
+        "Ground truth is boto3/compat.py::is_append_mode only; tests are excluded, and the shared file with the earlier Boto3 case is a documented follow-up regression rather than the same fix."
+      ]
+    },
+    {
+      "candidate_id": "ansible-ansible-issue-85568-pr-87222",
+      "case_id": "ansible-getent-service-unsupported-platform",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/ansible/modules/getent.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/ansible/modules/getent.py",
+          "symbol": "main"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #87222 directly fixes Issue #85568 by detecting a service override on non-glibc platforms before getent returns the misleading key-not-found error.",
+        "Retain lib/ansible/modules/getent.py::main; integration tests and changelog metadata are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-attrs-attrs-issue-1479-pr-1509",
+      "case_id": "attrs-transformer-alias-available",
+      "tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/attr/_make.py",
+          "symbol": "_transform_attrs"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #1509 directly fixes Issue #1479 by resolving default aliases before field_transformer runs; _transform_attrs is the supported pre-fix symbol target.",
+        "The production scope is src/attr/_make.py; related alias-state changes remain covered at file level, while docs, changelog, and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "aio-libs-multidict-issue-1159-pr-1160",
+      "case_id": "multidict-setdefault-segfault",
+      "tier": "generalization",
+      "expected_files": [
+        "multidict/_multidict.c"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #1159 reproduces a segmentation fault in MultiDict.setdefault when called with one argument, and merged PR #1160 initializes the missing default to Py_None in multidict_setdefault.",
+        "Retain multidict/_multidict.c only; changelog and tests are excluded, and C symbol ground truth remains empty."
+      ]
+    },
+    {
+      "candidate_id": "boto-botocore-issue-3455-pr-3543",
+      "case_id": "botocore-100-continue-reason",
+      "tier": "generalization",
+      "expected_files": [
+        "botocore/awsrequest.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "botocore/awsrequest.py",
+          "symbol": "AWSConnection._is_100_continue_status"
+        }
+      ],
+      "review_notes": [
+        "Issue #3455 reports that HTTP/1.1 100 responses without an optional reason phrase are rejected, and merged PR #3543 accepts both two-part and three-part status lines.",
+        "Retain botocore/awsrequest.py::AWSConnection._is_100_continue_status; tests are excluded, and PR #3456 was an earlier unmerged attempt rather than a second case."
+      ]
+    },
+    {
+      "candidate_id": "boto-botocore-issue-3532-pr-3535",
+      "case_id": "botocore-stubber-account-id",
+      "tier": "generalization",
+      "expected_files": [
+        "botocore/stub.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #3532 reports that DynamoDB Stubber triggers SSO credential loading before the stubbed call, and merged PR #3535 supplies a null account ID during endpoint resolution.",
+        "Retain botocore/stub.py only; changelog and tests are excluded. The fix spans several existing Stubber methods plus a new helper, so expected_symbols remains empty."
+      ]
+    },
+    {
+      "candidate_id": "sqlalchemy-alembic-issue-1429-pr-1430",
+      "case_id": "alembic-foreign-key-optional-name",
+      "tier": "generalization",
+      "expected_files": [
+        "alembic/operations/base.py",
+        "alembic/operations/ops.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "alembic/operations/base.py",
+          "symbol": "BatchOperations.create_foreign_key"
+        },
+        {
+          "file": "alembic/operations/ops.py",
+          "symbol": "CreateForeignKeyOp.batch_create_foreign_key"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #1430 directly closes Issue #1429 and changes the foreign-key constraint_name annotation from str to Optional[str] in both public and operation-layer paths.",
+        "Both production files and their pre-fix symbols are required; the PR contains no test, documentation, or unrelated production changes."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1236-pr-1290",
+      "case_id": "h2-bytes-header-informational",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/stream.py",
+        "src/h2/utilities.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/stream.py",
+          "symbol": "H2Stream.send_headers"
+        },
+        {
+          "file": "src/h2/utilities.py",
+          "symbol": "is_informational_response"
+        }
+      ],
+      "review_notes": [
+        "The first commit of merged PR #1290 records Fixes #1236 and corrects bytes-only header handling across the stream encoding entry point and informational-response utility.",
+        "The automatic list is narrowed to src/h2/stream.py and src/h2/utilities.py; the events.py repr guard is an unrelated companion fix and tests plus tox.ini are excluded."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "boto-botocore-issue-3434-pr-3575",
+      "reason": "PR #3575 only removes the deprecated license classifier, while Issue #3434 also reports botocore.data package-discovery warnings that remain unfixed; the broader PR #3565 was closed unmerged."
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1090-pr-1481",
+      "reason": "The Issue snapshot reproduces a synchronous fixture returning AsyncClient, but PR #1481 only adds AsyncIterable to the TypeVar bound and addresses a later report rather than the original reproduction."
+    },
+    {
+      "candidate_id": "aio-libs-multidict-issue-1143-pr-1144",
+      "reason": "The behavioral fix is in production header multidict/_multilib/state.h, but the automatic audit retains only setup.py; selection cannot add the omitted path, so accepting would create incomplete ground truth."
+    },
+    {
+      "candidate_id": "numpy-numpy-issue-30494-pr-30514",
+      "reason": "PR #30514 only works toward Issue #30494, which was actually closed by PR #30846, and the automatic file list also omits the material npy_pycompat.h macro change."
+    },
+    {
+      "candidate_id": "sphinx-doc-sphinx-issue-14238-pr-14538",
+      "reason": "Issue #14238 was closed by PR #14499, not PR #14538; the proposed Python files are adjacent type-check workarounds and omit material configuration changes."
+    },
+    {
+      "candidate_id": "psf-requests-issue-7434-pr-7431",
+      "reason": "PR #7431 changes header mutability typing, while Issue #7434 concerns JsonType and was closed by PR #7436; this Issue/Fix-PR relationship is incorrect."
+    }
+  ]
+}

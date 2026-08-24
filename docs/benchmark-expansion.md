@@ -6,6 +6,43 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.20 seventh 200-case expansion batch
+
+Manifest v15 accepts ten reviewed Issue/Fix-PR pairs from Jinja, Yarl, Boto3, Ansible, attrs,
+Multidict, Botocore, Alembic, and h2. It adds 12 production-file targets, including two multi-file
+fixes, and ten pre-fix Python symbol targets across eight cases. The Multidict C fix and the
+multi-method Botocore Stubber fix remain intentionally file-only.
+
+Review rejects six candidates rather than converting related changes into ground truth. Botocore
+#3434/#3575 is a partial packaging-warning fix; pytest-asyncio #1090/#1481 addresses a later type
+report rather than the snapshot reproduction; Multidict #1143/#1144 omits the material C header;
+NumPy #30494, Sphinx #14238, and Requests #7434 were each closed by a different PR than the proposed
+candidate. A valid second attrs case and a Prefect case with stale test-file eligibility remain
+undecided instead of being mislabeled as rejections. All ten accepted Python symbol targets resolve
+in their frozen repository maps.
+
+The suite now contains 120 cases across 52 repositories: 17 main, 11 calibration, and 92
+generalization cases. It records 176 production-file targets, 39 multi-file cases, and 121 reviewed
+symbol targets across 89 cases.
+
+Three deterministic v0.27 runs completed 120/120 cases. After removing timestamps, elapsed fields,
+and cache provenance, their candidate files, candidate symbols, per-case metrics, tier metrics, and
+aggregates were identical. The retained 110 cases were also unchanged from manifest v14. File
+Recall@1/5/10/20 is `0.3433/0.6279/0.7321/0.8671`, with MRR `0.5544`. Across the 89 labeled cases,
+Symbol Recall@1/5/10/20 is `0.2191/0.3755/0.4036/0.4710`, with MRR `0.3350`. The batch adds no
+Top-20 miss: 146 of 176 production targets are retrieved, leaving the previous 30 misses in the
+denominator.
+
+Run 1 reused 110 repository maps and rebuilt ten; runs 2 and 3 recorded 120/120 hits. Warm reuse
+reduced mean in-process analysis time from 4,724 to 3,576 ms per case, a 24.31% reduction, without
+changing any non-timing result.
+
+The regenerated 200-case queue contains 80 primary and 30 reserve candidates across 37
+repositories. Its primary set includes the 21 additional multi-file cases required to reach
+60/200 (30%). The reserve count decreases from 40 because only 110 remaining unique slots are
+needed and available after reviewed decisions; retaining 40 reserves would make the constraints
+infeasible even though the multi-file target itself remains feasible.
+
 ## v0.19 sixth 200-case expansion batch
 
 Manifest v14 accepts ten reviewed Issue/Fix-PR pairs from Botocore, MarkupSafe, Matplotlib,
@@ -413,19 +450,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting six ten-case batches into manifest v14 and excluding ten reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 133
-unique candidates across 38
+After accepting seven ten-case batches into manifest v15 and excluding sixteen reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 119
+unique candidates across 37
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 90 primary candidates and 40 reserves;
+- 80 primary candidates and 30 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 23 new multi-file primary candidates, which would raise the suite from 37/110 to 60/200
+- 21 new multi-file primary candidates, which would raise the suite from 39/120 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 44 primary Issues created before 2026;
-- 47 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 32 primary Issues created before 2026;
+- 36 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
