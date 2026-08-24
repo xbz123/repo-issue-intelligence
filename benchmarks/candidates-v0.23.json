@@ -1,0 +1,1417 @@
+{
+  "name": "real-project-benchmark-expansion-v0.23",
+  "version": 1,
+  "curated_at": "2026-08-24T09:50:08.820314Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 17,
+  "candidates": [
+    {
+      "id": "tox-dev-tox-issue-3945-pr-3948",
+      "repository": "tox-dev/tox",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3945,
+        "title": "Conflict between `constraints` and `constrain_package_deps` / `use_frozen_constraints` options",
+        "body": "## Issue\n\n(Posting this as an issue first because there are at least two potential outcomes, and I want to determine which one to pursue before I propose a PR)\n\nWe currently have three constraints-related options:\n\n* The `constraints` option allows you to specify a `constraints.txt` file that is used when installing all package *except* the package under test.\n* The `constrain_package_deps` option ensures packages specified in `deps` are not overridden by dependencies of the package.\n* The `use_frozen_constraints` option ensures the exact version of packages installed during the `deps` phase are not overridden during the package phase.\n\nThese can conflict. Given the following setup:\n\n**`pyproject.toml`**\n\n```toml\n[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n\n[project]\nname = \"foo\"\nversion = \"0.1.0\"\ndependencies = [\"requests\"]\n\n[tool.hatch.build.targets.wheel]\ninclude = [\"foo.py\"]\n```\n\n**`foo.py`**\n\n```python\ndef main():\n    pass\n```\n\n**`tox.ini`**\n\n```ini\n[tox]\nenvlist = py\n\n[testenv]\nconstrain_package_deps = true\nconstraints = constraints.txt\ndeps =\n    packaging\ncommands =\n    python -c \"import foo; print('ok')\n```\n\n**`constraints.txt`**\n\n```\npackaging==24.2\nrequests==2.31.0\n```\n\nIf you run e.g. `tox -e py3`, you'll see a duplicate `-c` option in the `install_package_deps` phase:\n\n```\n❯ .venv/bin/tox -e py3 \npy3: install_deps> python -I -m pip install packaging -c constraints.txt\n.pkg: install_requires> python -I -m pip install hatchling\n.pkg: _optional_hooks> python /tmp/tox-bug/.venv/lib/python3.14/site-packages/pyproject_api/_backend.py True hatchling.build\n.pkg: get_requires_for_build_sdist> python /tmp/tox-bug/.venv/lib/python3.14/site-packages/pyproject_api/_backend.py True hatchling.build\n.pkg: build_sdist> python /tmp/tox-bug/.venv/lib/python3.14/site-packages/pyproject_api/_backend.py True hatchling.build\npy3: install_package_deps> python -I -m pip install requests -c constraints.txt -c/tmp/tox-bug/.tox/py3/constraints.txt\npy3: install_package> python -I -m pip install --force-reinstall --no-deps /tmp/tox-bug/.tox/.tmp/package/1/foo-0.1.0.tar.gz\npy3: commands[0]> python -c 'import foo; print('\"'\"'ok'\"'\"')'\nok\n.pkg: _exit> python /tmp/tox-bug/.venv/lib/python3.14/site-packages/pyproject_api/_backend.py True hatchling.build\n  py3: OK (3.24=setup[3.22]+cmd[0.02] seconds)\n  congratulations :) (3.26 seconds)\n```\n\nI have also seen reports that this can also cause errors during this phase like so:\n\n```\nThe conflict is caused by:\n    The user requested oslo.context>=2.22.0\n    The user requested (constraint) oslo-context===6.3.0,===6.4.0\n```\n\nBut I've been unable to figure out how to trigger this yet. There is more detail in [this pastebin](https://paste.opendev.org/show/bCwEv5W8TeNaXKKvKg2K/) though.\n\nWith regard to fixes, I *think* the best suggestion is to forbid setting `constraints` at the same time as the `constrain_package_deps` / `use_frozen_constraints` or ignore the latter if the former is set (likely with a warning). The former already applies to both dependencies specified via `deps` and package dependencies, meaning the latter serves little to no purpose. The only case where I think you might want the two is if `deps` contained a constraint that was not present in your constraints file. If this were a likely case, then we'd probably need to merge the two constraints files. However, I suspect this is not common and we'd be better off waiting until someone requests it with a good reason why (YAGNI).\n\n## Environment\n\nn/a (this is a tox issue and is present on the latest version installed from pip)\n\n## Output of running tox\n\nn/a (per above)\n\n</details>\n\n## Minimal example\n\nSee example.",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2026-05-19T14:15:55Z",
+        "updated_at": "2026-05-29T11:55:17Z",
+        "html_url": "https://github.com/tox-dev/tox/issues/3945",
+        "author": "stephenfin"
+      },
+      "fix_pr_number": 3948,
+      "fix_pr_title": "🐛 fix(pip): skip constrain_package_deps when constraints is set",
+      "fix_pr_url": "https://github.com/tox-dev/tox/pull/3948",
+      "fix_pr_merged_at": "2026-05-28T05:12:32Z",
+      "merge_commit_sha": "a43427fa389d4f3deaa462bebc86b81a0ab87e37",
+      "pre_fix_sha": "27b68b39e6db707909311e654fcb6aa4d626cccf",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/tox/tox_env/python/pip/pip_install.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3945.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/how-to/usage.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/onboarding.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/config.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 1,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/tox/tox_env/python/pip/pip_install.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 4,
+          "changes": 16,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/tox_env/python/pip/test_pip_install.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 48,
+          "deletions": 0,
+          "changes": 48,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tox-dev/tox"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-28T05:12:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-05-19T14:15:55+00:00, pr_merged_at=2026-05-28T05:12:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "3693 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #3945 reproduces duplicate and conflicting pip constraint files when explicit constraints are combined with generated package constraints, and merged PR #3948 makes explicit constraints take precedence.",
+        "Retain pip_install.py as file-level ground truth because the fix spans two existing methods and a new property; documentation, tests, and changelog are excluded."
+      ]
+    },
+    {
+      "id": "urllib3-urllib3-issue-5077-pr-5102",
+      "repository": "urllib3/urllib3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 5077,
+        "title": "`SSL_KEYWORDS` is missing `assert_hostname` and `assert_fingerprint`, leaking HTTPS-only kwargs into HTTP connection construction",
+        "body": "### Subject\n\n`PoolManager._new_pool` strips SSL-only kwargs from connection-pool\nkwargs when creating an HTTP pool, via the `SSL_KEYWORDS` allowlist.\nThat list is missing `assert_hostname` and `assert_fingerprint`, both\nof which are HTTPS-only (declared as named parameters on\n`HTTPSConnection.__init__`, rejected by `HTTPConnection.__init__`).\n\nWhen a caller sets either on `PoolManager.connection_pool_kw` and then\nissues a plain-HTTP request, the kwarg leaks past the filter into\n`HTTPConnection.__init__`, which raises a `TypeError`.\n\nAdding both to `SSL_KEYWORDS` fixes it, matching the existing intent\nof the filter.\n\n### Environment\n\n\n```python\n>>> OS macOS-26.3.1-arm64-arm-64bit-Mach-O\n>>> Python 3.14.5\n>>> OpenSSL 3.6.2 7 Apr 2026\n>>> urllib3 2.7.0\n```\n\n### Steps to Reproduce\n\n```python\nimport urllib3\n\n\ndef show(kwarg: str) -> None:\n    pool = urllib3.PoolManager()\n    pool.connection_pool_kw[kwarg] = False\n    print(f\"--- connection_pool_kw[{kwarg!r}] = False, GET http://...\")\n    try:\n        pool.request(\"GET\", \"http://127.0.0.1:1/\", retries=False, timeout=0.1)\n    except TypeError as exc:\n        print(f\"  TypeError: {exc}\")\n    except Exception as exc:\n        print(f\"  {type(exc).__name__}: {exc}\")\n    print()\n\n\nif __name__ == \"__main__\":\n    print(f\"urllib3 version: {urllib3.__version__}\\n\")\n    # Both leak; both should be in SSL_KEYWORDS.\n    show(\"assert_hostname\")\n    show(\"assert_fingerprint\")\n\n    # For contrast: cert_reqs IS in SSL_KEYWORDS, gets stripped correctly.\n    show(\"cert_reqs\")\n```\n\n### Expected Behavior\n\nA `PoolManager` with `assert_hostname` or `assert_fingerprint` set on\n`connection_pool_kw` should successfully dispatch to plain-HTTP URLs.\nThose kwargs should be stripped before reaching\n`HTTPConnection.__init__`, the same way `cert_reqs`, `ca_certs`, and\nthe rest of `SSL_KEYWORDS` already are.\n\n### Actual Behavior\n\n`HTTPConnection.__init__` raises `TypeError`:\n\n```\nTypeError: HTTPConnection.__init__() got an unexpected keyword argument 'assert_hostname'\n```\n\nThe same happens for `assert_fingerprint`. For comparison, kwargs\nalready in `SSL_KEYWORDS` (e.g. `cert_reqs`) are correctly stripped\nand the request proceeds to the network leg.\n\n\n```\n--- connection_pool_kw['assert_hostname'] = False, GET http://...\n  TypeError: HTTPConnection.__init__() got an unexpected keyword argument 'assert_hostname'\n\n--- connection_pool_kw['assert_fingerprint'] = False, GET http://...\n  TypeError: HTTPConnection.__init__() got an unexpected keyword argument 'assert_fingerprint'\n\n--- connection_pool_kw['cert_reqs'] = False, GET http://...\n  NewConnectionError: HTTPConnection(host='127.0.0.1', port=1): Failed to establish a new connection: [Errno 61] Connection refused\n```\n\n",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-06-04T08:31:54Z",
+        "updated_at": "2026-07-12T16:10:15Z",
+        "html_url": "https://github.com/urllib3/urllib3/issues/5077",
+        "author": "cipherself"
+      },
+      "fix_pr_number": 5102,
+      "fix_pr_title": "Add assert_hostname and assert_fingerprint to SSL_KEYWORDS",
+      "fix_pr_url": "https://github.com/urllib3/urllib3/pull/5102",
+      "fix_pr_merged_at": "2026-07-12T16:10:14Z",
+      "merge_commit_sha": "8f5c1b46387b4d86aa54c2c526e4930ae58200a7",
+      "pre_fix_sha": "4e5ce638723118dc41f218cd6715f91a9f321908",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/poolmanager.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog/5077.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/urllib3/poolmanager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "test/test_poolmanager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 0,
+          "changes": 13,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: urllib3/urllib3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-12T16:10:14Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-04T08:31:54+00:00, pr_merged_at=2026-07-12T16:10:14+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2724 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #5077 reproduces HTTPS-only assert_hostname and assert_fingerprint options leaking into HTTPConnection construction, and merged PR #5102 adds both to SSL_KEYWORDS.",
+        "Retain src/urllib3/poolmanager.py as module-level constant ground truth; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "ansible-ansible-issue-87303-pr-87304",
+      "repository": "ansible/ansible",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 87303,
+        "title": "`ansible.builtin.rpm_key` fails on openSUSE Tumbleweed with `Unable to parse PGP key armor`.",
+        "body": "### Summary\n\nRunning the module `ansible.builtin.rpm_key` on openSUSE Tumbleweed fails.\nThe exception seems to be raised while parsing installed keys (and thus is independent of the provided `key` argument), because the given armored blocks are missing a final newline character. The following patch fixes it for me:\n```diff\ndiff --git a/lib/ansible/modules/rpm_key.py b/lib/ansible/modules/rpm_key.py\nindex 9f78c50..13f6801 100644\n--- a/fail.py\n+++ b/success.py\n@@ -161,7 +161,7 @@ class LibRPM:\n         pkt = ctypes.POINTER(ctypes.c_uint8)()\n         pktlen = ctypes.c_size_t()\n\n-        armor_bytes = armor.encode()\n+        armor_bytes = (armor+'\\n').encode()\n         result = self._lib.pgpParsePkts(armor_bytes, ctypes.byref(pkt), ctypes.byref(pktlen))\n\n         if result < 0 or not pkt:\n```\nWithout that, `self._lib.pgpParsePkts` returns `-4`, which, according to https://github.com/rpm-software-management/rpm/blob/c8dc5ea575a2e9c1488036d12f4b75f6a5a49120/include/rpm/rpmpgp.h#L219, means that no end of the block could be found.\n\n### Issue Type\n\nBug Report\n\n### Component Name\n\nansible.builtin.rpm_key\n\n### Ansible Version\n\n```console\n$ ansible --version\nansible [core 2.21.2]\n  config file = None\n  configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']\n  ansible python module location = /usr/lib/python3.13/site-packages/ansible\n  ansible collection location = /root/.ansible/collections:/usr/share/ansible/collections\n  executable location = /usr/bin/ansible\n  python version = 3.13.14 (main, Jul 17 2026, 10:06:46) [GCC] (/usr/bin/python3.13)\n  jinja version = 3.1.6\n  pyyaml version = 6.0.3 (with libyaml v0.2.5)\n```\n\n### Configuration\n\n```console\n# if using a version older than ansible-core 2.12 you should omit the '-t all'\n$ ansible-config dump --only-changed -t all\nCONFIG_FILE() = None\n\nGALAXY_SERVERS:\n```\n\n### OS / Environment\n\nopenSUSE Tumbleweed Snapshot 20260724 (has RPM 4.20.1)\n\n### Steps to Reproduce\n\n```Containerfile\nFROM opensuse/tumbleweed:latest\nRUN zypper refresh && zypper --non-interactive dup && zypper --non-interactive install ansible\nRUN ansible localhost -m ansible.builtin.rpm_key -a 'state=absent key=D82E2FE4A0C13308'\n```\nThe key `D82E2FE4A0C13308` was generated by the openSUSE Build Service, but can be replaced with any other key to reproduce the error.\n\n### Expected Results\n\n```\nlocalhost | SUCCESS => {\n    \"changed\": false\n}\n```\n\n### Actual Results\n\n```console\n[ERROR]: Task failed: Module failed: Unable to parse PGP key armor\nOrigin: <adhoc 'ansible.builtin.rpm_key' task>\n\n{'action': 'ansible.builtin.rpm_key', 'args': {'state': 'absent', 'key': 'D82E2FE4A0C13308'}, 'timeout': 0, [...]\n\nlocalhost | FAILED! => {\n    \"changed\": false,\n    \"msg\": \"Task failed: Module failed: Unable to parse PGP key armor\"\n}\n```\n\n### Code of Conduct\n\n- [x] I agree to follow the Ansible Code of Conduct",
+        "labels": [
+          "module",
+          "bug",
+          "has_pr",
+          "affects_2.21"
+        ],
+        "comments_count": 7,
+        "created_at": "2026-07-27T14:46:36Z",
+        "updated_at": "2026-08-11T00:03:28Z",
+        "html_url": "https://github.com/ansible/ansible/issues/87303",
+        "author": "expeehaa"
+      },
+      "fix_pr_number": 87304,
+      "fix_pr_title": "Handle missing trailing newline in keys",
+      "fix_pr_url": "https://github.com/ansible/ansible/pull/87304",
+      "fix_pr_merged_at": "2026-07-27T19:12:36Z",
+      "merge_commit_sha": "4e131d639aabd9d4cecd589dc046582921487a41",
+      "pre_fix_sha": "76884711a617bfe59b417df11fbfc42016c99de8",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/ansible/modules/rpm_key.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelogs/fragments/87304-rpm_key-armor-trailing-newline.yml",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "lib/ansible/modules/rpm_key.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "test/integration/targets/rpm_key/tasks/rpm_key.yaml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 36,
+          "deletions": 0,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: ansible/ansible"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-27T19:12:36Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-27T14:46:36+00:00, pr_merged_at=2026-07-27T19:12:36+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2892 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=module, bug, has_pr, affects_2.21"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #87303 reproduces librpm rejecting armored keys without a trailing newline, and merged PR #87304 normalizes the armor before pgpParsePkts.",
+        "Retain lib/ansible/modules/rpm_key.py::LibRPM._parse_armor; integration tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "astral-sh-ruff-issue-27216-pr-27711",
+      "repository": "astral-sh/ruff",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 27216,
+        "title": "`delete-full-slice` (FURB131) should not apply to `dict`s",
+        "body": "### Summary\n\n[`delete-full-slice` (FURB131)](https://docs.astral.sh/ruff/rules/delete-full-slice/) should not apply to `dict`s, because slicing `dict`s raises an error, although the rule documentation says it works. The upstream Refurb rule only applies to `list`s. [Example](https://play.ruff.rs/6843ace6-2a9b-4e0e-b501-ac6b1216751c):\n```console\n$ cat >furb131.py <<'# EOF'\nnames = {\"key\": \"value\"}\ndel names[:]\n# EOF\n\n$ python furb131.py 2>&1 | tail -n 1\nKeyError: slice(None, None, None)\n\n$ refurb --enable FURB131 furb131.py; echo $?\n0\n\n$ ruff --isolated check --preview --select FURB131 furb131.py --unsafe-fixes --fix\nFound 1 error (1 fixed, 0 remaining).\n\n$ cat furb131.py\nnames = {\"key\": \"value\"}\nnames.clear()\n\n$ python furb131.py; echo $?\n0\n```\n\n### Version\n\nruff 0.16.0 (a2635fd8f 2026-07-23)",
+        "labels": [
+          "rule",
+          "preview"
+        ],
+        "comments_count": 3,
+        "created_at": "2026-07-27T15:28:26Z",
+        "updated_at": "2026-08-14T19:37:59Z",
+        "html_url": "https://github.com/astral-sh/ruff/issues/27216",
+        "author": "dscorbett"
+      },
+      "fix_pr_number": 27711,
+      "fix_pr_title": "[`refurb`] Restrict `delete-full-slice` to lists (`FURB131`)",
+      "fix_pr_url": "https://github.com/astral-sh/ruff/pull/27711",
+      "fix_pr_merged_at": "2026-08-14T19:37:58Z",
+      "merge_commit_sha": "89ac93b12650197c9e262780a34c6ebe66657999",
+      "pre_fix_sha": "b8c5e73abe5b15a74fb066e474d30397d1421cfe",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 13,
+          "changes": 21,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/refurb/snapshots/ruff_linter__rules__refurb__tests__FURB131_FURB131.py.snap",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 74,
+          "changes": 74,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/ruff"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T19:37:58Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-27T15:28:26+00:00, pr_merged_at=2026-08-14T19:37:58+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "803 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=rule, preview"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #27216 shows FURB131 incorrectly rewriting dictionary full-slice deletion, and merged PR #27711 restricts the rule to lists.",
+        "Retain the Rust rule implementation as file-only ground truth; generated snapshots are excluded."
+      ]
+    },
+    {
+      "id": "scikit-learn-scikit-learn-issue-34338-pr-34341",
+      "repository": "scikit-learn/scikit-learn",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 34338,
+        "title": "radius_neighbors with array radius works with n_jobs=1 but raises ValueError for n_jobs>1",
+        "body": "### Describe the bug and give evidence about its user-facing impact\n\nWhen `radius` is passed as a per-sample array, `NearestNeighbors.radius_neighbors` returns a correct result with `n_jobs=1` but raises a `ValueError` with `n_jobs>1` on identical input for both `ball_tree` and `kd_tree`. An `n_jobs` value should not change behavior.\n\n`NearestNeighbors` is a convenient interface to `BallTree` and `KDTree` because, unlike those, it accepts an `n_jobs` parameter.\n\nI used the following workaround in the past, [here](https://github.com/nicolassalvy/ClippedDensityCoverage/blob/main/ClippedDensityCoverage/metrics/Clipped_Density_Coverage.py#L52-71):\n```python\ntree = NearestNeighbors(\n    algorithm=\"ball_tree\", n_jobs=n_jobs\n).fit(data1)\n\ndistances, indices = (\n    tree.radius_neighbors(\n        X=data2,\n        radius=np.max(radii),\n        return_distance=True,\n        sort_results=False,\n    )\n)\n\ncorrect_indices = [\n    indices[i][distances[i] <= radii[i]]\n    for i in range(len(distances))\n]\n```\nbut this can be very slow, both because of the mandatory `return_distance=True` and because of the following: adaptive radius search is useful here because the typical distances in different data modes can be very different, one mode where they are very far apart and another where they are close. With the workaround, the indices returned for half the data could be that whole half every time, which makes the results very slow.\n\nA related feature request showed interest: [#25970](https://github.com/scikit-learn/scikit-learn/issues/25970) (\"Allow NearestNeighbor radius_neighbors to accept an array for the `radius` keyword argument\"), though this present issue is only about the tree-based algorithms, which already accept it at `n_jobs=1` and only break under parallelism, not the `brute`-force case.\n\n### Steps/Code to Reproduce\n\n```python\nimport numpy as np\nfrom sklearn.neighbors import NearestNeighbors\n\nX = np.random.RandomState(0).rand(10, 3)\nr = np.full(len(X), 0.4)  # one radius per query point\n\nNearestNeighbors(algorithm=\"ball_tree\", n_jobs=1).fit(X).radius_neighbors(X, radius=r)  # works\nNearestNeighbors(algorithm=\"ball_tree\", n_jobs=2).fit(X).radius_neighbors(X, radius=r)  # raises ValueError\n```\n\n### Expected Results\n\nNo error for `n_jobs=2`, returning the same neighbors as `n_jobs=1`.\n\n### Actual Results\n\n```\n_RemoteTraceback: \n\"\"\"\nTraceback (most recent call last):\n  File \"/home/username/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/_utils.py\", line 109, in __call__\n    return self.func(**kwargs)\n           ~~~~~~~~~^^^^^^^^^^\n  File \"/home/username/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py\", line 607, in __call__\n    return [func(*args, **kwargs) for func, args, kwargs in self.items]\n            ~~~~^^^^^^^^^^^^^^^^^\n  File \"/home/username/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/sklearn/utils/parallel.py\", line 184, in __call__\n    return self.function(*args, **kwargs)\n           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"sklearn/neighbors/_binary_tree.pxi\", line 1324, in sklearn.neighbors._ball_tree.BinaryTree64.query_radius\nValueError: r must be broadcastable to X.shape\n\"\"\"\n\nThe above exception was the direct cause of the following exception:\n\nValueError                                Traceback (most recent call last)\nCell In[4], line 11\n      6 r = np.full(len(X), 0.4)  # one radius per query point\n      8 NearestNeighbors(algorithm=\"ball_tree\", n_jobs=1).fit(X).radius_neighbors(\n      9     X, radius=r\n     10 )  # works\n---> 11 NearestNeighbors(algorithm=\"ball_tree\", n_jobs=2).fit(X).radius_neighbors(\n     12     X, radius=r\n     13 )  # raises ValueError\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/sklearn/neighbors/_base.py:1270, in RadiusNeighborsMixin.radius_neighbors(self, X, radius, return_distance, sort_results)\n   1268 n_jobs = effective_n_jobs(self.n_jobs)\n   1269 delayed_query = delayed(self._tree.query_radius)\n-> 1270 chunked_results = Parallel(n_jobs, prefer=\"threads\")(\n   1271     delayed_query(X[s], radius, return_distance, sort_results=sort_results)\n   1272     for s in gen_even_slices(X.shape[0], n_jobs)\n   1273 )\n   1274 if return_distance:\n   1275     neigh_ind, neigh_dist = tuple(zip(*chunked_results))\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/sklearn/utils/parallel.py:91, in Parallel.__call__(self, iterable)\n     79 warning_filters = (\n     80     filters_func() if filters_func is not None else warnings.filters\n     81 )\n     83 iterable_with_config_and_warning_filters = (\n     84     (\n     85         _with_config_and_warning_filters(delayed_func, config, warning_filters),\n   (...)     89     for delayed_func, args, kwargs in iterable\n     90 )\n---> 91 return super().__call__(iterable_with_config_and_warning_filters)\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:2072, in Parallel.__call__(self, iterable)\n   2066 # The first item from the output is blank, but it makes the interpreter\n   2067 # progress until it enters the Try/Except block of the generator and\n   2068 # reaches the first `yield` statement. This starts the asynchronous\n   2069 # dispatch of the tasks to the workers.\n   2070 next(output)\n-> 2072 return output if self.return_generator else list(output)\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:1682, in Parallel._get_outputs(self, iterator, pre_dispatch)\n   1679     yield\n   1681     with self._backend.retrieval_context():\n-> 1682         yield from self._retrieve()\n   1684 except GeneratorExit:\n   1685     # The generator has been garbage collected before being fully\n   1686     # consumed. This aborts the remaining tasks if possible and warn\n   1687     # the user if necessary.\n   1688     self._exception = True\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:1784, in Parallel._retrieve(self)\n   1778 while self._wait_retrieval():\n   1779     # If the callback thread of a worker has signaled that its task\n   1780     # triggered an exception, or if the retrieval loop has raised an\n   1781     # exception (e.g. `GeneratorExit`), exit the loop and surface the\n   1782     # worker traceback.\n   1783     if self._aborting:\n-> 1784         self._raise_error_fast()\n   1785         break\n   1787     nb_jobs = len(self._jobs)\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:1859, in Parallel._raise_error_fast(self)\n   1855 # If this error job exists, immediately raise the error by\n   1856 # calling get_result. This job might not exists if abort has been\n   1857 # called directly or if the generator is gc'ed.\n   1858 if error_job is not None:\n-> 1859     error_job.get_result(self.timeout)\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:758, in BatchCompletionCallBack.get_result(self, timeout)\n    752 backend = self.parallel._backend\n    754 if backend.supports_retrieve_callback:\n    755     # We assume that the result has already been retrieved by the\n    756     # callback thread, and is stored internally. It's just waiting to\n    757     # be returned.\n--> 758     return self._return_or_raise()\n    760 # For other backends, the main thread needs to run the retrieval step.\n    761 try:\n\nFile ~/anaconda3/envs/sklearn-env/lib/python3.14/site-packages/joblib/parallel.py:773, in BatchCompletionCallBack._return_or_raise(self)\n    771 try:\n    772     if self.status == TASK_ERROR:\n--> 773         raise self._result\n    774     return self._result\n    775 finally:\n\nValueError: r must be broadcastable to X.shape\n```\n\n### Versions\n\n```shell\nSystem:\n    python: 3.14.6 | packaged by conda-forge | (main, Jun 12 2026, 08:51:42) [GCC 14.3.0]\nexecutable: /home/username/anaconda3/envs/sklearn-env/bin/python\n   machine: Linux-5.15.0-118-generic-x86_64-with-glibc2.35\n\nPython dependencies:\n      sklearn: 1.9.0\n          pip: 26.1.2\n   setuptools: 82.0.1\n        numpy: 2.4.6\n        scipy: 1.17.1\n       Cython: None\n       pandas: None\n   matplotlib: None\n       joblib: 1.5.3\nthreadpoolctl: 3.6.0\n     narwhals: 2.22.1\n\nBuilt with OpenMP: True\n\nthreadpoolctl info:\n       user_api: blas\n   internal_api: openblas\n    num_threads: 24\n         prefix: libopenblas\n       filepath: /home/username/anaconda3/envs/sklearn-env/lib/libopenblasp-r0.3.33.so\n        version: 0.3.33\nthreading_layer: pthreads\n   architecture: SkylakeX\n\n       user_api: openmp\n   internal_api: openmp\n    num_threads: 24\n         prefix: libgomp\n       filepath: /home/username/anaconda3/envs/sklearn-env/lib/libgomp.so.1.0.0\n        version: None\n```\n\n### Interest in fixing the bug\n\nYes, happy to work on a PR for that.\n\nThe root cause is in `radius_neighbors` [line 1271](https://github.com/scikit-learn/scikit-learn/blob/main/sklearn/neighbors/_base.py#L1271): although the query points are sliced per worker (`X[s]`), the whole `radius` is passed to every chunk, so each chunk gets a length-`n_samples` radius for an `n_samples / n_jobs` slice:\n```python\nchunked_results = Parallel(n_jobs, prefer=\"threads\")(\n    delayed_query(X[s], radius, return_distance, sort_results=sort_results)\n    for s in gen_even_slices(X.shape[0], n_jobs)\n)\n```\nA simple fix would be to slice `radius` with the same `s` when it is array-like: `radius[s] if np.ndim(radius) > 0 else radius`.",
+        "labels": [
+          "Bug",
+          "module:neighbors"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-06-19T09:51:36Z",
+        "updated_at": "2026-08-16T05:03:29Z",
+        "html_url": "https://github.com/scikit-learn/scikit-learn/issues/34338",
+        "author": "nicolassalvy"
+      },
+      "fix_pr_number": 34341,
+      "fix_pr_title": "FIX radius_neighbors with array-like radius and n_jobs > 1 for tree-based algorithms",
+      "fix_pr_url": "https://github.com/scikit-learn/scikit-learn/pull/34341",
+      "fix_pr_merged_at": "2026-08-16T05:03:27Z",
+      "merge_commit_sha": "cedc9d8c5f868b70eeae8b18f18c83675cdd1a36",
+      "pre_fix_sha": "cb4f2be10c4dc1da2592834b14a93ad9dbefa91d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "sklearn/neighbors/_base.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whats_new/upcoming_changes/sklearn.neighbors/34341.fix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/neighbors/_base.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 1,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "sklearn/neighbors/tests/test_neighbors.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 0,
+          "changes": 16,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: scikit-learn/scikit-learn"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-16T05:03:27Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-06-19T09:51:36+00:00, pr_merged_at=2026-08-16T05:03:27+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "9384 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, module:neighbors"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #34338 reports array-like radius values failing only when radius_neighbors uses multiple jobs, and merged PR #34341 slices radius with the same worker slice as X.",
+        "Retain RadiusNeighborsMixin.radius_neighbors; changelog and regression tests are excluded, and unmerged PR #34353 is not a second fix case."
+      ]
+    },
+    {
+      "id": "pandas-dev-pandas-issue-66517-pr-66791",
+      "repository": "pandas-dev/pandas",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 66517,
+        "title": "BUG: convert_dtypes raises OverflowError for integers outside the int64 range",
+        "body": "### Pandas version checks\n\n- [x] I have checked that this issue has not already been reported.\n\n- [x] I have confirmed this bug exists on the [latest version](https://pandas.pydata.org/docs/whatsnew/index.html) of pandas.\n\n- [x] I have confirmed this bug exists on the [main branch](https://pandas.pydata.org/docs/dev/getting_started/install.html#installing-the-development-version-of-pandas) of pandas.\n\n\n### Reproducible Example\n\n```python\nimport pandas as pd\n\npd.Series([2**64], dtype=object).convert_dtypes()\n# OverflowError: Python int too large to convert to C long\n\npd.Series([-(2**63) - 1], dtype=object).convert_dtypes()\n# OverflowError: Python int too large to convert to C long\n```\n\n### Issue Description\n\n`Series` construction correctly infers `object` for an integer that no NumPy/nullable integer\ndtype can hold:\n\n```python\n>>> pd.Series([2**64]).dtype\ndtype('O')\n```\n\nbut `convert_dtypes` then tries to force that column to `Int64` regardless, and overflows:\n\n```\n  File \"pandas/core/internals/blocks.py\", line 582, in convert_dtypes\n    rbs.append(b.astype(dtype=dtype, squeeze=b.ndim != 1))\n  File \"pandas/core/dtypes/astype.py\", line 82, in _astype_nansafe\n    return dtype.construct_array_type()._from_sequence(arr, dtype=dtype, copy=copy)\n  File \"pandas/core/arrays/numeric.py\", line 248, in _coerce_to_data_and_mask\n    values = dtype_cls._safe_cast(values, dtype, copy=False)\n  File \"pandas/core/arrays/integer.py\", line 65, in _safe_cast\n    casted = values.astype(dtype, copy=copy)\nOverflowError: Python int too large to convert to C long\n```\n\n`lib.infer_dtype` reports `\"integer\"` for these values, and the object-block conversion maps\nthat straight to `Int64` without checking that the values actually fit. `IntegerArray._safe_cast`\nfirst attempts `astype(..., casting=\"safe\")`, which raises `TypeError` for object input, and the\nfallback `values.astype(dtype)` is what raises `OverflowError`.\n\nNote this is a plain `OverflowError` escaping a public API rather than a pandas error type, so\nit is also not catchable via anything in `pandas.errors`.\n\n### Expected Behavior\n\n`convert_dtypes` should leave the column as `object` when the values do not fit in the target\ninteger dtype, matching what construction already infers:\n\n```python\n>>> pd.Series([2**64], dtype=object).convert_dtypes().dtype\ndtype('O')\n```\n\nRaising a clear pandas-level error would also be defensible, but silently attempting `Int64` and\nsurfacing a raw `OverflowError` is not.\n\n### Installed Versions\n\n<details>\n\n```\nINSTALLED VERSIONS\n------------------\ncommit                : e68db09ecf6427d1b62e565bacf17f2e525a3032\npython                : 3.13.11\npython-bits           : 64\nOS                    : Darwin\nOS-release            : 23.3.0\npandas                : 3.0.5\nnumpy                 : 2.5.1\ndateutil              : 2.9.0.post0\n```\n\nAlso reproduced on main at 7986b42596f.\n\n</details>\n",
+        "labels": [
+          "Bug",
+          "Dtype Conversions"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-07-29T03:27:05Z",
+        "updated_at": "2026-08-15T21:25:01Z",
+        "html_url": "https://github.com/pandas-dev/pandas/issues/66517",
+        "author": "jbrockmendel"
+      },
+      "fix_pr_number": 66791,
+      "fix_pr_title": "BUG: convert_dtypes raising OverflowError for out-of-int64-range integers",
+      "fix_pr_url": "https://github.com/pandas-dev/pandas/pull/66791",
+      "fix_pr_merged_at": "2026-08-15T21:25:00Z",
+      "merge_commit_sha": "5d996b539996defb0e2a43aac6beb516f3fd89c4",
+      "pre_fix_sha": "63c18fa41de4a2d4513013ebf63d2f5808d1744d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pandas/core/dtypes/cast.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/source/whatsnew/v3.1.0.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/core/dtypes/cast.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 1,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/tests/frame/methods/test_convert_dtypes.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/tests/series/methods/test_convert_dtypes.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 0,
+          "changes": 31,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pandas-dev/pandas"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T21:25:00Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-29T03:27:05+00:00, pr_merged_at=2026-08-15T21:25:00+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2890 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, Dtype Conversions"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #66517 reproduces OverflowError when convert_dtypes receives integers outside int64 range, and merged PR #66791 keeps object dtype unless a fitting masked integer dtype exists.",
+        "Retain pandas/core/dtypes/cast.py::convert_dtypes; tests and whatsnew are excluded, and superseded Issues #66556 and #66596 must not be counted separately."
+      ]
+    },
+    {
+      "id": "matplotlib-matplotlib-issue-32133-pr-32150",
+      "repository": "matplotlib/matplotlib",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 32133,
+        "title": "[Bug]: MemoryError in _mark_every_path (with float markevery) when extreme zooming in ",
+        "body": "### Bug summary\n\nWhen using a float value for markevery (e.g., markevery=0.05) and performing an extreme zoom on the plot causes matplotlib.lines._mark_every_path to attempt an enormous NumPy array allocation (239 GB in the example), resulting in a numpy.core._exceptions._ArrayMemoryError\n\nMemory requirements increase based on zoom level. \n\nFor less extreme zoom level, there is a temporary spike in memory usage and there is no memory error.\n\nIf we keep zooming, we will reach state when memory requirement will be high enough to cause memory error.\n\n### Code for reproduction\n\n```Python\nimport matplotlib.pyplot as plt\nimport numpy as np\n\nx = np.linspace(0, 10, 200)\ny = np.sin(x)\n\nfig, ax = plt.subplots()\nax.plot(x, y, marker='o', markevery=0.05)\n\n# Simulating an extreme zoom directly to trigger memory crash immediately\nax.set_xlim(5.000000, 5.000001)\n\nplt.show()\n```\n\n### Actual outcome\n\n```\nmatplotlib\\lines.py\", line 204, in _mark_every_path\n    inds = np.abs(delta[np.newaxis, :] - marker_delta[:, np.newaxis])\n                  ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nnumpy._core._exceptions._ArrayMemoryError: Unable to allocate 239. GiB for an array with shape (160371706, 200) and data type float64\n```\n\n### Expected outcome\n\nNo Memory Error\n\n### Additional information\n\nThis is just an extreme example to demonstrate the issue not my actual use case.\n\n### Operating system\n\nWindows 10 64-bit\n\n### Matplotlib Version\n\n3.11.1\n\n### Matplotlib Backend\n\nqtagg\n\n### Python version\n\n3.12\n\n### Jupyter version\n\n_No response_\n\n### Installation\n\npip",
+        "labels": [
+          "Performance"
+        ],
+        "comments_count": 4,
+        "created_at": "2026-07-29T14:00:44Z",
+        "updated_at": "2026-08-07T06:28:45Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/32133",
+        "author": "inxp"
+      },
+      "fix_pr_number": 32150,
+      "fix_pr_title": "FIX: Avoid unbounded allocations for float markevery",
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/32150",
+      "fix_pr_merged_at": "2026-08-07T06:28:31Z",
+      "merge_commit_sha": "0f760fb19391eab7c364ec997ac572692ac64e1a",
+      "pre_fix_sha": "6ee8677adb7d874b7ca16b5ea0b8ad55a47dc8a5",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/matplotlib/lines.py"
+      ],
+      "changed_files": [
+        {
+          "path": "lib/matplotlib/lines.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 5,
+          "changes": 32,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "lib/matplotlib/tests/test_lines.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 54,
+          "deletions": 0,
+          "changes": 54,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: matplotlib/matplotlib"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-07T06:28:31Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-29T14:00:44+00:00, pr_merged_at=2026-08-07T06:28:31+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1567 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Performance"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #32133 reproduces an unbounded allocation in _mark_every_path during extreme zooming with float markevery, and merged PR #32150 avoids the full marker-distance matrix.",
+        "Retain lib/matplotlib/lines.py::_mark_every_path; tests are excluded and existing Matplotlib cases use different backend files."
+      ]
+    },
+    {
+      "id": "apache-airflow-issue-70822-pr-70879",
+      "repository": "apache/airflow",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 70822,
+        "title": "scopes vs scope mismatch in azure provider (msgraphfs vs KiotaRequestAdapter)",
+        "body": "### Under which category would you file this issue?\n\nProviders\n\n### Apache Airflow version\n\n3.2.2\n\n### What happened and how to reproduce it?\n\nMicrosoft Graph Filesystem fails to initialise properly with `get_fs()` due to `scope` OAuth parameter being missing. The connection template defines a default `scopes` value, but no `scope`.\n\n### What you think should happen instead?\n\nIt should be possible to initialise the file system. Manually adding `scope` parameter with the same value as existing `scopes` one allows `get_fs()` function to work properly.\n\n### Operating System\n\nUbuntu 22.04\n\n### Deployment\n\nVirtualenv installation\n\n### Apache Airflow Provider(s)\n\nmicrosoft-azure\n\n### Versions of Apache Airflow Providers\n\n14.0.0\n\n### Official Helm Chart version\n\nNot Applicable\n\n### Kubernetes Version\n\n_No response_\n\n### Helm Chart configuration\n\n_No response_\n\n### Docker Image customizations\n\n_No response_\n\n### Anything else?\n\nThe issue was likely masked by https://github.com/apache/airflow/issues/69463, missing `token_endpoint` was being hit before missing `scope` was being reached.\n\n### Are you willing to submit PR?\n\n- [ ] Yes I am willing to submit a PR!\n\n### Code of Conduct\n\n- [x] I agree to follow this project's [Code of Conduct](https://github.com/apache/airflow/blob/main/CODE_OF_CONDUCT.md)\n",
+        "labels": [
+          "kind:bug",
+          "provider:microsoft-azure",
+          "area:providers",
+          "needs-triage"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-07-31T11:06:44Z",
+        "updated_at": "2026-08-16T09:18:16Z",
+        "html_url": "https://github.com/apache/airflow/issues/70822",
+        "author": "belegdol"
+      },
+      "fix_pr_number": 70879,
+      "fix_pr_title": "Fix Microsoft Graph filesystem auth by defaulting OAuth2 scope",
+      "fix_pr_url": "https://github.com/apache/airflow/pull/70879",
+      "fix_pr_merged_at": "2026-08-16T09:18:15Z",
+      "merge_commit_sha": "d993a7c61d962065b54452f067e6595515da1cc5",
+      "pre_fix_sha": "655740bb98282ca64d5bde2aeec65da8c56b1930",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py"
+      ],
+      "changed_files": [
+        {
+          "path": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 2,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "providers/microsoft/azure/tests/unit/microsoft/azure/fs/test_msgraph.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 65,
+          "deletions": 0,
+          "changes": 65,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: apache/airflow"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-16T09:18:15Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-31T11:06:44+00:00, pr_merged_at=2026-08-16T09:18:15+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1311 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=kind:bug, provider:microsoft-azure, area:providers, needs-triage"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #70822 reports the Microsoft Graph filesystem failing when the UI supplies scopes but not scope, and merged PR #70879 normalizes scope values and always supplies authlib's singular scope.",
+        "Retain msgraph.py::get_fs as the entry-point symbol; unit tests are excluded and related Issue #69463 is not the same fix."
+      ]
+    },
+    {
+      "id": "pylint-dev-pylint-issue-11224-pr-11250",
+      "repository": "pylint-dev/pylint",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 11224,
+        "title": "Uncaught NameInferenceError in comparison checker",
+        "body": "### Bug description\n\n```python\n# Code from a local fuzzing run\n\n1==b('nan')\n```\n\n### Configuration\n\n```ini\n\n```\n\n### Command used\n\n```shell\npylint crash.py\n```\n\n### Pylint output\n\n```python\nTraceback (most recent call last):\n  File \"pylint/pylint/utils/ast_walker.py\", line 87, in walk\n    callback(astroid)\n    ~~~~~~~~^^^^^^^^^\n  File \"pylint/pylint/checkers/base/comparison_checker.py\", line 385, in visit_compare\n    self._check_nan_comparison(\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        left, right, node, checking_for_absence=operator in {\"!=\", \"is not\"}\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"pylint/pylint/checkers/base/comparison_checker.py\", line 223, in _check_nan_comparison\n    if not nan_left and not _is_nan(right_value):\n                            ~~~~~~~^^^^^^^^^^^^^\n  File \"pylint/pylint/checkers/base/comparison_checker.py\", line 218, in _is_nan\n    or _is_float_nan(node)\n       ~~~~~~~~~~~~~^^^^^^\n  File \"pylint/pylint/checkers/base/comparison_checker.py\", line 169, in _is_float_nan\n    return node.inferred()[0].pytype() == \"builtins.float\"  # type: ignore[no-any-return]\n           ~~~~~~~~~~~~~^^\n  File \"astroid/astroid/nodes/node_ng.py\", line 569, in inferred\n    return list(self.infer())\n  File \"astroid/astroid/nodes/node_ng.py\", line 160, in infer\n    for i, result in enumerate(self._infer(context=context)):\n                     ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"astroid/astroid/decorators.py\", line 79, in inner\n    yield next(generator)\n          ~~~~^^^^^^^^^^^\n  File \"astroid/astroid/decorators.py\", line 42, in wrapped\n    for res in _func(node, context):\n               ~~~~~^^^^^^^^^^^^^^^\n  File \"astroid/astroid/nodes/node_classes.py\", line 1763, in _infer\n    for callee in self.func.infer(context):\n                  ~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"astroid/astroid/nodes/node_ng.py\", line 160, in infer\n    for i, result in enumerate(self._infer(context=context)):\n                     ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"astroid/astroid/decorators.py\", line 79, in inner\n    yield next(generator)\n          ~~~~^^^^^^^^^^^\n  File \"astroid/astroid/decorators.py\", line 42, in wrapped\n    for res in _func(node, context):\n               ~~~~~^^^^^^^^^^^^^^^\n  File \"astroid/astroid/nodes/node_classes.py\", line 591, in _infer\n    raise NameInferenceError(\n        name=self.name, scope=self.scope(), context=context\n    )\nastroid.exceptions.NameInferenceError: 'b' not found in <Module.crash l.0 at 0x7efe567f6650>.\n```\n\n### Expected behavior\n\nNo crash\n\n### Pylint version\n\n```shell\npylint-dev/astroid@5f428849d\npylint-dev/pylint@e95c41667\nPython 3.14.6\n\nThe crash also affects Pylint 4.0.6\n```\n\n### OS / Environment\n\nArch Linux\n\n### Additional dependencies\n\n```python\n\n```",
+        "labels": [
+          "Needs triage :inbox_tray:"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-03T02:18:16Z",
+        "updated_at": "2026-08-10T05:53:40Z",
+        "html_url": "https://github.com/pylint-dev/pylint/issues/11224",
+        "author": "correctmost"
+      },
+      "fix_pr_number": 11250,
+      "fix_pr_title": "Fix crash on NaN comparison with an uninferable call",
+      "fix_pr_url": "https://github.com/pylint-dev/pylint/pull/11250",
+      "fix_pr_merged_at": "2026-08-10T05:53:39Z",
+      "merge_commit_sha": "e9f5fac5326e07d53a4ed0269e6caa0050c0c31c",
+      "pre_fix_sha": "d58d7e717ad9d045c9efd8bc2290590a4c63a979",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pylint/checkers/base/comparison_checker.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whatsnew/fragments/11224.bugfix",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pylint/checkers/base/comparison_checker.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/functional/n/nan_comparison_check.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/n/nan_comparison_check.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pylint-dev/pylint"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-10T05:53:39Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-03T02:18:16+00:00, pr_merged_at=2026-08-10T05:53:39+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2802 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Needs triage :inbox_tray:"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #11224 reproduces an uncaught inference error for an uninferable operand in NaN comparison checking, and merged PR #11250 catches astroid.InferenceError in the nested helper.",
+        "Retain ComparisonChecker._check_nan_comparison._is_float_nan; changelog and functional tests are excluded."
+      ]
+    },
+    {
+      "id": "apache-airflow-issue-71319-pr-71572",
+      "repository": "apache/airflow",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 71319,
+        "title": "Keycloak team Op permission is missing team DAG resource",
+        "body": "### Under which category would you file this issue?\n\nProviders\n\n### Apache Airflow version\n\n3.3.0\n\n### What happened and how to reproduce it?\n\nWhen using the Keycloak Auth Manager with multi-team support, the Op-{team} permission created by create-team does not include the DAG resource for the team.\n\nThe issue was noticed while investigating #70251 and #70906.\n\nThe Op-{team} permission includes team-scoped resources such as Connection, Pool, and Variable, but Dag:{team} is missing.\n\nFor example:\n\nEnable multi-team support with the Keycloak Auth Manager.\nCreate a team:\nairflow keycloak-auth-manager create-team team-analytics\nInspect the generated Op-team-analytics permission in Keycloak.\nCheck the resources attached to the permission.\nDag:team-analytics is not included.\n\nAs a result, a user with the team Op role does not receive the expected permission for the team's DAG resource.\n\nThis is separate from the UNANIMOUS decision strategy issue addressed by #70906.\n\n### What you think should happen instead?\n\nThe Op-{team} permission should include the corresponding Dag:{team} resource.\n\nFor example, when creating team-analytics, the Op-team-analytics permission should include:\n\nDag:team-analytics\n\nalong with the other team-scoped resources.\n\n### Operating System\n\n_No response_\n\n### Deployment\n\nNone\n\n### Apache Airflow Provider(s)\n\nkeycloak\n\n### Versions of Apache Airflow Providers\n\napache-airflow-providers-keycloak==0.8.1\n\n### Official Helm Chart version\n\nNot Applicable\n\n### Kubernetes Version\n\n_No response_\n\n### Helm Chart configuration\n\n_No response_\n\n### Docker Image customizations\n\n_No response_\n\n### Anything else?\n\nThis issue is being created separately based on the discussion in #70251 and the review of #70906.\n\nThe missing team DAG resource is independent of the UNANIMOUS versus AFFIRMATIVE decision strategy issue fixed by #70906.\n\n### Are you willing to submit PR?\n\n- [ ] Yes I am willing to submit a PR!\n\n### Code of Conduct\n\n- [x] I agree to follow this project's [Code of Conduct](https://github.com/apache/airflow/blob/main/CODE_OF_CONDUCT.md)\n",
+        "labels": [
+          "kind:bug",
+          "area:providers",
+          "needs-triage",
+          "provider:keycloak"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-08-08T01:28:11Z",
+        "updated_at": "2026-08-14T14:13:48Z",
+        "html_url": "https://github.com/apache/airflow/issues/71319",
+        "author": "dhkim1920"
+      },
+      "fix_pr_number": 71572,
+      "fix_pr_title": "Grant team Op role access to team Dags in Keycloak auth manager",
+      "fix_pr_url": "https://github.com/apache/airflow/pull/71572",
+      "fix_pr_merged_at": "2026-08-14T14:13:47Z",
+      "merge_commit_sha": "957198466d2baf36f3d42100e0491ed0d1a01433",
+      "pre_fix_sha": "fbb0ca79e69fc668a0f9b590ca1aa5c00098d569",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py"
+      ],
+      "changed_files": [
+        {
+          "path": "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "providers/keycloak/tests/unit/keycloak/auth_manager/cli/test_commands.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 0,
+          "changes": 12,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: apache/airflow"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T14:13:47Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-08T01:28:11+00:00, pr_merged_at=2026-08-14T14:13:47+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2082 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=kind:bug, area:providers, needs-triage, provider:keycloak"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #71319 reports Keycloak team operations omitting the team-scoped DAG resource, and merged PR #71572 adds Dag:{team} to both permission creation and attachment paths.",
+        "Retain _attach_team_permissions as the create-team path symbol while file ground truth covers the second behavior point; tests are excluded."
+      ]
+    }
+  ]
+}
