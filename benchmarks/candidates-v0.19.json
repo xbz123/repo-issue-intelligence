@@ -1,0 +1,1465 @@
+{
+  "name": "real-project-benchmark-expansion-v0.19",
+  "version": 1,
+  "curated_at": "2026-08-24T00:13:33.815643Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 13,
+  "candidates": [
+    {
+      "id": "boto-botocore-issue-3268-pr-3552",
+      "repository": "boto/botocore",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3268,
+        "title": "Upload cancellation causes long retry loop",
+        "body": "### Describe the bug\n\nI'm not exactly sure if this is `botocore` or `s3transfer` issue, more probably some inconsistency between the two. What I observe is that when there is an asynchronous exception (Control-C or similar \"random\" exception that we use to terminate the application) during S3 upload, the upload does not stop immediately, but instead it hangs for longer than a minute. This happens with multithreaded upload, single-threaded upload does not show the same issue.\r\n\n\n### Regression Issue\n\n- [ ] Select this option if this issue appears to be a regression.\n\n### Expected Behavior\n\nI would expect that Control-C or other random exception should stop upload almost immediately.\n\n### Current Behavior\n\n\r\nRunning with debug logging enabled I think I see what happens:\r\n- When exception is raised, S3Transfer context manager `__exit__` method is called which calls `TransferManager.__exit__()`\r\n- Latter calls `TransferManager._shutdown` with exception type `FatalError` or `CancelledError` depending on the type of original exception.\r\n- That in turn calls transfer coordinator managers' `cancel()` method passing the exception type to them.\r\n- Later when client tries to read something from input file, the exception in transfer coordinator is checked and if not Null then that exception is raised.\r\n- I think the intention is that this exception is supposed to cancel upload by that thread, instead it looks like the retry handler intercepts that exception and tries to restart the upload in each thread. This causes the same issue - exception is re-raised and intercepted again. It gives up after multiple iterations and that takes time\r\n\r\nHere is an example of traceback dumped by boto from one of the threads when it goes into a retry loop:\r\n```\r\n2024-09-30 19:21:01,572 ThreadPoolExecutor-0_7 DEBUG botocore.httpsession (<...>/lib/python3.11/site-packages/botocore/httpsession.py:508) :: Exception received when sending urllib3 HTTP request\r\nTraceback (most recent call last):\r\n  File \"<...>/lib/python3.11/site-packages/botocore/httpsession.py\", line 464, in send\r\n    urllib_response = conn.urlopen(\r\n                      ^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 715, in urlopen\r\n    httplib_response = self._make_request(\r\n                       ^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 416, in _make_request\r\n    conn.request(method, url, **httplib_request_kw)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 96, in request\r\n    rval = super().request(method, url, body, headers, *args, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connection.py\", line 244, in request\r\n    super(HTTPConnection, self).request(method, url, body=body, headers=headers)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1303, in request\r\n    self._send_request(method, url, body, headers, encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1349, in _send_request\r\n    self.endheaders(body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1298, in endheaders\r\n    self._send_output(message_body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 130, in _send_output\r\n    self._handle_expect_response(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 176, in _handle_expect_response\r\n    self._send_message_body(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 209, in _send_message_body\r\n    self.send(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 223, in send\r\n    return super().send(str)\r\n           ^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1009, in send\r\n    datablock = data.read(self.blocksize)\r\n                ^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/utils.py\", line 520, in read\r\n    data = self._fileobj.read(amount_to_read)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/upload.py\", line 90, in read\r\n    raise self._transfer_coordinator.exception\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 715, in urlopen\r\n    httplib_response = self._make_request(\r\n                       ^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 416, in _make_request\r\n    conn.request(method, url, **httplib_request_kw)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 96, in request\r\n    rval = super().request(method, url, body, headers, *args, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connection.py\", line 244, in request\r\n    super(HTTPConnection, self).request(method, url, body=body, headers=headers)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1303, in request\r\n    self._send_request(method, url, body, headers, encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1349, in _send_request\r\n    self.endheaders(body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1298, in endheaders\r\n    self._send_output(message_body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 130, in _send_output\r\n    self._handle_expect_response(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 176, in _handle_expect_response\r\n    self._send_message_body(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 209, in _send_message_body\r\n    self.send(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 223, in send\r\n    return super().send(str)\r\n           ^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1009, in send\r\n    datablock = data.read(self.blocksize)\r\n                ^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/utils.py\", line 520, in read\r\n    data = self._fileobj.read(amount_to_read)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/upload.py\", line 90, in read\r\n    raise self._transfer_coordinator.exception\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 715, in urlopen\r\n    httplib_response = self._make_request(\r\n                       ^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connectionpool.py\", line 416, in _make_request\r\n    conn.request(method, url, **httplib_request_kw)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 96, in request\r\n    rval = super().request(method, url, body, headers, *args, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/urllib3/connection.py\", line 244, in request\r\n    super(HTTPConnection, self).request(method, url, body=body, headers=headers)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1303, in request\r\n    self._send_request(method, url, body, headers, encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1349, in _send_request\r\n    self.endheaders(body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1298, in endheaders\r\n    self._send_output(message_body, encode_chunked=encode_chunked)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 130, in _send_output\r\n    self._handle_expect_response(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 176, in _handle_expect_response\r\n    self._send_message_body(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 209, in _send_message_body\r\n    self.send(message_body)\r\n  File \"<...>/lib/python3.11/site-packages/botocore/awsrequest.py\", line 223, in send\r\n    return super().send(str)\r\n           ^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/http/client.py\", line 1009, in send\r\n    datablock = data.read(self.blocksize)\r\n                ^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/utils.py\", line 520, in read\r\n    data = self._fileobj.read(amount_to_read)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"<...>/lib/python3.11/site-packages/s3transfer/upload.py\", line 90, in read\r\n    raise self._transfer_coordinator.exception\r\ns3transfer.exceptions.FatalError: Received signal SIGINT.\r\n```\n\n### Reproduction Steps\n\nHere is the code that I used to debug the issue, the code is actually a trivial call to `file_upload` method. The trick is to trigger upload cancellation by hitting Ctrl-C at a correct moment. In our setup I used ~100MB file which gave me a reasonable time window during the upload. If you are lucky that after hitting Ctrl-C you should see enormous amount of tracebacks printed like the one I included above.\r\n\r\n```\r\n#!/usr/bin/env python\r\n\r\nimport argparse\r\nimport logging\r\nimport signal\r\nimport traceback\r\n\r\nimport botocore\r\nimport boto3\r\n\r\n# Configure logging to use DEBUG, this shows tracebacks from execptions\r\n# handled by boto internally.\r\nfmt = \"%(asctime)s %(threadName)s %(levelname)s %(name)s (%(pathname)s:%(lineno)d) :: %(message)s\"\r\nlogging.basicConfig(level=logging.DEBUG, format=fmt)\r\n\r\n_log = logging.getLogger()\r\n\r\n# In our case we try to gracefully terminate transfers when a signal is sent\r\n# by the scheduler which executes all processing jobs. This is done by raising\r\n# special exception which inherits BaseException so that it's not swalowed by\r\n# regular `except Exception`, i.e. it behaves more like KeyboardInterrupt.\r\nclass GracefulShutdownInterrupt(BaseException):\r\n    pass\r\n\r\n\r\ndef _signal_handler(signum, stack_frame):\r\n    signame = signal.Signals(signum).name\r\n    _log.info(f\"************* Signal {signame} detected, cleaning up and shutting down. ************\\n\")\r\n    traceback.print_stack(stack_frame)\r\n    raise GracefulShutdownInterrupt(f\"Received signal {signame}.\")\r\n\r\n\r\ndef main():\r\n\r\n    parser = argparse.ArgumentParser()\r\n    parser.add_argument(\"file\", help=\"File to upload to S3.\")\r\n    parser.add_argument(\"bucket\", help=\"Name S3 bucket.\")\r\n    parser.add_argument(\"path\", help=\"Name of the object in the bucket.\")\r\n    parser.add_argument(\"-p\", \"--profile\", default=None, help=\"AWS profile name.\")\r\n    parser.add_argument(\"--endpoint-url\", default=None, help=\"Endpoint URL.\")\r\n    parser.add_argument(\"--access-key-id\", default=None, help=\"Access key ID.\")\r\n    parser.add_argument(\"--secret-access-key\", default=None, help=\"Secret access key.\")\r\n    args = parser.parse_args()\r\n\r\n    session = boto3.Session(profile_name=args.profile)\r\n\r\n    # This configuration is what we use by default in our setup.\r\n    config = botocore.config.Config(read_timeout=180, retries={\"mode\": \"adaptive\", \"max_attempts\": 10})\r\n    client = session.client(\r\n        \"s3\",\r\n        endpoint_url=args.endpoint_url,\r\n        aws_access_key_id=args.access_key_id,\r\n        aws_secret_access_key=args.secret_access_key,\r\n        config=config,\r\n    )\r\n\r\n    # Installing handler is optional, if KeyboardInterrupt is raised instead of\r\n    # GracefulShutdownInterrupt then the exception raised by coordinators will\r\n    # be different (CancelledError vs. FatalError).\r\n    signal.signal(signal.SIGINT, _signal_handler)\r\n    signal.signal(signal.SIGTERM, _signal_handler)\r\n    client.upload_file(args.file, args.bucket, args.path)\r\n\r\n\r\nif __name__ == \"__main__\":\r\n    main()\r\n```\n\n### Possible Solution\n\nMaybe retry handler should understand that certain kinds of exceptions should result in immediate failure?\n\n### Additional Information/Context\n\nPackage versions:\r\n```\r\nboto3                         1.34.131\r\nbotocore                      1.34.131\r\ns3transfer                    0.10.2\r\nurllib3                       1.26.19\r\n```\n\n### SDK version used\n\n1.34.131\n\n### Environment details (OS name and version, etc.)\n\nRed Hat Enterprise Linux release 8.6 (Ootpa), kernel 4.18.0-372.32.1.el8_6.x86_64",
+        "labels": [
+          "bug",
+          "s3transfer",
+          "p2"
+        ],
+        "comments_count": 7,
+        "created_at": "2024-10-01T02:58:56Z",
+        "updated_at": "2025-09-09T22:15:35Z",
+        "html_url": "https://github.com/boto/botocore/issues/3268",
+        "author": "andy-slac"
+      },
+      "fix_pr_number": 3552,
+      "fix_pr_title": "Fix CancelledError retry loops to enable immediate S3 upload cancellation",
+      "fix_pr_url": "https://github.com/boto/botocore/pull/3552",
+      "fix_pr_merged_at": "2025-09-09T22:08:22Z",
+      "merge_commit_sha": "a78a9ed40104888a9620c60a80b7fe4820f45025",
+      "pre_fix_sha": "25cbbe2251d746b3f5ef0a4fcdb644def86937dc",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "botocore/httpsession.py"
+      ],
+      "changed_files": [
+        {
+          "path": "botocore/httpsession.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/test_http_session.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: boto/botocore"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-09-09T22:08:22Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-10-01T02:58:56+00:00, pr_merged_at=2025-09-09T22:08:22+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "12312 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, s3transfer, p2"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #3268 reports long retry loops after cancellation during multithreaded S3 uploads, and merged PR #3552 fixes the issue by letting concurrent.futures.CancelledError escape URLLib3Session.send.",
+        "The material production change is confined to botocore/httpsession.py::URLLib3Session.send; tests/unit/test_http_session.py and the removed temporary botocore_main.py are excluded from ground truth."
+      ]
+    },
+    {
+      "id": "pallets-markupsafe-issue-472-pr-477",
+      "repository": "pallets/markupsafe",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 472,
+        "title": "`escape()` fails with certain `str` subclasses",
+        "body": "I have a very similar issue to #467, however it is one that persists after the 3.0.1 patch.\r\n\r\nEssentially what is happening is that `str` subclasses which override `__str__()` are no longer (since 2.1.5) handled in the same way\r\n\r\nI encountered this with django's [SafeString](https://docs.djangoproject.com/en/5.0/_modules/django/utils/safestring/), however for the purpose of repro I have a simpler example below:\r\n\r\n```python\r\nfrom markupsafe import _escape_inner\r\n\r\nclass NewString(str):\r\n  def __str__(self):\r\n    return self\r\n\r\ns = NewString(\"abc\")\r\n_escape_inner(s)\r\n```\r\n\r\noutput:\r\n```\r\n---------------------------------------------------------------------------\r\nSystemError                               Traceback (most recent call last)\r\nCell In[4], line 1\r\n----> 1 _escape_inner(s)\r\n\r\nSystemError: <built-in function _escape_inner> returned NULL without setting an exception\r\n```\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.10.12\r\n- MarkupSafe version: 3.0.1\r\n",
+        "labels": [],
+        "comments_count": 7,
+        "created_at": "2024-10-10T04:39:54Z",
+        "updated_at": "2024-11-02T00:05:36Z",
+        "html_url": "https://github.com/pallets/markupsafe/issues/472",
+        "author": "sgfost"
+      },
+      "fix_pr_number": 477,
+      "fix_pr_title": "relax speedups str check",
+      "fix_pr_url": "https://github.com/pallets/markupsafe/pull/477",
+      "fix_pr_merged_at": "2024-10-17T00:18:01Z",
+      "merge_commit_sha": "e85aff4d878aa458d5c1e879bf475d8483647f71",
+      "pre_fix_sha": "9c44ecf45141f691d373a66ce664c43b5a6cc761",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/markupsafe/_speedups.c",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_escape.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 36,
+          "deletions": 0,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/markupsafe"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-10-17T00:18:01Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-10-10T04:39:54+00:00, pr_merged_at=2024-10-17T00:18:01+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "966 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #472 reproduces escape() failure for str subclasses, and merged PR #477 fixes it by relaxing PyUnicode_CheckExact to PyUnicode_Check in the C speedups implementation.",
+        "Retain only src/markupsafe/_speedups.c as production ground truth; CHANGES.rst, pyproject.toml, and tests/test_escape.py are excluded, and C symbol ground truth remains empty."
+      ]
+    },
+    {
+      "id": "matplotlib-matplotlib-issue-29256-pr-29338",
+      "repository": "matplotlib/matplotlib",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 29256,
+        "title": "[Bug]: canvas.manager.set_window_title does not work to figure with `WebAgg` backend",
+        "body": "### Bug summary\n\ncanvas.manager.set_window_title does not work to figure with `WebAgg` backend (but MacOSX). the title is still `Figure 1` by default.\n\n### Code for reproduction\n\n```Python\nimport matplotlib.pyplot as plt\r\nimport numpy as np\r\nimport matplotlib\r\nmatplotlib.use(\"WebAgg\")\r\n\r\nfig = plt.figure(figsize=(7, 5))\r\nfig.canvas.manager.set_window_title(\"My figure\")\r\nax = fig.add_subplot(111)\r\n\r\ndx, dy = 0.05, 0.05\r\ny, x = np.mgrid[slice(1, 5 + dy, dy),\r\nslice(1, 5 + dx, dx)]\r\nz = np.sin(x)**10 + np.cos(10 + y*x) * np.cos(x)\r\n\r\ncf = ax.contourf(x + dx/2., y + dy/2., z)\r\nfig.colorbar(cf, ax=ax)\r\n\r\nplt.show()\n```\n\n\n### Actual outcome\n\n<img width=\"724\" alt=\"image\" src=\"https://github.com/user-attachments/assets/065b0b52-ec9e-44f6-85cd-86fb3a7486d4\">\r\n\n\n### Expected outcome\n\n<img width=\"709\" alt=\"image\" src=\"https://github.com/user-attachments/assets/4fec14df-fc6f-4f4e-bd01-db872f4c8250\">\r\n\n\n### Additional information\n\nit works in MacOSX backends\r\n\r\n<img width=\"700\" alt=\"image\" src=\"https://github.com/user-attachments/assets/6c4b67ef-28f3-46d7-ae65-532af995979f\">\r\n\n\n### Operating system\n\nmacOS Sequoia 15.1.1\n\n### Matplotlib Version\n\n3.9.3\n\n### Matplotlib Backend\n\nWebAgg\n\n### Python version\n\n3.12.7\n\n### Jupyter version\n\n_No response_\n\n### Installation\n\npip",
+        "labels": [
+          "status: confirmed bug",
+          "GUI: webagg",
+          "topic: backends"
+        ],
+        "comments_count": 4,
+        "created_at": "2024-12-08T08:19:23Z",
+        "updated_at": "2026-08-11T17:56:16Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/29256",
+        "author": "YongcaiHuang"
+      },
+      "fix_pr_number": 29338,
+      "fix_pr_title": "Use set_window_title rather than set_label to set title of webagg figure",
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/29338",
+      "fix_pr_merged_at": "2025-01-07T09:05:23Z",
+      "merge_commit_sha": "02263ba168e8fbfe0d0ef26e1f90599d19d83563",
+      "pre_fix_sha": "f8900ead0d9381a7652568768b065324f929734e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/api/next_api_changes/behavior/29256_IMT.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "lib/matplotlib/backends/backend_webagg_core.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 4,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: matplotlib/matplotlib"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-01-07T09:05:23Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-12-08T08:19:23+00:00, pr_merged_at=2025-01-07T09:05:23+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1274 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=status: confirmed bug, GUI: webagg, topic: backends"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #29256 reports that WebAgg ignored figure.canvas.manager.set_window_title, and merged PR #29338 fixes the behavior in FigureCanvasWebAggCore.handle_refresh by using manager.get_window_title().",
+        "Retain only lib/matplotlib/backends/backend_webagg_core.py::FigureCanvasWebAggCore.handle_refresh; the API-change document is excluded, and the PR demonstration is not a repository ground-truth file."
+      ]
+    },
+    {
+      "id": "pypa-setuptools-issue-4810-pr-5169",
+      "repository": "pypa/setuptools",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 4810,
+        "title": "[BUG] Valid syntax for define-macros in pyproject.toml is invalid for ccompiler",
+        "body": "### setuptools version\n\n75.8.0 (main branch at fb7f3d3cab98f2c00cbf18fe887ce73007f49e18)\n\n### Python version\n\n3.12.7 and 3.13\n\n### OS\n\nUbuntu 22.04 and Ubuntu 24.04, in containers\n\n### Additional environment information\n\n_No response_\n\n### Description\n\nI'm porting a project (wxPython) from using a very custom build system+setup.py, to use a pyproject.toml and be buildable by standard build frontends.\nI am struggling to find the correct syntax to use for defining a Cython extension module statically in pyproject.toml (experimental, introduced in 74.1.0).\nThere are no examples available anywhere on the web nor in tests of other fields than \"name\" and \"sources\". According to the jsonschema (https://github.com/pypa/setuptools/blob/main/setuptools/config/setuptools.schema.json), that isn't updated on schemastore by the way so my IDE is having a hard time to help me, the define-macros must be an array, of arrays, where there are one or two elements. By trial and error, I got to a point where my pyproject.toml was not failing the validation, and could continue.\n\nI got this (shortened):\n```toml\n[project]\nname = \"wxPython\"\nrequires-python = \">=3.9\"\ndynamic = [\"readme\", \"version\"]\ndependencies = [\n    \"numpy ; python_version >= '3.0'\",\n    \"typing-extensions; python_version < '3.11'\",\n]\n\n[build-system]\nrequires = [\n    \"setuptools>=74.1.0\",\n    \"cython == 3.0.11\",\n    \"sip == 6.9.1\",\n]\nbuild-backend = \"setuptools.build_meta\"\n\n[tool.setuptools]\nlicense-files = [\"LICENSE.txt\"]\n\n[[tool.setuptools.ext-modules]]\nname = \"svg._nanosvg\"\nsources = [\"wx/svg/_nanosvg.pyx\"]\ninclude-dirs = [\"ext/nanosvg/src\"]\ndefine-macros = [\n    [\n        \"NANOSVG_IMPLEMENTATION\",\n        \"1\",\n    ],\n    [\n        \"NANOSVGRAST_IMPLEMENTATION\",\n        \"1\",\n    ],\n    [\n        \"NANOSVG_ALL_COLOR_KEYWORDS\",\n        \"1\",\n    ],\n]\n```\n\nBut when it comes to actually build the Cython extension, I get that my macros defined must be a one or two element tuple. The stack trace is below, but mentions `TypeError: bad macro definition '['NANOSVG_IMPLEMENTATION', '1']': each element of 'macros' list must be a 1- or 2-tuple`. This is from `gen_preprocess_options`, in \nhttps://github.com/pypa/setuptools/blob/fb7f3d3cab98f2c00cbf18fe887ce73007f49e18/setuptools/_distutils/ccompiler.py#L1189-L1230\n\n\n<details><summary>Details</summary>\n<p>\nThis is from a run using `uv build`, but I tried and got the same with pip and also the `build` package (it's just a bit harder to iterate on, as the project I'm working on currently needs the root directory in path, and has the current build system script named build.py, so running \"python -m build\" doesn't work from there, I need to be in another directory).\n\n```console\nCompiling wx/svg/_nanosvg.pyx because it changed.\n[1/1] Cythonizing wx/svg/_nanosvg.pyx\nbuilding 'svg._nanosvg' extension\nTraceback (most recent call last):\n  File \"<string>\", line 11, in <module>\n    wheel_filename = backend.build_wheel(\"/workspaces/Phoenix/dist\", {}, None)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 435, in build_wheel\n    return _build(['bdist_wheel'])\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 426, in _build\n    return self._build_with_temp_dir(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        cmd,\n        ^^^^\n    ...<3 lines>...\n        self._arbitrary_args(config_settings),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 407, in _build_with_temp_dir\n    self.run_setup()\n    ~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 320, in run_setup\n    exec(code, locals())\n    ~~~~^^^^^^^^^^^^^^^^\n  File \"<string>\", line 448, in <module>\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/__init__.py\", line 117, in setup\n    return distutils.core.setup(**attrs)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/core.py\", line 186, in setup\n    return run_commands(dist)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/core.py\", line 202, in run_commands\n    dist.run_commands()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 983, in run_commands\n    self.run_command(cmd)\n    ~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"<string>\", line 232, in run\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/cmd.py\", line 339, in run_command\n    self.distribution.run_command(command)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build.py\", line 136, in run\n    self.run_command(cmd_name)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/cmd.py\", line 339, in run_command\n    self.distribution.run_command(command)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/command/build_ext.py\", line 99, in run\n    _build_ext.run(self)\n    ~~~~~~~~~~~~~~^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 365, in run\n    self.build_extensions()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 481, in build_extensions\n    self._build_extensions_serial()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 507, in _build_extensions_serial\n    self.build_extension(ext)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/command/build_ext.py\", line 264, in build_extension\n    _build_ext.build_extension(self, ext)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/Cython/Distutils/build_ext.py\", line 135, in build_extension\n    super(build_ext, self).build_extension(ext)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 562, in build_extension\n    objects = self.compiler.compile(\n        sources,\n    ...<5 lines>...\n        depends=ext.depends,\n    )\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 597, in compile\n    macros, objects, extra_postargs, pp_opts, build = self._setup_compile(\n                                                      ~~~~~~~~~~~~~~~~~~~^\n        output_dir, macros, include_dirs, sources, depends, extra_postargs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 355, in _setup_compile\n    pp_opts = gen_preprocess_options(macros, incdirs)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 1213, in gen_preprocess_options\n    raise TypeError(\n    ...<2 lines>...\n    )\nTypeError: bad macro definition '['NANOSVG_IMPLEMENTATION', '1']': each element of 'macros' list must be a 1- or 2-tuple\n  × Failed to build `/workspaces/Phoenix`\n  ├─▶ The build backend returned an error\n  ╰─▶ Call to `setuptools.build_meta.build_wheel` failed (exit status: 1)\n      hint: This usually indicates a problem with the package or the build environment.\n``` \n\n</p>\n</details>\n\nSo we see that it absolutely requires tuples, but how is really possible to express tuples in toml, and even so, how to get it to pass the toml schema validation?\n\n\n### Expected behavior\n\nBe able to enter all other parameters of ext-modules in pyproject.toml, as mentionned in https://setuptools.pypa.io/en/latest/userguide/ext_modules.html\n\n> Optionally any other parameter of [setuptools.Extension](https://setuptools.pypa.io/en/latest/userguide/ext_modules.html#setuptools.Extension) can be defined in the configuration file (but in the case of pyproject.toml they must be written using [kebab-case](https://wikipedia.org/wiki/kebab-case) convention).\n\nI think that it is on the distutils side that they are too strict.\n\n### How to Reproduce\n\nTo help out, I made a test case of what I think `gen_preprocess_options` expects as input, just below `test_pyproject_sets_attribute` in setuptools/tests/config/test_apply_pyprojecttoml.py like when the ext-modules functionality was added in https://github.com/pypa/setuptools/pull/4568.\n\nI made it run in CI in: https://github.com/echoix/setuptools/pull/1\n\n```python\n    def test_pyproject_sets_define_macros(self, tmp_path, monkeypatch):\n        monkeypatch.chdir(tmp_path)\n        pyproject = Path(\"pyproject.toml\")\n        toml_config = \"\"\"\n        [project]\n        name = \"test\"\n        version = \"42.0\"\n        [tool.setuptools]\n        ext-modules = [\n          {name = \"my.ext\", sources = [\"hello.c\", \"world.c\"], define-macros = [ [\"FIRST_SINGLE\"], [\"SECOND_TWO\", \"1\"]]}\n        ]\n        \"\"\"\n        pyproject.write_text(cleandoc(toml_config), encoding=\"utf-8\")\n        with pytest.warns(pyprojecttoml._ExperimentalConfiguration):\n            dist = pyprojecttoml.apply_configuration(Distribution({}), pyproject)\n        assert len(dist.ext_modules) == 1\n        assert dist.ext_modules[0].name == \"my.ext\"\n        assert set(dist.ext_modules[0].sources) == {\"hello.c\", \"world.c\"}\n        assert dist.ext_modules[0].define_macros[0] == (\"FIRST_SINGLE\",)\n        assert dist.ext_modules[0].define_macros[1] == (\"SECOND_TWO\", \"1\")\n```\n\nI didn't understand enough the existing tests in setuptools/_distutils/tests/test_build_ext.py to be able to do something there, as it is where I think it is more there that the problem is.\n\nIn my project, I was running `uv build --verbose --verbose`, but that work isn't completed yet and I don't expect a successful build yet.\n\n### Output\n\n(same as above)\n```console\nCompiling wx/svg/_nanosvg.pyx because it changed.\n[1/1] Cythonizing wx/svg/_nanosvg.pyx\nbuilding 'svg._nanosvg' extension\nTraceback (most recent call last):\n  File \"<string>\", line 11, in <module>\n    wheel_filename = backend.build_wheel(\"/workspaces/Phoenix/dist\", {}, None)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 435, in build_wheel\n    return _build(['bdist_wheel'])\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 426, in _build\n    return self._build_with_temp_dir(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~^\n        cmd,\n        ^^^^\n    ...<3 lines>...\n        self._arbitrary_args(config_settings),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 407, in _build_with_temp_dir\n    self.run_setup()\n    ~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/build_meta.py\", line 320, in run_setup\n    exec(code, locals())\n    ~~~~^^^^^^^^^^^^^^^^\n  File \"<string>\", line 448, in <module>\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/__init__.py\", line 117, in setup\n    return distutils.core.setup(**attrs)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/core.py\", line 186, in setup\n    return run_commands(dist)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/core.py\", line 202, in run_commands\n    dist.run_commands()\n    ~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 983, in run_commands\n    self.run_command(cmd)\n    ~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"<string>\", line 232, in run\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/cmd.py\", line 339, in run_command\n    self.distribution.run_command(command)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build.py\", line 136, in run\n    self.run_command(cmd_name)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/cmd.py\", line 339, in run_command\n    self.distribution.run_command(command)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/dist.py\", line 999, in run_command\n    super().run_command(command)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_command\n    cmd_obj.run()\n    ~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/command/build_ext.py\", line 99, in run\n    _build_ext.run(self)\n    ~~~~~~~~~~~~~~^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 365, in run\n    self.build_extensions()\n    ~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 481, in build_extensions\n    self._build_extensions_serial()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 507, in _build_extensions_serial\n    self.build_extension(ext)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/command/build_ext.py\", line 264, in build_extension\n    _build_ext.build_extension(self, ext)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/Cython/Distutils/build_ext.py\", line 135, in build_extension\n    super(build_ext, self).build_extension(ext)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/command/build_ext.py\", line 562, in build_extension\n    objects = self.compiler.compile(\n        sources,\n    ...<5 lines>...\n        depends=ext.depends,\n    )\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 597, in compile\n    macros, objects, extra_postargs, pp_opts, build = self._setup_compile(\n                                                      ~~~~~~~~~~~~~~~~~~~^\n        output_dir, macros, include_dirs, sources, depends, extra_postargs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 355, in _setup_compile\n    pp_opts = gen_preprocess_options(macros, incdirs)\n  File \"/home/vscode/.cache/uv/builds-v0/.tmpA9wUTw/lib/python3.13/site-packages/setuptools/_distutils/ccompiler.py\", line 1213, in gen_preprocess_options\n    raise TypeError(\n    ...<2 lines>...\n    )\nTypeError: bad macro definition '['NANOSVG_IMPLEMENTATION', '1']': each element of 'macros' list must be a 1- or 2-tuple\n  × Failed to build `/workspaces/Phoenix`\n  ├─▶ The build backend returned an error\n  ╰─▶ Call to `setuptools.build_meta.build_wheel` failed (exit status: 1)\n      hint: This usually indicates a problem with the package or the build environment.\n```\n",
+        "labels": [
+          "bug",
+          "help wanted",
+          "good first issue",
+          "Needs Triage"
+        ],
+        "comments_count": 1,
+        "created_at": "2025-01-19T15:33:24Z",
+        "updated_at": "2026-03-09T11:11:14Z",
+        "html_url": "https://github.com/pypa/setuptools/issues/4810",
+        "author": "echoix"
+      },
+      "fix_pr_number": 5169,
+      "fix_pr_title": "Parse `ext-module.define-macros` from `pyproject.toml` as list of tuples",
+      "fix_pr_url": "https://github.com/pypa/setuptools/pull/5169",
+      "fix_pr_merged_at": "2026-03-09T11:11:13Z",
+      "merge_commit_sha": "2019c16701667db1010c62ec11c6ef78c2e58206",
+      "pre_fix_sha": "7308942329bff7078bff4e16b89964b2bc6df616",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "setuptools/config/_apply_pyprojecttoml.py"
+      ],
+      "changed_files": [
+        {
+          "path": "newsfragments/5169.misc.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "setuptools/config/_apply_pyprojecttoml.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 1,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "setuptools/tests/config/test_apply_pyprojecttoml.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 4,
+          "changes": 28,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/setuptools"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-03-09T11:11:13Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-01-19T15:33:24+00:00, pr_merged_at=2026-03-09T11:11:13+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "18230 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, help wanted, good first issue, Needs Triage"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #4810 reproduces ccompiler TypeError for valid pyproject.toml define-macros lists, and merged PR #5169 converts each TOML macro value to the tuple shape expected by _ext_modules.",
+        "The production fix is confined to setuptools/config/_apply_pyprojecttoml.py::_ext_modules; the regression test and news fragment are excluded."
+      ]
+    },
+    {
+      "id": "encode-django-rest-framework-issue-9645-pr-10011",
+      "repository": "encode/django-rest-framework",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 9645,
+        "title": "Duplicated GenericIPAddressField validation errors with ModelSerializer and protocol",
+        "body": "Hi!\n\nI'm using `GenericIPAddressField` with explicit `protocol` as `IPv4` (Also reproduces with `IPv6`) and `ModelSerializer`. If the input is not an valid IpAddress, DRF generates duplicate(ish) errors.\n\nRepro\n```py\nfrom django.db import models\nfrom rest_framework.serializers import ModelSerializer\n\n\nclass A(models.Model):\n    address = models.GenericIPAddressField(protocol=\"IPv4\")  # Also reproduces with `IPv6`\n\n    class Meta:\n        app_label = \"main\"\n\nclass ASerializer(ModelSerializer[A]):\n    class Meta:\n        model = A\n        fields = \"__all__\"\n\n\nser = ASerializer(data={'address': 'not an ip address'})\nser.is_valid(raise_exception=True)\n```\n\nResult\n```py\nrest_framework.exceptions.ValidationError: {'address': [\n    ErrorDetail(string='Enter a valid IPv4 address.', code='invalid'), \n    ErrorDetail(string='Enter a valid IPv4 or IPv6 address.', code='invalid')\n]}\n```\n\nThe second error message is incorrect\n\nThanks!\n\n- [ ] Raised initially as discussion - **Can't, it gets deleted automatically** - https://groups.google.com/g/django-rest-framework/c/eNNq1UYeww4\n- [x] This is not a feature request suitable for implementation outside this project. Please elaborate what it is:\n  - [x] other type of bug fix\n- [x] I have reduced the issue to the simplest possible case.",
+        "labels": [
+          "stale"
+        ],
+        "comments_count": 5,
+        "created_at": "2025-02-03T17:02:14Z",
+        "updated_at": "2026-08-11T06:51:39Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/9645",
+        "author": "HansAarneLiblik"
+      },
+      "fix_pr_number": 10011,
+      "fix_pr_title": "Fix duplicate validation errors for GenericIPAddressField with protocol",
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/10011",
+      "fix_pr_merged_at": "2026-08-11T06:51:38Z",
+      "merge_commit_sha": "1f599b1ec4e1d2e2d990a625a53f2ba219a89bb3",
+      "pre_fix_sha": "cf582fb58e9e5ffcc8ed78a2cb9aaa8f4865666a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "rest_framework/utils/field_mapping.py"
+      ],
+      "changed_files": [
+        {
+          "path": "rest_framework/utils/field_mapping.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 2,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_model_serializer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 86,
+          "deletions": 4,
+          "changes": 90,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: encode/django-rest-framework"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-11T06:51:38Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-02-03T17:02:14+00:00, pr_merged_at=2026-08-11T06:51:38+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "8 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1289 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=stale"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #10011 directly fixes Issue #9645 by passing GenericIPAddressField protocol through get_field_kwargs and removing duplicate IP validators.",
+        "The production scope is rest_framework/utils/field_mapping.py::get_field_kwargs; tests/test_model_serializer.py is excluded, while the PR follow-up stack is retained as an attribution risk rather than separate ground truth."
+      ]
+    },
+    {
+      "id": "scikit-learn-scikit-learn-issue-31030-pr-34399",
+      "repository": "scikit-learn/scikit-learn",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 31030,
+        "title": "DBSCAN always triggers and EfficiencyWarning",
+        "body": "### Describe the bug\n\nCalling dbscan always triggers an efficiency warning. There is no apparent way to either call it correctly or disable the warning. \n\nThis was originally reported as an issue in SemiBin, which uses DBSCAN under the hood: https://github.com/BigDataBiology/SemiBin/issues/175\n\n### Steps/Code to Reproduce\n\n```python\nimport numpy as np\nfrom sklearn.cluster import dbscan\nfrom sklearn.neighbors import kneighbors_graph, sort_graph_by_row_values\n\nf = np.random.randn(10_000, 240)\ndist_matrix = kneighbors_graph(\n    f,\n    n_neighbors=200,\n    mode='distance',\n    p=2,\n    n_jobs=3)\n\n_, labels = dbscan(dist_matrix,\n        eps=0.1, min_samples=5, n_jobs=4, metric='precomputed')\n\n\ndist_matrix = sort_graph_by_row_values(dist_matrix)\n_, labels = dbscan(dist_matrix,\n        eps=0.1, min_samples=5, n_jobs=4, metric='precomputed')\n```\n\n### Expected Results\n\nNo warning, at least in second call\n\n### Actual Results\n\n```\n/home/luispedro/.mambaforge/envs/py3.11/lib/python3.11/site-packages/sklearn/neighbors/_base.py:248: EfficiencyWarning: Precomputed sparse input was not sorted by row values. Use the function sklearn.neighbors.sort_graph_by_row_values to sort the input by row values, with warn_when_not_sorted=False to remove this warning.\n  warnings.warn(\n/home/luispedro/.mambaforge/envs/py3.11/lib/python3.11/site-packages/sklearn/neighbors/_base.py:248: EfficiencyWarning: Precomputed sparse input was not sorted by row values. Use the function sklearn.neighbors.sort_graph_by_row_values to sort the input by row values, with warn_when_not_sorted=False to remove this warning.\n  warnings.warn(\n```\n\n### Versions\n\n```shell\nI tested on the current main branch, 5cdbbf15e3fade7cc2462ef66dc4ea0f37f390e3, but it has been going on for a while (see original SemiBin report from September 2024):\n\n\nSystem:\n    python: 3.11.9 | packaged by conda-forge | (main, Apr 19 2024, 18:36:13) [GCC 12.3.0]\nexecutable: /home/luispedro/.mambaforge/envs/py3.11/bin/python3.11\n   machine: Linux-6.8.0-55-generic-x86_64-with-glibc2.39\n\nPython dependencies:\n      sklearn: 1.7.dev0\n          pip: 24.0\n   setuptools: 70.0.0\n        numpy: 1.26.4\n        scipy: 1.13.1\n       Cython: None\n       pandas: 2.2.2\n   matplotlib: 3.8.4\n       joblib: 1.4.2\nthreadpoolctl: 3.5.0\n\nBuilt with OpenMP: True\n\nthreadpoolctl info:\n       user_api: blas\n   internal_api: openblas\n    num_threads: 16\n         prefix: libopenblas\n       filepath: /home/luispedro/.mambaforge/envs/py3.11/lib/libopenblasp-r0.3.27.so\n        version: 0.3.27\nthreading_layer: pthreads\n   architecture: Haswell\n\n       user_api: openmp\n   internal_api: openmp\n    num_threads: 16\n         prefix: libgomp\n       filepath: /home/luispedro/.mambaforge/envs/py3.11/lib/libgomp.so.1.0.0\n        version: None\n```",
+        "labels": [
+          "Bug",
+          "Needs Investigation"
+        ],
+        "comments_count": 17,
+        "created_at": "2025-03-19T20:51:03Z",
+        "updated_at": "2026-08-07T05:56:22Z",
+        "html_url": "https://github.com/scikit-learn/scikit-learn/issues/31030",
+        "author": "luispedro"
+      },
+      "fix_pr_number": 34399,
+      "fix_pr_title": "FIX: avoid spurious EfficiencyWarning in DBSCAN with metric='precomputed'",
+      "fix_pr_url": "https://github.com/scikit-learn/scikit-learn/pull/34399",
+      "fix_pr_merged_at": "2026-08-07T05:56:21Z",
+      "merge_commit_sha": "1752fca7b791c34377767c6e88f4a51c8d5f2d71",
+      "pre_fix_sha": "bf2dfd4f4d1949cf78405af7891ec9b340b83d15",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "sklearn/cluster/_dbscan.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whats_new/upcoming_changes/sklearn.cluster/34399.fix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/cluster/_dbscan.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "sklearn/cluster/tests/test_dbscan.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 35,
+          "deletions": 1,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: scikit-learn/scikit-learn"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-07T05:56:21Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-03-19T20:51:03+00:00, pr_merged_at=2026-08-07T05:56:21+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "8 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2772 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, Needs Investigation"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #34399 closes Issue #31030 by sorting the sparse neighborhood graph after DBSCAN.fit sets its diagonal, preventing the unconditional EfficiencyWarning.",
+        "The production fix is confined to sklearn/cluster/_dbscan.py::DBSCAN.fit; the regression test and whats-new entry are excluded, and related Issues #34218 and #31337 are recorded as attribution overlap rather than separate cases."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-7-pr-115",
+      "repository": "python-hyper/h11",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 7,
+        "title": "Support for servers with broken line endings",
+        "body": "I'm informed that some allegedly-HTTP servers use `\\r` or `\\n` for line endings, and that robust clients need to support this too.\n\nSigh.\n\nMaybe the thing to do is to watch for `\\r\\r` or `\\n\\n` in the headers block and then go into a special case mode if we see it?\n",
+        "labels": [],
+        "comments_count": 12,
+        "created_at": "2016-06-04T18:26:38Z",
+        "updated_at": "2020-12-26T17:46:25Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/7",
+        "author": "njsmith"
+      },
+      "fix_pr_number": 115,
+      "fix_pr_title": "Added ability to use LF, not only CRLF delimiter for response Headers and Body",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/115",
+      "fix_pr_merged_at": "2020-12-26T17:46:25Z",
+      "merge_commit_sha": "c88da54f3fe10a4a5d3f1e15b761024b0d8cf730",
+      "pre_fix_sha": "522b00470b5776dda2dc7e98ff778eb1e418e6ad",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "h11/_connection.py",
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "changed_files": [
+        {
+          "path": "h11/_connection.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 1,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/_readers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/_receivebuffer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 76,
+          "deletions": 48,
+          "changes": 124,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/tests/test_io.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 37,
+          "deletions": 0,
+          "changes": 37,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "h11/tests/test_receivebuffer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 74,
+          "deletions": 18,
+          "changes": 92,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "newsfragments/7.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-12-26T17:46:25Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2016-06-04T18:26:38+00:00, pr_merged_at=2020-12-26T17:46:25+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "15 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "265 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #115 closes Issue #7 and implements one behavior chain for LF and mixed header delimiters across the receive buffer, readers, and connection state machine.",
+        "All three h11 production files are retained; tests and the news fragment are excluded, and the Issue's sparse reproduction remains an advisory diagnostic-risk note."
+      ]
+    },
+    {
+      "id": "pycqa-flake8-issue-1689-pr-1713",
+      "repository": "PyCQA/flake8",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1689,
+        "title": "warn on invalid codes in `ignore` / `extend-ignore`",
+        "body": "### describe the request\n\nfor example https://github.com/getsentry/sentry-python/blob/b36d84a76bd6f8344c9b0a9694591939296e9c06/.flake8#L2-L13\r\n\r\nthis disables a code called `//` and a code called `I` (among many others) due to incorrect comment syntax",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2022-09-15T15:54:13Z",
+        "updated_at": "2022-11-24T11:25:52Z",
+        "html_url": "https://github.com/PyCQA/flake8/issues/1689",
+        "author": "asottile"
+      },
+      "fix_pr_number": 1713,
+      "fix_pr_title": "Adds error when incorrect error codes are parsed from config file",
+      "fix_pr_url": "https://github.com/PyCQA/flake8/pull/1713",
+      "fix_pr_merged_at": "2022-11-07T23:57:52Z",
+      "merge_commit_sha": "ad1006e8cb4494b496ae301a19d68d1565d06f8e",
+      "pre_fix_sha": "5eeee3fbc0b64c7de347d1964de3074b9b2bde0b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/flake8/defaults.py",
+        "src/flake8/options/config.py",
+        "src/flake8/plugins/finder.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/flake8/defaults.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/flake8/options/config.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 0,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/flake8/plugins/finder.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 5,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/plugins/finder_test.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 31,
+          "changes": 31,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/unit/test_defaults.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 36,
+          "deletions": 0,
+          "changes": 36,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/unit/test_options_config.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 32,
+          "deletions": 0,
+          "changes": 32,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyCQA/flake8"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2022-11-07T23:57:52Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-09-15T15:54:13+00:00, pr_merged_at=2022-11-07T23:57:52+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "251 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #1713 directly closes Issue #1689 and applies shared invalid-code validation to configuration parsing and plugin classification.",
+        "All three production files are retained while tests are excluded; defaults.py adds only a module-level regular expression, so symbol ground truth is recorded for parse_config and _classify_plugins only."
+      ]
+    },
+    {
+      "id": "pytest-dev-pluggy-issue-431-pr-646",
+      "repository": "pytest-dev/pluggy",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 431,
+        "title": "multi hook registration does not unregister",
+        "body": "#251 added having multiple hooks of the same name to a plugin\r\n\r\n\r\nhttps://github.com/pytest-dev/pluggy/blob/475c4aa99200bfa3e30d12458ab2a3593a36dd56/src/pluggy/_hooks.py#L417-L422C57 does not unregister them\r\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 6,
+        "created_at": "2023-08-14T11:56:26Z",
+        "updated_at": "2026-02-25T09:33:38Z",
+        "html_url": "https://github.com/pytest-dev/pluggy/issues/431",
+        "author": "RonnyPfannschmidt"
+      },
+      "fix_pr_number": 646,
+      "fix_pr_title": "Fix _remove_plugin and get_hookcallers for multi-impl plugins",
+      "fix_pr_url": "https://github.com/pytest-dev/pluggy/pull/646",
+      "fix_pr_merged_at": "2026-02-25T09:33:37Z",
+      "merge_commit_sha": "20d8143f127a4d7526dbbea441857b4b80ec8bdd",
+      "pre_fix_sha": "6ab917ba3b2dc1dceba6a260a0c30cb947f6a69c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/pluggy/_hooks.py",
+        "src/pluggy/_manager.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog/431.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/pluggy/_hooks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 5,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/pluggy/_manager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 3,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/test_pluginmanager.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 73,
+          "deletions": 0,
+          "changes": 73,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pluggy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-02-25T09:33:37Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-08-14T11:56:26+00:00, pr_merged_at=2026-02-25T09:33:37+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "208 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #646 directly closes Issue #431: HookCaller._remove_plugin removes every implementation and PluginManager.get_hookcallers deduplicates the resulting callers.",
+        "Both production files and pre-fix symbols are retained; the changelog and plugin-manager regression tests are excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-121-pr-122",
+      "repository": "python-hyper/h11",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 121,
+        "title": "Server wait forever on obviously incorrect but incomplete HTTP request",
+        "body": "I've encountered this behavior by initiating an HTTPS request with a client to a server expecting HTTP.\r\nSo the server end up with a TLS \"Client Hello\" frame which doesn't contains the `\\r\\n\\r\\n` pattern that should mark the end of the header part of the HTTP request.\r\n\r\nHence h11 just consider the request is not over yet, hence the server starts waiting forever while the client is waiting for a TLS \"Server Hello\" answer :'(\r\n\r\nhttps://github.com/python-hyper/h11/blob/522b00470b5776dda2dc7e98ff778eb1e418e6ad/h11/_readers.py#L70-L81\r\n\r\nhttps://github.com/python-hyper/h11/blob/522b00470b5776dda2dc7e98ff778eb1e418e6ad/h11/_receivebuffer.py#L101-L112\r\n\r\nA quick&dirty test on various websites (heroku.com using cowboy, yahoo.com using ATS and google.com) shows that parsing of the HTTP request start line occurs as soon as it is received (and so a `400 Invalid HTTP Request` is returned instead of waiting indefinitely).\r\n\r\nI didn't check if this behavior is specified in the RFC (I guess it's not ^^), however it seems a legit behavior... or at least something worth talking about ;-)",
+        "labels": [],
+        "comments_count": 5,
+        "created_at": "2020-12-16T22:21:41Z",
+        "updated_at": "2020-12-28T17:44:21Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/121",
+        "author": "touilleMan"
+      },
+      "fix_pr_number": 122,
+      "fix_pr_title": "Add early detection of invalid http data when request line starts with binary",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/122",
+      "fix_pr_merged_at": "2020-12-28T17:44:21Z",
+      "merge_commit_sha": "88d7bd1ecdfa100404e15d6a2182100ca01852ed",
+      "pre_fix_sha": "889a56446f8ffd2e915d75f761bdb61a9102f4ba",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "changed_files": [
+        {
+          "path": "h11/_readers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/_receivebuffer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 17,
+          "deletions": 0,
+          "changes": 17,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "h11/tests/test_connection.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 32,
+          "deletions": 0,
+          "changes": 32,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "newsfragments/122.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-12-28T17:44:21Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-12-16T22:21:41+00:00, pr_merged_at=2020-12-28T17:44:21+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1089 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Merged PR #122 directly closes Issue #121 and detects an incomplete binary or TLS ClientHello request as invalid instead of leaving the server waiting forever.",
+        "The reader and receive-buffer production files are both required; tests and the news fragment are excluded, and ReceiveBuffer is the pre-fix owner of the newly introduced helper."
+      ]
+    }
+  ]
+}
