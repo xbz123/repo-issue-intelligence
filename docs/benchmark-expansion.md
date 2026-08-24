@@ -6,6 +6,39 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.19 sixth 200-case expansion batch
+
+Manifest v14 accepts ten reviewed Issue/Fix-PR pairs from Botocore, MarkupSafe, Matplotlib,
+Setuptools, Django REST Framework, scikit-learn, h11, Flake8, and Pluggy. It adds 16 production-file
+targets, including four multi-file fixes, and 14 pre-fix Python symbol targets across nine cases.
+The MarkupSafe C speedups case remains intentionally file-only.
+
+Review rejects Yarl #1458/#1638 because that PR is a documentation-only follow-up and the Issue
+was already closed by the behavioral PR #1645. It also rejects h11 #31/#104: the Issue is a
+discussion-driven header-casing feature, its automatic file list contains a formatting-only
+reader change, and this batch already retains two stronger h11 defect reports. All 14 accepted
+Python symbol targets resolve in their frozen repository maps.
+
+The suite now contains 110 cases across 49 repositories: 17 main, 11 calibration, and 82
+generalization cases. It records 164 production-file targets, 37 multi-file cases, and 111 reviewed
+symbol targets across 81 cases.
+
+Three deterministic v0.27 runs completed 110/110 cases. After removing timestamps, elapsed fields,
+and cache provenance, their candidate files, candidate symbols, per-case metrics, tier metrics, and
+aggregates were identical. The retained 100 cases were also unchanged from manifest v13. File
+Recall@1/5/10/20 is `0.3473/0.6168/0.7168/0.8550`, with MRR `0.5516`. Across the 81 labeled cases,
+Symbol Recall@1/5/10/20 is `0.2284/0.3693/0.4002/0.4619`, with MRR `0.3366`. Thirty of 164
+production targets remain outside the deterministic Top-20; the new misses are Setuptools
+`setuptools/config/_apply_pyprojecttoml.py` and Flake8 `src/flake8/options/config.py`.
+
+Run 1 reused 106 repository maps and rebuilt four; runs 2 and 3 recorded 110/110 hits. Warm reuse
+reduced mean in-process analysis time from 4,547 to 3,738 ms per case, a 17.79% reduction, without
+changing any non-timing result.
+
+The regenerated 200-case review queue now contains 90 primary and 40 reserve candidates across 38
+repositories. Its primary set includes 23 multi-file cases so reaching 200 would preserve the
+30% multi-file target.
+
 ## v0.18 fifth 200-case expansion batch
 
 Manifest v13 accepts ten reviewed Issue/Fix-PR pairs from Jinja, pytest-asyncio, Requests, Pylint,
@@ -380,19 +413,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting five ten-case batches into manifest v13 and excluding eight reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 145
+After accepting six ten-case batches into manifest v14 and excluding ten reviewed rejections,
+maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 133
 unique candidates across 38
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 100 primary candidates and 40 reserves;
+- 90 primary candidates and 40 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 27 new multi-file primary candidates, which would raise the suite from 33/100 to 60/200
+- 23 new multi-file primary candidates, which would raise the suite from 37/110 to 60/200
   multi-file cases (30%) if all primary candidates pass review;
-- 54 primary Issues created before 2026;
-- 54 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- 44 primary Issues created before 2026;
+- 47 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -409,7 +442,7 @@ The compact queue is committed so review order, advisory signals, pre-fix SHA pr
 files, and diversity constraints are auditable without claiming that the 200-case manifest already
 exists.
 
-Manifest v13 confirms that the earlier candidate-pool saturation does not survive broader,
+Historical manifest v13 confirmed that the earlier candidate-pool saturation does not survive broader,
 mixed-language, multi-file cases: 28 of 148 reviewed production targets are outside the
 deterministic Top-20. Subsequent batches keep those misses in the denominator and must not weaken
 the frozen-case acceptance rules to improve the headline metric.

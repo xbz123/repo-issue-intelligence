@@ -1,0 +1,218 @@
+{
+  "name": "real-project-benchmark-expansion-v0.19",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "boto-botocore-issue-3268-pr-3552",
+      "case_id": "botocore-upload-cancellation-retry",
+      "tier": "generalization",
+      "expected_files": [
+        "botocore/httpsession.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "botocore/httpsession.py",
+          "symbol": "URLLib3Session.send"
+        }
+      ],
+      "review_notes": [
+        "Issue #3268 reports long retry loops after cancellation during multithreaded S3 uploads, and merged PR #3552 fixes the issue by letting concurrent.futures.CancelledError escape URLLib3Session.send.",
+        "The material production change is confined to botocore/httpsession.py::URLLib3Session.send; tests/unit/test_http_session.py and the removed temporary botocore_main.py are excluded from ground truth."
+      ]
+    },
+    {
+      "candidate_id": "pallets-markupsafe-issue-472-pr-477",
+      "case_id": "markupsafe-str-subclass-escape",
+      "tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #472 reproduces escape() failure for str subclasses, and merged PR #477 fixes it by relaxing PyUnicode_CheckExact to PyUnicode_Check in the C speedups implementation.",
+        "Retain only src/markupsafe/_speedups.c as production ground truth; CHANGES.rst, pyproject.toml, and tests/test_escape.py are excluded, and C symbol ground truth remains empty."
+      ]
+    },
+    {
+      "candidate_id": "matplotlib-matplotlib-issue-29256-pr-29338",
+      "case_id": "matplotlib-webagg-window-title",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/backends/backend_webagg_core.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/matplotlib/backends/backend_webagg_core.py",
+          "symbol": "FigureCanvasWebAggCore.handle_refresh"
+        }
+      ],
+      "review_notes": [
+        "Issue #29256 reports that WebAgg ignored figure.canvas.manager.set_window_title, and merged PR #29338 fixes the behavior in FigureCanvasWebAggCore.handle_refresh by using manager.get_window_title().",
+        "Retain only lib/matplotlib/backends/backend_webagg_core.py::FigureCanvasWebAggCore.handle_refresh; the API-change document is excluded, and the PR demonstration is not a repository ground-truth file."
+      ]
+    },
+    {
+      "candidate_id": "pypa-setuptools-issue-4810-pr-5169",
+      "case_id": "setuptools-pyproject-define-macros",
+      "tier": "generalization",
+      "expected_files": [
+        "setuptools/config/_apply_pyprojecttoml.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "setuptools/config/_apply_pyprojecttoml.py",
+          "symbol": "_ext_modules"
+        }
+      ],
+      "review_notes": [
+        "Issue #4810 reproduces ccompiler TypeError for valid pyproject.toml define-macros lists, and merged PR #5169 converts each TOML macro value to the tuple shape expected by _ext_modules.",
+        "The production fix is confined to setuptools/config/_apply_pyprojecttoml.py::_ext_modules; the regression test and news fragment are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-9645-pr-10011",
+      "case_id": "drf-generic-ip-protocol-errors",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/utils/field_mapping.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/utils/field_mapping.py",
+          "symbol": "get_field_kwargs"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #10011 directly fixes Issue #9645 by passing GenericIPAddressField protocol through get_field_kwargs and removing duplicate IP validators.",
+        "The production scope is rest_framework/utils/field_mapping.py::get_field_kwargs; tests/test_model_serializer.py is excluded, while the PR follow-up stack is retained as an attribution risk rather than separate ground truth."
+      ]
+    },
+    {
+      "candidate_id": "scikit-learn-scikit-learn-issue-31030-pr-34399",
+      "case_id": "sklearn-dbscan-sparse-warning",
+      "tier": "generalization",
+      "expected_files": [
+        "sklearn/cluster/_dbscan.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "sklearn/cluster/_dbscan.py",
+          "symbol": "DBSCAN.fit"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #34399 closes Issue #31030 by sorting the sparse neighborhood graph after DBSCAN.fit sets its diagonal, preventing the unconditional EfficiencyWarning.",
+        "The production fix is confined to sklearn/cluster/_dbscan.py::DBSCAN.fit; the regression test and whats-new entry are excluded, and related Issues #34218 and #31337 are recorded as attribution overlap rather than separate cases."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-7-pr-115",
+      "case_id": "h11-broken-line-endings",
+      "tier": "generalization",
+      "expected_files": [
+        "h11/_connection.py",
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "h11/_connection.py",
+          "symbol": "Connection.next_event"
+        },
+        {
+          "file": "h11/_readers.py",
+          "symbol": "ChunkedReader.__call__"
+        },
+        {
+          "file": "h11/_receivebuffer.py",
+          "symbol": "ReceiveBuffer.maybe_extract_lines"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #115 closes Issue #7 and implements one behavior chain for LF and mixed header delimiters across the receive buffer, readers, and connection state machine.",
+        "All three h11 production files are retained; tests and the news fragment are excluded, and the Issue's sparse reproduction remains an advisory diagnostic-risk note."
+      ]
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1689-pr-1713",
+      "case_id": "flake8-invalid-ignore-codes",
+      "tier": "generalization",
+      "expected_files": [
+        "src/flake8/defaults.py",
+        "src/flake8/options/config.py",
+        "src/flake8/plugins/finder.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/flake8/options/config.py",
+          "symbol": "parse_config"
+        },
+        {
+          "file": "src/flake8/plugins/finder.py",
+          "symbol": "_classify_plugins"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #1713 directly closes Issue #1689 and applies shared invalid-code validation to configuration parsing and plugin classification.",
+        "All three production files are retained while tests are excluded; defaults.py adds only a module-level regular expression, so symbol ground truth is recorded for parse_config and _classify_plugins only."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pluggy-issue-431-pr-646",
+      "case_id": "pluggy-multi-hook-unregister",
+      "tier": "generalization",
+      "expected_files": [
+        "src/pluggy/_hooks.py",
+        "src/pluggy/_manager.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/pluggy/_hooks.py",
+          "symbol": "HookCaller._remove_plugin"
+        },
+        {
+          "file": "src/pluggy/_manager.py",
+          "symbol": "PluginManager.get_hookcallers"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #646 directly closes Issue #431: HookCaller._remove_plugin removes every implementation and PluginManager.get_hookcallers deduplicates the resulting callers.",
+        "Both production files and pre-fix symbols are retained; the changelog and plugin-manager regression tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-121-pr-122",
+      "case_id": "h11-incomplete-invalid-request",
+      "tier": "generalization",
+      "expected_files": [
+        "h11/_readers.py",
+        "h11/_receivebuffer.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "h11/_readers.py",
+          "symbol": "maybe_read_from_IDLE_client"
+        },
+        {
+          "file": "h11/_receivebuffer.py",
+          "symbol": "ReceiveBuffer"
+        }
+      ],
+      "review_notes": [
+        "Merged PR #122 directly closes Issue #121 and detects an incomplete binary or TLS ClientHello request as invalid instead of leaving the server waiting forever.",
+        "The reader and receive-buffer production files are both required; tests and the news fragment are excluded, and ReceiveBuffer is the pre-fix owner of the newly introduced helper."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "aio-libs-yarl-issue-1458-pr-1638",
+      "reason": "PR #1638 is a documentation-only follow-up whose body states that behavior is unchanged; Issue #1458 was already closed by PR #1645, while yarl/_query.py contains only a docstring change and CHANGES/1638.doc.rst is changelog metadata."
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-31-pr-104",
+      "reason": "Issue #31 is a discussion-driven outgoing-header casing feature rather than a concrete defect report, and its automatic four-file scope includes a formatting-only readers change; the batch retains the two stronger h11 defect cases instead."
+    }
+  ]
+}
