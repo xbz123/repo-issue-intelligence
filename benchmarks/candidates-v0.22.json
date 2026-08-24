@@ -1,0 +1,1584 @@
+{
+  "name": "real-project-benchmark-expansion-v0.22",
+  "version": 1,
+  "curated_at": "2026-08-24T08:58:13.806165Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 16,
+  "candidates": [
+    {
+      "id": "pallets-jinja-issue-2025-pr-2026",
+      "repository": "pallets/jinja",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 2025,
+        "title": "Undefined objects can't be copied or pickled by Python > 3.5",
+        "body": "### Description\r\nDue to [an ancient erroneous deletion of `__slots__` metadata](https://github.com/pallets/jinja/blob/3.1.4/src/jinja2/runtime.py#L1049-L1056), it's not possible to copy/deepcopy/pickle `Undefined` objects (all of which we occasionally need to do in Ansible) in Python > 3.5.\r\n\r\nThe comment above the deletion of `__slots__` implies a misunderstanding of how that metadata was/is used. The deletion was always probably technically a bug, but once Python started providing default implementations of `__getstate__` and `__reduce_ex__` on all objects (which consult that metadata at runtime), it broke the default copyability/pickle-ability of `Undefined` (and derived) objects.\r\n\r\nWe're working around this with a monkeypatch that restores the missing `__slots__` metadata. We've also submitted PR  #2026 to zap the problematic deletion and tests that verify copy/deepcopy/pickle functionality on all the built-in `Undefined` types.\r\n\r\n### Repro\r\n\r\n(on any Python > 3.5 with Jinja installed):\r\n```\r\n$ python -c 'import copy; import jinja2; copy.copy(jinja2.Undefined())'\r\nTraceback (most recent call last):\r\n  File \"<string>\", line 1, in <module>\r\n  File \"/usr/lib64/python3.11/copy.py\", line 92, in copy\r\n    rv = reductor(4)\r\n         ^^^^^^^^^^^\r\nTypeError: cannot pickle 'Undefined' object\r\n```\r\n\r\n### Expected\r\nThe default runtime-provided implementations of `__getstate__` and `__reduce_ex__` that back `copy.copy`, `copy.deepcopy` and `pickle` should work properly with all `Undefined` derived types.\r\n\r\n### Environment\r\n\r\n- Python version: >= 3.6\r\n- Jinja version: anything from at least the past 16 years\r\n",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2024-10-01T19:08:45Z",
+        "updated_at": "2025-01-03T00:18:55Z",
+        "html_url": "https://github.com/pallets/jinja/issues/2025",
+        "author": "nitzmahone"
+      },
+      "fix_pr_number": 2026,
+      "fix_pr_title": "Preserve `__slots__` metadata on Undefined types",
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/2026",
+      "fix_pr_merged_at": "2024-12-19T16:14:53Z",
+      "merge_commit_sha": "ba8847a466d0f3ad622502f86e819737a4b9fdc7",
+      "pre_fix_sha": "39d9ffff1f33a5e5141af655857f9dbe6b6df03d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/jinja2/runtime.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 17,
+          "deletions": 13,
+          "changes": 30,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_api.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 8,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_runtime.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 50,
+          "deletions": 0,
+          "changes": 50,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/jinja"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-12-19T16:14:53Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-10-01T19:08:45+00:00, pr_merged_at=2024-12-19T16:14:53+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1628 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #2025 reproduces copy and pickle failures for Undefined objects, and merged PR #2026 preserves slot metadata while making dunder protocol probing raise AttributeError.",
+        "Retain src/jinja2/runtime.py; the decisive slot restoration is module-level, so no single pre-fix symbol is assigned. Tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "sphinx-doc-sphinx-issue-14050-pr-14202",
+      "repository": "sphinx-doc/sphinx",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 14050,
+        "title": "LaTeXTranslator fails to build documents using the \"acronym\" standard role.",
+        "body": "### Describe the bug\n\nThe documentation of the Moin 2 project at https://app.readthedocs.org/projects/moin-20/ fails to build because of an \n> NotImplementedError: <class 'sphinx.writers.latex.LaTeXTranslator'> departing unknown node type: acronym\n\nThe `<acronym>` element is defined in the `docutils.dtd` and documented in https://docutils.sourceforge.io/docs/ref/doctree.html#acronym and implemented in the Python class   `docutils.nodes.acronym`.\nIt is supported by all Docutils writers and Sphinx's HTML writer.\n\n### How to Reproduce\n\nTry to export a document using the  [\"acronym\" standard role](https://docutils.sourceforge.io/docs/ref/rst/roles.html#acronym) to LaTeX.\n\nFor example, index.rst containing the line\n\n    This document is written in reStructuredText (:ac:`rST`).\n\n`make latex`\n\n\n### Environment Information\n\n```text\nPlatform:              linux; (Linux-6.12.48+deb13-amd64-x86_64-with-glibc2.41)\nPython version:        3.13.5 (main, Jun 25 2025, 18:55:22) [GCC 14.2.0])\nPython implementation: CPython\nSphinx version:        8.2.3\nDocutils version:      0.22.4b1.dev\nJinja2 version:        3.1.6\nPygments version:      2.18.0\n```\n\n### Sphinx extensions\n\n```python\nNone\n```\n\n### Additional context\n\nThe issue occured with a recent Documentation update at readthedocs\n(https://app.readthedocs.org/projects/moin-20/)\nThe environment described above was used to reproduce.",
+        "labels": [
+          "type:bug"
+        ],
+        "comments_count": 5,
+        "created_at": "2025-11-09T16:23:06Z",
+        "updated_at": "2026-01-20T00:36:11Z",
+        "html_url": "https://github.com/sphinx-doc/sphinx/issues/14050",
+        "author": "gmilde"
+      },
+      "fix_pr_number": 14202,
+      "fix_pr_title": "Let LaTeX writer support the standard role \"acronym\".",
+      "fix_pr_url": "https://github.com/sphinx-doc/sphinx/pull/14202",
+      "fix_pr_merged_at": "2025-12-22T11:01:46Z",
+      "merge_commit_sha": "e5cacbc407c2c2552507795542f66754f5171d40",
+      "pre_fix_sha": "5c2ab212b44a844d977ef6ddab89590af3eb65cd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "sphinx/writers/latex.py"
+      ],
+      "changed_files": [
+        {
+          "path": "AUTHORS.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "sphinx/writers/latex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: sphinx-doc/sphinx"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-12-22T11:01:46Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-11-09T16:23:06+00:00, pr_merged_at=2025-12-22T11:01:46+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1387 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=type:bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #14050 reproduces LaTeXTranslator aborting on the standard acronym role, and merged PR #14202 adds the missing LaTeX visitor behavior.",
+        "Retain sphinx/writers/latex.py; the visitor is newly introduced by the fix and therefore has no pre-fix symbol target. Authors and changelog files are excluded."
+      ]
+    },
+    {
+      "id": "aio-libs-yarl-issue-1632-pr-1687",
+      "repository": "aio-libs/yarl",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1632,
+        "title": "[heads up] test_pickle and test_pickle_does_not_pollute_cache fail when run with Python 3.15.0a6 (urllib.parse changes)",
+        "body": "### Please confirm the following\n\n- [x] I agree to follow the [aio-libs Code of Conduct][CoC]\n\n[CoC]: ../../.github/blob/master/CODE_OF_CONDUCT.md\n\n- [x] I have checked the [current issues][issue search] for duplicates.\n\n[issue search]: ../search?q=is%3Aissue&type=issues\n\n- [x] I understand this is open source software provided for free and that I might not receive a timely response.\n- [x] I am positive I am **NOT** reporting a (potential) security\nvulnerability, to the best of my knowledge. *(These must be shared by\nsubmitting [this report form][vulnerability report form] instead, if\nany hesitation exists.)*\n\n[vulnerability report form]: ../security/advisories/new\n\n- [ ] I am willing to submit a pull request with reporoducers as xfailing test cases or even entire fix. *(Assign this issue to me.)*\n\n### Describe the bug\n\nI'm building yarl 1.22.0 in Fedora Linux 45 with Python 3.15.0a6.\nTwo tests fail. Based on the traceback, this will have something to do with the changes to urllib.parse: https://github.com/python/cpython/commit/c5cfcdf16a98063530bdfe11a8894ab57aea3d92\nI don't know if it's regression on the side of Python or a functionality that needs to be worked into yarl's code.\nHappy to test any fixes.\n\n### To Reproduce\n\nin a fresh venv with Python 3.15.0a6:\n\n```\n$ python -m pip install pytest pytest_cov -e .\n$ python -m pytest tests/test_pickle.py -W ignore::DeprecationWarning  # needed because current pygments leaks a DeprecationWarning\n```\n\n\n### Expected behavior\n\nTests pass\n\n### Logs/tracebacks\n\n```python-traceback\n_________________________________ test_pickle __________________________________\n[gw0] linux -- Python 3.15.0 /usr/bin/python3\n\n    def test_pickle() -> None:\n        u1 = URL(\"picklepickle\")\n        hash(u1)\n>       v = pickle.dumps(u1)\n            ^^^^^^^^^^^^^^^^\n\nu1         = URL('picklepickle')\n\ntests/test_pickle.py:11: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = SplitResult(scheme='', netloc='', path='picklepickle', query='', fragment='')\n\n    def __getstate__(self):\n        state = super().__getstate__()\n        try:\n>           if state[1]['_keep_empty'] == _MISSING_AS_NONE_DEFAULT:\n               ^^^^^^^^\nE           TypeError: 'NoneType' object is not subscriptable\nE           when serializing tuple item 0\nE           when serializing yarl.URL state\nE           when serializing yarl.URL object\n\n__class__  = <class 'urllib.parse._ResultBase'>\nself       = SplitResult(scheme='', netloc='', path='picklepickle', query='', fragment='')\nstate      = None\n\n/usr/lib64/python3.15/urllib/parse.py:311: TypeError\n______________________ test_pickle_does_not_pollute_cache ______________________\n[gw0] linux -- Python 3.15.0 /usr/bin/python3\n\n    def test_pickle_does_not_pollute_cache() -> None:\n        \"\"\"Verify the unpickling does not pollute the cache.\n    \n        Since unpickle will call URL.__new__ with default\n        args, we need to make sure that default args never\n        end up in the pre_encoded_url or encode_url cache.\n        \"\"\"\n        u1 = URL.__new__(URL)\n        u1._scheme = \"this\"\n        u1._netloc = \"never.appears.any.where.else.in.tests\"\n        u1._path = \"\"\n        u1._query = \"\"\n        u1._fragment = \"\"\n        hash(u1)\n>       v = pickle.dumps(u1)\n            ^^^^^^^^^^^^^^^^\n\nu1         = URL('this://never.appears.any.where.else.in.tests')\n\ntests/test_pickle.py:48: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = SplitResult(scheme='this', netloc='never.appears.any.where.else.in.tests', path='', query='', fragment='')\n\n    def __getstate__(self):\n        state = super().__getstate__()\n        try:\n>           if state[1]['_keep_empty'] == _MISSING_AS_NONE_DEFAULT:\n               ^^^^^^^^\nE           TypeError: 'NoneType' object is not subscriptable\nE           when serializing tuple item 0\nE           when serializing yarl.URL state\nE           when serializing yarl.URL object\n\n__class__  = <class 'urllib.parse._ResultBase'>\nself       = SplitResult(scheme='this', netloc='never.appears.any.where.else.in.tests', path='', query='', fragment='')\nstate      = None\n```\n\n### Python Version\n\n```console\n$ python --version\n3.15.0a6\n```\n\n### multidict Version\n\n```console\n$ python -m pip show multidict\nVersion: 6.7.1\n```\n\n### propcache Version\n\n```console\n$ python -m pip show propcache\n```\n\n### yarl Version\n\n```console\n$ python -m pip show yarl\nVersion: 1.23.0 (tested on today's master)\n```\n\n### OS\n\nFedora Linux 45/43\n\n### Additional context\n\n_No response_",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-02-25T11:16:28Z",
+        "updated_at": "2026-05-17T13:57:51Z",
+        "html_url": "https://github.com/aio-libs/yarl/issues/1632",
+        "author": "befeleme"
+      },
+      "fix_pr_number": 1687,
+      "fix_pr_title": "Fix pickling of URL on Python 3.15",
+      "fix_pr_url": "https://github.com/aio-libs/yarl/pull/1687",
+      "fix_pr_merged_at": "2026-05-17T13:57:50Z",
+      "merge_commit_sha": "faaa1fdd975220810dffb91adad87d589931d5b8",
+      "pre_fix_sha": "d92a83f5ff11ce4066df38f3df2e9bef6d2d9c40",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "yarl/_url.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES/1632.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_pickle.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 34,
+          "deletions": 0,
+          "changes": 34,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "yarl/_url.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 2,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: aio-libs/yarl"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-17T13:57:50Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-02-25T11:16:28+00:00, pr_merged_at=2026-05-17T13:57:50+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "6 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4556 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1632 reproduces URL pickling failures on Python 3.15, and merged PR #1687 returns a raw tuple from URL.__getstate__ without changing legacy __setstate__ compatibility.",
+        "Retain yarl/_url.py::URL.__getstate__; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "pypa-virtualenv-issue-3105-pr-3110",
+      "repository": "pypa/virtualenv",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3105,
+        "title": "virtualenv --help is not formatting using terminal width",
+        "body": "**Issue**\n\nvirtualenv --help should use terminal width to format output, but it does not. The output just runs on without regard for the terminal width which makes it hard to read.\nNote: The argparse package does this by default, which I am very familiar with having used it for all my python programs.\n\nHere is what a section of the output from virtualenv showing how it disregards terminal width:\n\n<img width=\"939\" height=\"420\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/0d1496e6-795a-493d-abc3-dcbd23eefdbb\" />\n\nIn contrast here is a section of output from `pip --help` showing how output should be formatted making it easy to read.\n\n<img width=\"950\" height=\"222\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/4cbd1393-79cf-4648-adde-0ca65d00b6a1\" />\n\n**Environment**\n\nProvide at least:\n\n- OS: Windows 10\n- Shell: git bash under Windows Terminal\n- Python version and path: \npython was installed using pyenv\nvirtualenv was installed with pip\n\n- `pip list` of the host python where `virtualenv` is installed:\n  ```console\n$ which python\n/c/Users/julie/home/.local/pyenv/pyenv-win/shims/python\n$ pyenv which python\nC:\\Users\\julie\\home\\.local\\pyenv\\pyenv-win\\versions\\3.14.2\\python.exe\n$ python -V\nPython 3.14.2\n$ pip -V\npip 26.0.1 from C:\\Users\\julie\\home\\.local\\pyenv\\pyenv-win\\versions\\3.14.2\\Lib\\site-packages\\pip (python 3.14)\n$ virtualenv --version\nvirtualenv 21.2.0 from C:\\Users\\julie\\home\\.local\\pyenv\\pyenv-win\\versions\\3.14.2\\Lib\\site-packages\\virtualenv\\__init__.py\n$ pip list\nPackage           Version\nargcomplete       3.6.3\nclick             8.3.2\ncolorama          0.4.6\ndistlib           0.4.0\nfilelock          3.25.2\npackaging         26.0\npip               25.3\npipx              1.11.1\nplatformdirs      4.9.4\npython-discovery  1.2.1\nstevedore         5.7.0\nuserpath          1.9.2\nvirtualenv        21.2.0\nvirtualenv-clone  0.5.7\nvirtualenvwrapper 6.1.1\n```\n\n**Output of the virtual environment creation**\n\nMake sure to run the creation with `-vvv --with-traceback`:\n\n```console\n\n```\n",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-04-04T16:44:06Z",
+        "updated_at": "2026-04-07T15:05:24Z",
+        "html_url": "https://github.com/pypa/virtualenv/issues/3105",
+        "author": "julie777"
+      },
+      "fix_pr_number": 3110,
+      "fix_pr_title": "fix: use terminal width for help formatting instead of hardcoded 240",
+      "fix_pr_url": "https://github.com/pypa/virtualenv/pull/3110",
+      "fix_pr_merged_at": "2026-04-07T15:05:22Z",
+      "merge_commit_sha": "f0bbe174e2c241f9a7fbeaac7446cf200c14a851",
+      "pre_fix_sha": "dfaa73826dad5e9c2cdc2b5873a14eb80c37480b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/virtualenv/config/cli/parser.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3110.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/virtualenv/config/cli/parser.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/unit/config/cli/test_help_formatter.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 27,
+          "deletions": 0,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/unit/test_run.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/virtualenv"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-04-07T15:05:22Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-04-04T16:44:06+00:00, pr_merged_at=2026-04-07T15:05:22+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2035 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #3105 shows virtualenv help ignoring terminal width, and merged PR #3110 replaces the hard-coded width with shutil.get_terminal_size().columns.",
+        "Retain src/virtualenv/config/cli/parser.py::HelpFormatter.__init__; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "psf-requests-issue-7432-pr-7433",
+      "repository": "psf/requests",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 7432,
+        "title": "`prepare_body` stream detection regression",
+        "body": "<!-- Summary. -->\nRequests 2.34.0 changed the stream detection in PreparedRequest.prepare_body() from `hasattr(data, \"__iter__\")` to `isinstance(data, Iterable)`. This breaks file-like wrappers that expose `__iter__/read/tell/seek` via `__getattr__ delegation` (e.g. tqdm.wrapattr), because `isinstance(..., Iterable)` only checks the class MRO, not dynamic attribute delegation. As a result, `_body_position` is never recorded and the body cannot be rewound on 307/308 redirects.\n## Expected Result\n\nUpload completes successfully through the redirect, as it did in 2.33.1.\n\n## Actual Result\n\nThe redirected request sends an empty/consumed body. The server receives no data and the request times out:\n```\nrequests.exceptions.ReadTimeout: HTTPSConnectionPool(...): Read timed out. (read timeout=30)\n```\n\n## Reproduction Steps\n\n```python\nimport os\nimport requests\nfrom tqdm import tqdm\n\nwith open(\"testfile.txt\", \"wb\") as f:\n    f.write(b\"hello world \" * 1000)\n\nwith open(\"testfile.txt\", \"rb\") as f:\n    with tqdm.wrapattr(f, \"read\", total=os.path.getsize(\"testfile.txt\")) as wrapped:\n        # Any endpoint that 307 redirects to a presigned S3 URL\n        requests.put(\"https://your-api.example.com/upload\", data=wrapped, timeout=30)\n\n```\n\n## System Information\n\n    $ python -m requests.help\n\n```json\n{\n  \"chardet\": {\n    \"version\": null\n  },\n  \"charset_normalizer\": {\n    \"version\": \"3.4.7\"\n  },\n  \"cryptography\": {\n    \"version\": \"\"\n  },\n  \"idna\": {\n    \"version\": \"3.13\"\n  },\n  \"implementation\": {\n    \"name\": \"CPython\",\n    \"version\": \"3.13.5\"\n  },\n  \"platform\": {\n    \"release\": \"24.6.0\",\n    \"system\": \"Darwin\"\n  },\n  \"pyOpenSSL\": {\n    \"openssl_version\": \"\",\n    \"version\": null\n  },\n  \"requests\": {\n    \"version\": \"2.34.0\"\n  },\n  \"system_ssl\": {\n    \"version\": \"30000120\"\n  },\n  \"urllib3\": {\n    \"version\": \"2.5.0\"\n  },\n  \"using_charset_normalizer\": true,\n  \"using_pyopenssl\": false\n}\n```\n\n<!-- This command is only available on Requests v2.16.4 and greater. Otherwise,\nplease provide some basic information about your system (Python version,\noperating system, &c). -->\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2026-05-12T13:42:12Z",
+        "updated_at": "2026-05-12T17:51:03Z",
+        "html_url": "https://github.com/psf/requests/issues/7432",
+        "author": "k223kim"
+      },
+      "fix_pr_number": 7433,
+      "fix_pr_title": "Fix `prepare_body` stream detection for `__getattr__`-based file wrappers",
+      "fix_pr_url": "https://github.com/psf/requests/pull/7433",
+      "fix_pr_merged_at": "2026-05-12T17:51:02Z",
+      "merge_commit_sha": "6404f345e562d962abe6700a1c357ec1e7e18232",
+      "pre_fix_sha": "0b401c76b6e80a4eecf3c690085b2553f6e261ca",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/requests/models.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/requests/models.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 3,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_requests.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 0,
+          "changes": 15,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: psf/requests"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-12T17:51:02Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-05-12T13:42:12+00:00, pr_merged_at=2026-05-12T17:51:02+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2077 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #7432 reproduces redirected uploads failing for file wrappers that expose __iter__ through __getattr__, and merged PR #7433 restores delegated-iterator stream detection.",
+        "Retain src/requests/models.py::PreparedRequest.prepare_body; tests are excluded."
+      ]
+    },
+    {
+      "id": "pypa-build-issue-655-pr-1083",
+      "repository": "pypa/build",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 655,
+        "title": "Controlling location of isolated build environments?",
+        "body": "Is there a way to control exactly where isolated build environments are created?\r\n\r\nFor example, I'd like to ask python-build to create its isolated build environments inside `.local/tmp/python-build` inside my project.\r\n\r\nSorry if this is documented somewhere and I didn't see it.",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 8,
+        "created_at": "2023-08-15T13:14:48Z",
+        "updated_at": "2026-06-12T17:56:47Z",
+        "html_url": "https://github.com/pypa/build/issues/655",
+        "author": "gwerbin"
+      },
+      "fix_pr_number": 1083,
+      "fix_pr_title": "✨ feat(env): control the isolated build environment location",
+      "fix_pr_url": "https://github.com/pypa/build/pull/1083",
+      "fix_pr_merged_at": "2026-06-12T17:56:46Z",
+      "merge_commit_sha": "714175afba330b51a7eb47f9153173dc75210d48",
+      "pre_fix_sha": "9ac8718f5ffaeba3660b02158822047c580b194e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/build/__main__.py",
+        "src/build/env.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/655.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/explanation/how-it-works.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/how-to/troubleshooting.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 13,
+          "changes": 21,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/api.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 0,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/cli.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/environment-variables.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 4,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/build/__main__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 32,
+          "deletions": 2,
+          "changes": 34,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/build/_exceptions.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/build/env.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 18,
+          "deletions": 3,
+          "changes": 21,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_env.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 66,
+          "deletions": 0,
+          "changes": 66,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_main.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 3,
+          "changes": 34,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/build"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-12T17:56:46Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-08-15T13:14:48+00:00, pr_merged_at=2026-06-12T17:56:46+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "281 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #655 asks for a controllable isolated build-environment location, and merged PR #1083 adds env_dir propagation through the API and CLI plus path-aware lifecycle handling.",
+        "Retain src/build/__main__.py::build_package and src/build/env.py::DefaultIsolatedEnv; src/build/_exceptions.py is docstring-only, while docs, changelog, and tests are excluded."
+      ]
+    },
+    {
+      "id": "python-hyper-h2-issue-1305-pr-1315",
+      "repository": "python-hyper/h2",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 1305,
+        "title": "Update types to adhere to `--strict-bytes` / PEP688",
+        "body": "Mypy 1.16 added [`--strict-bytes`](https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-strict-bytes) to `--strict`, and plans to enable it by default in mypy 2.0. As far as I can tell the type hints in this package has not been updated to reflect this, giving false alarms for downstream users.\n\nPyright also does not promote `bytearray`/`memoryview` to `bytes` with [`disableBytesTypePromotions`](https://microsoft.github.io/pyright/#/configuration?id=type-evaluation-settings) defaulting to `True`.\n\nThe one I noticed when updating https://github.com/pgjones/hypercorn/pull/303 was [`H2Connection.receive_data`](https://github.com/python-hyper/h2/blob/0583911b29d05764bbe3f7691d59f4d5e83e249b/src/h2/connection.py#L1495) only accepting `bytes` for the `data` parameter, but it only passes `data` onto [`FrameBuffer.add_data`](https://github.com/python-hyper/h2/blob/0583911b29d05764bbe3f7691d59f4d5e83e249b/src/h2/frame_buffer.py#L39) which should be perfectly capable of also accepting e.g. `bytearray`.\n\nIt's likely you can replace a lot of type hints with `collections.abc.Buffer`, or at least a protocol which inherits from `Buffer` + `Sized` (since `FrameBuffer.add_data` makes use of `len`).",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2025-08-08T10:18:30Z",
+        "updated_at": "2026-05-12T20:21:47Z",
+        "html_url": "https://github.com/python-hyper/h2/issues/1305",
+        "author": "jakkdl"
+      },
+      "fix_pr_number": 1315,
+      "fix_pr_title": "Broaden receive data buffer types",
+      "fix_pr_url": "https://github.com/python-hyper/h2/pull/1315",
+      "fix_pr_merged_at": "2026-05-12T20:21:45Z",
+      "merge_commit_sha": "dc5da5c3329e293492c97ff2243e93ede84f2d20",
+      "pre_fix_sha": "73a232d9b1f00514994bf9af066adb9f13f3fc73",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/connection.py",
+        "src/h2/frame_buffer.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGELOG.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "docs/source/basic-usage.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 1,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 2,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/h2/_typing.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 21,
+          "deletions": 0,
+          "changes": 21,
+          "eligible_source": false,
+          "exclusion_reason": "file does not exist at the pre-fix commit"
+        },
+        {
+          "path": "src/h2/connection.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 2,
+          "changes": 6,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "src/h2/frame_buffer.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 12,
+          "deletions": 5,
+          "changes": 17,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_basic_logic.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 0,
+          "changes": 16,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/typing/strict_bytes.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 28,
+          "deletions": 0,
+          "changes": 28,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h2"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-05-12T20:21:45Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-08-08T10:18:30+00:00, pr_merged_at=2026-05-12T20:21:45+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1218 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #1305 reports strict-bytes type failures for bytearray and memoryview inputs, and merged PR #1315 broadens the receive path and normalizes frame-buffer input through memoryview.",
+        "Retain H2Connection.receive_data and FrameBuffer.add_data in the two existing production files; the added type-only protocol, tests, docs, changelog, and project metadata are excluded."
+      ]
+    },
+    {
+      "id": "pyo3-pyo3-issue-6199-pr-6200",
+      "repository": "PyO3/pyo3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 6199,
+        "title": "Reference pool mutex is taken on every attach which serializes multithreaded embedders",
+        "body": "`ReferencePool::drop_deferred_references` is called on every attach and it checks `is_empty` under a process global mutex.\n\nFor multithreaded embedders it becomes a serialization point. The mutex acquisition rate scales with threads and attach rate. Contended `std` mutex parks threads in the kernel.\n\nI stumbled up on this while profiling the [Pants build system](https://github.com/pantsbuild/pants) engine (a Rust tokio runtime driving Python 3.14t code, pyo3 0.28.3) where I can measure anti-scaling behaviour attributed to `ReferencePool::drop_deferred_references` parking threads.\n\nThe proposed solution is to add an atomic bool to track whether the pool is \"dirty\". This is not a novel idea. #1608 introduced a dirty bool which was later removed. In #4174 it was noted that a dirty flag has the same cache-coherence traffic as the mutex's own futex word in the uncontended case. That does not hold under contention, though. \n\n#4174 also suggested replacing the mutex with a lock-free solution. The dirty flag is a more minimal fix and serves pants needs.",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-07-12T21:01:22Z",
+        "updated_at": "2026-08-12T22:13:34Z",
+        "html_url": "https://github.com/PyO3/pyo3/issues/6199",
+        "author": "tobni"
+      },
+      "fix_pr_number": 6200,
+      "fix_pr_title": "Skip the reference pool mutex on attach when no decrefs are pending",
+      "fix_pr_url": "https://github.com/PyO3/pyo3/pull/6200",
+      "fix_pr_merged_at": "2026-08-12T22:13:33Z",
+      "merge_commit_sha": "b19673a3f004d18aadd186cb3e52be763b53613a",
+      "pre_fix_sha": "d1e3be6ef10f29f0b0a42551a1ed82973bd1289c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "changed_files": [
+        {
+          "path": ".github/workflows/benches.yml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 2,
+          "changes": 13,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "newsfragments/6200.changed.md",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "noxfile.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pyo3-benches/Cargo.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "pyo3-benches/benches/bench_attach.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 0,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pyo3-benches/benches/bench_attach_scaling.rs",
+          "status": "added",
+          "previous_path": null,
+          "additions": 109,
+          "deletions": 0,
+          "changes": 109,
+          "eligible_source": false,
+          "exclusion_reason": "file does not exist at the pre-fix commit"
+        },
+        {
+          "path": "src/internal/state.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 51,
+          "deletions": 2,
+          "changes": 53,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyO3/pyo3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-12T22:13:33Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-12T21:01:22+00:00, pr_merged_at=2026-08-12T22:13:33+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "6 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1061 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #6199 reports a process-global mutex serializing multithreaded embedders, and merged PR #6200 adds an atomic dirty fast path in ReferencePool.",
+        "Narrow the automatic list to src/internal/state.rs; nox, benchmark, workflow, and news files are auxiliary, and Rust symbol ground truth remains file-only."
+      ]
+    },
+    {
+      "id": "astral-sh-ruff-issue-27637-pr-27646",
+      "repository": "astral-sh/ruff",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 27637,
+        "title": "ruff check --statistics doesn't link rule codes to web pages, unlike plain ruff check",
+        "body": "### Summary\n\nWhen I run `ruff check`, it uses OSC 9 hyperlinks for rule codes (like `UP046`), linking them to web pages (like https://docs.astral.sh/ruff/rules/non-pep695-generic-class/), which is very convenient and I love it!\n\nHowever when I run `ruff check --statistics`, the rule codes are not hyperlinked, and I find myself running `ruff check --select COPYPASTEDRULECODE` just so that I could click on its hyperlink.\n\nWould you please make `ruff check --statistics` also use OSC 9 hyperlinks?\n\n(I (now) know about `ruff rule`, but reading the not-even-syntax-highlighted markup source in my terminal doesn't spark joy, and I'd rather read a pretty web page.)\n\n### Version\n\n0.16.1",
+        "labels": [
+          "cli",
+          "help wanted"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-10T21:27:33Z",
+        "updated_at": "2026-08-12T18:12:58Z",
+        "html_url": "https://github.com/astral-sh/ruff/issues/27637",
+        "author": "mgedmin"
+      },
+      "fix_pr_number": 27646,
+      "fix_pr_title": "Hyperlink rule codes in `ruff check --statistics` output",
+      "fix_pr_url": "https://github.com/astral-sh/ruff/pull/27646",
+      "fix_pr_merged_at": "2026-08-12T18:12:57Z",
+      "merge_commit_sha": "4d261dd20bd364d802f72fc489d77a8272966024",
+      "pre_fix_sha": "d08b174e09a23c0a0413b7e7db7dc67d69593eac",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/ruff/src/printer.rs",
+        "crates/ruff_db/src/diagnostic/mod.rs",
+        "crates/ruff_db/src/diagnostic/stylesheet.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/ruff/src/printer.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 25,
+          "deletions": 8,
+          "changes": 33,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff/tests/cli/lint.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 48,
+          "deletions": 0,
+          "changes": 48,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "crates/ruff_db/src/diagnostic/mod.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "crates/ruff_db/src/diagnostic/stylesheet.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/ruff"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-12T18:12:57Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-10T21:27:33+00:00, pr_merged_at=2026-08-12T18:12:57+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "685 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=cli, help wanted"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #27637 requests the same rule-code hyperlinks in statistics output as normal check output, and merged PR #27646 reuses the diagnostic URL and stylesheet hyperlink helper.",
+        "All three Rust production files are required for printing, helper export, and stylesheet behavior; tests are excluded and Rust symbols remain file-only."
+      ]
+    },
+    {
+      "id": "tox-dev-tox-issue-3975-pr-3976",
+      "repository": "tox-dev/tox",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 3975,
+        "title": "Parallel runs expose usage of closed fds",
+        "body": "## Issue\n\nRunning tox in parallel intermittently exposes operation on a closed fd. That results in various intermittent errors like `Bad file descriptor` or `Input/output error`.\n\nThis is broken on the very current release 4.56.2. Previous releases (e.g. 4.56.1) don't manifest this error.\n\n## Environment\n\nProvide at least:\n\n- OS: Fedora Linux 43\n\n<details open>\n<summary>Output of <code>uv pip list</code> of the host Python, where <code>tox</code> is installed</summary>\n\n```console\nPackage          Version Editable project location\n---------------- ------- ----------------------------------------------------\ncachetools       7.1.4\ncolorama         0.4.6\ncoverage         7.15.0\ndistlib          0.4.3\nfilelock         3.29.7\niniconfig        2.3.0\npackaging        26.2\nplatformdirs     4.10.0\npluggy           1.6.0\npygments         2.20.0\npyproject-api    1.10.1\npytest           9.1.1\npytest-asyncio   1.4.0\npytest-cov       7.1.0\npytest-mock      3.15.1\npython-discovery 1.4.3\ntest-test        0.1.0   /tmp/test-test2\ntomli-w          1.2.0\ntox              4.56.2\ntox-uv-bare      1.33.4\nvirtualenv       21.6.0\n```\n\n</details>\n\n## Output of running tox\n\n<details open>\n<summary>Output of <code>uv run -- tox -rvv --parallel auto  -e 3.10,3.11,3.12,3.13,3.14</code></summary>\n\n```console\n3.10: 174 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\n3.11: 181 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\n3.12: 191 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\n3.13: 200 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\n3.14: 209 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\ncurrent: 216 D using system uv from PATH: ~/.local/bin/uv (uv 0.11.6 (x86_64-unknown-linux-gnu)) [tox_uv/_venv.py:248]\n3.10: FAIL ✖ in 0.11 seconds\n3.10: 217 W remove tox env folder /tmp/test-test2/.tox/3.10 [tox/tox_env/api.py:348]\n3.10: 271 W venv> ~/.local/bin/uv venv -p cpython3.10 --allow-existing '--prompt=test-test2[3.10]' -v --python-preference system /tmp/test-test2/.tox/3.10 [tox/tox_env/api.py:485]\n3.10: 331 C exit 101 (0.06 seconds) /tmp/test-test2> ~/.local/bin/uv venv -p cpython3.10 --allow-existing '--prompt=test-test2[3.10]' -v --python-preference system /tmp/test-test2/.tox/3.10 pid=617259 [tox/execute/api.py:308]\n3.14: OK ✔ in 1.25 seconds\n⠼ [3/5] 3.11 | 3.12 | 3.13DEBUG uv 0.11.6 (x86_64-unknown-linux-gnu)\nDEBUG Found project root: `/tmp/test-test2`\nDEBUG No workspace root found, using project root\nDEBUG Using Python request `cpython@3.10` from explicit request\nDEBUG Using request connect timeout of 10s and read timeout of 30s\nException in thread tox-r-err-617478-20:\nTraceback (most recent call last):\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/threading.py\", line 1082, in _bootstrap_inner\n    self._context.run(self.run)\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/threading.py\", line 1024, in run\n    self._target(*self._args, **self._kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.venv/lib/python3.14/site-packages/tox/execute/local_sub_process/read_via_thread_unix.py\", line 32, in _read_stream\n    self._read_until_eof(selector)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/tmp/test-test2/.venv/lib/python3.14/site-packages/tox/execute/local_sub_process/read_via_thread_unix.py\", line 39, in _read_until_eof\n    ready = selector.select(timeout=TIMEOUT_FOR_INTERRUPT)\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/selectors.py\", line 452, in select\n    fd_event_list = self._selector.poll(timeout, max_ev)\nOSError: [Errno 9] Bad file descriptor\n3.13: FAIL ✖ in 1.46 seconds\nDEBUG uv 0.11.6 (x86_64-unknown-linux-gnu)\nDEBUG Found project root: `/tmp/test-test2`\nDEBUG No workspace root found, using project root\nDEBUG Using Python request `cpython@3.13` from explicit request\nDEBUG Using request connect timeout of 10s and read timeout of 30s\nDEBUG Searching for CPython 3.13 in search path or managed installations\nDEBUG Found `cpython-3.14.2-linux-x86_64-gnu` at `/tmp/test-test2/.venv/bin/python3` (first executable in the search path)\nDEBUG Ignoring Python interpreter at `/tmp/test-test2/.venv/bin/python3`: system interpreter required\nDEBUG Found `cpython-3.14.2-linux-x86_64-gnu` at `/tmp/test-test2/.venv/bin/python` (search path)\nDEBUG Ignoring Python interpreter at `/tmp/test-test2/.venv/bin/python`: system interpreter required\nDEBUG Found `cpython-3.14.6-linux-x86_64-gnu` at `/usr/bin/python3` (search path)\nDEBUG Skipping interpreter at `/usr/bin/python3` from search path: does not satisfy request `3.13`\nDEBUG Found `cpython-3.14.6-linux-x86_64-gnu` at `/usr/bin/python` (search path)\nDEBUG Skipping interpreter at `/usr/bin/python` from search path: does not satisfy request `3.13`\nDEBUG Searching for managed installations at `~/.local/share/uv/python`\nDEBUG Skipping managed installation `cpython-3.14.2-linux-x86_64-gnu`: does not satisfy `3.13`\nDEBUG Found managed installation `cpython-3.13.13-linux-x86_64-gnu`\nDEBUG Found `cpython-3.13.13-linux-x86_64-gnu` at `~/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13` (managed installations)\nDEBUG Skipping managed installation cpython-3.13.13-linux-x86_64-gnu: system installation preferred\nDEBUG Allowing managed installation cpython-3.13.13-linux-x86_64-gnu: no system installations\nUsing CPython 3.13.13\nCreating virtual environment at: .tox/3.13\nDEBUG Assessing Python executable as base candidate: ~/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13\nDEBUG Using base executable for virtual environment: ~/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13\nDEBUG Allowing existing directory due to `--allow-existing`\nDEBUG Using symlink directory ~/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu instead of base Python path: ~/.local/share/uv/python/cpython-3.13-linux-x86_64-gnu/bin/python3.13\nDEBUG Detected parent process ID: 617205\nDEBUG Parent process executable: ~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/bin/python3.14\nDEBUG Parent process comm: tox\nDEBUG Could not determine shell from parent process\nDEBUG uv 0.11.6 (x86_64-unknown-linux-gnu)\nDEBUG Found project root: `/tmp/test-test2`\nDEBUG No workspace root found, using project root\nDEBUG Using Python request `cpython@3.13` from explicit request\nDEBUG Checking for Python environment at: `.tox/3.13`\nDEBUG The project environment's Python version satisfies the request: `CPython 3.13`\nDEBUG Using request connect timeout of 10s and read timeout of 30s\nDEBUG Computed cache info: Timestamp(SystemTime { tv_sec: 1783518335, tv_nsec: 142410223 }), None, None, {}, {\"src\": Some(Timestamp(Timestamp(SystemTime { tv_sec: 1783518057, tv_nsec: 895063180 })))}. Most recently modified: pyproject.toml\nDEBUG Directory source requirement already cached: test-test==0.1.0 (from file:///tmp/test-test2)\nDEBUG Registry requirement already cached: pytest==9.1.1\nDEBUG Registry requirement already cached: pytest-asyncio==1.4.0\nDEBUG Registry requirement already cached: pytest-cov==7.1.0\nDEBUG Registry requirement already cached: pytest-mock==3.15.1\nDEBUG Registry requirement already cached: iniconfig==2.3.0\nDEBUG Registry requirement already cached: packaging==26.2\nDEBUG Registry requirement already cached: pluggy==1.6.0\nDEBUG Registry requirement already cached: pygments==2.20.0\nDEBUG Identified uncached distribution: coverage==7.15.0\nDEBUG No cache entry for: https://files.pythonhosted.org/packages/a1/fa/b70062750686bd7da454da27927622f48bbac6990ac7a4c4a4653e7b0036/coverage-7.15.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl\nDEBUG Sending fresh GET request for: https://files.pythonhosted.org/packages/a1/fa/b70062750686bd7da454da27927622f48bbac6990ac7a4c4a4653e7b0036/coverage-7.15.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl\nPrepared 1 package in 299ms\nInstalled 10 packages in 10ms\n + coverage==7.15.0\n + iniconfig==2.3.0\n + packaging==26.2\n + pluggy==1.6.0\n + pygments==2.20.0\n + pytest==9.1.1\n + pytest-asyncio==1.4.0\n + pytest-cov==7.1.0\n + pytest-mock==3.15.1\n + test-test==0.1.0 (from file:///tmp/test-test2)\nTraceback (most recent call last):\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/main.py\", line 328, in wrap_session\n    config.hook.pytest_sessionstart(session=session)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_hooks.py\", line 512, in __call__\n    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_manager.py\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 167, in _multicall\n    raise exception\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 139, in _multicall\n    teardown.throw(exception)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/logging.py\", line 795, in pytest_sessionstart\n    return (yield)\n            ^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/terminal.py\", line 852, in pytest_sessionstart\n    self.write_sep(\"=\", \"test session starts\", bold=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/terminal.py\", line 566, in write_sep\n    self._tw.sep(sep, title, fullwidth, **markup)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 152, in sep\n    self.line(line, **markup)\n    ~~~~~~~~~^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 184, in line\n    self.write(\"\\n\")\n    ~~~~~~~~~~^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 164, in write\n    self.write_raw(msg, flush=flush)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 168, in write_raw\n    self._file.write(msg)\n    ~~~~~~~~~~~~~~~~^^^^^\nOSError: [Errno 5] Input/output error\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/tmp/test-test2/.tox/3.13/bin/pytest\", line 10, in <module>\n    sys.exit(_console_main())\n             ~~~~~~~~~~~~~^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/config/__init__.py\", line 253, in _console_main\n    code = _main(prog=_get_prog_name(sys.argv))\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/config/__init__.py\", line 229, in _main\n    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)\n                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_hooks.py\", line 512, in __call__\n    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_manager.py\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 167, in _multicall\n    raise exception\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/main.py\", line 377, in pytest_cmdline_main\n    return wrap_session(config, _main)\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/main.py\", line 350, in wrap_session\n    config.notify_exception(excinfo, config.option)\n    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/config/__init__.py\", line 1267, in notify_exception\n    res = self.hook.pytest_internalerror(excrepr=excrepr, excinfo=excinfo)\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_hooks.py\", line 512, in __call__\n    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_manager.py\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 167, in _multicall\n    raise exception\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/pluggy/_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/terminal.py\", line 582, in pytest_internalerror\n    self.write_line(\"INTERNALERROR> \" + line)\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/terminal.py\", line 538, in write_line\n    self._tw.line(line, **markup)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 184, in line\n    self.write(\"\\n\")\n    ~~~~~~~~~~^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 164, in write\n    self.write_raw(msg, flush=flush)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.tox/3.13/lib/python3.13/site-packages/_pytest/_io/terminalwriter.py\", line 168, in write_raw\n    self._file.write(msg)\n    ~~~~~~~~~~~~~~~~^^^^^\nOSError: [Errno 5] Input/output error\nException ignored on flushing sys.stdout:\nOSError: [Errno 5] Input/output error\nException in thread tox-r-out-617498-5:\nTraceback (most recent call last):\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/threading.py\", line 1082, in _bootstrap_inner\n    self._context.run(self.run)\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/threading.py\", line 1024, in run\n    self._target(*self._args, **self._kwargs)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/test-test2/.venv/lib/python3.14/site-packages/tox/execute/local_sub_process/read_via_thread_unix.py\", line 32, in _read_stream\n    self._read_until_eof(selector)\n    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/tmp/test-test2/.venv/lib/python3.14/site-packages/tox/execute/local_sub_process/read_via_thread_unix.py\", line 39, in _read_until_eof\n    ready = selector.select(timeout=TIMEOUT_FOR_INTERRUPT)\n  File \"~/.local/share/uv/python/cpython-3.14.2-linux-x86_64-gnu/lib/python3.14/selectors.py\", line 452, in select\n    fd_event_list = self._selector.poll(timeout, max_ev)\nOSError: [Errno 9] Bad file descriptor\n3.13: 219 W remove tox env folder /tmp/test-test2/.tox/3.13 [tox/tox_env/api.py:348]\n3.13: 263 W venv> ~/.local/bin/uv venv -p cpython3.13 --allow-existing '--prompt=test-test2[3.13]' -v --python-preference system /tmp/test-test2/.tox/3.13 [tox/tox_env/api.py:485]\n3.13: 325 I exit 0 (0.06 seconds) /tmp/test-test2> ~/.local/bin/uv venv -p cpython3.13 --allow-existing '--prompt=test-test2[3.13]' -v --python-preference system /tmp/test-test2/.tox/3.13 pid=617239 [tox/execute/api.py:308]\n3.13: 326 W uv-sync> ~/.local/bin/uv sync --python-preference system -v --link-mode symlink --frozen --no-default-groups --group unit-test --all-extras --color never --no-progress -p cpython3.13 [tox/tox_env/api.py:485]\n3.13: 678 I exit 0 (0.35 seconds) /tmp/test-test2> ~/.local/bin/uv sync --python-preference system -v --link-mode symlink --frozen --no-default-groups --group unit-test --all-extras --color never --no-progress -p cpython3.13 pid=617301 [tox/execute/api.py:308]\n3.13: 679 W commands[0]> pytest -v -p no:cacheprovider --cov=. --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --junit-prefix 3.13 --color=no tests [tox/tox_env/api.py:485]\n3.13: 1683 C exit 120 (1.00 seconds) /tmp/test-test2> pytest -v -p no:cacheprovider --cov=. --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --junit-prefix 3.13 --color=no tests pid=617483 [tox/execute/api.py:308]\n3.12: OK ✔ in 1.54 seconds\n  3.10: FAIL code 101 (0.11 seconds)\n  3.11: OK (1.55=setup[0.48]+cmd[1.07] seconds)\n  3.12: OK (1.54=setup[0.44]+cmd[1.11] seconds)\n  3.13: FAIL code 120 (1.46=setup[0.46]+cmd[1.00] seconds)\n  3.14: OK (1.25=setup[0.21]+cmd[1.04] seconds)\n  evaluation failed :( (1.63 seconds)\n```\n\n</details>\n\n## Minimal example\n\n<!--  If possible, provide a minimal reproducer for the issue. -->\n\nUse the attached [recreate project](https://github.com/user-attachments/files/29804129/recreate-project.tar.gz) and inside it run\n```shell\nuv run -- tox -rvv --parallel auto  -e 3.10,3.11,3.12,3.13,3.14\n\n# running the tests one at a time works ok\nuv run -- tox -rvv --parallel 1  -e 3.10,3.11,3.12,3.13,3.14\n```\n",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-07-08T14:07:46Z",
+        "updated_at": "2026-07-08T16:56:16Z",
+        "html_url": "https://github.com/tox-dev/tox/issues/3975",
+        "author": "vit-zikmund"
+      },
+      "fix_pr_number": 3976,
+      "fix_pr_title": "Don't double-close the child pty fd (fixes parallel Bad file descriptor) (#3975)",
+      "fix_pr_url": "https://github.com/tox-dev/tox/pull/3976",
+      "fix_pr_merged_at": "2026-07-08T16:56:15Z",
+      "merge_commit_sha": "6f8dabccf8773938368aabcbe44362afcc7928c7",
+      "pre_fix_sha": "5458a28f15a36c0d7ad2e7166cce4dac0a9cd7cf",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/tox/execute/local_sub_process/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/3975.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/tox/execute/local_sub_process/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 2,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/execute/local_subprocess/test_local_subprocess.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 22,
+          "deletions": 0,
+          "changes": 22,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tox-dev/tox"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-08T16:56:15Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-08T14:07:46+00:00, pr_merged_at=2026-07-08T16:56:15+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "18043 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #3975 reproduces parallel runs closing reused file descriptors, and merged PR #3976 prevents the child pty descriptor from being closed twice.",
+        "Retain src/tox/execute/local_sub_process/__init__.py::LocalSubProcessExecuteInstance.get_stream_file_no; tests and changelog are excluded."
+      ]
+    }
+  ]
+}

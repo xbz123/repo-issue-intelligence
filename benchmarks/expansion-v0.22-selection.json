@@ -1,0 +1,237 @@
+{
+  "name": "real-project-benchmark-expansion-v0.22",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "pallets-jinja-issue-2025-pr-2026",
+      "case_id": "jinja-undefined-copy-pickle-slots",
+      "tier": "generalization",
+      "expected_files": [
+        "src/jinja2/runtime.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #2025 reproduces copy and pickle failures for Undefined objects, and merged PR #2026 preserves slot metadata while making dunder protocol probing raise AttributeError.",
+        "Retain src/jinja2/runtime.py; the decisive slot restoration is module-level, so no single pre-fix symbol is assigned. Tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "sphinx-doc-sphinx-issue-14050-pr-14202",
+      "case_id": "sphinx-latex-acronym-role",
+      "tier": "generalization",
+      "expected_files": [
+        "sphinx/writers/latex.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #14050 reproduces LaTeXTranslator aborting on the standard acronym role, and merged PR #14202 adds the missing LaTeX visitor behavior.",
+        "Retain sphinx/writers/latex.py; the visitor is newly introduced by the fix and therefore has no pre-fix symbol target. Authors and changelog files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "aio-libs-yarl-issue-1632-pr-1687",
+      "case_id": "yarl-python315-pickle-state",
+      "tier": "generalization",
+      "expected_files": [
+        "yarl/_url.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "yarl/_url.py",
+          "symbol": "URL.__getstate__"
+        }
+      ],
+      "review_notes": [
+        "Issue #1632 reproduces URL pickling failures on Python 3.15, and merged PR #1687 returns a raw tuple from URL.__getstate__ without changing legacy __setstate__ compatibility.",
+        "Retain yarl/_url.py::URL.__getstate__; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-virtualenv-issue-3105-pr-3110",
+      "case_id": "virtualenv-help-terminal-width",
+      "tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/config/cli/parser.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/virtualenv/config/cli/parser.py",
+          "symbol": "HelpFormatter.__init__"
+        }
+      ],
+      "review_notes": [
+        "Issue #3105 shows virtualenv help ignoring terminal width, and merged PR #3110 replaces the hard-coded width with shutil.get_terminal_size().columns.",
+        "Retain src/virtualenv/config/cli/parser.py::HelpFormatter.__init__; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-7432-pr-7433",
+      "case_id": "requests-prepare-body-delegated-iter",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/models.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/models.py",
+          "symbol": "PreparedRequest.prepare_body"
+        }
+      ],
+      "review_notes": [
+        "Issue #7432 reproduces redirected uploads failing for file wrappers that expose __iter__ through __getattr__, and merged PR #7433 restores delegated-iterator stream detection.",
+        "Retain src/requests/models.py::PreparedRequest.prepare_body; tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-build-issue-655-pr-1083",
+      "case_id": "build-isolated-env-location",
+      "tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py",
+        "src/build/env.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/build/__main__.py",
+          "symbol": "build_package"
+        },
+        {
+          "file": "src/build/env.py",
+          "symbol": "DefaultIsolatedEnv"
+        }
+      ],
+      "review_notes": [
+        "Issue #655 asks for a controllable isolated build-environment location, and merged PR #1083 adds env_dir propagation through the API and CLI plus path-aware lifecycle handling.",
+        "Retain src/build/__main__.py::build_package and src/build/env.py::DefaultIsolatedEnv; src/build/_exceptions.py is docstring-only, while docs, changelog, and tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1305-pr-1315",
+      "case_id": "h2-buffer-protocol-input",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/connection.py",
+        "src/h2/frame_buffer.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/connection.py",
+          "symbol": "H2Connection.receive_data"
+        },
+        {
+          "file": "src/h2/frame_buffer.py",
+          "symbol": "FrameBuffer.add_data"
+        }
+      ],
+      "review_notes": [
+        "Issue #1305 reports strict-bytes type failures for bytearray and memoryview inputs, and merged PR #1315 broadens the receive path and normalizes frame-buffer input through memoryview.",
+        "Retain H2Connection.receive_data and FrameBuffer.add_data in the two existing production files; the added type-only protocol, tests, docs, changelog, and project metadata are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pyo3-pyo3-issue-6199-pr-6200",
+      "case_id": "pyo3-reference-pool-dirty-fastpath",
+      "tier": "generalization",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #6199 reports a process-global mutex serializing multithreaded embedders, and merged PR #6200 adds an atomic dirty fast path in ReferencePool.",
+        "Narrow the automatic list to src/internal/state.rs; nox, benchmark, workflow, and news files are auxiliary, and Rust symbol ground truth remains file-only."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-ruff-issue-27637-pr-27646",
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/ruff/src/printer.rs",
+        "crates/ruff_db/src/diagnostic/mod.rs",
+        "crates/ruff_db/src/diagnostic/stylesheet.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #27637 requests the same rule-code hyperlinks in statistics output as normal check output, and merged PR #27646 reuses the diagnostic URL and stylesheet hyperlink helper.",
+        "All three Rust production files are required for printing, helper export, and stylesheet behavior; tests are excluded and Rust symbols remain file-only."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-3975-pr-3976",
+      "case_id": "tox-parallel-pty-double-close",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/execute/local_sub_process/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/tox/execute/local_sub_process/__init__.py",
+          "symbol": "LocalSubProcessExecuteInstance.get_stream_file_no"
+        }
+      ],
+      "review_notes": [
+        "Issue #3975 reproduces parallel runs closing reused file descriptors, and merged PR #3976 prevents the child pty descriptor from being closed twice.",
+        "Retain src/tox/execute/local_sub_process/__init__.py::LocalSubProcessExecuteInstance.get_stream_file_no; tests and changelog are excluded."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "numpy-numpy-issue-30494-pr-30620",
+      "reason": "PR #30620 is a non-closing backport of an already merged partial fix, does not address the Issue's tracemalloc bottleneck, and the automatic scope omits material npy_pycompat.h changes."
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1245-pr-1246",
+      "reason": "Issue #1245 and PR #1246 are a repository/package rename with textual source edits, not a runtime behavior fix suitable for production localization ground truth."
+    },
+    {
+      "candidate_id": "pypa-packaging-issue-597-pr-1344",
+      "reason": "PR #1344 only adds version directives to source docstrings and documentation, explicitly leaves known entries incomplete, and changes no runtime behavior."
+    },
+    {
+      "candidate_id": "aio-libs-multidict-issue-1123-pr-1179",
+      "reason": "PR #1179 is development-tooling and formatting work; the source diffs are formatter output rather than a material runtime fix."
+    },
+    {
+      "candidate_id": "sphinx-doc-sphinx-issue-11873-pr-12011",
+      "reason": "PR #12011 is an incomplete earlier implementation; later PR #14433 explicitly closes Issue #11873 and fixes the remaining relative-path behavior."
+    },
+    {
+      "candidate_id": "ansible-ansible-issue-85037-pr-86432",
+      "reason": "PR #86432 is a feature refactor rather than the Issue #85037 fix, while actual related PR #85914 was not merged; the automatic scope also omits material embed modules."
+    },
+    {
+      "candidate_id": "pyo3-pyo3-issue-6318-pr-6300",
+      "reason": "PR #6300 adds no_std CI coverage and is unrelated to the pending-decref flaky test in Issue #6318, which was fixed by PR #6320."
+    },
+    {
+      "candidate_id": "python-attrs-attrs-issue-240-pr-1267",
+      "reason": "PR #1267 only enables later work and closes different Issues; merged PR #1541 is the actual follow-up that closes Issue #240."
+    },
+    {
+      "candidate_id": "pypa-setuptools-issue-3085-pr-4991",
+      "reason": "PR #4991 merely references Issue #3085 and removes some pkg_resources uses; later PRs #5007 and #5173 complete and close the broader removal task."
+    },
+    {
+      "candidate_id": "boto-boto3-issue-3163-pr-4613",
+      "reason": "PR #4613 is a later documentation and parameter-name correction without a closing relation; PR #3172 is the Issue-linked behavior change."
+    },
+    {
+      "candidate_id": "paramiko-paramiko-issue-67-pr-152",
+      "reason": "PR #152 lacks an explicit closing relation and its core ECDSA implementation is the newly added paramiko/ecdsakey.py, which is absent from the pre-fix and automatic expected-file scope."
+    },
+    {
+      "candidate_id": "pytest-dev-pluggy-issue-186-pr-236",
+      "reason": "PR #236 is documentation-only; changes under src are docstring and Sphinx reference edits with no production behavior change."
+    },
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-4851-pr-4856",
+      "reason": "PR #4856 is a release/workflow feature that depends on PR #4861 and mixes its runtime changes; the automatic source-only scope omits material wheel, Rust, and release configuration, so attribution is incomplete."
+    },
+    {
+      "candidate_id": "pypa-virtualenv-issue-3157-pr-3166",
+      "reason": "The substantive symlink resolution lives in the external python-discovery release and pyproject dependency change, while the automatic scope retains only a local cache-key bump and cannot represent the complete fix."
+    }
+  ]
+}

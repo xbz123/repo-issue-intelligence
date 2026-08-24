@@ -6,6 +6,43 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+## v0.22 ninth 200-case expansion batch
+
+Manifest v17 accepts ten reviewed Issue/Fix-PR pairs from Jinja, Sphinx, Yarl, Virtualenv,
+Requests, Build, h2, PyO3, Ruff, and tox. It adds 14 production-file targets, including three
+multi-file fixes, and eight pre-fix symbol targets across six Python cases. The module-level Jinja
+slot restoration, newly added Sphinx visitor, and Rust PyO3/Ruff fixes remain intentionally
+file-only.
+
+Review rejects fourteen records after comparing the Issue, ordered PR commits, final production
+diff, and pre-fix tree. The rejected set includes wrong or partial PR attribution, documentation or
+formatting-only changes, an external-dependency fix represented only by a cache-key bump, and cases
+whose automatic file list omits the core new implementation, header, configuration, or embed
+module. Multidict #292/#1204 and tox #3939/#3941 remain undecided because their complete material
+scope still needs a new audit; they are not ground truth. All eight accepted Python symbol targets
+resolve uniquely in the frozen repository maps, including the qualified tox class method.
+
+The suite now contains 140 cases across 56 repositories: 17 main, 11 calibration, and 112
+generalization cases. It records 205 production-file targets, 45 multi-file cases, and 135 reviewed
+symbol targets across 101 cases.
+
+Three deterministic v0.27 runs completed 140/140 cases. After removing timestamps, elapsed fields,
+and cache provenance, their candidate files, candidate symbols, per-case metrics, tier metrics, and
+aggregates were identical. The retained 130 cases were unchanged from manifest v16. File
+Recall@1/5/10/20 is `0.3300/0.6382/0.7364/0.8593`, with MRR `0.5419`. Across the 101 labeled cases,
+Symbol Recall@1/5/10/20 is `0.2178/0.3952/0.4200/0.4794`, with MRR `0.3398`. Ruff's three
+production files are the only new Top-20 misses, so coverage is 166 of 205 and 39 misses remain in
+the denominator.
+
+All three retained runs recorded 140/140 repository-map cache hits. Their per-case analysis means
+were 3,525, 3,513, and 3,591 ms, with a three-run mean of 3,543 ms. Timing is observational only;
+normalized ranking and metric output is the reproducibility gate.
+
+The regenerated queue contains 60 primary and 25 reserve candidates across 36 repositories. Manual
+review reduced the remaining unique multi-file pool to two cases. The original 60/200 (30%) target
+is therefore not feasible without accepting incomplete ground truth; planning now preserves both
+remaining candidates and targets the auditable ceiling of 47/200 (23.5%).
+
 ## v0.21 eighth 200-case expansion batch
 
 Manifest v16 accepts ten reviewed Issue/Fix-PR pairs from Yarl, Pluggy, attrs, Virtualenv,
@@ -482,19 +519,19 @@ deeper scans were then limited to 12 repositories that had already produced revi
 zero-yield Django and HTTPX scans were not repeated. Because the discovery passes overlap, record
 counts are not case counts.
 
-After accepting eight ten-case batches into manifest v16 and excluding twenty reviewed rejections,
-maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)` leaves 107
-unique candidates across 37
+After accepting nine ten-case batches into manifest v17 and excluding thirty-four reviewed
+rejections, maximum-cardinality matching by both `(repository, Issue)` and `(repository, fix PR)`
+leaves 88 unique candidates across 36
 repositories.
 `benchmarks/expansion-v200-review-queue.json` prioritizes:
 
-- 70 primary candidates and 25 reserves;
+- 60 primary candidates and 25 reserves;
 - no more than five primary candidates per repository;
 - at least one primary candidate from every repository represented in the unique pool;
-- 18 new multi-file primary candidates, which would raise the suite from 42/130 to 60/200
-  multi-file cases (30%) if all primary candidates pass review;
-- 31 primary Issues created before 2026;
-- 28 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
+- both remaining multi-file candidates, which would raise the suite from 45/140 to the auditable
+  ceiling of 47/200 (23.5%) if both pass review;
+- 27 primary Issues created before 2026;
+- 21 primary candidates that pass all four advisory checks for body, bug wording, diagnostics,
   and an explicit closing reference.
 
 This is a review queue, not benchmark ground truth. Every entry is serialized with
@@ -504,7 +541,7 @@ verify every expected file at the recorded pre-fix commit, decide the tier, and 
 ground truth where the fix hunk supports it. A reviewer may narrow the automatic file list but may
 not add an unaudited path. Explicit rejection decisions are fed back into planning so rejected
 candidates do not return to later queues. Rejected primaries should be replaced from the reserve
-queue without weakening the repository cap or the 30% multi-file target.
+queue without weakening the repository cap or the evidence-backed 23.5% multi-file ceiling.
 
 The raw discovery catalogs remain ignored because they contain repeated, mutable Issue snapshots.
 The compact queue is committed so review order, advisory signals, pre-fix SHA provenance, expected
