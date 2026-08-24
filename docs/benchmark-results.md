@@ -1,31 +1,31 @@
 # Real-Project File Localization Benchmark
 
-## Current result: manifest v16 on 130 frozen cases
+## Current result: manifest v17 on 140 frozen cases
 
-Manifest v16 contains 130 reviewed Issue/Fix-PR cases across 53 public repositories: 17 main,
-11 calibration, and 102 generalization cases. It records 191 production-file targets and 127 reviewed
-symbol targets across 95 cases. Every case embeds the complete Issue snapshot, merged same-repository
+Manifest v17 contains 140 reviewed Issue/Fix-PR cases across 56 public repositories: 17 main,
+11 calibration, and 112 generalization cases. It records 205 production-file targets and 135 reviewed
+symbol targets across 101 cases. Every case embeds the complete Issue snapshot, merged same-repository
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.27 runs finished 130/130 cases. After excluding timestamps,
+Three complete deterministic v0.27 runs finished 140/140 cases. After excluding timestamps,
 elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
-and aggregates were identical. The retained 120 cases were also unchanged from manifest v15.
+and aggregates were identical. The retained 130 cases were also unchanged from manifest v16.
 
-| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Run 1 / warm analysis per case |
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 130/130 | 0.3400 | 0.6335 | 0.7315 | 0.8562 | 0.5474 | 4,894 / 3,665 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 5,722 / 5,635 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,524 / 1,213 ms |
-| Generalization | 102/102 | 0.3206 | 0.6309 | 0.7216 | 0.8167 | 0.5391 | 5,119 / 3,601 ms |
+| Overall | 140/140 | 0.3300 | 0.6382 | 0.7364 | 0.8593 | 0.5419 | 3,543 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 5,663 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,212 ms |
+| Generalization | 112/112 | 0.3098 | 0.6371 | 0.7286 | 0.8241 | 0.5330 | 3,450 ms |
 
-Run 1 had 120 cache hits and ten misses; the warm column averages runs 2 and 3, each with 130
-cache hits. Warm repository-map reuse reduced the overall in-process mean by 25.11%, from 4,894 to
-3,665 ms per case. Measurements start after repository preparation and do not
+All three retained runs recorded 140 repository-map cache hits. Their overall in-process means were
+3,525, 3,513, and 3,591 ms per case; timing is observational and not part of the reproducibility
+gate. Measurements start after repository preparation and do not
 include clone, fetch, checkout, or Issue retrieval time.
 
-Across the 95 labeled cases, Symbol Recall@1/5/10/20 is
-`0.2263/0.3939/0.4202/0.4833`, with MRR `0.3428`. Thirty-six production targets are absent from the
+Across the 101 labeled cases, Symbol Recall@1/5/10/20 is
+`0.2178/0.3952/0.4200/0.4794`, with MRR `0.3398`. Thirty-nine production targets are absent from the
 deterministic Top-20. Six are retained-suite misses: `paramiko/common.py`, `boto3/compat.py`,
 `lib/matplotlib/cbook/__init__.py`, `src/tox/tox_env/python/runner.py`,
 `pylint/config/callback_actions.py`, and `tornado/locks.py`. The second batch adds 13 misses across
@@ -36,7 +36,8 @@ TSX files and tox's cross-section resolver. The fifth adds Pylint's class checke
 and Paramiko's dependency declaration. The sixth adds Setuptools
 `setuptools/config/_apply_pyprojecttoml.py` and Flake8 `src/flake8/options/config.py`. They remain in
 the denominator; the seventh batch adds no miss. The eighth adds Prefect's AnyOf utility, both uv
-stale-interpreter-cache files, and three uv check plumbing files. These failures define concrete
+stale-interpreter-cache files, and three uv check plumbing files. The ninth adds Ruff's printer,
+diagnostic export, and stylesheet helper files. These failures define concrete
 retrieval work for the next stage.
 
 v0.27 also makes Git co-change evidence reproducible. It scans the 100 most recent commits reachable
@@ -173,6 +174,9 @@ new symbols.
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-v0.27-batch9-140-cases-run1.json`
+- `benchmarks/results/deterministic-v0.27-batch9-140-cases-run2.json`
+- `benchmarks/results/deterministic-v0.27-batch9-140-cases-run3.json`
 - `benchmarks/results/deterministic-v0.27-batch8-130-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-batch8-130-cases-run2.json`
 - `benchmarks/results/deterministic-v0.27-batch8-130-cases-run3.json`
@@ -235,8 +239,8 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-One hundred fifty-five of the 191 reviewed production-file targets appear in the deterministic Top-20.
-The reported macro-average File Recall@20 is `0.8562`; the 36 missing targets are grouped in the current
+One hundred sixty-six of the 205 reviewed production-file targets appear in the deterministic Top-20.
+The reported macro-average File Recall@20 is `0.8593`; the 39 missing targets are grouped in the current
 result section. This is benchmark coverage, not a population-level recall estimate.
 
 ## Previous 32-case deterministic result
@@ -257,13 +261,15 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 ## Current limitations
 
-- The suite is not a balanced population sample; v0.14-v0.21 accept only the first 80 of 150
+- The suite is not a balanced population sample; v0.14-v0.22 accept only the first 90 of 150
   planned additions.
-- Forty-two of 130 cases have multi-file production ground truth.
-- File Recall@20 is `0.8562`; 36 reviewed targets remain outside the current candidate pool.
-- Symbol Recall@20 is `0.4833`, so within-file localization remains a major bottleneck.
+- Forty-five of 140 cases have multi-file production ground truth. Manual audit leaves only two
+  additional reviewable multi-file candidates, so the original 30% target is not feasible without
+  weakening ground-truth integrity.
+- File Recall@20 is `0.8593`; 39 reviewed targets remain outside the current candidate pool.
+- Symbol Recall@20 is `0.4794`, so within-file localization remains a major bottleneck.
 - TypeScript, Rust, and C participate in file localization but have no parsed symbol or cross-language graph.
-- The retained DeepSeek evidence covers manifest v8 only; manifest v16 has not yet received a
+- The retained DeepSeek evidence covers manifest v8 only; manifest v17 has not yet received a
   three-run external rerank evaluation.
 - Full hypothesis generation reached 140/150 valid final contracts in the current three-run
   real-project evaluation, but run-level success still ranged from 86% to 100%.
@@ -272,7 +278,7 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Investigate the 36 manifest-v16 Top-20 misses, prioritizing non-Python and multi-file paths.
-4. Continue reviewing the remaining 70 primary Issue/Fix-PR candidates in balanced batches.
-5. Repeat the 130-case rank-only run after retrieval changes and report mean, variation, fallback
+3. Investigate the 39 manifest-v17 Top-20 misses, prioritizing non-Python and multi-file paths.
+4. Continue reviewing the remaining 60 primary Issue/Fix-PR candidates in balanced batches.
+5. Repeat the 140-case rank-only run after retrieval changes and report mean, variation, fallback
    taxonomy, valid-response MRR, and overall MRR.
