@@ -10,14 +10,15 @@ quality improvement is claimed.
 2. `hybrid`: deterministic retrieval followed only by OpenCode
    `deepseek-v4-flash` evidence-ID reranking.
 
-An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
-outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
-plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
-disables reasoning, asks for at most three IDs, starts with an 8,192-token output budget, and retries
-once at 20,000 tokens only if the first completion is truncated. The complete frozen Issue is sent,
-while selected deterministic repository evidence defaults to at most 200 source lines per snippet
-and 100,000 characters in total. The provider context window remains an additional request-size
-limit.
+An `llm-only` variant remains future work. Hybrid preserves the deterministic Top-20 as its exact
+fallback and appends unique files from a separate Top-40 retrieval pass to a model-only candidate
+pool. The model can promote at most three selected pool files before the unchanged deterministic
+order fills the final Top-20. It sends no `response_format` and accepts one unique plain-text
+`RANK:` line; the CLI does not accept a different provider or model. The rank request disables
+reasoning, starts with an 8,192-token output budget, and retries once at 20,000 tokens only if the
+first completion is truncated. The complete frozen Issue is sent. Under the default 100,000-character
+total evidence budget, each of the 40 candidate snippets is limited to 2,500 characters and at most
+200 source lines. The provider context window remains an additional request-size limit.
 
 The full Agent analysis path also disables model reasoning before requesting its strict JSON
 object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
@@ -31,14 +32,14 @@ truly unlimited response.
 
 ## Dataset
 
-The current frozen dataset contains 50 closed issues across 21 repositories that link to a fix
-pull request. Manifest version 8 stores the complete evaluated Issue snapshot and never fetches
+The current frozen dataset contains 200 closed issues across 58 repositories that link to a fix
+pull request. Manifest version 20 stores the complete evaluated Issue snapshot and never fetches
 mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- 39 manually reviewed symbols across 33 high-confidence cases;
+- 265 reviewed production-file targets and 177 manually reviewed symbols across 143 cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so

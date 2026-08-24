@@ -179,19 +179,22 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.27-rank20000-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.28-pool40-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
 accept provider or model overrides. The reranker requests no grammar-constrained response format
 and parses exactly one `RANK: E3,E1,E2` line. Duplicate IDs are removed, unknown IDs are rejected,
-and omitted candidates keep their deterministic order. Only transport errors, HTTP 429, and HTTP
-5xx responses are retried with bounded exponential backoff; invalid ranks and HTTP 4xx responses
-fall back immediately. This isolates file ordering from hypothesis generation and removes the
-unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
-and the completion budget starts at 8,192 tokens with one 20,000-token truncation retry. The full
-frozen Issue and selected deterministic candidate snippets are sent without project-defined input
-character caps. Current manifest version 20 embeds 200 complete Issue
+and omitted base candidates keep their deterministic order. Hybrid preserves the deterministic
+Top-20 as its exact fallback and appends unique candidates from a separate Top-40 retrieval pass to
+the model-only pool. At most three model-selected files can be promoted before the unchanged base
+order fills the final Top-20. Only transport errors, HTTP 429, and HTTP 5xx responses are retried
+with bounded exponential backoff; invalid ranks and HTTP 4xx responses fall back immediately. This
+isolates file ordering from hypothesis generation and removes the unreliable JSON-schema path from
+the benchmark. Reasoning is disabled for this narrow ranking task, and the completion budget starts
+at 8,192 tokens with one 20,000-token truncation retry. The full frozen Issue is sent with at most
+40 source snippets. Under the default 100,000-character total evidence budget, each snippet is
+limited to 2,500 characters and 200 source lines. Current manifest version 20 embeds 200 complete Issue
 snapshots across 58 repositories, corrected pre-fix SHAs, and 177 manually reviewed symbol targets
 across 143 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank

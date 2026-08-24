@@ -142,6 +142,7 @@ GRAPH_EXPANSION_MIN_BONUS = 5.0
 GRAPH_EXPANSION_SLOTS = 3
 GRAPH_STRONG_EXPANSION_SLOTS = 1
 PROTECTED_BASE_RESERVATION_SLOTS = 1
+DEFAULT_CANDIDATE_LIMIT = 20
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
 FUNCTION_LOCAL_RELATION_PREFIX = (
@@ -3048,8 +3049,14 @@ def locate_candidates(
     ]
 
 
-def investigate(issue: IssueRecord, repository_map: RepositoryMap) -> InvestigationReport:
-    candidates = locate_candidates(issue, repository_map)
+def investigate(
+    issue: IssueRecord,
+    repository_map: RepositoryMap,
+    candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
+) -> InvestigationReport:
+    if candidate_limit < 1:
+        raise ValueError("candidate_limit must be positive")
+    candidates = locate_candidates(issue, repository_map, limit=candidate_limit)
     hypotheses: list[Hypothesis] = []
     for index, candidate in enumerate(candidates[:3], start=1):
         location = candidate.file
