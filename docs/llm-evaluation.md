@@ -10,14 +10,15 @@ quality improvement is claimed.
 2. `hybrid`: deterministic retrieval followed only by OpenCode
    `deepseek-v4-flash` evidence-ID reranking.
 
-An `llm-only` variant remains future work. The implemented Hybrid benchmark cannot discover files
-outside the deterministic candidate pool. It sends no `response_format` and accepts one unique
-plain-text `RANK:` line; the CLI does not accept a different provider or model. The rank request
-disables reasoning, asks for at most three IDs, starts with an 8,192-token output budget, and retries
-once at 20,000 tokens only if the first completion is truncated. The complete frozen Issue is sent,
-while selected deterministic repository evidence defaults to at most 200 source lines per snippet
-and 100,000 characters in total. The provider context window remains an additional request-size
-limit.
+An `llm-only` variant remains future work. Hybrid preserves the deterministic Top-20 as its exact
+fallback and appends unique files from a separate Top-40 retrieval pass to a model-only candidate
+pool. The model can promote at most three selected pool files before the unchanged deterministic
+order fills the final Top-20. It sends no `response_format` and accepts one unique plain-text
+`RANK:` line; the CLI does not accept a different provider or model. The rank request disables
+reasoning, starts with an 8,192-token output budget, and retries once at 20,000 tokens only if the
+first completion is truncated. The complete frozen Issue is sent. Under the default 100,000-character
+total evidence budget, each of the 40 candidate snippets is limited to 2,500 characters and at most
+200 source lines. The provider context window remains an additional request-size limit.
 
 The full Agent analysis path also disables model reasoning before requesting its strict JSON
 object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
@@ -31,14 +32,14 @@ truly unlimited response.
 
 ## Dataset
 
-The current frozen dataset contains 50 closed issues across 21 repositories that link to a fix
-pull request. Manifest version 8 stores the complete evaluated Issue snapshot and never fetches
+The current frozen dataset contains 200 closed issues across 58 repositories that link to a fix
+pull request. Manifest version 20 stores the complete evaluated Issue snapshot and never fetches
 mutable Issue text during a benchmark run. It records:
 
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- 39 manually reviewed symbols across 33 high-confidence cases;
+- 265 reviewed production-file targets and 177 manually reviewed symbols across 143 cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
@@ -73,6 +74,38 @@ not derived correctly. Manifest version 5 is retained as
 
 Machine-readable results are saved under `benchmarks/results/`; the reviewed result is
 `docs/benchmark-results.md`. All evaluated issues, including failures, must remain in the output.
+
+## Manifest-v20 pool-40 external result
+
+Three authorized zero-delay runs evaluated all 200 frozen public cases with OpenCode
+`deepseek-v4-flash`, temperature `0.1`, seed `1337`, and the bounded Top-40 protocol. All 600
+requests returned one valid known-ID `RANK:` line on their first attempt. No case used fallback,
+reported an unknown evidence ID, or failed execution.
+
+| Run | File R@1 | R@5 | R@10 | R@20 | MRR | Pool R | Mean LLM latency | Input / output tokens |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.5772 | 0.7830 | 0.8272 | 0.8790 | 0.7497 | 0.8973 | 5.47 s | 3,449,353 / 1,972 |
+| 2 | 0.5672 | 0.7847 | 0.8288 | 0.8790 | 0.7467 | 0.8973 | 3.18 s | 3,449,353 / 1,968 |
+| 3 | 0.5722 | 0.7855 | 0.8297 | 0.8790 | 0.7472 | 0.8973 | 3.73 s | 3,449,353 / 1,968 |
+| Mean | 0.5722 | 0.7844 | 0.8286 | 0.8790 | 0.7479 | 0.8973 | 4.13 s | - |
+
+The deterministic baseline is `0.3510/0.6567/0.7555/0.8665`, with MRR `0.5396`. The model-only
+pool contains 229 of 265 production targets; the final Top-20 contains 222, compared with 219 in
+the deterministic Top-20. Every run recovered the same three files from outside the base set:
+`tornado/locks.py`, `pylint/checkers/classes/class_checker.py`, and
+`scipy/linalg/_matfuncs.py`. No deterministic Top-20 ground-truth file was displaced.
+
+Across the three runs, 135/200 complete candidate orders were identical and eight cases changed
+expected-file reciprocal rank. Pairwise ordering changes affected 41, 48, and 45 cases. Fixed seed
+therefore remains best effort even though protocol success and Recall@20 were stable. Symbol
+Recall@20 remained `0.4645` because the protocol does not create cross-language symbols; mean
+symbol MRR rose from deterministic `0.3349` to `0.4856` through file reordering.
+
+The compact reviewed artifact is
+`benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON
+files were validated locally but are not committed because they duplicate large candidate lists.
+These measurements establish bounded localization and rank-protocol behavior on this frozen public
+suite, not root-cause accuracy or reliability on unseen/private repositories.
 
 ## Current smoke result
 

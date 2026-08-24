@@ -21,6 +21,7 @@ from repo_issue_intelligence.benchmark import (
     run_benchmark,
     tracked_repository_files,
 )
+from repo_issue_intelligence.investigator import investigate
 from repo_issue_intelligence.llm_client import LLMProviderError
 from repo_issue_intelligence.models import (
     EvidenceRerankAnalysis,
@@ -98,6 +99,26 @@ class ReverseEvidenceAnalyzer:
 
     def close(self) -> None:
         return None
+
+
+class MixedBaseTailAnalyzer(ReverseEvidenceAnalyzer):
+    def rerank(self, issue, evidence):
+        return EvidenceRerankResult(
+            provider="opencode",
+            model=self.model,
+            request_id="tail-promotion-request",
+            system_fingerprint="benchmark-fingerprint",
+            input_tokens=200,
+            output_tokens=100,
+            elapsed_ms=10,
+            analysis=EvidenceRerankAnalysis(
+                reranked_evidence_ids=[
+                    evidence[0].id,
+                    evidence[20].id,
+                    evidence[1].id,
+                ],
+            ),
+        )
 
 
 def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
@@ -308,6 +329,56 @@ def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None
     assert aggregate.llm_fallback_reasons == {}
 
 
+def test_hybrid_promotes_tail_candidate_in_model_order(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    repository = tmp_path / "repository"
+    source = repository / "src"
+    source.mkdir(parents=True)
+    for index in range(45):
+        (source / f"token_handler_{index}.py").write_text(
+            f"def handle_token_{index}():\n    return None\n",
+            encoding="utf-8",
+        )
+    record = benchmark_issue(updated_at)
+    repository_map = build_repository_map(repository)
+    base_files = [
+        candidate.file
+        for candidate in investigate(record, repository_map).candidates
+    ]
+    expanded_files = [
+        candidate.file
+        for candidate in investigate(
+            record,
+            repository_map,
+            candidate_limit=40,
+        ).candidates
+    ]
+    tail_files = [path for path in expanded_files if path not in set(base_files)]
+    case = benchmark_case(updated_at).model_copy(
+        update={"expected_files": [tail_files[0]]}
+    )
+
+    result = evaluate_case(
+        case,
+        record,
+        repository,
+        BenchmarkVariant.HYBRID,
+        analyzer=MixedBaseTailAnalyzer(),
+    )
+
+    assert len(result.candidate_files) == 20
+    assert len(set(result.candidate_files)) == 20
+    assert result.candidate_files[:3] == [
+        base_files[0],
+        tail_files[0],
+        base_files[1],
+    ]
+    assert result.candidate_files[3:] == base_files[2:19]
+    assert result.candidate_pool_recall == 1
+    assert result.file_recall_at_20 == 1
+    assert result.llm_fallback_used is False
+
+
 def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
     manifest = BenchmarkManifest(
@@ -352,7 +423,8 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
 
     assert run.provider == "opencode"
     assert run.timeout_seconds == 180.0
-    assert run.max_chars_per_evidence is None
+    assert run.candidate_pool_limit == 40
+    assert run.max_chars_per_evidence == 2_500
     assert run.max_evidence_chars == 100_000
     assert run.max_lines_per_evidence == 200
     assert run.initial_output_tokens == 8_192
@@ -372,6 +444,24 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
         analyzer=ReverseEvidenceAnalyzer(),
     )
     assert warm_run.results[0].repository_map_cache_hit is True
+
+    deterministic_run = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    assert deterministic_run.candidate_pool_limit is None
+    assert deterministic_run.max_chars_per_evidence is None
+
+    unbounded_run = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.HYBRID,
+        analyzer=ReverseEvidenceAnalyzer(),
+        max_evidence_chars=None,
+    )
+    assert unbounded_run.max_evidence_chars is None
+    assert unbounded_run.max_chars_per_evidence is None
 
     historical_payload = run.model_dump(mode="json")
     historical_payload["variant"] = "hybrid-full"
@@ -812,6 +902,40 @@ def test_hybrid_unknown_evidence_id_falls_back_without_retry(tmp_path: Path) -> 
     assert aggregate.average_llm_success_elapsed_ms is None
     assert aggregate.llm_input_tokens == 7
     assert aggregate.llm_output_tokens == 9
+
+
+def test_hybrid_fallback_preserves_exact_deterministic_top_twenty(
+    tmp_path: Path,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    repository = tmp_path / "repository"
+    source = repository / "src"
+    source.mkdir(parents=True)
+    for index in range(45):
+        (source / f"token_handler_{index}.py").write_text(
+            f"def handle_token_{index}():\n    return None\n",
+            encoding="utf-8",
+        )
+    case = benchmark_case(updated_at).model_copy(
+        update={"expected_files": ["src/token_handler_0.py"]}
+    )
+    deterministic = evaluate_case(
+        case,
+        benchmark_issue(updated_at),
+        repository,
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    hybrid = evaluate_case(
+        case,
+        benchmark_issue(updated_at),
+        repository,
+        BenchmarkVariant.HYBRID,
+        analyzer=UnknownEvidenceAnalyzer(),
+    )
+
+    assert hybrid.candidate_files == deterministic.candidate_files
+    assert len(hybrid.candidate_files) == 20
+    assert hybrid.llm_fallback_used is True
 
 
 class TransientEvidenceAnalyzer(ReverseEvidenceAnalyzer):

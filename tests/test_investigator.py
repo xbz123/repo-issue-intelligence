@@ -6,6 +6,7 @@ import pytest
 
 import repo_issue_intelligence.investigator as investigator_module
 from repo_issue_intelligence.investigator import (
+    DEFAULT_CANDIDATE_LIMIT,
     _content_matches_identifier,
     _expansion_relation_bonus,
     _identifier_variants,
@@ -4348,4 +4349,28 @@ def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> 
 
     report = investigate(record, build_repository_map(repository))
 
-    assert len(report.candidates) == 20
+    assert len(report.candidates) == DEFAULT_CANDIDATE_LIMIT
+
+    expanded = investigate(record, build_repository_map(repository), candidate_limit=40)
+    assert len(expanded.candidates) == 25
+
+
+def test_investigate_explicit_default_limit_preserves_order(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    for index in range(25):
+        write_source(
+            repository,
+            f"src/token_handler_{index}.py",
+            f"def handle_token_{index}():\n    return None\n",
+        )
+    record = issue("Token handler failure", "Token handling fails.")
+    repository_map = build_repository_map(repository)
+
+    implicit = investigate(record, repository_map)
+    explicit = investigate(
+        record,
+        repository_map,
+        candidate_limit=DEFAULT_CANDIDATE_LIMIT,
+    )
+
+    assert implicit.model_dump() == explicit.model_dump()

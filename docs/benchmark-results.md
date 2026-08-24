@@ -42,6 +42,37 @@ final direct batch adds uv's PEP 508 formatter, Airflow's Snowflake hook and use
 SciPy's Remez C++ guard, and SciPy `signm`. These failures define concrete
 retrieval work for the next stage.
 
+## Manifest-v20 DeepSeek pool-40 result
+
+The v0.28 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
+separate Top-40 pool to OpenCode `deepseek-v4-flash`. Each of the 40 snippets receives at most 2,500
+characters and 200 source lines under the unchanged 100,000-character total budget. The model may
+promote at most three files; unselected base files retain deterministic order.
+
+| Run | Valid ranks | File R@1 | R@5 | R@10 | R@20 | Pool R | MRR | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 200/200 | 0.5772 | 0.7830 | 0.8272 | 0.8790 | 0.8973 | 0.7497 | 5.47 s |
+| 2 | 200/200 | 0.5672 | 0.7847 | 0.8288 | 0.8790 | 0.8973 | 0.7467 | 3.18 s |
+| 3 | 200/200 | 0.5722 | 0.7855 | 0.8297 | 0.8790 | 0.8973 | 0.7472 | 3.73 s |
+| Mean | 600/600 | 0.5722 | 0.7844 | 0.8286 | 0.8790 | 0.8973 | 0.7479 | 4.13 s |
+
+All requests succeeded on their first attempt; fallback, unknown-ID, invalid-rank, HTTP, and
+transport failure counts are zero. The three runs used 10,348,059 input tokens and 5,908 output
+tokens. File R@20 is stable across runs, while Recall@1 has population standard deviation `0.0041`
+and MRR `0.0013`.
+
+The Top-40 pool contains 229/265 production targets and the final Top-20 contains 222/265. Every
+run recovers `tornado/locks.py`, `pylint/checkers/classes/class_checker.py`, and
+`scipy/linalg/_matfuncs.py` from outside the deterministic Top-20 without losing existing
+ground truth. The remaining seven pool-visible misses were not selected, and 36 targets remain
+outside the bounded pool. Mean Symbol Recall@1/5/10/20 is
+`0.4167/0.4493/0.4587/0.4645`, with symbol MRR `0.4856`.
+
+Only 135/200 complete candidate orders are identical across all repeats; pairwise order changes
+affect 41, 48, and 45 cases, and eight cases vary in expected-file reciprocal rank. The result
+supports a reliable plain-rank contract and a repeatable three-file pool expansion on this suite,
+not deterministic generation or root-cause accuracy.
+
 v0.27 also makes Git co-change evidence reproducible. It scans the 100 most recent commits reachable
 from the frozen HEAD and consumes at most 50 commits touching a lexical seed. The previous
 path-filtered command could cross a five-second timeout on a cold partial clone but succeed after
@@ -176,6 +207,7 @@ new symbols.
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run2.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run3.json`
@@ -276,11 +308,11 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
   2026 and repository representation remains uneven.
 - Forty-five of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
-- File Recall@20 is `0.8665`; 46 reviewed targets remain outside the current candidate pool.
+- Deterministic File Recall@20 is `0.8665`; 46 reviewed targets remain outside its Top-20. The
+  hybrid Top-40 pool misses 36 targets and its final Top-20 misses 43.
 - Symbol Recall@20 is `0.4645`, so within-file localization remains a major bottleneck.
 - TypeScript, Rust, and C participate in file localization but have no parsed symbol or cross-language graph.
-- The retained DeepSeek evidence covers manifest v8 only; manifest v20 has not yet received a
-  three-run external rerank evaluation.
+- Manifest v20 has a three-run rank-only evaluation, but no full hypothesis-quality evaluation.
 - Full hypothesis generation reached 140/150 valid final contracts in the current three-run
   real-project evaluation, but run-level success still ranged from 86% to 100%.
 
@@ -288,8 +320,8 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Investigate the 46 manifest-v20 Top-20 misses, prioritizing non-Python and multi-file paths.
+3. Investigate the 36 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
 4. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
-5. Repeat the 200-case rank-only run after retrieval changes and report mean, variation, fallback
-   taxonomy, valid-response MRR, and overall MRR.
+5. Diagnose the seven pool-visible targets that DeepSeek did not promote and the eight cases whose
+   expected-file reciprocal rank varied across repeats.

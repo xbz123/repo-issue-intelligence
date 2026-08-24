@@ -23,7 +23,10 @@ from .evidence import (
     collect_evidence,
 )
 from .github_client import REPOSITORY_PATTERN
-from .investigator import investigate
+from .investigator import (
+    DEFAULT_CANDIDATE_LIMIT,
+    investigate,
+)
 from .llm_client import LLMProviderError
 from .models import (
     EvidenceRerankResult,
@@ -40,6 +43,17 @@ from .repository_index import (
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 2
 REPOSITORY_MAP_CACHE_DIRECTORY = ".repository-map-cache"
+HYBRID_CANDIDATE_POOL_LIMIT = 40
+MAX_RERANKED_EVIDENCE_IDS = 3
+
+
+def _max_chars_per_evidence(
+    max_evidence_chars: int | None,
+    candidate_pool_limit: int,
+) -> int | None:
+    if max_evidence_chars is None:
+        return None
+    return max(1, max_evidence_chars // candidate_pool_limit)
 
 
 class BenchmarkTier(StrEnum):
@@ -206,6 +220,7 @@ class BenchmarkRun(BaseModel):
     model: str | None = None
     max_evidence_chars: int | None = None
     max_lines_per_evidence: int | None = None
+    candidate_pool_limit: int | None = None
     max_chars_per_evidence: int | None = None
     initial_output_tokens: int | None = None
     max_output_tokens: int | None = None
@@ -424,12 +439,19 @@ def _hybrid_candidate_files(
     max_attempts: int,
     retry_delay_seconds: float,
 ) -> tuple[list[str], EvidenceRerankResult, int]:
+    base_files = _unique_files(
+        [candidate.file for candidate in report.candidates[:DEFAULT_CANDIDATE_LIMIT]]
+    )
+    max_chars_per_evidence = _max_chars_per_evidence(
+        max_evidence_chars,
+        HYBRID_CANDIDATE_POOL_LIMIT,
+    )
     evidence = collect_evidence(
         report,
         max_total_chars=max_evidence_chars,
         max_lines_per_snippet=max_lines_per_evidence,
         context_lines=4,
-        max_chars_per_snippet=None,
+        max_chars_per_snippet=max_chars_per_evidence,
     )
     if not evidence:
         error = LLMProviderError(
@@ -475,11 +497,13 @@ def _hybrid_candidate_files(
                 error.request_id = analysis.request_id
                 error.system_fingerprint = analysis.system_fingerprint
                 raise error
-            reranked = [
-                evidence_files[evidence_id]
-                for evidence_id in reranked_ids
+            reranked = _unique_files(
+                [evidence_files[evidence_id] for evidence_id in reranked_ids]
+            )[:MAX_RERANKED_EVIDENCE_IDS]
+            remaining_base = [
+                path for path in base_files if path not in set(reranked)
             ]
-            remaining = [candidate.file for candidate in report.candidates]
+            remaining = [*reranked, *remaining_base]
             analysis = analysis.model_copy(
                 update={
                     "input_tokens": analysis.input_tokens + failed_input_tokens,
@@ -487,7 +511,7 @@ def _hybrid_candidate_files(
                     "elapsed_ms": round(analysis.elapsed_ms + failed_elapsed_ms, 3),
                 }
             )
-            return _unique_files([*reranked, *remaining]), analysis, request_attempts
+            return remaining[:DEFAULT_CANDIDATE_LIMIT], analysis, request_attempts
         except LLMProviderError as error:
             last_error = error
             request_attempts += error.attempts
@@ -543,12 +567,43 @@ def evaluate_case(
             included_files,
             repository_map_cache,
         )
-    report = investigate(
+    base_report = investigate(
         issue,
         repository_map,
+        candidate_limit=DEFAULT_CANDIDATE_LIMIT,
     )
+    if variant is BenchmarkVariant.HYBRID:
+        expanded_report = investigate(
+            issue,
+            repository_map,
+            candidate_limit=HYBRID_CANDIDATE_POOL_LIMIT,
+        )
+        base_paths = {candidate.file for candidate in base_report.candidates}
+        report = base_report.model_copy(
+            update={
+                "candidates": [
+                    *base_report.candidates,
+                    *[
+                        candidate
+                        for candidate in expanded_report.candidates
+                        if candidate.file not in base_paths
+                    ][: max(
+                        0,
+                        HYBRID_CANDIDATE_POOL_LIMIT
+                        - len(base_report.candidates),
+                    )],
+                ]
+            }
+        )
+    else:
+        report = base_report
     candidate_locations = {candidate.file: candidate for candidate in report.candidates}
-    candidate_files = _unique_files([candidate.file for candidate in report.candidates])
+    candidate_pool_files = _unique_files(
+        [candidate.file for candidate in report.candidates]
+    )
+    candidate_files = _unique_files(
+        [candidate.file for candidate in report.candidates[:DEFAULT_CANDIDATE_LIMIT]]
+    )
     llm_result = None
     llm_failure = None
     llm_attempts = 0
@@ -647,7 +702,10 @@ def evaluate_case(
         file_recall_at_5=round(len(matched_at_5) / len(expected), 4),
         file_recall_at_10=round(len(matched_at_10) / len(expected), 4),
         file_recall_at_20=round(len(matched_at_20) / len(expected), 4),
-        candidate_pool_recall=round(len(expected.intersection(candidate_files)) / len(expected), 4),
+        candidate_pool_recall=round(
+            len(expected.intersection(candidate_pool_files)) / len(expected),
+            4,
+        ),
         reciprocal_rank=round(1 / first_rank, 4) if first_rank else 0,
         symbol_recall_at_1=symbol_recall_at(1),
         symbol_recall_at_5=symbol_recall_at(5),
@@ -915,7 +973,15 @@ def run_benchmark(
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,
         max_lines_per_evidence=max_lines_per_evidence if analyzer else None,
-        max_chars_per_evidence=None,
+        candidate_pool_limit=HYBRID_CANDIDATE_POOL_LIMIT if analyzer else None,
+        max_chars_per_evidence=(
+            _max_chars_per_evidence(
+                max_evidence_chars,
+                HYBRID_CANDIDATE_POOL_LIMIT,
+            )
+            if analyzer
+            else None
+        ),
         initial_output_tokens=getattr(
             analyzer,
             "rerank_initial_output_tokens",

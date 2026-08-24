@@ -179,19 +179,22 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.27-rank20000-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.28-pool40-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
 accept provider or model overrides. The reranker requests no grammar-constrained response format
 and parses exactly one `RANK: E3,E1,E2` line. Duplicate IDs are removed, unknown IDs are rejected,
-and omitted candidates keep their deterministic order. Only transport errors, HTTP 429, and HTTP
-5xx responses are retried with bounded exponential backoff; invalid ranks and HTTP 4xx responses
-fall back immediately. This isolates file ordering from hypothesis generation and removes the
-unreliable JSON-schema path from the benchmark. Reasoning is disabled for this narrow ranking task,
-and the completion budget starts at 8,192 tokens with one 20,000-token truncation retry. The full
-frozen Issue and selected deterministic candidate snippets are sent without project-defined input
-character caps. Current manifest version 20 embeds 200 complete Issue
+and omitted base candidates keep their deterministic order. Hybrid preserves the deterministic
+Top-20 as its exact fallback and appends unique candidates from a separate Top-40 retrieval pass to
+the model-only pool. At most three model-selected files can be promoted before the unchanged base
+order fills the final Top-20. Only transport errors, HTTP 429, and HTTP 5xx responses are retried
+with bounded exponential backoff; invalid ranks and HTTP 4xx responses fall back immediately. This
+isolates file ordering from hypothesis generation and removes the unreliable JSON-schema path from
+the benchmark. Reasoning is disabled for this narrow ranking task, and the completion budget starts
+at 8,192 tokens with one 20,000-token truncation retry. The full frozen Issue is sent with at most
+40 source snippets. Under the default 100,000-character total evidence budget, each snippet is
+limited to 2,500 characters and 200 source lines. Current manifest version 20 embeds 200 complete Issue
 snapshots across 58 repositories, corrected pre-fix SHAs, and 177 manually reviewed symbol targets
 across 143 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
@@ -376,6 +379,18 @@ File Recall@1 is `0.3510`, Recall@5 `0.6567`, Recall@10 `0.7555`, Recall@20 `0.8
 `0.5396`. Symbol Recall@1 is `0.2378`, Recall@5 `0.3840`, Recall@10 `0.4155`, Recall@20 `0.4645`,
 and symbol MRR `0.3349`. Forty-six of 265 production targets remain outside Top-20 and stay in the
 denominator.
+
+Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed 600/600 valid
+rank requests in one attempt with zero fallback. Mean File Recall@1/5/10/20 was
+`0.5722/0.7844/0.8286/0.8790`, with MRR `0.7479`; population standard deviation was `0.0041` for
+Recall@1 and `0.0013` for MRR. The Top-40 pool covered 229/265 production targets and the final
+Top-20 covered 222/265, recovering `tornado/locks.py`, Pylint `class_checker.py`, and SciPy
+`_matfuncs.py` in every run without losing an existing deterministic Top-20 ground-truth target. Symbol
+Recall@20 remained `0.4645`; mean symbol MRR rose to `0.4856` through file reordering. Only 135/200
+complete candidate orders were identical across all repeats, so seed 1337 remains best effort.
+The three runs used 10,348,059 input tokens and 5,908 output tokens. See the compact
+[`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
+the duplicate raw run files remain outside Git.
 
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
