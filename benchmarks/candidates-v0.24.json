@@ -1,0 +1,1421 @@
+{
+  "name": "real-project-benchmark-expansion-v0.24",
+  "version": 1,
+  "curated_at": "2026-08-24T11:43:54.658230Z",
+  "base_manifest_name": "python-real-issue-file-localization",
+  "base_manifest_version": 18,
+  "candidates": [
+    {
+      "id": "urllib3-urllib3-issue-5099-pr-5103",
+      "repository": "urllib3/urllib3",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 5099,
+        "title": "Test failures with `pyopenssl==26.3.0`: `DeprecationWarning: X509.get_subject is deprecated. You should use cryptography's X.509 APIs instead.`",
+        "body": "### Subject\n\nAfter upgrading to `pyopenssl==26.3.0`, a lot of `test/contrib/test_pyopenssl.py` tests are failing over new deprecation warnings, e.g.:\n\n```pytb\n$ pytest test/contrib/test_pyopenssl.py  -x\n========================================================= test session starts =========================================================\nplatform linux -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0\nrootdir: /tmp/urllib3\nconfigfile: pyproject.toml\nplugins: socket-0.7.0, memray-1.8.0, anyio-4.13.0, timeout-2.4.0\ncollected 373 items                                                                                                                   \n\ntest/contrib/test_pyopenssl.py .....................................................................F\n\n============================================================== FAILURES ===============================================================\n_____________________________________________ TestHTTPS_IPV4SAN.test_can_validate_ip_san ______________________________________________\n\nself = <test.with_dummyserver.test_https.TestHTTPS_IPV4SAN object at 0x7fded4629bd0>\nipv4_san_server = ServerConfig(scheme='https', host='127.0.0.1', port=34599, ca_certs='/tmp/pytest-of-mgorny/pytest-3/certs0/ca.pem')\n\n    def test_can_validate_ip_san(self, ipv4_san_server: ServerConfig) -> None:\n        \"\"\"Ensure that urllib3 can validate SANs with IP addresses in them.\"\"\"\n        with HTTPSConnectionPool(\n            ipv4_san_server.host,\n            ipv4_san_server.port,\n            cert_reqs=\"CERT_REQUIRED\",\n            ca_certs=ipv4_san_server.ca_certs,\n        ) as https_pool:\n>           r = https_pool.request(\"GET\", \"/\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntest/with_dummyserver/test_https.py:1334: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\nsrc/urllib3/_request_methods.py:135: in request\n    return self.request_encode_url(\nsrc/urllib3/_request_methods.py:182: in request_encode_url\n    return self.urlopen(method, url, **extra_kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsrc/urllib3/connectionpool.py:787: in urlopen\n    response = self._make_request(\nsrc/urllib3/connectionpool.py:464: in _make_request\n    self._validate_conn(conn)\nsrc/urllib3/connectionpool.py:1105: in _validate_conn\n    conn.connect()\nsrc/urllib3/connection.py:814: in connect\n    sock_and_verified = _ssl_wrap_socket_and_match_hostname(\nsrc/urllib3/connection.py:1016: in _ssl_wrap_socket_and_match_hostname\n    cert: _TYPE_PEER_CERT_RET_DICT = ssl_sock.getpeercert()  # type: ignore[assignment]\n                                     ^^^^^^^^^^^^^^^^^^^^^^\nsrc/urllib3/contrib/pyopenssl.py:404: in getpeercert\n    \"subject\": (((\"commonName\", x509.get_subject().CN),),),  # type: ignore[dict-item]\n                                ^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nargs = (<OpenSSL.crypto.X509 object at 0x7fded41fd350>,), kwargs = {}\n\n    @functools.wraps(arg)\n    def wrapper(*args, **kwargs):\n>       _wm.warn(msg, category=category, stacklevel=stacklevel + 1)\nE       DeprecationWarning: X509.get_subject is deprecated. You should use cryptography's X.509 APIs instead.\n\n/usr/lib/python3.14/_py_warnings.py:799: DeprecationWarning\n-------------------------------------------------------- Captured stderr setup --------------------------------------------------------\n[2026-07-04 18:54:09 +0200] [1268816] [INFO] Running on https://127.0.0.1:34599 (CTRL + C to quit)\n--------------------------------------------------------- Captured log setup ----------------------------------------------------------\nINFO     hypercorn.error:logging.py:106 Running on https://127.0.0.1:34599 (CTRL + C to quit)\n---------------------------------------------------------- Captured log call ----------------------------------------------------------\nDEBUG    urllib3.connectionpool:connectionpool.py:1061 Starting new HTTPS connection (1): 127.0.0.1:34599\n======================================================= short test summary info =======================================================\nFAILED test/contrib/test_pyopenssl.py::TestHTTPS_IPV4SAN::test_can_validate_ip_san - DeprecationWarning: X509.get_subject is deprecated. You should use cryptography's X.509 APIs instead.\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n==================================================== 1 failed, 69 passed in 0.61s =====================================================\n```\n\n### Environment\n\nGentoo Linux amd64\nPython 3.14.6\nOpenSSL 3.6.3 9 Jun 2026\nurllib3 2.7.1.dev22\n\n### Steps to Reproduce\n\n```\nnox -e test-3.14\n. .nox/test-3-14/bin/activate\nuv pip install -U pyopenssl\npytest test/contrib/test_pyopenssl.py\n```\n\n### Expected Behavior\n\nPassing tests.\n\n### Actual Behavior\n\nTests failing due to deprecation warnings.",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-07-04T16:57:10Z",
+        "updated_at": "2026-07-18T11:25:43Z",
+        "html_url": "https://github.com/urllib3/urllib3/issues/5099",
+        "author": "mgorny"
+      },
+      "fix_pr_number": 5103,
+      "fix_pr_title": "Replace deprecated pyOpenSSL `X509.get_subject` and `Context.set_passwd_cb` methods",
+      "fix_pr_url": "https://github.com/urllib3/urllib3/pull/5103",
+      "fix_pr_merged_at": "2026-07-18T11:25:42Z",
+      "merge_commit_sha": "13fa1e033b37405b228599ee590af485dc3e38aa",
+      "pre_fix_sha": "e18a0d1a159210a5b64354a435b6e5437c80e0d6",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/contrib/pyopenssl.py"
+      ],
+      "changed_files": [
+        {
+          "path": "changelog/5103.bugfix.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/urllib3/contrib/pyopenssl.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 29,
+          "deletions": 6,
+          "changes": 35,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "uv.lock",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 57,
+          "deletions": 60,
+          "changes": 117,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: urllib3/urllib3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-18T11:25:42Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-04T16:57:10+00:00, pr_merged_at=2026-07-18T11:25:42+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "5038 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #5099 reports pyOpenSSL deprecation failures from X509.get_subject, and merged PR #5103 replaces the lookup with cryptography's X.509 API while removing a related password-callback warning.",
+        "Retain the pyopenssl production file as file-level ground truth because the pre-fix map contains three conditional WrappedSocket.getpeercert definitions; lock and changelog files are excluded, and unmerged PR #5121 is not a second fix case."
+      ]
+    },
+    {
+      "id": "pylint-dev-pylint-issue-11228-pr-11262",
+      "repository": "pylint-dev/pylint",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 11228,
+        "title": "`AttributeError: 'FunctionDef' object has no attribute 'ancestors'` in docparams checker",
+        "body": "### Bug description\n\n```python\n# Code from a local fuzzing run\n\ndef f():\n    \"\"\"\n    Raises:\n        TypeError: incorrect type\n    \"\"\"\n    raise sum\n```\n\n### Configuration\n\n```ini\n\n```\n\n### Command used\n\n```shell\npylint --enable-all-extensions crash.py\n```\n\n### Pylint output\n\n```python\nTraceback (most recent call last):\n  File \"pylint/pylint/utils/ast_walker.py\", line 87, in walk\n    callback(astroid)\n    ~~~~~~~~^^^^^^^^^\n  File \"pylint/pylint/extensions/docparams.py\", line 343, in visit_raise\n    if any(found_exc == ancestor.name for ancestor in expected.ancestors()):\n                                                      ^^^^^^^^^^^^^^^^^^\nAttributeError: 'FunctionDef' object has no attribute 'ancestors'\n```\n\n### Expected behavior\n\nNo crash\n\n### Pylint version\n\n```shell\npylint-dev/astroid@86664181\npylint-dev/pylint@a219ca322\nPython 3.14.6\n\nThe crash also affects Pylint 4.0.6\n```\n\n### OS / Environment\n\nArch Linux\n\n### Additional dependencies\n\n```python\n\n```",
+        "labels": [
+          "Crash 💥"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-04T01:13:11Z",
+        "updated_at": "2026-08-13T13:28:49Z",
+        "html_url": "https://github.com/pylint-dev/pylint/issues/11228",
+        "author": "correctmost"
+      },
+      "fix_pr_number": 11262,
+      "fix_pr_title": "Fix crash in docparams on raising a non-exception name",
+      "fix_pr_url": "https://github.com/pylint-dev/pylint/pull/11262",
+      "fix_pr_merged_at": "2026-08-13T13:28:47Z",
+      "merge_commit_sha": "03eaf44a7fa3dc7831ff849215751862a5d00154",
+      "pre_fix_sha": "d4ade4ae762534f203d57c3cbcb94e4d7d3d7f0d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pylint/extensions/_check_docs_utils.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whatsnew/fragments/11228.bugfix",
+          "status": "added",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pylint/extensions/_check_docs_utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 2,
+          "changes": 9,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/extensions/test_check_docs_utils.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 49,
+          "deletions": 0,
+          "changes": 49,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/ext/docparams/raise/missing_raises_doc_Google.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 0,
+          "changes": 9,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/ext/docparams/raise/missing_raises_doc_Google.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pylint-dev/pylint"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-13T13:28:47Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-04T01:13:11+00:00, pr_merged_at=2026-08-13T13:28:47+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "972 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Crash 💥"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #11228 reproduces docparams crashing when an inferred raise target is a function or module instead of an exception class, and merged PR #11262 guards the ancestry lookup.",
+        "Retain possible_exc_types; tests and changelog are excluded."
+      ]
+    },
+    {
+      "id": "pylint-dev-pylint-issue-11231-pr-11232",
+      "repository": "pylint-dev/pylint",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 11231,
+        "title": "False positive invalid-name (C0103) for module-level TypedDict instantiation, regression from PR #10673",
+        "body": "### Bug description\n\nAfter #10672 was fixed by #10673, pylint now flags `invalid-name` (C0103) for *any* module-level\nvariable assigned an **instance** of a `TypedDict`-derived class — not just for the functional\n`typing.TypedDict(\"Name\", {...})` type-definition syntax that #10672 was actually about.\n\n`_should_check_class_regex()` treats an assignment as class-like whenever the inferred value is\na `bases.Instance` whose MRO contains an ancestor named `\"TypedDict\"`:\n\n```python\nif isinstance(inferred_assign_type, bases.Instance) and {\n    \"EnumMeta\",\n    \"TypedDict\",\n}.intersection(\n    {ancestor.name for ancestor in cast(InferenceResult, inferred_assign_type).mro()}\n):\n    return True\n```\n\nThis is correct for the functional-syntax case (`X = typing.TypedDict(\"X\", {...})`), where `X`\nreally does define a new type and should follow `class-rgx`. But it also fires for the completely\nunrelated case of instantiating an *already-defined* TypedDict subclass to produce an ordinary\nvalue — which is not a type definition at all and shouldn't be checked against `class-rgx`.\n\nIn the type-definition case, astroid already infers the assigned value as a `nodes.ClassDef`,\nwhich is caught by the *first* branch of `_should_check_class_regex` (`isinstance(inferred_assign_type, nodes.ClassDef)`).\nThe second branch (the `Instance`/MRO check added by #10673) is only ever needed for the `EnumMeta`\ncase, not for `TypedDict`, and adding `\"TypedDict\"` to that same branch overreaches into plain\nvalue construction.\n\n### Minimal reproducer\n\n```python\nfrom typing import TypedDict\n\n\nclass Foo(TypedDict):\n    value: str\n\n\n_DEFAULT_VALUE = Foo(value='0')\n```\n\n### Configuration\n\n```ini\n\n```\n\n### Command used\n\n```shell\npylint --disable=all --enable=invalid-name repro.py\n```\n\n### Pylint output\n\n```python\n************* Module repro\nrepro.py:8:0: C0103: Class name \"_DEFAULT_VALUE\" doesn't conform to PascalCase naming style (invalid-name)\n```\n\n### Expected behavior\n\nNo `invalid-name` warning — `_DEFAULT_VALUE` is an ordinary module-level constant holding a plain `dict`-like value (`Foo` is a `dict` at runtime), not a class or a type definition. It should be checked against `const-rgx`/`variable-rgx`, not `class-rgx`.\n\n### Pylint version\n\n```shell\npylint 4.0.6\nastroid 4.0.4\nPython 3.14.6\n```\n\n### OS / Environment\n\nFedora 44\n\n### Additional dependencies\n\n```python\n\n```",
+        "labels": [
+          "False Positive 🦟"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-05T08:45:12Z",
+        "updated_at": "2026-08-09T14:49:14Z",
+        "html_url": "https://github.com/pylint-dev/pylint/issues/11231",
+        "author": "v-startsev"
+      },
+      "fix_pr_number": 11232,
+      "fix_pr_title": "Fix false positive for invalid-name on TypedDict instances",
+      "fix_pr_url": "https://github.com/pylint-dev/pylint/pull/11232",
+      "fix_pr_merged_at": "2026-08-09T14:49:13Z",
+      "merge_commit_sha": "d9b20de170c8195e2493dccbded9f229baeb885f",
+      "pre_fix_sha": "2704876d736917a36ba5674bed9c9251434d096f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pylint/checkers/base/name_checker/checker.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/whatsnew/fragments/11231.false_positive",
+          "status": "added",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pylint/checkers/base/name_checker/checker.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 8,
+          "changes": 18,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/functional/i/invalid/invalid_name.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/functional/i/invalid/invalid_name.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pylint-dev/pylint"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-09T14:49:13Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-05T08:45:12+00:00, pr_merged_at=2026-08-09T14:49:13+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2368 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=False Positive 🦟"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #11231 reports a TypedDict instance being checked with class naming rules, and merged PR #11232 excludes the instance path without changing functional TypedDict or EnumMeta handling.",
+        "Retain NameChecker._should_check_class_regex; tests and changelog are excluded, and regression-source PR #10673 is not another fix case."
+      ]
+    },
+    {
+      "id": "pandas-dev-pandas-issue-66639-pr-66790",
+      "repository": "pandas-dev/pandas",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 66639,
+        "title": "BUG: read_csv(sep=None) raises TypeError instead of falling back to the python engine",
+        "body": "### Pandas version checks\n\n- [x] I have checked that this issue has not already been reported.\n\n- [x] I have confirmed this bug exists on the [latest version](https://pandas.pydata.org/docs/whatsnew/index.html) of pandas.\n\n- [x] I have confirmed this bug exists on the [main branch](https://pandas.pydata.org/docs/dev/getting_started/install.html#installing-the-development-version-of-pandas) of pandas.\n\n\n### Reproducible Example\n\n```python\nimport io\nimport pandas as pd\n\npd.read_csv(io.StringIO(\"a;b\\n1;2\\n\"), sep=None)\n```\n\n### Issue Description\n\n`sep=None` asks pandas to sniff the separator with `csv.Sniffer`, which only the python engine implements. Up to and including 2.2.3, passing `sep=None` without an explicit engine fell back to the python engine with a `ParserWarning`, and passing `engine=\"c\"` explicitly raised a clear `ValueError`. Since 3.0.0 the fallback is gone, and the option reaches the C parser, which fails on an unhandled `None`:\n\n```\n  File \"pandas/_libs/parsers.pyx\", line 481, in pandas._libs.parsers.TextReader.__cinit__\n    if len(delimiter) > 1:\nTypeError: object of type 'NoneType' has no len()\n```\n\nBehavior on `io.StringIO(\"a;b\\n1;2\\n\")`:\n\n| | 2.2.3 | 3.0.0 – 3.0.5, main |\n|---|---|---|\n| `sep=None` (default engine) | falls back to python + `ParserWarning` | `TypeError` |\n| `sep=None, engine=\"c\"` | `ValueError: the 'c' engine does not support sep=None with delim_whitespace=False` | `TypeError` |\n| `sep=None, engine=\"python\"` | works | works |\n\nThe `engine=\"pyarrow\"` case is separate but worth fixing alongside, because it fails silently rather than loudly — it ignores `sep=None` and parses each line as one column:\n\n```python\n>>> pd.read_csv(io.StringIO(\"a;b\\n1;2\\n\"), sep=None, engine=\"pyarrow\")\n   a;b\n0  1;2\n```\n\nThe cause looks like GH-58668 (`CLN: Remove deprecated read_csv(delim_whitespace=)`, 0fc033618c7). `_clean_options` previously had:\n\n```python\nif sep is None and not delim_whitespace:\n    fallback_reason = \"sep=None with delim_whitespace=False\"\n    engine = \"python\"\n```\n\nWhen `delim_whitespace` was removed, the whole branch was deleted rather than reduced to `if sep is None:`. `_clean_options` still handles the other python-only separator cases (`len(sep) > 1`, non-encodeable `sep`), so `sep=None` is now the only one with no branch, and `engine` stays `\"c\"`.\n\nThis also means the documentation is currently wrong: the `sep` entry in the `read_csv`/`read_table` docstrings and in the IO user guide both still state that with `sep=None` \"the Python parsing engine ... will be used\", which no longer happens.\n\n### Expected Behavior\n\n`sep=None` with no explicit engine should fall back to the python engine and emit a `ParserWarning`, as in 2.2.3 and as the docstring describes:\n\n```python\n>>> pd.read_csv(io.StringIO(\"a;b\\n1;2\\n\"), sep=None)\n   a  b\n0  1  2\n```\n\n`engine=\"c\"` with `sep=None` should raise a `ValueError` naming the unsupported option, consistent with how `skipfooter` and regex separators are reported. `engine=\"pyarrow\"` should raise rather than silently return a single column.\n\n### Installed Versions\n\n<details>\n\nReproduced on 3.0.0, 3.0.5, and main (`3.1.0.dev0+1481.g1d6b36eb8ff`); works as documented on 2.2.3.\n\n</details>\n",
+        "labels": [
+          "Bug",
+          "Regression",
+          "IO CSV"
+        ],
+        "comments_count": 1,
+        "created_at": "2026-08-06T16:58:16Z",
+        "updated_at": "2026-08-15T21:25:31Z",
+        "html_url": "https://github.com/pandas-dev/pandas/issues/66639",
+        "author": "jbrockmendel"
+      },
+      "fix_pr_number": 66790,
+      "fix_pr_title": "BUG: read_csv(sep=None) raised TypeError instead of falling back to the python engine (GH#66639)",
+      "fix_pr_url": "https://github.com/pandas-dev/pandas/pull/66790",
+      "fix_pr_merged_at": "2026-08-15T21:25:25Z",
+      "merge_commit_sha": "96b3ea45912032b20954857b9a690b9043f78372",
+      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pandas/io/parsers/readers.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/source/user_guide/io.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 9,
+          "changes": 14,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "doc/source/whatsnew/v3.1.0.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/io/parsers/readers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 4,
+          "changes": 13,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pandas/tests/io/parser/common/test_read_errors.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 5,
+          "changes": 7,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "pandas/tests/io/parser/test_unsupported.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 26,
+          "deletions": 0,
+          "changes": 26,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pandas-dev/pandas"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T21:25:25Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-06T16:58:16+00:00, pr_merged_at=2026-08-15T21:25:25+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "3207 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Bug, Regression, IO CSV"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #66639 reports read_csv with sep=None no longer falling back to the Python engine, and merged PR #66790 restores fallback while rejecting explicitly incompatible engines.",
+        "Retain TextFileReader._clean_options; docs, whatsnew, and tests are excluded, and Issues #66641, #66644, and #66723 are not counted separately."
+      ]
+    },
+    {
+      "id": "astral-sh-ruff-issue-27631-pr-27687",
+      "repository": "astral-sh/ruff",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 27631,
+        "title": "False negatives when passing `subprocess` command as keyword argument",
+        "body": "### Summary\n\nVarious [`flake8-bandit`-derived rules](https://docs.astral.sh/ruff/rules/#flake8-bandit-s) are triggered when calling one of the `subprocess` functions with a non-literal value as the first argument, as this is considered untrusted input. However, passing the array of command tokens as a keyword argument, i.e. `args=[...]`, silences the violation!\n\n```console\n➜ ruff check --select=S603 - <<< 'subprocess.check_output([foo])'\nAll checks passed!\n➜ ruff check --select=S603 - <<< 'import subprocess; foo = input(); subprocess.check_output([foo])'\nS603 `subprocess` call: check for execution of untrusted input\n --> -:1:35\n  |\n1 | import subprocess; foo = input(); subprocess.check_output([foo])\n  |                                   ^^^^^^^^^^^^^^^^^^^^^^^\n\nFound 1 error.\n```\n\nThis appears to be due to the use of `call.arguments.args.first()` in this file:\nhttps://github.com/astral-sh/ruff/blob/5b48a040974781ba90b47c8df628f8fd9b6c95dd/crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs#L321-L327\n\n### Version\n\nruff 0.16.2 (5b48a0409 2026-08-07)",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-08-10T14:49:19Z",
+        "updated_at": "2026-08-12T14:18:02Z",
+        "html_url": "https://github.com/astral-sh/ruff/issues/27631",
+        "author": "allanlewis"
+      },
+      "fix_pr_number": 27687,
+      "fix_pr_title": "[`flake8-bandit`] Also check keyword arguments (`S602`, `S603`, `S607`, `S609`)",
+      "fix_pr_url": "https://github.com/astral-sh/ruff/pull/27687",
+      "fix_pr_merged_at": "2026-08-12T14:18:00Z",
+      "merge_commit_sha": "ec02d6d6b095e3e9d6f8c1abcd0bb03a1302eb12",
+      "pre_fix_sha": "8f11b10b926b1625cf35a5babb44854e2bbd423d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "crates/ruff_linter/resources/mdtest/flake8-bandit/rules.md",
+          "status": "added",
+          "previous_path": null,
+          "additions": 77,
+          "deletions": 0,
+          "changes": 77,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "crates/ruff_linter/src/rules/flake8_bandit/rules/shell_injection.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 22,
+          "deletions": 7,
+          "changes": 29,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: astral-sh/ruff"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-12T14:18:00Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-10T14:49:19+00:00, pr_merged_at=2026-08-12T14:18:00+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1079 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #27631 reports subprocess shell-injection checks missing keyword arguments, and merged PR #27687 adds keyword-aware argument lookup in the existing Rust rule.",
+        "Retain the Rust production file as file-only ground truth; mdtest and other regression tests are excluded."
+      ]
+    },
+    {
+      "id": "paramiko-paramiko-issue-713-pr-889",
+      "repository": "paramiko/paramiko",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 713,
+        "title": "Paramiko passes IV to pycrypto when using MODE_CTR",
+        "body": "In later versions of pycrypto, this throws an exception, because of this commit:\nhttps://github.com/dlitz/pycrypto/commit/8dbe0dc3eea5c689d4f76b37b93fe216cf1f00d4\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2016-03-31T14:18:11Z",
+        "updated_at": "2016-04-25T03:08:51Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/713",
+        "author": "jmh045000"
+      },
+      "fix_pr_number": 889,
+      "fix_pr_title": "Don't pass IV to pycrypto when using MODE_CTR",
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/889",
+      "fix_pr_merged_at": "2017-02-20T21:51:59Z",
+      "merge_commit_sha": "c978a6bff03e2c2b620ff485c987ff5311dad97d",
+      "pre_fix_sha": "7a9d633486991b11e4c212e6937ceea42c1e539f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "changed_files": [
+        {
+          "path": "paramiko/transport.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: paramiko/paramiko"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2017-02-20T21:51:59Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2016-03-31T14:18:11+00:00, pr_merged_at=2017-02-20T21:51:59+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "162 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #713 reports AES-CTR construction failing because PyCrypto receives an IV it does not accept, and merged PR #889 omits the IV for CTR mode.",
+        "Retain Transport._get_cipher; tests and changelog are excluded, and unmerged duplicate PR #714 is not counted."
+      ]
+    },
+    {
+      "id": "pallets-markupsafe-issue-358-pr-376",
+      "repository": "pallets/markupsafe",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 358,
+        "title": "Return type for methods covered by `_simple_escaping_wrapper` is wrong",
+        "body": "Currently you are using `_simple_escaping_wrapper` to extend most of the existing string methods, which is absolutely fine (although the type annotation for the decorator could be better), but the way you are applying the decorator is problematic, since mypy will not be able to infer that the return type for these methods has changed. So whenever you use these methods the type will be downgraded to `str` from `Markup`. Luckily most of these methods you are unlikely to use on markup, but `replace` is one that I've wanted to use on several occasions and had to use `type:ignore` to fix the typing issues.\r\n\r\n```\r\nhtml = Markup('<a href=\"${url}\">some link</a>')\r\nreveal_type(html)  # Markup -> OK\r\nstill_html = html.replace('${url}', 'http://example.com')\r\nreveal_type(still_html)  # str -> Not OK\r\n```\r\n\r\nThe second `reveal_type` should still be `Markup`, since `_simple_escaping_wrapper` preserves markup-safety.\r\n\r\nThe simple way to fix this would just be to explicitly write out each method explicitly, rather than the hacky loop using `locals`. It wouldn't even really be that much more verbose than it is right now, in many ways it would actually be more simple to just write:\r\n```\r\n__getitem__ = _simple_escaping_wrapper(str.__getitem__)\r\ncapitalize = _simple_escaping_wrapper(str.capitalize)\r\ntitle = _simple_escaping_wrapper(str.title)\r\nlower = _simple_escaping_wrapper(str.lower)\r\nupper = _simple_escaping_wrapper(str.upper)\r\nreplace = _simple_escaping_wrapper(str.replace)\r\nljust = _simple_escaping_wrapper(str.ljust)\r\nrjust = _simple_escaping_wrapper(str.rjust)\r\nlstrip = _simple_escaping_wrapper(str.lstrip)\r\nrstrip = _simple_escaping_wrapper(str.rstrip)\r\ncenter = _simple_escaping_wrapper(str.center)\r\nstrip = _simple_escaping_wrapper(str.strip)\r\ntranslate = _simple_escaping_wrapper(str.translate)\r\nexpandtabs = _simple_escaping_wrapper(str.expandtabs)\r\nswapcase = _simple_escaping_wrapper(str.swapcase)\r\nzfill = _simple_escaping_wrapper(str.zfill)\r\n```\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.10\r\n- MarkupSafe version: 2.1.2\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2023-03-12T11:42:03Z",
+        "updated_at": "2023-06-17T00:04:25Z",
+        "html_url": "https://github.com/pallets/markupsafe/issues/358",
+        "author": "Daverball"
+      },
+      "fix_pr_number": 376,
+      "fix_pr_title": "improve typing for `_simple_escaping_wrapper`",
+      "fix_pr_url": "https://github.com/pallets/markupsafe/pull/376",
+      "fix_pr_merged_at": "2023-06-02T14:52:32Z",
+      "merge_commit_sha": "60e7eb97e65947a83fa290010f3dde71be8fed84",
+      "pre_fix_sha": "910ffffbcc991f5bc38345bb7134844700504db5",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/markupsafe/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 29,
+          "changes": 53,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/markupsafe"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2023-06-02T14:52:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-03-12T11:42:03+00:00, pr_merged_at=2023-06-02T14:52:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2042 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #358 reports wrapped Markup string methods being typed as returning str, and merged PR #376 gives the wrapper a ParamSpec-preserving decorator type and explicit method bindings.",
+        "Retain _simple_escaping_wrapper; changelog is excluded and related Issue #364 must not become a duplicate case."
+      ]
+    },
+    {
+      "id": "pallets-markupsafe-issue-417-pr-418",
+      "repository": "pallets/markupsafe",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 417,
+        "title": "Markup.striptags: comments now get replaced with a space",
+        "body": "In 2.1.4, if `Markup.striptags` is called, the comment gets replaced by a space. In versions before that it's completely removed from the output.\r\n\r\nTest case to reproduce:\r\n\r\n```\r\nimport unittest\r\n\r\nfrom markupsafe import Markup\r\n\r\nclass MarkupSafeTest(unittest.TestCase):\r\n    def test_striptags(self):\r\n        value = 'x <!-- comment -->'\r\n        self.assertEqual(Markup(value).striptags(), 'x')\r\n\r\n\r\nif __name__ == '__main__':\r\n    unittest.main()\r\n```\r\n\r\nWith markupsafe 2.1.4 it fails, with 2.1.3 - it passes.\r\n\r\nI'm running with Python 3.11\r\n\r\nThe issue was originally found by running the `test_striptags` jinja test case with markupsafe 2.1.4:\r\n\r\nhttps://github.com/pallets/jinja/blob/3fd91e4d11bdd131d8c12805177dbe74d85e7b82/tests/test_filters.py#L94\r\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2024-01-24T15:34:43Z",
+        "updated_at": "2024-02-17T00:04:08Z",
+        "html_url": "https://github.com/pallets/markupsafe/issues/417",
+        "author": "kholmanskikh"
+      },
+      "fix_pr_number": 418,
+      "fix_pr_title": "Fix for spurious whitespace in striptags output",
+      "fix_pr_url": "https://github.com/pallets/markupsafe/pull/418",
+      "fix_pr_merged_at": "2024-02-02T15:45:31Z",
+      "merge_commit_sha": "60a6512315d0ce05e6788808f80be526f2084b3f",
+      "pre_fix_sha": "73e6a4886564a554c4a19983d29c97f9fc95457d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/markupsafe/__init__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGES.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/markupsafe/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 2,
+          "changes": 5,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_markupsafe.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pallets/markupsafe"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-02-02T15:45:31Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-01-24T15:34:43+00:00, pr_merged_at=2024-02-02T15:45:31+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "762 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #417 reproduces comments leaving spurious whitespace in Markup.striptags, and merged PR #418 restores stripping comments and tags before collapsing spaces.",
+        "Retain Markup.striptags; tests and changelog are excluded. Existing MarkupSafe cases in the same file cover different defects."
+      ]
+    },
+    {
+      "id": "pypa-build-issue-966-pr-1087",
+      "repository": "pypa/build",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 966,
+        "title": "keep backend logs?",
+        "body": "I can't seem to find in the docs how to keep the backend logs (and even better the whole temporary directory where the building is happening).\n\nIt's rather annoying to see an error from meson-python backend but being unable to see the actual meson log.\n(and yes, in my case running meson standalone works, but invoking it via build does not, so it's really a debugging need)",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 0,
+        "created_at": "2025-12-16T00:49:53Z",
+        "updated_at": "2026-06-14T04:07:22Z",
+        "html_url": "https://github.com/pypa/build/issues/966",
+        "author": "dimpase"
+      },
+      "fix_pr_number": 1087,
+      "fix_pr_title": "✨ feat(cli): surface debug paths when a backend build fails",
+      "fix_pr_url": "https://github.com/pypa/build/pull/1087",
+      "fix_pr_merged_at": "2026-06-14T04:07:21Z",
+      "merge_commit_sha": "e7cb0927c0e77e6e4f11a8f1b4fc030010defef8",
+      "pre_fix_sha": "254be0cc5be82b0871b8d4702b9fca4cabc87eb4",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/966.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/explanation/how-it-works.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 0,
+          "changes": 6,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/how-to/troubleshooting.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 49,
+          "deletions": 2,
+          "changes": 51,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/reference/cli.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 0,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/tutorial/getting-started.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/build/__main__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 19,
+          "deletions": 2,
+          "changes": 21,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_main.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 33,
+          "deletions": 1,
+          "changes": 34,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/build"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-14T04:07:21Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-12-16T00:49:53+00:00, pr_merged_at=2026-06-14T04:07:21+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "374 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #966 reports backend logs disappearing with temporary build directories, and merged PR #1087 emits a failure hint for preserving or locating the working directories.",
+        "Retain _handle_build_error; documentation, tests, and changelog are excluded. The required env and extraction flags already exist at the recorded pre-fix SHA."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-98-pr-99",
+      "repository": "python-hyper/h11",
+      "suggested_tier": "generalization",
+      "issue_snapshot": {
+        "number": 98,
+        "title": "RemoteProtocolError's messaging is not specific",
+        "body": "There are several conditions that lead to a \"malformed data\" RemoteProtocolError. This makes sending specific messaging to the user (such as \"Illegal header line.\", etc) difficult.\r\n\r\nIs there a way that we can gather more information about why this particular message occurs?",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2020-03-13T05:59:56Z",
+        "updated_at": "2020-07-31T15:23:29Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/98",
+        "author": "ian-otto"
+      },
+      "fix_pr_number": 99,
+      "fix_pr_title": "Make error messages returned by match failures less ambiguous (#98)",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/99",
+      "fix_pr_merged_at": "2020-07-31T15:23:29Z",
+      "merge_commit_sha": "41a3467dd98271529cce361c756da9e34d8e2b00",
+      "pre_fix_sha": "68e32dbb475d5241f077afaa278b6ef248b1f9bd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "h11/_readers.py"
+      ],
+      "changed_files": [
+        {
+          "path": "h11/_readers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 4,
+          "changes": 8,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-07-31T15:23:29Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2020-03-13T05:59:56+00:00, pr_merged_at=2020-07-31T15:23:29+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "276 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "accepted",
+      "review_notes": [
+        "Issue #98 asks for actionable RemoteProtocolError messages, and merged PR #99 adds specific invalid header, request, status, and chunk details to reader validation.",
+        "Retain _decode_header_lines as the representative pre-fix symbol while file ground truth covers the other reader hunks; existing h11 cases target different protocol defects."
+      ]
+    }
+  ]
+}

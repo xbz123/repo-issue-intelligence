@@ -1,0 +1,748 @@
+{
+  "name": "real-project-benchmark-expansion-v0.25",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "tox-dev-tox-issue-3939-pr-3941",
+      "case_id": "tox-schema-conditional-replacements",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/session/cmd/schema.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3939-pr-3941.",
+        "Retain src/tox/session/cmd/schema.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22807-pr-22808",
+      "case_id": "prefect-task-run-recorder-bulk-upsert",
+      "tier": "generalization",
+      "expected_files": [
+        "src/prefect/server/services/task_run_recorder.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/prefect/server/services/task_run_recorder.py",
+          "symbol": "_record_bulk_task_run_events"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for prefecthq-prefect-issue-22807-pr-22808.",
+        "Retain src/prefect/server/services/task_run_recorder.py with pre-fix symbol target _record_bulk_task_run_events; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-4021-pr-4022",
+      "case_id": "tox-provisioning-incompatible-options",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/session/env_select.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/tox/session/env_select.py",
+          "symbol": "EnvSelector._collect_names"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-4021-pr-4022.",
+        "Retain src/tox/session/env_select.py with pre-fix symbol target EnvSelector._collect_names; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "prefecthq-prefect-issue-22812-pr-22813",
+      "case_id": "prefect-events-basic-auth",
+      "tier": "generalization",
+      "expected_files": [
+        "src/prefect/events/clients.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/prefect/events/clients.py",
+          "symbol": "PrefectEventsClient.__init__"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for prefecthq-prefect-issue-22812-pr-22813.",
+        "Retain src/prefect/events/clients.py with pre-fix symbol target PrefectEventsClient.__init__; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-11267-pr-11268",
+      "case_id": "pylint-invalid-class-object-target",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/classes/class_checker.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/checkers/classes/class_checker.py",
+          "symbol": "ClassChecker._check_invalid_class_object"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pylint-dev-pylint-issue-11267-pr-11268.",
+        "Retain pylint/checkers/classes/class_checker.py with pre-fix symbol target ClassChecker._check_invalid_class_object; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-6202-pr-9902",
+      "case_id": "drf-listfield-ordered-partial-data",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/fields.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/fields.py",
+          "symbol": "ListField.get_value"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for encode-django-rest-framework-issue-6202-pr-9902.",
+        "Retain rest_framework/fields.py with pre-fix symbol target ListField.get_value; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "paramiko-paramiko-issue-2038-pr-2039",
+      "case_id": "paramiko-remove-blowfish",
+      "tier": "generalization",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/transport.py",
+          "symbol": "Transport"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for paramiko-paramiko-issue-2038-pr-2039.",
+        "Retain paramiko/transport.py with pre-fix symbol target Transport; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1101-pr-1373",
+      "case_id": "pytest-asyncio-loop-factories",
+      "tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pytest_asyncio/plugin.py",
+          "symbol": "PytestAsyncioFunction._loop_scope"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pytest-dev-pytest-asyncio-issue-1101-pr-1373.",
+        "Retain pytest_asyncio/plugin.py with pre-fix symbol target PytestAsyncioFunction._loop_scope; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-9741-pr-9742",
+      "case_id": "drf-ordering-filter-context-default",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/filters.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/filters.py",
+          "symbol": "OrderingFilter.get_default_valid_fields"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for encode-django-rest-framework-issue-9741-pr-9742.",
+        "Retain rest_framework/filters.py with pre-fix symbol target OrderingFilter.get_default_valid_fields; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-7219-pr-7220",
+      "case_id": "requests-chardet-upper-bound",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/__init__.py",
+          "symbol": "check_compatibility"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for psf-requests-issue-7219-pr-7220.",
+        "Retain src/requests/__init__.py with pre-fix symbol target check_compatibility; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-11271-pr-11275",
+      "case_id": "pylint-qualified-noreturn",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/utils.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/checkers/utils.py",
+          "symbol": "is_terminating_func"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pylint-dev-pylint-issue-11271-pr-11275.",
+        "Retain pylint/checkers/utils.py with pre-fix symbol target is_terminating_func; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "encode-django-rest-framework-issue-9927-pr-9928",
+      "case_id": "drf-null-datetime-html-render",
+      "tier": "generalization",
+      "expected_files": [
+        "rest_framework/renderers.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/renderers.py",
+          "symbol": "HTMLFormRenderer.render_field"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for encode-django-rest-framework-issue-9927-pr-9928.",
+        "Retain rest_framework/renderers.py with pre-fix symbol target HTMLFormRenderer.render_field; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tox-dev-tox-issue-3929-pr-3931",
+      "case_id": "tox-schema-env-deps",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/session/cmd/schema.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/tox/session/cmd/schema.py",
+          "symbol": "_process_type"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3929-pr-3931.",
+        "Retain src/tox/session/cmd/schema.py with pre-fix symbol target _process_type; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1316-pr-1317",
+      "case_id": "h2-duplicate-content-length",
+      "tier": "generalization",
+      "expected_files": [
+        "src/h2/stream.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/h2/stream.py",
+          "symbol": "H2Stream._initialize_content_length"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for python-hyper-h2-issue-1316-pr-1317.",
+        "Retain src/h2/stream.py with pre-fix symbol target H2Stream._initialize_content_length; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-1362-pr-5020",
+      "case_id": "urllib3-response-header-validation",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connection.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/urllib3/connection.py",
+          "symbol": "HTTPConnection.getresponse"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for urllib3-urllib3-issue-1362-pr-5020.",
+        "Retain src/urllib3/connection.py with pre-fix symbol target HTTPConnection.getresponse; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scipy-scipy-issue-23076-pr-24923",
+      "case_id": "scipy-sparse-sum-dtype",
+      "tier": "generalization",
+      "expected_files": [
+        "scipy/sparse/_sputils.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "scipy/sparse/_sputils.py",
+          "symbol": "get_sum_dtype"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for scipy-scipy-issue-23076-pr-24923.",
+        "Retain scipy/sparse/_sputils.py with pre-fix symbol target get_sum_dtype; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "boto-botocore-issue-3651-pr-3652",
+      "case_id": "botocore-trailer-checksum-content-length",
+      "tier": "generalization",
+      "expected_files": [
+        "botocore/httpchecksum.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "botocore/httpchecksum.py",
+          "symbol": "_apply_request_trailer_checksum"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for boto-botocore-issue-3651-pr-3652.",
+        "Retain botocore/httpchecksum.py with pre-fix symbol target _apply_request_trailer_checksum; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-uv-issue-21089-pr-21094",
+      "case_id": "uv-empty-pep508-error",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/uv-pep508/src/lib.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for astral-sh-uv-issue-21089-pr-21094.",
+        "Retain crates/uv-pep508/src/lib.rs as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-build-issue-198-pr-1080",
+      "case_id": "build-machine-readable-report",
+      "tier": "generalization",
+      "expected_files": [
+        "src/build/__main__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/build/__main__.py",
+          "symbol": "main"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pypa-build-issue-198-pr-1080.",
+        "Retain src/build/__main__.py with pre-fix symbol target main; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-setuptools-issue-3085-pr-5007",
+      "case_id": "setuptools-pkg-resources-removal",
+      "tier": "generalization",
+      "expected_files": [
+        "pkg_resources/__init__.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pypa-setuptools-issue-3085-pr-5007.",
+        "Retain pkg_resources/__init__.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1747-pr-1854",
+      "case_id": "flake8-remove-doctest-options",
+      "tier": "generalization",
+      "expected_files": [
+        "src/flake8/plugins/pyflakes.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/flake8/plugins/pyflakes.py",
+          "symbol": "FlakesChecker.parse_options"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pycqa-flake8-issue-1747-pr-1854.",
+        "Retain src/flake8/plugins/pyflakes.py with pre-fix symbol target FlakesChecker.parse_options; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-158-pr-159",
+      "case_id": "h11-exclude-tests-from-wheel",
+      "tier": "generalization",
+      "expected_files": [
+        "setup.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for python-hyper-h11-issue-158-pr-159.",
+        "Retain setup.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "apache-airflow-issue-54983-pr-68107",
+      "case_id": "airflow-snowflake-workload-identity",
+      "tier": "generalization",
+      "expected_files": [
+        "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py",
+          "symbol": "SnowflakeHook._get_static_conn_params"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for apache-airflow-issue-54983-pr-68107.",
+        "Retain providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py with pre-fix symbol target SnowflakeHook._get_static_conn_params; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-virtualenv-issue-3181-pr-3184",
+      "case_id": "virtualenv-skip-distutils-hook",
+      "tier": "generalization",
+      "expected_files": [
+        "src/virtualenv/create/via_global_ref/api.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/virtualenv/create/via_global_ref/api.py",
+          "symbol": "ViaGlobalRefApi.install_patch"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pypa-virtualenv-issue-3181-pr-3184.",
+        "Retain src/virtualenv/create/via_global_ref/api.py with pre-fix symbol target ViaGlobalRefApi.install_patch; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pallets-markupsafe-issue-460-pr-461",
+      "case_id": "markupsafe-free-threaded-gil",
+      "tier": "generalization",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pallets-markupsafe-issue-460-pr-461.",
+        "Retain src/markupsafe/_speedups.c as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-2580-pr-5140",
+      "case_id": "urllib3-retry-warning-extra",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connectionpool.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/urllib3/connectionpool.py",
+          "symbol": "HTTPConnectionPool.urlopen"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for urllib3-urllib3-issue-2580-pr-5140.",
+        "Retain src/urllib3/connectionpool.py with pre-fix symbol target HTTPConnectionPool.urlopen; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-6646-pr-7309",
+      "case_id": "requests-content-type-charset-parse",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/utils.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/utils.py",
+          "symbol": "_parse_content_type_header"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for psf-requests-issue-6646-pr-7309.",
+        "Retain src/requests/utils.py with pre-fix symbol target _parse_content_type_header; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scipy-scipy-issue-24495-pr-25602",
+      "case_id": "scipy-remez-dense-grid-guard",
+      "tier": "generalization",
+      "expected_files": [
+        "scipy/signal/_sigtoolsmodule.cc"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for scipy-scipy-issue-24495-pr-25602.",
+        "Retain scipy/signal/_sigtoolsmodule.cc as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-7434-pr-7436",
+      "case_id": "requests-json-type-invariance",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/_types.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for psf-requests-issue-7434-pr-7436.",
+        "Retain src/requests/_types.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scipy-scipy-issue-25657-pr-25658",
+      "case_id": "scipy-signm-dtype",
+      "tier": "generalization",
+      "expected_files": [
+        "scipy/linalg/_matfuncs.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "scipy/linalg/_matfuncs.py",
+          "symbol": "signm.rounded_sign"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for scipy-scipy-issue-25657-pr-25658.",
+        "Retain scipy/linalg/_matfuncs.py with pre-fix symbol target signm.rounded_sign; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "python-attrs-attrs-issue-240-pr-1541",
+      "case_id": "attrs-converter-property",
+      "tier": "generalization",
+      "expected_files": [
+        "src/attr/_make.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for python-attrs-attrs-issue-240-pr-1541.",
+        "Retain src/attr/_make.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-3176-pr-4835",
+      "case_id": "hypothesis-target-optimizer-scheduling",
+      "tier": "generalization",
+      "expected_files": [
+        "hypothesis/src/hypothesis/internal/conjecture/engine.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for hypothesisworks-hypothesis-issue-3176-pr-4835.",
+        "Retain hypothesis/src/hypothesis/internal/conjecture/engine.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-3289-pr-5057",
+      "case_id": "urllib3-lazy-default-queue",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/connectionpool.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/urllib3/connectionpool.py",
+          "symbol": "HTTPConnectionPool.__init__"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for urllib3-urllib3-issue-3289-pr-5057.",
+        "Retain src/urllib3/connectionpool.py with pre-fix symbol target HTTPConnectionPool.__init__; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-packaging-issue-781-pr-1346",
+      "case_id": "packaging-pure-python-tags",
+      "tier": "generalization",
+      "expected_files": [
+        "src/packaging/tags.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pypa-packaging-issue-781-pr-1346.",
+        "Retain src/packaging/tags.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "apache-airflow-issue-58618-pr-58981",
+      "case_id": "airflow-display-current-user",
+      "tier": "generalization",
+      "expected_files": [
+        "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for apache-airflow-issue-58618-pr-58981.",
+        "Retain airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tornadoweb-tornado-issue-3562-pr-3563",
+      "case_id": "tornado-httpheaders-case-insensitive-contains",
+      "tier": "generalization",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "tornado/httputil.py",
+          "symbol": "HTTPHeaders.__contains__"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tornadoweb-tornado-issue-3562-pr-3563.",
+        "Retain tornado/httputil.py with pre-fix symbol target HTTPHeaders.__contains__; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pytest-dev-pytest-asyncio-issue-1419-pr-1421",
+      "case_id": "pytest-asyncio-policy-fixture-deprecation",
+      "tier": "generalization",
+      "expected_files": [
+        "pytest_asyncio/plugin.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pytest-dev-pytest-asyncio-issue-1419-pr-1421.",
+        "Retain pytest_asyncio/plugin.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "pypa-packaging-issue-1220-pr-1224",
+      "case_id": "packaging-parse-tag-limit",
+      "tier": "generalization",
+      "expected_files": [
+        "src/packaging/tags.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for pypa-packaging-issue-1220-pr-1224.",
+        "Retain src/packaging/tags.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "tornadoweb-tornado-issue-3637-pr-3646",
+      "case_id": "tornado-request-constructor-deprecations",
+      "tier": "generalization",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "tornado/httputil.py",
+          "symbol": "HTTPServerRequest.__init__"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tornadoweb-tornado-issue-3637-pr-3646.",
+        "Retain tornado/httputil.py with pre-fix symbol target HTTPServerRequest.__init__; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    },
+    {
+      "candidate_id": "psf-requests-issue-4795-pr-7427",
+      "case_id": "requests-no-proxy-domain-boundaries",
+      "tier": "generalization",
+      "expected_files": [
+        "src/requests/utils.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/utils.py",
+          "symbol": "should_bypass_proxies"
+        }
+      ],
+      "review_notes": [
+        "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for psf-requests-issue-4795-pr-7427.",
+        "Retain src/requests/utils.py with pre-fix symbol target should_bypass_proxies; tests, docs, changelog, generated, and auxiliary files are excluded."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-4857-pr-4862",
+      "reason": "PR #4862 fixes Issues #4857, #4858, and #4859 together, so no unique Issue-to-Fix-PR pair exists."
+    },
+    {
+      "candidate_id": "python-hyper-h2-issue-1247-pr-1309",
+      "reason": "PR #1309 fixes Issues #1308, #1247, and #319 together, so #1247 would duplicate one fix."
+    },
+    {
+      "candidate_id": "scikit-learn-scikit-learn-issue-34621-pr-34632",
+      "reason": "The changes are CI and test-warning infrastructure rather than production library behavior."
+    },
+    {
+      "candidate_id": "pyo3-pyo3-issue-6318-pr-6320",
+      "reason": "All production-file hunks are inside a cfg(test) module and only relax a flaky assertion."
+    },
+    {
+      "candidate_id": "sphinx-doc-sphinx-issue-3099-pr-3104",
+      "reason": "PR #3104 is a different LaTeX package-options feature and omits the Issue's material style-file scope."
+    },
+    {
+      "candidate_id": "pypa-packaging-issue-774-pr-825",
+      "reason": "PR #825 fixes Issues #678 and #802 rather than the platform_release request in #774."
+    },
+    {
+      "candidate_id": "tornadoweb-tornado-issue-3510-pr-3511",
+      "reason": "PR #3511 only removes a debug print and does not fix the reported 500-to-400 error-handling root cause."
+    },
+    {
+      "candidate_id": "matplotlib-matplotlib-issue-28220-pr-32195",
+      "reason": "PR #32195 changes clear() behavior but does not fix the reported initial PolygonSelector state."
+    },
+    {
+      "candidate_id": "aio-libs-yarl-issue-1455-pr-1456",
+      "reason": "The automatic scope omits the material yarl/_quoting_c.pyx free-threading implementation."
+    },
+    {
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-13132-pr-13155",
+      "reason": "The PR is documentation-only and changes no runtime behavior."
+    },
+    {
+      "candidate_id": "pytest-dev-pluggy-issue-37-pr-42",
+      "reason": "PR #42 addresses hook signature warnings and is not the benchmark-test feature requested by Issue #37."
+    },
+    {
+      "candidate_id": "boto-boto3-issue-3787-pr-3863",
+      "reason": "The PR only adds docstring links and changes no production behavior."
+    },
+    {
+      "candidate_id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
+      "reason": "The PR is CI/build integration support rather than production library behavior."
+    },
+    {
+      "candidate_id": "pyo3-pyo3-issue-5344-pr-5602",
+      "reason": "PR #5602 closes a different Issue and its hunks are test-only."
+    },
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4853",
+      "reason": "PR #4853 does not close Issue #4858; the actual fix is the non-unique PR #4862."
+    },
+    {
+      "candidate_id": "pypa-build-issue-557-pr-1084",
+      "reason": "PR #1084 is an API deprecation change and does not implement the requested non-isolated dependency validation."
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-2936-pr-5054",
+      "reason": "The PR documents intended socket_options behavior and changes no runtime behavior."
+    },
+    {
+      "candidate_id": "pycqa-flake8-issue-1823-pr-1824",
+      "reason": "The PR removes an outdated source comment link only."
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-3546-pr-5120",
+      "reason": "The PR corrects a docstring description only."
+    },
+    {
+      "candidate_id": "sqlalchemy-sqlalchemy-issue-13462-pr-13463",
+      "reason": "The PR is explicitly a documentation/typographical correction."
+    },
+    {
+      "candidate_id": "python-hyper-h11-issue-28-pr-93",
+      "reason": "The PR formats benchmark, example, and fuzz files and changes no h11 runtime behavior."
+    }
+  ]
+}
