@@ -1,0 +1,182 @@
+{
+  "name": "real-project-benchmark-expansion-v0.23",
+  "version": 1,
+  "manifest_name": "python-real-issue-file-localization",
+  "selections": [
+    {
+      "candidate_id": "tox-dev-tox-issue-3945-pr-3948",
+      "case_id": "tox-user-constraints-precedence",
+      "tier": "generalization",
+      "expected_files": [
+        "src/tox/tox_env/python/pip/pip_install.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #3945 reproduces duplicate and conflicting pip constraint files when explicit constraints are combined with generated package constraints, and merged PR #3948 makes explicit constraints take precedence.",
+        "Retain pip_install.py as file-level ground truth because the fix spans two existing methods and a new property; documentation, tests, and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "urllib3-urllib3-issue-5077-pr-5102",
+      "case_id": "urllib3-http-ssl-keyword-filter",
+      "tier": "generalization",
+      "expected_files": [
+        "src/urllib3/poolmanager.py"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #5077 reproduces HTTPS-only assert_hostname and assert_fingerprint options leaking into HTTPConnection construction, and merged PR #5102 adds both to SSL_KEYWORDS.",
+        "Retain src/urllib3/poolmanager.py as module-level constant ground truth; tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "ansible-ansible-issue-87303-pr-87304",
+      "case_id": "ansible-rpm-key-armor-newline",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/ansible/modules/rpm_key.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/ansible/modules/rpm_key.py",
+          "symbol": "LibRPM._parse_armor"
+        }
+      ],
+      "review_notes": [
+        "Issue #87303 reproduces librpm rejecting armored keys without a trailing newline, and merged PR #87304 normalizes the armor before pgpParsePkts.",
+        "Retain lib/ansible/modules/rpm_key.py::LibRPM._parse_armor; integration tests and changelog are excluded."
+      ]
+    },
+    {
+      "candidate_id": "astral-sh-ruff-issue-27216-pr-27711",
+      "case_id": "ruff-delete-full-slice-dict",
+      "tier": "generalization",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
+      ],
+      "expected_symbols": [],
+      "review_notes": [
+        "Issue #27216 shows FURB131 incorrectly rewriting dictionary full-slice deletion, and merged PR #27711 restricts the rule to lists.",
+        "Retain the Rust rule implementation as file-only ground truth; generated snapshots are excluded."
+      ]
+    },
+    {
+      "candidate_id": "scikit-learn-scikit-learn-issue-34338-pr-34341",
+      "case_id": "sklearn-radius-neighbors-array-parallel",
+      "tier": "generalization",
+      "expected_files": [
+        "sklearn/neighbors/_base.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "sklearn/neighbors/_base.py",
+          "symbol": "RadiusNeighborsMixin.radius_neighbors"
+        }
+      ],
+      "review_notes": [
+        "Issue #34338 reports array-like radius values failing only when radius_neighbors uses multiple jobs, and merged PR #34341 slices radius with the same worker slice as X.",
+        "Retain RadiusNeighborsMixin.radius_neighbors; changelog and regression tests are excluded, and unmerged PR #34353 is not a second fix case."
+      ]
+    },
+    {
+      "candidate_id": "pandas-dev-pandas-issue-66517-pr-66791",
+      "case_id": "pandas-convert-dtypes-large-integer",
+      "tier": "generalization",
+      "expected_files": [
+        "pandas/core/dtypes/cast.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/core/dtypes/cast.py",
+          "symbol": "convert_dtypes"
+        }
+      ],
+      "review_notes": [
+        "Issue #66517 reproduces OverflowError when convert_dtypes receives integers outside int64 range, and merged PR #66791 keeps object dtype unless a fitting masked integer dtype exists.",
+        "Retain pandas/core/dtypes/cast.py::convert_dtypes; tests and whatsnew are excluded, and superseded Issues #66556 and #66596 must not be counted separately."
+      ]
+    },
+    {
+      "candidate_id": "matplotlib-matplotlib-issue-32133-pr-32150",
+      "case_id": "matplotlib-markevery-extreme-zoom",
+      "tier": "generalization",
+      "expected_files": [
+        "lib/matplotlib/lines.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/matplotlib/lines.py",
+          "symbol": "_mark_every_path"
+        }
+      ],
+      "review_notes": [
+        "Issue #32133 reproduces an unbounded allocation in _mark_every_path during extreme zooming with float markevery, and merged PR #32150 avoids the full marker-distance matrix.",
+        "Retain lib/matplotlib/lines.py::_mark_every_path; tests are excluded and existing Matplotlib cases use different backend files."
+      ]
+    },
+    {
+      "candidate_id": "apache-airflow-issue-70822-pr-70879",
+      "case_id": "airflow-msgraph-scope-normalization",
+      "tier": "generalization",
+      "expected_files": [
+        "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py",
+          "symbol": "get_fs"
+        }
+      ],
+      "review_notes": [
+        "Issue #70822 reports the Microsoft Graph filesystem failing when the UI supplies scopes but not scope, and merged PR #70879 normalizes scope values and always supplies authlib's singular scope.",
+        "Retain msgraph.py::get_fs as the entry-point symbol; unit tests are excluded and related Issue #69463 is not the same fix."
+      ]
+    },
+    {
+      "candidate_id": "pylint-dev-pylint-issue-11224-pr-11250",
+      "case_id": "pylint-nan-comparison-inference-error",
+      "tier": "generalization",
+      "expected_files": [
+        "pylint/checkers/base/comparison_checker.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pylint/checkers/base/comparison_checker.py",
+          "symbol": "ComparisonChecker._check_nan_comparison._is_float_nan"
+        }
+      ],
+      "review_notes": [
+        "Issue #11224 reproduces an uncaught inference error for an uninferable operand in NaN comparison checking, and merged PR #11250 catches astroid.InferenceError in the nested helper.",
+        "Retain ComparisonChecker._check_nan_comparison._is_float_nan; changelog and functional tests are excluded."
+      ]
+    },
+    {
+      "candidate_id": "apache-airflow-issue-71319-pr-71572",
+      "case_id": "airflow-keycloak-team-dag-resource",
+      "tier": "generalization",
+      "expected_files": [
+        "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py",
+          "symbol": "_attach_team_permissions"
+        }
+      ],
+      "review_notes": [
+        "Issue #71319 reports Keycloak team operations omitting the team-scoped DAG resource, and merged PR #71572 adds Dag:{team} to both permission creation and attachment paths.",
+        "Retain _attach_team_permissions as the create-team path symbol while file ground truth covers the second behavior point; tests are excluded."
+      ]
+    }
+  ],
+  "rejections": [
+    {
+      "candidate_id": "hypothesisworks-hypothesis-issue-4858-pr-4862",
+      "reason": "PR #4862 fixes three Issues (#4857, #4858, and #4859) in one regex change, so Issue #4858 cannot provide a unique Issue-to-Fix-PR ground-truth pair."
+    },
+    {
+      "candidate_id": "pypa-setuptools-issue-3085-pr-4997",
+      "reason": "PR #4997 only references and partially advances Issue #3085; later PRs #5007 and #5173 complete and close the broader pkg_resources removal."
+    }
+  ]
+}
