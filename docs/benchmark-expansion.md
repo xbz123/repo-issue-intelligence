@@ -37,7 +37,7 @@ unique. The final 40 accepted cases add no multi-file fix because the last autom
 record omitted a material C header; the earlier 30% aspiration is therefore reported as infeasible
 under the final ground-truth standard rather than filled with incomplete cases.
 
-Three deterministic v0.29 schema-corrected runs, using the v0.27 retrieval logic, completed
+Three deterministic v0.30 runs, using the unchanged v0.29 Top-20 retrieval logic, completed
 200/200 cases with zero failures. After removing timestamps, elapsed fields, and cache provenance,
 all candidate files, candidate symbols, per-case metrics, tier metrics, and aggregates were
 identical. The retained 160 cases were unchanged from manifest v19. File Recall@1/5/10/20 is
@@ -45,11 +45,18 @@ identical. The retained 160 cases were unchanged from manifest v19. File Recall@
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
 `0.3349`. Top-20 coverage is 221 of 267 production targets; all 46 misses remain in the denominator.
 
-Run 1 reused nine repository maps and rebuilt 191 after the index-version correction; runs 2 and 3
-recorded 200/200 hits. Warm reuse reduced mean in-process analysis time from 7,371 to 4,196 ms per
-case, a 43.07% reduction, without
+All three v0.30 runs recorded 200/200 repository-map cache hits and averaged 4,552 ms per case.
+They remained structurally identical to the corrected v0.29 deterministic baseline without
 changing any non-timing result. `benchmarks/expansion-v200-review-queue-v19.json` archives the final
 160-to-200 review pool; there is no active expansion queue after manifest v20.
+
+The pre-change Top-40 audit found 36 missed targets: 15 Python, 14 Rust, five TypeScript, one C,
+and one C++. Reserving three directly supported paths only in the expanded pool recovered NumPy
+`dlpack.c` plus two pandas Arrow-string targets, increasing pool coverage from 231/267 to 234/267
+without changing the deterministic Top-20. Three DeepSeek runs promoted `dlpack.c` and the pandas
+mixin every time; mean Recall@20 rose from `0.8807` to `0.8890`. Mean Recall@1 and MRR declined
+slightly and remain documented as tradeoffs. The compact taxonomy is
+`benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
 ## v0.23 tenth 200-case expansion batch
 

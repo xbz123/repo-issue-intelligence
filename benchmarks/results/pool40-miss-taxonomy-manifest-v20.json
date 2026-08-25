@@ -1,0 +1,518 @@
+{
+  "protocol": "pool40-miss-taxonomy-v0.30",
+  "manifest_version": 20,
+  "baseline_candidate_pool_limit": 40,
+  "missed_production_targets": 36,
+  "language_counts": {
+    "C": 1,
+    "C++": 1,
+    "Python": 15,
+    "Rust": 14,
+    "TypeScript": 5
+  },
+  "wide_candidate_rank_buckets": {
+    "41-60": 8,
+    "61-100": 7,
+    "101-200": 5,
+    "201+": 16
+  },
+  "repository_counts": {
+    "PrefectHQ/prefect": 4,
+    "ansible/ansible": 1,
+    "apache/airflow": 4,
+    "astral-sh/ruff": 4,
+    "astral-sh/uv": 10,
+    "boto/boto3": 1,
+    "matplotlib/matplotlib": 1,
+    "numpy/numpy": 1,
+    "pandas-dev/pandas": 3,
+    "paramiko/paramiko": 2,
+    "pylint-dev/pylint": 1,
+    "pypa/virtualenv": 1,
+    "scipy/scipy": 1,
+    "tox-dev/tox": 2
+  },
+  "policy_result": {
+    "expanded_protected_slots": 3,
+    "candidate_pool_matched_targets_before": 231,
+    "candidate_pool_matched_targets_after": 234,
+    "new_pool_targets": [
+      "numpy/_core/src/multiarray/dlpack.c",
+      "pandas/core/arrays/_arrow_string_mixins.py",
+      "pandas/core/arrays/string_arrow.py"
+    ],
+    "promoted_in_every_deepseek_run": [
+      "numpy/_core/src/multiarray/dlpack.c",
+      "pandas/core/arrays/_arrow_string_mixins.py"
+    ],
+    "regressed_pool_targets": []
+  },
+  "targets": [
+    {
+      "case_id": "airflow-display-current-user",
+      "repository": "apache/airflow",
+      "file": "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 921,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "airflow-keycloak-team-dag-resource",
+      "repository": "apache/airflow",
+      "file": "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py",
+      "language": "Python",
+      "wide_candidate_rank": 67,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Issue-matching symbols call _get_client"
+      ]
+    },
+    {
+      "case_id": "airflow-msgraph-scope-normalization",
+      "repository": "apache/airflow",
+      "file": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py",
+      "language": "Python",
+      "wide_candidate_rank": 90,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Symbol _get_scopes matches",
+        "Issue-matching symbols call _get_scopes"
+      ]
+    },
+    {
+      "case_id": "airflow-snowflake-workload-identity",
+      "repository": "apache/airflow",
+      "file": "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py",
+      "language": "Python",
+      "wide_candidate_rank": 173,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Symbol SnowflakeHook.get_azure_oauth_token matches"
+      ]
+    },
+    {
+      "case_id": "ansible-callback-deprecation-metadata",
+      "repository": "ansible/ansible",
+      "file": "lib/ansible/plugins/callback/oneline.py",
+      "language": "Python",
+      "wide_candidate_rank": 201,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Symbol CallbackModule matches"
+      ]
+    },
+    {
+      "case_id": "boto3-download-fileobj-append-mode",
+      "repository": "boto/boto3",
+      "file": "boto3/compat.py",
+      "language": "Python",
+      "wide_candidate_rank": 46,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Symbol rename_file matches"
+      ]
+    },
+    {
+      "case_id": "matplotlib-tk-close-root-window",
+      "repository": "matplotlib/matplotlib",
+      "file": "lib/matplotlib/cbook/__init__.py",
+      "language": "Python",
+      "wide_candidate_rank": 81,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Related source calls imported symbols defined here",
+        "Related source imports this file",
+        "Symbol is_scalar_or_string matches",
+        "Issue-matching symbols call is_scalar_or_string"
+      ]
+    },
+    {
+      "case_id": "numpy-scalar-dlpack",
+      "repository": "numpy/numpy",
+      "file": "numpy/_core/src/multiarray/dlpack.c",
+      "language": "C",
+      "wide_candidate_rank": 78,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Path matches issue title terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "pandas-isin-mixed-numeric-precision",
+      "repository": "pandas-dev/pandas",
+      "file": "pandas/core/algorithms.py",
+      "language": "Python",
+      "wide_candidate_rank": 123,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Related source imports this file",
+        "Symbol _ensure_data matches",
+        "Issue-matching symbols call _ensure_data"
+      ]
+    },
+    {
+      "case_id": "pandas-string-match-ascii",
+      "repository": "pandas-dev/pandas",
+      "file": "pandas/core/arrays/_arrow_string_mixins.py",
+      "language": "Python",
+      "wide_candidate_rank": 87,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Symbol ArrowStringArrayMixin._str_match matches",
+        "Issue title matches owner and method ArrowStringArrayMixin._str_match",
+        "Issue title strongly matches symbol ArrowStringArrayMixin._str_match"
+      ]
+    },
+    {
+      "case_id": "pandas-string-match-ascii",
+      "repository": "pandas-dev/pandas",
+      "file": "pandas/core/arrays/string_arrow.py",
+      "language": "Python",
+      "wide_candidate_rank": 81,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Symbol ArrowStringArray._str_match matches",
+        "Issue title matches owner and method ArrowStringArray._str_match",
+        "Issue title strongly matches symbol ArrowStringArray._str_match"
+      ]
+    },
+    {
+      "case_id": "paramiko-channel-window-performance",
+      "repository": "paramiko/paramiko",
+      "file": "paramiko/common.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Related source calls imported symbols defined here",
+        "Changed with lexical seed files in 1 prior commits (latest 6f21111)"
+      ]
+    },
+    {
+      "case_id": "paramiko-cryptography-25-ecdh",
+      "repository": "paramiko/paramiko",
+      "file": "setup.py",
+      "language": "Python",
+      "wide_candidate_rank": 59,
+      "evidence_categories": [
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "prefect-anyof-copy-new-run",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts",
+      "language": "TypeScript",
+      "wide_candidate_rank": 1282,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "prefect-nested-parameter-rendering",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 387,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "prefect-required-array-empty",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/schema-form-property.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 830,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "prefect-schema-null-value-persistence",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/schema-form-input.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 360,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "pylint-output-format-files",
+      "repository": "pylint-dev/pylint",
+      "file": "pylint/config/callback_actions.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Related source imports this file",
+        "Symbol _GenerateConfigFileAction matches"
+      ]
+    },
+    {
+      "case_id": "ruff-os-exit-private-member",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_linter/src/rules/pylint/helpers.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 181,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff/src/printer.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 1286,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_db/src/diagnostic/mod.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 1294,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_db/src/diagnostic/stylesheet.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 1560,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "scipy-remez-dense-grid-guard",
+      "repository": "scipy/scipy",
+      "file": "scipy/signal/_sigtoolsmodule.cc",
+      "language": "C++",
+      "wide_candidate_rank": 246,
+      "evidence_categories": [
+        "Path matches issue identifiers",
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "tox-cross-section-reference-context",
+      "repository": "tox-dev/tox",
+      "file": "src/tox/config/loader/ini/replace.py",
+      "language": "Python",
+      "wide_candidate_rank": 111,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source content matches issue terms",
+        "Symbol ReplaceReferenceIni matches"
+      ]
+    },
+    {
+      "case_id": "tox-skip-missing-interpreters",
+      "repository": "tox-dev/tox",
+      "file": "src/tox/tox_env/python/runner.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Changed with lexical seed files in 1 prior commits (latest dbeec44)",
+        "Symbol PythonRun.default_pkg_type matches"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-cli/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 139,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 328,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/settings.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 330,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-empty-pep508-error",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-pep508/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 45,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-settings/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 208,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/commands/project/add.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 235,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/commands/project/mod.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 244,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 254,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-venv-stale-interpreter-cache",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-python/src/interpreter.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 46,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "uv-venv-stale-interpreter-cache",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/commands/project/mod.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 60,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms"
+      ]
+    },
+    {
+      "case_id": "virtualenv-unsupported-seed-python",
+      "repository": "pypa/virtualenv",
+      "file": "src/virtualenv/run/plugin/seeders.py",
+      "language": "Python",
+      "wide_candidate_rank": 71,
+      "evidence_categories": [
+        "Path matches issue terms",
+        "Imports match component terms",
+        "Source contains issue identifiers",
+        "Source content matches issue terms",
+        "Related source calls imported symbols defined here",
+        "Symbol SeederSelector.create matches"
+      ]
+    }
+  ],
+  "notes": [
+    "wide_candidate_rank is diagnostic ordering from an intentionally wide positive-score run; it is not a production Top-40 rank.",
+    "The artifact contains no Issue bodies or source snippets; full raw diagnostics remain outside Git.",
+    "The policy preserves the single protected slot for the deterministic Top-20 and uses three slots only for candidate limits of at least 40."
+  ]
+}

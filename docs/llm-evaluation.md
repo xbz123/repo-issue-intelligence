@@ -12,8 +12,10 @@ quality improvement is claimed.
 
 An `llm-only` variant remains future work. Hybrid preserves the deterministic Top-20 as its exact
 fallback and appends unique files from a separate Top-40 retrieval pass to a model-only candidate
-pool. The model can promote at most three selected pool files before the unchanged deterministic
-order fills the final Top-20. It sends no `response_format` and accepts one unique plain-text
+pool. The Top-20 reserves one slot for a directly supported path; the Top-40 pass reserves three,
+without changing the deterministic fallback. The model can promote at most three selected pool
+files before the unchanged deterministic order fills the final Top-20. It sends no
+`response_format` and accepts one unique plain-text
 `RANK:` line; the CLI does not accept a different provider or model. The rank request disables
 reasoning, starts with an 8,192-token output budget, and retries once at 20,000 tokens only if the
 first completion is truncated. The complete frozen Issue is sent. Under the default 100,000-character
@@ -77,37 +79,39 @@ Machine-readable results are saved under `benchmarks/results/`; the reviewed res
 
 ## Manifest-v20 pool-40 external result
 
-Three authorized zero-delay runs evaluated all 200 frozen public cases with OpenCode
+Three authorized v0.30 zero-delay runs evaluated all 200 frozen public cases with OpenCode
 `deepseek-v4-flash`, temperature `0.1`, seed `1337`, and the bounded Top-40 protocol. All 600
-requests returned one valid known-ID `RANK:` line on their first attempt. No case used fallback,
-reported an unknown evidence ID, or failed execution.
+case-runs returned one valid known-ID `RANK:` line. Of these, 598 succeeded on the first attempt and
+two recovered through the bounded truncation retry. No case used fallback, reported an unknown
+evidence ID, or failed execution.
 
 | Run | File R@1 | R@5 | R@10 | R@20 | MRR | Pool R | Mean LLM latency | Input / output tokens |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.5722 | 0.7947 | 0.8313 | 0.8790 | 0.7551 | 0.8973 | 2.33 s | 3,449,909 / 1,964 |
-| 2 | 0.5622 | 0.7922 | 0.8338 | 0.8840 | 0.7483 | 0.8973 | 1.97 s | 3,449,909 / 1,972 |
-| 3 | 0.5772 | 0.7897 | 0.8313 | 0.8790 | 0.7543 | 0.8973 | 3.03 s | 3,449,909 / 1,960 |
-| Mean | 0.5705 | 0.7922 | 0.8321 | 0.8807 | 0.7526 | 0.8973 | 2.44 s | - |
+| 1 | 0.5572 | 0.7972 | 0.8388 | 0.8907 | 0.7483 | 0.9057 | 6.00 s | 3,443,977 / 1,964 |
+| 2 | 0.5622 | 0.7922 | 0.8388 | 0.8907 | 0.7521 | 0.9057 | 6.31 s | 3,443,977 / 1,968 |
+| 3 | 0.5672 | 0.7963 | 0.8355 | 0.8857 | 0.7543 | 0.9057 | 5.79 s | 3,443,977 / 1,964 |
+| Mean | 0.5622 | 0.7952 | 0.8377 | 0.8890 | 0.7516 | 0.9057 | 6.03 s | - |
 
 The corrected deterministic baseline is `0.3510/0.6517/0.7505/0.8665`, with MRR `0.5396`.
-The model-only pool contains 231 of 267 production targets; the final Top-20 contains 224, 225,
-and 224, compared with 221 in the deterministic Top-20. Every run recovered the same three files
-from outside the base set:
-`tornado/locks.py`, `pylint/checkers/classes/class_checker.py`, and
-`scipy/linalg/_matfuncs.py`. Run 2 also recovered
-`setuptools/config/_apply_pyprojecttoml.py`. No deterministic Top-20 ground-truth file was
-displaced.
+The model-only pool contains 234 of 267 production targets; the final Top-20 contains 227, 227,
+and 226, compared with 221 in the deterministic Top-20. NumPy `dlpack.c` and pandas
+`_arrow_string_mixins.py` are newly promoted in every run. Every run also recovers
+`tornado/locks.py`, Pylint `class_checker.py`, and SciPy `_matfuncs.py`; runs 1 and 2 recover
+Setuptools `_apply_pyprojecttoml.py`. No deterministic Top-20 ground-truth file is displaced.
 
-Across the three runs, 144/200 complete candidate orders were identical and 12 cases changed
-expected-file reciprocal rank. Pairwise ordering changes affected 34, 39, and 43 cases. Fixed seed
+Across the three runs, 138/200 complete candidate orders were identical and nine cases changed
+expected-file reciprocal rank. Pairwise ordering changes affected 43, 46, and 43 cases. Fixed seed
 therefore remains best effort even though protocol success and Recall@20 were stable. Symbol
-Recall@20 remained `0.4645` because the protocol does not create cross-language symbols; mean
-symbol MRR rose from deterministic `0.3349` to `0.4909` through file reordering. The three runs
-used 10,349,727 input tokens and 5,896 output tokens in total.
+Recall@20 was `0.4668`; mean symbol MRR was `0.4867`. The runs used 10,331,931 input tokens and
+5,896 output tokens in total. Relative to v0.29, mean Recall@20 improves from `0.8807` to `0.8890`,
+while Recall@1 decreases from `0.5705` to `0.5622` and MRR from `0.7526` to `0.7516`; the change is
+therefore a candidate-recall improvement, not a uniform ranking improvement.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON
 files were validated locally but are not committed because they duplicate large candidate lists.
+The pre-change 36-target miss audit is retained without Issue bodies or snippets at
+`benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 These measurements establish bounded localization and rank-protocol behavior on this frozen public
 suite, not root-cause accuracy or reliability on unseen/private repositories.
 

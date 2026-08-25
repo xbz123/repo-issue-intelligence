@@ -142,6 +142,8 @@ GRAPH_EXPANSION_MIN_BONUS = 5.0
 GRAPH_EXPANSION_SLOTS = 3
 GRAPH_STRONG_EXPANSION_SLOTS = 1
 PROTECTED_BASE_RESERVATION_SLOTS = 1
+EXPANDED_PROTECTED_BASE_RESERVATION_MIN_LIMIT = 40
+EXPANDED_PROTECTED_BASE_RESERVATION_SLOTS = 3
 DEFAULT_CANDIDATE_LIMIT = 20
 GRAPH_SECOND_HOP_CALL_MIN_LENGTH = 5
 GRAPH_STRONG_EXPANSION_PREFIX = "Two-hop source call chain via "
@@ -2445,27 +2447,31 @@ def _reserve_protected_paths(
     selected = ranked_paths[:limit]
     selected_set = set(selected)
     protected_set = set(protected_paths)
-    reserved = 0
-    for path in protected_paths:
-        if reserved >= reservation_slots:
-            break
-        if path in selected_set:
-            continue
-        replace_index = next(
-            (
-                index
-                for index in range(len(selected) - 1, -1, -1)
-                if selected[index] not in protected_set
-            ),
-            None,
-        )
-        if replace_index is None:
-            break
-        selected_set.remove(selected[replace_index])
+    missing_protected_paths = [
+        path for path in protected_paths if path not in selected_set
+    ]
+    replaceable_indices = [
+        index
+        for index in range(len(selected) - 1, -1, -1)
+        if selected[index] not in protected_set
+    ]
+    replace_count = min(
+        reservation_slots,
+        len(missing_protected_paths),
+        len(replaceable_indices),
+    )
+    replace_indices = replaceable_indices[:replace_count]
+    replace_indices.sort()
+    reserved_paths = missing_protected_paths[:replace_count]
+    for replace_index, path in zip(replace_indices, reserved_paths, strict=True):
         selected[replace_index] = path
-        selected_set.add(path)
-        reserved += 1
     return selected
+
+
+def _protected_base_reservation_slots(limit: int) -> int:
+    if limit >= EXPANDED_PROTECTED_BASE_RESERVATION_MIN_LIMIT:
+        return EXPANDED_PROTECTED_BASE_RESERVATION_SLOTS
+    return PROTECTED_BASE_RESERVATION_SLOTS
 
 
 def locate_candidates(
@@ -2840,7 +2846,7 @@ def locate_candidates(
         base_order,
         reservation_order,
         limit,
-        PROTECTED_BASE_RESERVATION_SLOTS,
+        _protected_base_reservation_slots(limit),
     )
     reranked_base: list[str] = []
     for start in range(0, len(base_shortlist), GRAPH_RERANK_BAND_SIZE):

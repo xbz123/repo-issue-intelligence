@@ -11,6 +11,7 @@ from repo_issue_intelligence.investigator import (
     _expansion_relation_bonus,
     _identifier_variants,
     _merge_tail_expansions,
+    _protected_base_reservation_slots,
     _rerank_relation_bonus,
     _reserve_protected_paths,
     extract_issue_signals,
@@ -421,6 +422,29 @@ def test_directly_supported_path_enters_base_shortlist() -> None:
     )
 
     assert selected == ["first.py", "second.py", "publish.py"]
+
+
+def test_expanded_pool_reserves_three_directly_supported_paths() -> None:
+    ranked = [f"base-{index}.py" for index in range(45)]
+    protected = ranked[40:43]
+
+    default_selected = _reserve_protected_paths(
+        ranked,
+        protected,
+        limit=20,
+        reservation_slots=_protected_base_reservation_slots(20),
+    )
+    expanded_selected = _reserve_protected_paths(
+        ranked,
+        protected,
+        limit=40,
+        reservation_slots=_protected_base_reservation_slots(40),
+    )
+
+    assert default_selected[-1] == protected[0]
+    assert default_selected[:-1] == ranked[:19]
+    assert expanded_selected[-3:] == protected
+    assert expanded_selected[:-3] == ranked[:37]
 
 
 def test_source_path_reservation_ignores_auxiliary_traceback_paths(
@@ -4391,6 +4415,43 @@ def test_investigation_keeps_twenty_candidates_for_reranking(tmp_path: Path) -> 
 
     expanded = investigate(record, build_repository_map(repository), candidate_limit=40)
     assert len(expanded.candidates) == 25
+
+
+def test_expanded_investigation_reserves_three_supported_paths(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    for index in range(40):
+        write_source(
+            repository,
+            f"src/worker_failure_alpha_beta_gamma_{index:02d}.rs",
+            'const MARKERS: &str = "AlphaWorker BetaWorker GammaWorker";\n',
+        )
+    targets = [
+        "src/alpha_worker.rs",
+        "src/beta_worker.rs",
+        "src/gamma_worker.rs",
+    ]
+    for target in targets:
+        write_source(repository, target, "const TARGET: bool = true;\n")
+    record = issue(
+        "AlphaWorker BetaWorker GammaWorker failure",
+        "The worker selection fails.",
+    )
+    repository_map = build_repository_map(repository)
+
+    default = investigate(record, repository_map)
+    expanded = investigate(record, repository_map, candidate_limit=40)
+    default_targets = [
+        candidate.file for candidate in default.candidates if candidate.file in targets
+    ]
+    expanded_targets = [
+        candidate.file for candidate in expanded.candidates if candidate.file in targets
+    ]
+
+    assert default_targets == targets[:1]
+    assert expanded_targets == targets
+    assert [candidate.file for candidate in expanded.candidates[-3:]] == targets
 
 
 def test_investigate_explicit_default_limit_preserves_order(tmp_path: Path) -> None:
