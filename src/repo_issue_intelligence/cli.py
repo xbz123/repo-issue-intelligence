@@ -473,6 +473,13 @@ def benchmark_discover(
             help="Maximum production source files in a reviewable fix.",
         ),
     ] = 5,
+    base_manifest: Annotated[
+        Path | None,
+        typer.Option(
+            "--base-manifest",
+            help="Skip Issues and fix PRs already present in this manifest.",
+        ),
+    ] = None,
     tier: Annotated[
         list[str] | None,
         typer.Option(
@@ -484,6 +491,7 @@ def benchmark_discover(
     """Discover Issue/Fix-PR pairs for manual benchmark audit."""
     client = GitHubClient(Settings().github_token)
     try:
+        existing = load_manifest(base_manifest) if base_manifest else None
         catalog = discover_candidates(
             client,
             repositories,
@@ -491,6 +499,18 @@ def benchmark_discover(
             scan_limit_per_repository=scan_limit_per_repository,
             max_source_files=max_source_files,
             suggested_tiers=_parse_tier_assignments(tier),
+            excluded_issue_keys=frozenset(
+                (case.repository.lower(), case.issue_number)
+                for case in existing.cases
+            )
+            if existing
+            else frozenset(),
+            excluded_pull_request_keys=frozenset(
+                (case.repository.lower(), case.fix_pr_number)
+                for case in existing.cases
+            )
+            if existing
+            else frozenset(),
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error

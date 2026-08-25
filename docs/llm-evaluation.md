@@ -39,7 +39,7 @@ mutable Issue text during a benchmark run. It records:
 - issue number, title, body, labels, timestamps, URL, author, and comment count;
 - duplicate master, when applicable;
 - files changed by the fix;
-- 265 reviewed production-file targets and 177 manually reviewed symbols across 143 cases;
+- 267 reviewed production-file targets and 177 manually reviewed symbols across 143 cases;
 - the parent of the first fix-PR commit used for indexing.
 
 Repository preparation verifies the frozen SHA, and evaluation indexes only Git-tracked paths so
@@ -84,22 +84,26 @@ reported an unknown evidence ID, or failed execution.
 
 | Run | File R@1 | R@5 | R@10 | R@20 | MRR | Pool R | Mean LLM latency | Input / output tokens |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.5772 | 0.7830 | 0.8272 | 0.8790 | 0.7497 | 0.8973 | 5.47 s | 3,449,353 / 1,972 |
-| 2 | 0.5672 | 0.7847 | 0.8288 | 0.8790 | 0.7467 | 0.8973 | 3.18 s | 3,449,353 / 1,968 |
-| 3 | 0.5722 | 0.7855 | 0.8297 | 0.8790 | 0.7472 | 0.8973 | 3.73 s | 3,449,353 / 1,968 |
-| Mean | 0.5722 | 0.7844 | 0.8286 | 0.8790 | 0.7479 | 0.8973 | 4.13 s | - |
+| 1 | 0.5722 | 0.7947 | 0.8313 | 0.8790 | 0.7551 | 0.8973 | 2.33 s | 3,449,909 / 1,964 |
+| 2 | 0.5622 | 0.7922 | 0.8338 | 0.8840 | 0.7483 | 0.8973 | 1.97 s | 3,449,909 / 1,972 |
+| 3 | 0.5772 | 0.7897 | 0.8313 | 0.8790 | 0.7543 | 0.8973 | 3.03 s | 3,449,909 / 1,960 |
+| Mean | 0.5705 | 0.7922 | 0.8321 | 0.8807 | 0.7526 | 0.8973 | 2.44 s | - |
 
-The deterministic baseline is `0.3510/0.6567/0.7555/0.8665`, with MRR `0.5396`. The model-only
-pool contains 229 of 265 production targets; the final Top-20 contains 222, compared with 219 in
-the deterministic Top-20. Every run recovered the same three files from outside the base set:
+The corrected deterministic baseline is `0.3510/0.6517/0.7505/0.8665`, with MRR `0.5396`.
+The model-only pool contains 231 of 267 production targets; the final Top-20 contains 224, 225,
+and 224, compared with 221 in the deterministic Top-20. Every run recovered the same three files
+from outside the base set:
 `tornado/locks.py`, `pylint/checkers/classes/class_checker.py`, and
-`scipy/linalg/_matfuncs.py`. No deterministic Top-20 ground-truth file was displaced.
+`scipy/linalg/_matfuncs.py`. Run 2 also recovered
+`setuptools/config/_apply_pyprojecttoml.py`. No deterministic Top-20 ground-truth file was
+displaced.
 
-Across the three runs, 135/200 complete candidate orders were identical and eight cases changed
-expected-file reciprocal rank. Pairwise ordering changes affected 41, 48, and 45 cases. Fixed seed
+Across the three runs, 144/200 complete candidate orders were identical and 12 cases changed
+expected-file reciprocal rank. Pairwise ordering changes affected 34, 39, and 43 cases. Fixed seed
 therefore remains best effort even though protocol success and Recall@20 were stable. Symbol
 Recall@20 remained `0.4645` because the protocol does not create cross-language symbols; mean
-symbol MRR rose from deterministic `0.3349` to `0.4856` through file reordering.
+symbol MRR rose from deterministic `0.3349` to `0.4909` through file reordering. The three runs
+used 10,349,727 input tokens and 5,896 output tokens in total.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON

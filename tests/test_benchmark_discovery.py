@@ -9,6 +9,7 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkManifest,
     BenchmarkSymbolTarget,
     BenchmarkTier,
+    load_manifest,
 )
 from repo_issue_intelligence.benchmark_discovery import (
     CandidateRejectionEntry,
@@ -21,6 +22,7 @@ from repo_issue_intelligence.benchmark_discovery import (
     curate_benchmark_expansion,
     discover_candidates,
     linked_pull_request_numbers,
+    load_candidate_selection,
     load_candidate_sources,
     reviewed_rejection_ids,
     save_curated_expansion,
@@ -132,17 +134,51 @@ def test_classify_changed_files_excludes_non_ground_truth_paths() -> None:
                 "status": "modified",
                 "changes": 9,
             },
+            {
+                "filename": "src/package/package.schema.json",
+                "status": "modified",
+                "changes": 10,
+            },
+            {
+                "filename": "src/package/package-lock.json",
+                "status": "modified",
+                "changes": 11,
+            },
         ]
     )
 
     assert files[0].eligible_source is True
-    assert all(not item.eligible_source for item in files[1:])
+    assert all(not item.eligible_source for item in files[1:9])
+    assert files[9].eligible_source is True
+    assert files[9].exclusion_reason is None
+    assert files[10].eligible_source is False
+    assert files[10].exclusion_reason == "unsupported source suffix"
     assert files[3].exclusion_reason == "file does not exist at the pre-fix commit"
     assert files[6].exclusion_reason == (
         "test, documentation, example, generated, or vendored path"
     )
     assert files[7].exclusion_reason == "test file"
     assert files[8].exclusion_reason == "test file"
+
+
+def test_final_selection_replays_shipped_tox_schema_ground_truth() -> None:
+    base = load_manifest(Path("benchmarks/cases-v0.24-expanded-160-cases.json"))
+    candidates = load_candidate_sources(
+        [
+            Path("benchmarks/candidates-v0.25.json"),
+            Path("benchmarks/rejections-v0.25.json"),
+        ]
+    )
+    assert sum(candidate.status is CandidateStatus.ACCEPTED for candidate in candidates) == 40
+    assert sum(candidate.status is CandidateStatus.REJECTED for candidate in candidates) == 21
+    selection = load_candidate_selection(
+        Path("benchmarks/expansion-v0.25-selection.json")
+    )
+
+    _, replayed = curate_benchmark_expansion(base, candidates, selection)
+    committed = load_manifest(Path("benchmarks/cases-v0.25-expanded-200-cases.json"))
+
+    assert replayed == committed
 
 
 def test_audit_candidate_derives_pre_fix_sha_and_requires_review() -> None:
@@ -286,6 +322,21 @@ def test_discovery_stops_after_reviewable_target() -> None:
     assert len(catalog.candidates) == 1
     assert catalog.candidates[0].issue_snapshot.number == 42
     assert catalog.candidates[0].suggested_tier is BenchmarkTier.GENERALIZATION
+
+
+def test_discovery_skips_frozen_issue_and_continues_to_target() -> None:
+    catalog = discover_candidates(
+        FakeDiscoveryClient(),
+        ["example/project"],
+        target_per_repository=1,
+        scan_limit_per_repository=10,
+        excluded_issue_keys=frozenset({("Example/Project", 42)}),
+        excluded_pull_request_keys=frozenset({("Example/Project", 43)}),
+    )
+
+    assert len(catalog.candidates) == 1
+    assert catalog.candidates[0].issue_snapshot.number == 44
+    assert catalog.candidates[0].fix_pr_number == 45
 
 
 def test_curate_expansion_accepts_only_explicit_manual_selection(tmp_path: Path) -> None:
@@ -439,6 +490,16 @@ def test_curate_expansion_can_narrow_audited_expected_files() -> None:
     with pytest.raises(ValueError, match="outside the audited patch"):
         curate_benchmark_expansion(base_manifest, [candidate], selection)
 
+    selection.selections[0].expected_files = ["src/fix.py"]
+    selection.rejections = [
+        CandidateRejectionEntry(
+            candidate_id="unknown-candidate",
+            reason="This ID is absent from the audited source.",
+        )
+    ]
+    with pytest.raises(ValueError, match="unknown rejected candidate IDs"):
+        curate_benchmark_expansion(base_manifest, [candidate], selection)
+
 
 def test_curate_expansion_records_rejections_without_accepting_them() -> None:
     base_issue = issue(1)
@@ -489,14 +550,12 @@ def test_curate_expansion_records_rejections_without_accepting_them() -> None:
     assert [candidate.id for candidate in curated.candidates] == [selected.id]
     assert expanded.cases[-1].id == "selected-case"
 
-    replayed_curated, replayed_expanded = curate_benchmark_expansion(
-        base_manifest,
-        [selected],
-        selection,
-    )
-
-    assert replayed_curated.candidates == curated.candidates
-    assert replayed_expanded == expanded
+    with pytest.raises(ValueError, match="unknown rejected candidate IDs"):
+        curate_benchmark_expansion(
+            base_manifest,
+            [selected],
+            selection,
+        )
 
     queue = build_candidate_review_queue(
         base_manifest,

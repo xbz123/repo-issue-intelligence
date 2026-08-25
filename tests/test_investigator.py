@@ -482,6 +482,44 @@ def test_locate_candidates_uses_source_content_identifiers(tmp_path: Path) -> No
     )
 
 
+def test_repository_map_localizes_shipped_json_schema(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/tox/session/cmd/schema.py",
+        "def build_schema():\n    return {'deps': ['string']}\n",
+    )
+    write_source(
+        repository,
+        "src/tox/tox.schema.json",
+        '{"properties": {"deps": {"type": "string"}}}\n',
+    )
+    write_source(
+        repository,
+        "src/tox/package-lock.json",
+        '{"deps": "not a benchmark source artifact"}\n',
+    )
+
+    repository_map = build_repository_map(repository)
+    records = {file.path: file for file in repository_map.files}
+
+    assert records["src/tox/tox.schema.json"].language == "JSON Schema"
+    assert records["src/tox/tox.schema.json"].symbols == []
+    assert "src/tox/package-lock.json" not in records
+
+    candidates = locate_candidates(
+        issue(
+            "Published tox schema rejects dependency arrays",
+            "The `deps` property in `src/tox/tox.schema.json` accepts only strings.",
+        ),
+        repository_map,
+    )
+
+    assert "src/tox/tox.schema.json" in {
+        candidate.file for candidate in candidates
+    }
+
+
 def test_locate_candidates_prefers_compound_title_identifier(
     tmp_path: Path,
 ) -> None:

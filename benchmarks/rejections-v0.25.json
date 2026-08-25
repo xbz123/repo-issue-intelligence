@@ -1,0 +1,3049 @@
+{
+  "name": "real-project-benchmark-v0.25-rejected-provenance",
+  "version": 1,
+  "generated_at": "2026-08-25T00:00:00Z",
+  "repositories": [
+    "HypothesisWorks/hypothesis",
+    "PyCQA/flake8",
+    "PyO3/pyo3",
+    "TornadoWeb/tornado",
+    "aio-libs/yarl",
+    "boto/boto3",
+    "matplotlib/matplotlib",
+    "pypa/build",
+    "pypa/packaging",
+    "pytest-dev/pluggy",
+    "python-hyper/h11",
+    "python-hyper/h2",
+    "scikit-learn/scikit-learn",
+    "sphinx-doc/sphinx",
+    "sqlalchemy/sqlalchemy",
+    "urllib3/urllib3"
+  ],
+  "search_query": "archived rejected candidates from the v0.25 review sources",
+  "target_per_repository": 1,
+  "scan_limit_per_repository": 1,
+  "max_source_files": 8,
+  "candidates": [
+    {
+      "id": "hypothesisworks-hypothesis-issue-4857-pr-4862",
+      "repository": "HypothesisWorks/hypothesis",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 4857,
+        "title": "`st.from_regex` can incorrectly raise `IncompatibleWithAlphabet` with kleene star",
+        "body": "```python\n# raises, but \"\", \"a\", \"aa\", etc are all valid test cases\nst.from_regex(r\"a*b*\", alphabet=\"a\", fullmatch=True).example()\n```",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-13T18:38:14Z",
+        "updated_at": "2026-08-15T17:39:39Z",
+        "html_url": "https://github.com/HypothesisWorks/hypothesis/issues/4857",
+        "author": "Liam-DeVoe"
+      },
+      "fix_pr_number": 4862,
+      "fix_pr_title": "Fix some regex bugs",
+      "fix_pr_url": "https://github.com/HypothesisWorks/hypothesis/pull/4862",
+      "fix_pr_merged_at": "2026-08-15T17:39:37Z",
+      "merge_commit_sha": "16f24b76015dbaabca40608eb9e73b46ac64e249",
+      "pre_fix_sha": "a15954b165af42884b655dcf7e9338cb107711da",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
+      ],
+      "changed_files": [
+        {
+          "path": "hypothesis/RELEASE.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 0,
+          "changes": 16,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "hypothesis/src/hypothesis/strategies/_internal/regex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 86,
+          "deletions": 78,
+          "changes": 164,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "hypothesis/tests/cover/test_regex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 92,
+          "deletions": 8,
+          "changes": 100,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: HypothesisWorks/hypothesis"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T17:39:37Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-13T18:38:14+00:00, pr_merged_at=2026-08-15T17:39:37+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "134 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        },
+        {
+          "code": "unique_fix_pr",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR #4862 already has another reviewable Issue; select only one case during manual audit."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "PR #4862 already has another reviewable Issue; select only one case during manual audit.",
+        "Manual rejection: PR #4862 fixes Issues #4857, #4858, and #4859 together, so no unique Issue-to-Fix-PR pair exists."
+      ]
+    },
+    {
+      "id": "python-hyper-h2-issue-1247-pr-1309",
+      "repository": "python-hyper/h2",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 1247,
+        "title": "”Header block missing mandatory :path header” when using CONNECT as per the HTTP/2 specification",
+        "body": "A `CONNECT` request without a `:path` header, which *must* be omitted according to the [specification](https://tools.ietf.org/html/rfc7540#section-8.3):\r\n\r\n> The \":scheme\" and \":path\" pseudo-header fields MUST be omitted.\r\n\r\nCauses `ProtocolError('Header block missing mandatory :path header')`\r\n\r\nRelated to #319",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2021-02-24T06:31:53Z",
+        "updated_at": "2025-10-13T17:29:12Z",
+        "html_url": "https://github.com/python-hyper/h2/issues/1247",
+        "author": "Gallaecio"
+      },
+      "fix_pr_number": 1309,
+      "fix_pr_title": "HTTP/2: accept ordinary CONNECT without :path/:scheme; add tests (pseudo-headers + round-trip)",
+      "fix_pr_url": "https://github.com/python-hyper/h2/pull/1309",
+      "fix_pr_merged_at": "2025-10-13T17:29:10Z",
+      "merge_commit_sha": "85068ed527ce1d1a91f68f1aee50ea0b9d540104",
+      "pre_fix_sha": "9268b7235f345e6a335733d56d298594e8069aa3",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/h2/utilities.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CHANGELOG.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 0,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "src/h2/utilities.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 8,
+          "changes": 39,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_connect_pseudo_headers.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 99,
+          "deletions": 0,
+          "changes": 99,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_connect_roundtrip_and_edges.py",
+          "status": "added",
+          "previous_path": null,
+          "additions": 234,
+          "deletions": 0,
+          "changes": 234,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h2"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-10-13T17:29:10Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2021-02-24T06:31:53+00:00, pr_merged_at=2025-10-13T17:29:10+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "313 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        },
+        {
+          "code": "unique_fix_pr",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR #1309 already has another reviewable Issue; select only one case during manual audit."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "PR #1309 already has another reviewable Issue; select only one case during manual audit.",
+        "Manual rejection: PR #1309 fixes Issues #1308, #1247, and #319 together, so #1247 would duplicate one fix."
+      ]
+    },
+    {
+      "id": "scikit-learn-scikit-learn-issue-34621-pr-34632",
+      "repository": "scikit-learn/scikit-learn",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 34621,
+        "title": "⚠️ CI failed on Unit tests Linux x86-64 pylatest_pip_scipy_dev (last failure: Aug 04, 2026) ⚠️",
+        "body": "**CI is still failing on [Unit tests Linux x86-64 pylatest_pip_scipy_dev](https://github.com/scikit-learn/scikit-learn/actions/runs/30875349563/job/91885732261)** (Aug 04, 2026)\n- test_sparse_preprocess_data_offsets[1-lil_matrix]\n- test_sparse_preprocess_data_offsets[1-lil_array]\n- test_large_sparse_matrix[csr_matrix-lbfgs]\n- test_large_sparse_matrix[csr_matrix-liblinear]\n- test_large_sparse_matrix[csr_matrix-newton-cd-gram]\n- test_large_sparse_matrix[csr_matrix-newton-cg]\n- test_large_sparse_matrix[csr_matrix-newton-cholesky]\n- test_large_sparse_matrix[csr_matrix-sag]\n- test_large_sparse_matrix[csr_matrix-saga]\n- test_large_sparse_matrix[csr_array-lbfgs]\n- test_large_sparse_matrix[csr_array-liblinear]\n- test_large_sparse_matrix[csr_array-newton-cd-gram]\n- test_large_sparse_matrix[csr_array-newton-cg]\n- test_large_sparse_matrix[csr_array-newton-cholesky]\n- test_large_sparse_matrix[csr_array-sag]\n- test_large_sparse_matrix[csr_array-saga]\n- test_sparse_input[1-float32-csr_matrix-auto-auto]\n- test_sparse_input[1-float32-csr_matrix-auto-dense]\n- test_sparse_input[1-float32-csr_matrix-auto-arpack]\n- test_sparse_input[1-float32-csr_matrix-FW-auto]\n- test_sparse_input[1-float32-csr_matrix-FW-dense]\n- test_sparse_input[1-float32-csr_matrix-FW-arpack]\n- test_sparse_input[1-float32-csr_matrix-D-auto]\n- test_sparse_input[1-float32-csr_matrix-D-dense]\n- test_sparse_input[1-float32-csr_matrix-D-arpack]\n- test_sparse_input[1-float32-csr_array-auto-auto]\n- test_sparse_input[1-float32-csr_array-auto-dense]\n- test_sparse_input[1-float32-csr_array-auto-arpack]\n- test_sparse_input[1-float32-csr_array-FW-auto]\n- test_sparse_input[1-float32-csr_array-FW-dense]\n- test_sparse_input[1-float32-csr_array-FW-arpack]\n- test_sparse_input[1-float32-csr_array-D-auto]\n- test_sparse_input[1-float32-csr_array-D-dense]\n- test_sparse_input[1-float32-csr_array-D-arpack]\n- test_sparse_input[1-float64-csr_matrix-auto-auto]\n- test_sparse_input[1-float64-csr_matrix-auto-dense]\n- test_sparse_input[1-float64-csr_matrix-auto-arpack]\n- test_sparse_input[1-float64-csr_matrix-FW-auto]\n- test_sparse_input[1-float64-csr_matrix-FW-dense]\n- test_sparse_input[1-float64-csr_matrix-FW-arpack]\n- test_sparse_input[1-float64-csr_matrix-D-auto]\n- test_sparse_input[1-float64-csr_matrix-D-dense]\n- test_sparse_input[1-float64-csr_matrix-D-arpack]\n- test_sparse_input[1-float64-csr_array-auto-auto]\n- test_sparse_input[1-float64-csr_array-auto-dense]\n- test_sparse_input[1-float64-csr_array-auto-arpack]\n- test_sparse_input[1-float64-csr_array-FW-auto]\n- test_sparse_input[1-float64-csr_array-FW-dense]\n- test_sparse_input[1-float64-csr_array-FW-arpack]\n- test_sparse_input[1-float64-csr_array-D-auto]\n- test_sparse_input[1-float64-csr_array-D-dense]\n- test_sparse_input[1-float64-csr_array-D-arpack]\n- test_multilabel_jaccard_score\n- test_multiclass_jaccard_score\n- test_precision_recall_f1_no_labels[0-macro-1]\n- test_precision_recall_f1_no_labels[0-micro-1]\n- test_precision_recall_f1_no_labels[0-weighted-1]\n- test_precision_recall_f1_no_labels[0-samples-1]\n- test_precision_recall_f1_no_labels[1-macro-1]\n- test_precision_recall_f1_no_labels[1-micro-1]\n- test_precision_recall_f1_no_labels[1-weighted-1]\n- test_precision_recall_f1_no_labels[1-samples-1]\n- test_precision_recall_f1_no_labels[nan-macro-1]\n- test_precision_recall_f1_no_labels[nan-micro-1]\n- test_precision_recall_f1_no_labels[nan-weighted-1]\n- test_precision_recall_f1_no_labels[nan-samples-1]\n- test_precision_recall_f1_no_labels_average_none[0]\n- test_precision_recall_f1_no_labels_average_none[1]\n- test_precision_recall_f1_no_labels_average_none[nan]\n- test_prf_no_warnings_if_zero_division_set[0]\n- test_prf_no_warnings_if_zero_division_set[1]\n- test_prf_no_warnings_if_zero_division_set[nan]\n- test_recall_warnings[warn]\n- test_recall_warnings[0]\n- test_recall_warnings[1]\n- test_recall_warnings[nan]\n- test_precision_warnings[warn]\n- test_precision_warnings[0]\n- test_precision_warnings[1]\n- test_precision_warnings[nan]\n- test_fscore_warnings[warn]\n- test_fscore_warnings[0]\n- test_fscore_warnings[1]\n- test_fscore_warnings[nan]\n- test_tfidf_transformer_type[float32]\n- test_tfidf_transformer_type[float64]\n- test_tfidf_transformer_sparse[csc_matrix-csr_matrix]\n- test_tfidf_transformer_sparse[csc_matrix-csr_array]\n- test_tfidf_transformer_sparse[csc_array-csr_matrix]\n- test_tfidf_transformer_sparse[csc_array-csr_array]\n- test_tfidf_transformer_copy[csr_matrix]\n- test_tfidf_transformer_copy[csr_array]\n- test_robust_scaler_error_sparse\n- test_robust_scaler_equivalence_dense_sparse[positive-0]\n- test_robust_scaler_equivalence_dense_sparse[positive-0.05]\n- test_robust_scaler_equivalence_dense_sparse[positive-0.1]\n- test_robust_scaler_equivalence_dense_sparse[positive-0.5]\n- test_robust_scaler_equivalence_dense_sparse[positive-1]\n- test_robust_scaler_equivalence_dense_sparse[negative-0]\n- test_robust_scaler_equivalence_dense_sparse[negative-0.05]\n- test_robust_scaler_equivalence_dense_sparse[negative-0.1]\n- test_robust_scaler_equivalence_dense_sparse[negative-0.5]\n- test_robust_scaler_equivalence_dense_sparse[negative-1]\n- test_robust_scaler_equivalence_dense_sparse[zeros-0]\n- test_robust_scaler_equivalence_dense_sparse[zeros-0.05]\n- test_robust_scaler_equivalence_dense_sparse[zeros-0.1]\n- test_robust_scaler_equivalence_dense_sparse[zeros-0.5]\n- test_robust_scaler_equivalence_dense_sparse[zeros-1]\n- test_robust_scaler_equivalence_dense_sparse[None-0]\n- test_robust_scaler_equivalence_dense_sparse[None-0.05]\n- test_robust_scaler_equivalence_dense_sparse[None-0.1]\n- test_robust_scaler_equivalence_dense_sparse[None-0.5]\n- test_robust_scaler_equivalence_dense_sparse[None-1]\n- test_quantile_transform_subsampling\n- test_one_hot_encoder_warning\n- test_polynomial_features_csr_X_floats[1-csr_matrix-2-True-False-float32]\n- test_polynomial_features_csr_X_floats[1-csr_matrix-2-True-False-float64]\n- test_polynomial_features_csr_X_floats[1-csr_matrix-3-False-False-float64]\n- test_polynomial_features_csr_X_floats[1-csr_matrix-3-False-True-float64]\n- test_polynomial_features_csr_X_floats[1-csr_array-2-True-False-float32]\n- test_polynomial_features_csr_X_floats[1-csr_array-2-True-False-float64]\n- test_polynomial_features_csr_X_floats[1-csr_array-3-False-False-float64]\n- test_polynomial_features_csr_X_floats[1-csr_array-3-False-True-float64]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-0-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-1-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-2-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-0-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-1-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-2-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-0-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-1-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-2-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-0-3-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-1-3-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_matrix-2-3-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-0-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-1-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-2-2-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-0-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-1-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-2-3-True]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-0-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-1-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-2-2-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-0-3-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-1-3-False]\n- test_polynomial_features_csr_X_zero_row[1-csr_array-2-3-False]\n- test_polynomial_features_csr_X_degree_4[1-csr_matrix-True-True]\n- test_polynomial_features_csr_X_degree_4[1-csr_matrix-True-False]\n- test_polynomial_features_csr_X_degree_4[1-csr_matrix-False-True]\n- test_polynomial_features_csr_X_degree_4[1-csr_matrix-False-False]\n- test_polynomial_features_csr_X_degree_4[1-csr_array-True-True]\n- test_polynomial_features_csr_X_degree_4[1-csr_array-True-False]\n- test_polynomial_features_csr_X_degree_4[1-csr_array-False-True]\n- test_polynomial_features_csr_X_degree_4[1-csr_array-False-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-2-1-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-2-2-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-1-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-2-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-3-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-2-1-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-2-2-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-1-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-2-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_matrix-3-3-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-2-1-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-2-2-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-1-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-2-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-3-True]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-2-1-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-2-2-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-1-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-2-False]\n- test_polynomial_features_csr_X_dim_edges[1-csr_array-3-3-False]\n- test_sort_graph_by_row_values_warning[csr_matrix]",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2026-08-01T03:55:35Z",
+        "updated_at": "2026-08-04T14:23:46Z",
+        "html_url": "https://github.com/scikit-learn/scikit-learn/issues/34621",
+        "author": "scikit-learn-bot"
+      },
+      "fix_pr_number": 34632,
+      "fix_pr_title": "CI Fix scipy-dev remaining failures due to scipy sparse DeprecationWarning",
+      "fix_pr_url": "https://github.com/scikit-learn/scikit-learn/pull/34632",
+      "fix_pr_merged_at": "2026-08-04T14:23:45Z",
+      "merge_commit_sha": "82cc705860c801129a3025b2c5959fda5fd50f37",
+      "pre_fix_sha": "5799d3eac08bda44fbce3309e641cbf98c5d312a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "sklearn/utils/_testing.py"
+      ],
+      "changed_files": [
+        {
+          "path": "sklearn/feature_extraction/tests/test_text.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 4,
+          "changes": 13,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/linear_model/tests/test_base.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/linear_model/tests/test_logistic.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 2,
+          "changes": 9,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/manifold/tests/test_isomap.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 3,
+          "deletions": 5,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/metrics/tests/test_classification.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 162,
+          "deletions": 148,
+          "changes": 310,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/neighbors/tests/test_neighbors.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/preprocessing/tests/test_data.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 4,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/preprocessing/tests/test_encoders.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/preprocessing/tests/test_polynomial.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 5,
+          "changes": 16,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sklearn/utils/_testing.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "sklearn/utils/tests/test_sparsefuncs.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 29,
+          "deletions": 8,
+          "changes": 37,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: scikit-learn/scikit-learn"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-04T14:23:45Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-01T03:55:35+00:00, pr_merged_at=2026-08-04T14:23:45+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "9782 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The changes are CI and test-warning infrastructure rather than production library behavior."
+      ]
+    },
+    {
+      "id": "pyo3-pyo3-issue-6318-pr-6320",
+      "repository": "PyO3/pyo3",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 6318,
+        "title": "Flaky test: Pending decref pool is not always processed on next attach",
+        "body": "In #6200, there was a fast path added to the pending decref pool. It uses an `AtomicBool` with `Relaxed` loads and stores. The refs in the pool are eventually released if the user keeps attaching, but the current test asserts that it's released on the next attach.\n\nhttps://github.com/PyO3/pyo3/blob/dfdbc468faf92dbf1594bdeb31bd96fb7c1ef06b/src/internal/state.rs#L575-L588\n\nThe key questions here is whether or not release-on-next-attach is part of pyo3's guarantee to users. \n\n- If it is, we need to fix the fast path and add some kind of test that can reliably catch this error.\n- If it isn't, the current test needs to be updated to allow this somehow.",
+        "labels": [],
+        "comments_count": 7,
+        "created_at": "2026-08-13T03:23:43Z",
+        "updated_at": "2026-08-15T22:13:09Z",
+        "html_url": "https://github.com/PyO3/pyo3/issues/6318",
+        "author": "Person-93"
+      },
+      "fix_pr_number": 6320,
+      "fix_pr_title": "ci: relax ordering assertion in `test_detached_drop_is_collected_on_next_attach`",
+      "fix_pr_url": "https://github.com/PyO3/pyo3/pull/6320",
+      "fix_pr_merged_at": "2026-08-15T22:13:08Z",
+      "merge_commit_sha": "6abc7287a78abefe9c3cf882c57512e6f3116516",
+      "pre_fix_sha": "dfdbc468faf92dbf1594bdeb31bd96fb7c1ef06b",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "src/internal/state.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 19,
+          "deletions": 9,
+          "changes": 28,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyO3/pyo3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-15T22:13:08Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-13T03:23:43+00:00, pr_merged_at=2026-08-15T22:13:08+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "655 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: All production-file hunks are inside a cfg(test) module and only relax a flaky assertion."
+      ]
+    },
+    {
+      "id": "sphinx-doc-sphinx-issue-3099-pr-3104",
+      "repository": "sphinx-doc/sphinx",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 3099,
+        "title": "literalinclude xml: TeX capacity exceeded, sorry [main memory size=3000000].",
+        "body": "A document with just the following fails:\n\n```\n.. literalinclude:: large.xml\n    :language: xml\n..\n```\n\nwhere `large.xml` is about 1000 lines of this:\n\n```\n<a>\n                <e f=\"g\" h=\"i\" />\n                <e f=\"g\" h=\"i\" />\n                <e f=\"g\" h=\"i\" />\n                <e f=\"g\" h=\"i\" />\n                ... same line repeated ~1000 times ...\n</a>\n```\n\n(for some reason the 16 spaces indentation are important to trigger this) \n\nThe error is:\n\n```\n...\n(\"C:\\Program Files\\MiKTeX 2.9\\tex\\latex\\psnfss\\t1pcr.fd\")\nUnderfull \\vbox (badness 10000) detected at line 1156\n\nUnderfull \\vbox (badness 10000) detected at line 1156\n! TeX capacity exceeded, sorry [main memory size=3000000].\n\\spx@VerbatimFBox ...ip \\fboxsep \\copy \\@tempboxa\n                                                  \\vskip \\fboxsep }\\kern -\\w...\nl.1156 \\end{Verbatim}\n\n!  ==> Fatal error occurred, no output PDF file produced!\nTranscript written on SNSNetworkProtocol.log.\n\nBuild finished; the PDF files are in _build/latex.\n```\n",
+        "labels": [
+          "type:bug",
+          "builder:latex"
+        ],
+        "comments_count": 20,
+        "created_at": "2016-10-26T12:30:39Z",
+        "updated_at": "2026-01-27T00:39:44Z",
+        "html_url": "https://github.com/sphinx-doc/sphinx/issues/3099",
+        "author": "petsuter"
+      },
+      "fix_pr_number": 3104,
+      "fix_pr_title": "``'sphinxpackageoptions'`` for key=value styling of Sphinx LaTeX",
+      "fix_pr_url": "https://github.com/sphinx-doc/sphinx/pull/3104",
+      "fix_pr_merged_at": "2016-11-01T18:25:49Z",
+      "merge_commit_sha": "a759e5eae78e7cca6beffe9313357f1dd8cd4338",
+      "pre_fix_sha": "99147c137293ef569d073d5fa9e01a2fdc136e60",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "sphinx/writers/latex.py"
+      ],
+      "changed_files": [
+        {
+          "path": "doc/conf.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "doc/config.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 1,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "doc/latex.rst",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 288,
+          "deletions": 67,
+          "changes": 355,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "sphinx/templates/latex/content.tex_t",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "sphinx/texinputs/footnotehyper-sphinx.sty",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 20,
+          "changes": 28,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "sphinx/texinputs/sphinx.sty",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 171,
+          "deletions": 116,
+          "changes": 287,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "sphinx/writers/latex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 14,
+          "deletions": 13,
+          "changes": 27,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: sphinx-doc/sphinx"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2016-11-01T18:25:49Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2016-10-26T12:30:39+00:00, pr_merged_at=2016-11-01T18:25:49+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "7 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "998 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=type:bug, builder:latex"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: PR #3104 is a different LaTeX package-options feature and omits the Issue's material style-file scope."
+      ]
+    },
+    {
+      "id": "pypa-packaging-issue-774-pr-825",
+      "repository": "pypa/packaging",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 774,
+        "title": "Marker referencing 'platform_release' fails to evaluate on Linux systems with non-PEP 440 kernel versions",
+        "body": "In a conversation on Mastodon, @kevinbowen777 [reported an error](https://fosstodon.org/@kevinbowen/111752319850691579) with a failing version comparison when installing [py5](https://py5coding.org/) with [pdm](https://pdm-project.org/latest/). With @py5coding and myself, we tracked the cause to markers like `platform_release >= \"20.0\" and sys_platform == \"darwin\"` that appear in the pdm lock file. Specifically, on Linux, `platform_release` evaluates to the full Linux kernel version as returned by `uname -r`, which might be something like `6.1.0-17-amd64` (on Kevin's system) or `6.7.0-gentoo` (on mine), and so when packaging applies PEP 440 version comparison logic to that version number, it raises an `InvalidVersion` error.\r\n\r\nHere's a simple reproduction on my system:\r\n\r\n```pycon\r\n>>> import packaging.markers\r\n>>> marker = packaging.markers.Marker('platform_release >= \"20.0\"')\r\n>>> packaging.markers.default_environment()\r\n{'implementation_name': 'cpython', 'implementation_version': '3.12.1', 'os_name': 'posix', 'platform_machine': 'x86_64', 'platform_release': '6.7.0-gentoo', 'platform_system': 'Linux', 'platform_version': '#1 SMP PREEMPT_DYNAMIC Sun Jan 14 21:02:35 PST 2024', 'python_full_version': '3.12.1', 'platform_python_implementation': 'CPython', 'python_version': '3.12', 'sys_platform': 'linux'}\r\n>>> m.evaluate()\r\nTraceback (most recent call last):\r\n  File \"<stdin>\", line 1, in <module>\r\n  File \"/usr/lib/python3.12/site-packages/packaging/markers.py\", line 252, in evaluate\r\n    return _evaluate_markers(self._markers, current_environment)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.12/site-packages/packaging/markers.py\", line 158, in _evaluate_markers\r\n    groups[-1].append(_eval_op(lhs_value, op, rhs_value))\r\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.12/site-packages/packaging/markers.py\", line 116, in _eval_op\r\n    return spec.contains(lhs, prereleases=True)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.12/site-packages/packaging/specifiers.py\", line 568, in contains\r\n    normalized_item = _coerce_version(item)\r\n                      ^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.12/site-packages/packaging/specifiers.py\", line 36, in _coerce_version\r\n    version = Version(version)\r\n              ^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.12/site-packages/packaging/version.py\", line 200, in __init__\r\n    raise InvalidVersion(f\"Invalid version: '{version}'\")\r\npackaging.version.InvalidVersion: Invalid version: '6.7.0-gentoo'\r\n```\r\n\r\nI know it's not terribly common for packages to use the `platform_release` marker, but evidently it does happen; in this case when installing py5, something is conditionally depending on [pyobjc](https://github.com/ronaldoussoren/pyobjc) and is using `platform_release` to express that condition. And I didn't find anything in the documentation indicating that this sort of thing shouldn't be allowed. So it certainly at least _looks_ like an issue that needs to be worked around.\r\n\r\nThis is pretty similar to #678, but that issue was about the Python runtime version, where there's a bit of an argument to be made that CPython should stick to PEP 440-compatible version numbers. I'm pretty sure that argument isn't going to fly for distribution-packaged Linux kernel versions. I wasn't sure if you'd rather have a separate issue or just a comment on #678, but I figured I'd start with this and you can absorb it into that other issue if you want.\r\n\r\n---\r\n\r\n<details>\r\n<summary>Original example with pdm and py5</summary>\r\n\r\n```console\r\n$ pdm init --python python3.12 --lib --backend pdm-backend --non-interactive\r\nCreating a pyproject.toml for PDM...\r\nVirtualenv is created successfully at /home/diazona/tmp/py5_test/.venv\r\nProject is initialized successfully\r\n$ pdm add --no-sync py5\r\nAdding packages to default dependencies: py5\r\n🔒 Lock successful\r\nChanges are written to pyproject.toml.\r\n$ pdm install -v\r\nSTATUS: Resolving packages from lockfile...\r\nTraceback (most recent call last):\r\n  File \"/home/diazona/.local/bin/pdm\", line 8, in <module>\r\n    sys.exit(main())\r\n             ^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/core.py\", line 288, in main\r\n    return Core().main(args or sys.argv[1:])\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/core.py\", line 208, in main\r\n    raise cast(Exception, err).with_traceback(traceback) from None\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/core.py\", line 203, in main\r\n    self.handle(project, options)\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/core.py\", line 157, in handle\r\n    command.handle(project, options)\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/cli/commands/install.py\", line 100, in handle\r\n    actions.do_sync(\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/cli/actions.py\", line 222, in do_sync\r\n    candidates = resolve_candidates_from_lockfile(project, requirements, groups=list(selection))\r\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/cli/actions.py\", line 154, in resolve_candidates_from_lockfile\r\n    return {\r\n           ^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/models/repositories.py\", line 605, in evaluate_candidates\r\n    and not can.req.marker.evaluate(self.environment.marker_environment)\r\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/pdm/models/markers.py\", line 50, in evaluate\r\n    return self.inner.evaluate(environment)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/dep_logic/markers/multi.py\", line 139, in evaluate\r\n    return all(m.evaluate(environment) for m in self.markers)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/dep_logic/markers/multi.py\", line 139, in <genexpr>\r\n    return all(m.evaluate(environment) for m in self.markers)\r\n               ^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/dep_logic/markers/single.py\", line 50, in evaluate\r\n    return pkg_marker.evaluate(environment)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/markers.py\", line 252, in evaluate\r\n    return _evaluate_markers(self._markers, current_environment)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/markers.py\", line 158, in _evaluate_markers\r\n    groups[-1].append(_eval_op(lhs_value, op, rhs_value))\r\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/markers.py\", line 116, in _eval_op\r\n    return spec.contains(lhs, prereleases=True)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/specifiers.py\", line 568, in contains\r\n    normalized_item = _coerce_version(item)\r\n                      ^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/specifiers.py\", line 36, in _coerce_version\r\n    version = Version(version)\r\n              ^^^^^^^^^^^^^^^^\r\n  File \"/home/diazona/.local/pipx/venvs/pdm/lib/python3.12/site-packages/packaging/version.py\", line 200, in __init__\r\n    raise InvalidVersion(f\"Invalid version: '{version}'\")\r\npackaging.version.InvalidVersion: Invalid version: '6.7.0-gentoo'\r\n```\r\n\r\nIt's worth noting that we haven't figured out how to reproduce this with any other package installer besides pdm. We haven't figured out why exactly that is; evidently there's something that pdm is doing and others don't which is involved in triggering the error. But, considering the simple example I posted above, this clearly doesn't _need_ pdm to be reproducible, and it didn't seem like pdm is using `Marker.evaluate()` incorrectly, which is why I'm reporting it here rather than to pdm.\r\n\r\n</details>",
+        "labels": [
+          "bug",
+          "packaging.markers"
+        ],
+        "comments_count": 36,
+        "created_at": "2024-01-16T02:04:50Z",
+        "updated_at": "2026-07-22T05:15:52Z",
+        "html_url": "https://github.com/pypa/packaging/issues/774",
+        "author": "diazona"
+      },
+      "fix_pr_number": 825,
+      "fix_pr_title": "Patch python_full_version unconditionally",
+      "fix_pr_url": "https://github.com/pypa/packaging/pull/825",
+      "fix_pr_merged_at": "2024-08-27T16:39:00Z",
+      "merge_commit_sha": "c385b58c4d0e4d66f5c8273ebb155801c92aadf3",
+      "pre_fix_sha": "ead9d34f9b6a5e504a4563d9246f76d37a112e85",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/packaging/markers.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/packaging/markers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 13,
+          "deletions": 7,
+          "changes": 20,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_markers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 6,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/packaging"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-08-27T16:39:00Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-01-16T02:04:50+00:00, pr_merged_at=2024-08-27T16:39:00+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "3 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "8547 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug, packaging.markers"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: PR #825 fixes Issues #678 and #802 rather than the platform_release request in #774."
+      ]
+    },
+    {
+      "id": "tornadoweb-tornado-issue-3510-pr-3511",
+      "repository": "TornadoWeb/tornado",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 3510,
+        "title": "500 error if non-RFC Host is being passed in headers.",
+        "body": "With 6.5.1 (and 6.5) I am getting 500 error if I add `Host: http//1.1.1.1:80` or similar non-RFC values.\n\n```\n2025-06-11 23:12:48,612 - tornado.application - ERROR - Uncaught exception\nTraceback (most recent call last):\n  File \"/usr/local/lib/python3.12/site-packages/tornado/http1connection.py\", line 222, in _read_message\n    header_recv_future = delegate.headers_received(start_line, headers)\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/site-packages/tornado/routing.py\", line 255, in headers_received\n    request = httputil.HTTPServerRequest(\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/site-packages/tornado/httputil.py\", line 506, in __init__\n    raise HTTPInputError(\"Invalid Host header: %r\" % self.host)\ntornado.httputil.HTTPInputError: Invalid Host header: 'http//1.1.1.1:80'\n2025-06-11 23:12:48,614 - tornado.application - ERROR - Uncaught exception\nTraceback (most recent call last):\n  File \"/usr/local/lib/python3.12/site-packages/tornado/http1connection.py\", line 222, in _read_message\n    header_recv_future = delegate.headers_received(start_line, headers)\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/site-packages/tornado/routing.py\", line 255, in headers_received\n    request = httputil.HTTPServerRequest(\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/site-packages/tornado/httputil.py\", line 506, in __init__\n    raise HTTPInputError(\"Invalid Host header: %r\" % self.host)\ntornado.httputil.HTTPInputError: Invalid Host header: 'http//1.1.1.1:80'\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/local/lib/python3.12/site-packages/tornado/http1connection.py\", line 221, in _read_message\n    with _ExceptionLoggingContext(app_log):\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.12/site-packages/tornado/http1connection.py\", line 70, in __exit__\n    raise _QuietException\ntornado.http1connection._QuietException\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/local/lib/python3.12/site-packages/tornado/http1connection.py\", line 302, in _read_message\n    delegate.on_connection_close()\n  File \"/usr/local/lib/python3.12/site-packages/tornado/routing.py\", line 282, in on_connection_close\n    assert self.delegate is not None\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n```\nTo reproduce:\n`Dockerfile`\n```\nFROM python:3.12-slim\nWORKDIR /app\nRUN apt-get update && apt-get install -y \\\n    gcc \\\n    && rm -rf /var/lib/apt/lists/*\nRUN pip install --no-cache-dir tornado==6.5.1 requests\nCOPY . .\nEXPOSE 8888\nCMD [\"python\", \"server.py\"]\n```\n`server.py`\n```\n#!/usr/bin/env python3\n\nimport asyncio\nimport tornado.web\n\n\nclass MainHandler(tornado.web.RequestHandler):\n\n    def get(self):\n        self.write({\"message\": \"Hello from Tornado 6.5.1\", \"status\": \"running\"})\n\n\ndef make_app():\n    return tornado.web.Application([\n        (r\"/\", MainHandler),\n    ], debug=True)\n\n\nasync def main():\n    app = make_app()\n    app.listen(8888)\n\n    print(\"Tornado server started on http://0.0.0.0:8888\")\n    print(\"Tornado version: 6.5.1\")\n\n    await asyncio.Event().wait()\n\n\nif __name__ == \"__main__\":\n    asyncio.run(main())\n```\n`client.py`\n```\n#!/usr/bin/env python3\n\nimport requests\n\n\ndef main() -> None:\n    session = requests.Session()\n    session.headers.update({\"Host\": \"http//1.1.1.1:80\"})\n\n    try:\n        response = session.get(\"http://localhost:8888/\")\n        print(f\"Status: {response.status_code}\")\n        print(f\"Response: {response.json()}\")\n    except Exception as e:\n        print(f\"Error: {e}\")\n    finally:\n        session.close()\n\n\nif __name__ == \"__main__\":\n    main()\n```\nTo run:\n```\npodman build -t tornado-bug . && podman run -it --rm -p 8888:8888 tornado-bug\n```\nand from another terminal: `python client.py`\n\nAlso I think this line can be removed 😄 \nhttps://github.com/tornadoweb/tornado/blob/bb07ce9d1f0e9529b6fe9c2cebe78cfb238b4a0c/tornado/httputil.py#L505",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2025-06-11T23:24:27Z",
+        "updated_at": "2025-07-22T20:43:44Z",
+        "html_url": "https://github.com/tornadoweb/tornado/issues/3510",
+        "author": "dchirikov"
+      },
+      "fix_pr_number": 3511,
+      "fix_pr_title": "httputil: Remove a debug print left in by mistake",
+      "fix_pr_url": "https://github.com/tornadoweb/tornado/pull/3511",
+      "fix_pr_merged_at": "2025-06-12T15:10:39Z",
+      "merge_commit_sha": "aace116c3f195e127c63b00fd5afadf1587c99d0",
+      "pre_fix_sha": "bb07ce9d1f0e9529b6fe9c2cebe78cfb238b4a0c",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "tornado/httputil.py"
+      ],
+      "changed_files": [
+        {
+          "path": "tornado/httputil.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 1,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: tornadoweb/tornado"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-06-12T15:10:39Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-06-11T23:24:27+00:00, pr_merged_at=2025-06-12T15:10:39+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "4144 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: PR #3511 only removes a debug print and does not fix the reported 500-to-400 error-handling root cause."
+      ]
+    },
+    {
+      "id": "matplotlib-matplotlib-issue-28220-pr-32195",
+      "repository": "matplotlib/matplotlib",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 28220,
+        "title": "[ENH]: matplotlib.widgets.PolygonSelector widget initial cursor position at data rather than (0,0)",
+        "body": "### Problem\n\nI'm trying this demo of matplotlib.widgets.PolygonSelector widget: [Select indices from a collection using polygon selector](https://matplotlib.org/stable/gallery/widgets/polygon_selector_demo.html ).  The demo as is, is fine because the data is close to (0,0).  However, if the data is not near the origin (e.g. add 500 to grid_x and grid_y in the demo) then the PolygonSelector cursor starts at (0,0) when the figure appears and the data is far off and appears small so I have to always zoom in before selecting points.  It would be nice if the initial cursor position was relevant to the data.\n\n### Proposed solution\n\nIn the PolygonSelector widget __init__ method replace:\r\n`self._xs, self._ys = [0], [0]`\r\nwith \r\n`self._xs, self._ys = [sum(ax.get_xlim()) / 2], [sum(ax.get_ylim()) / 2`\r\nThen the cursor will be in the middle of the axes object that is past to the PolygonSelector initiator.",
+        "labels": [
+          "New feature"
+        ],
+        "comments_count": 8,
+        "created_at": "2024-05-13T22:31:59Z",
+        "updated_at": "2026-08-16T07:40:44Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/28220",
+        "author": "rtrwalker"
+      },
+      "fix_pr_number": 32195,
+      "fix_pr_title": "ENH: Preserve PolygonSelector cursor position after clear",
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/32195",
+      "fix_pr_merged_at": "2026-08-16T07:40:43Z",
+      "merge_commit_sha": "855008e51a87de96b0eda014df9af25d4206c3b2",
+      "pre_fix_sha": "787c7d4873501cc90371af9b265cae234ecfef13",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/matplotlib/widgets.py"
+      ],
+      "changed_files": [
+        {
+          "path": "lib/matplotlib/tests/test_widgets.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 3,
+          "changes": 14,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "lib/matplotlib/widgets.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 1,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: matplotlib/matplotlib"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-16T07:40:43Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-05-13T22:31:59+00:00, pr_merged_at=2026-08-16T07:40:43+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "907 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=New feature"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=New feature",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: PR #32195 changes clear() behavior but does not fix the reported initial PolygonSelector state."
+      ]
+    },
+    {
+      "id": "aio-libs-yarl-issue-1455-pr-1456",
+      "repository": "aio-libs/yarl",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 1455,
+        "title": "Support the free-threaded build of CPython 3.13",
+        "body": "### Is your feature request related to a problem?\n\n_No response_\n\n### Describe the solution you'd like\n\nHey all! 👋\r\n\r\nI took the liberty of looking into adding support for the 3.13 free-threaded build of CPython after `multidict` (I also plan to look at other libraries under the `aio-libs` organization). This aims to be a tracking issue for all work necessary to support it, for which I'm going to open a PR shortly.\r\n\r\n- [ ] Set up CI for free-threading\r\n- [ ] Audit the Cython extension module for thread-safety issues\r\n  - [ ] The only issues seems to be the usage of a statically allocated buffer for the `Writer` struct. That's fairly straightforward to solve.\r\n- [ ] Audit the Python code for thread-safety issues\r\n  - [ ] One fairly complicated thing to figure out was that there's some thread safety issues in the Python code as well. This stems from havily using non-thread-local caches when creating `URL` instances. Instantiating a `URL` with a string url for example calls `encode_url` which uses an `lru_cache`. This means that multiple threads might end up sharing the same object, even if the `URL` object appears to have been created locally. There's a couple possible solution to this:\r\n    - Disable `lru_cache` under the free-threaded build so that object sharing between threads is more straightfoward.\r\n    - Instead of using `lru_cache` to cache the `URL` object itself, it could instead cache the immutable parts that make up a `URL`. \r\n- [ ] Mark the Cython extension module as thread-safe with setting `freethreading_compatible` in the cython directives (can be easily done through `pyproject.toml`).\r\n- [ ] Build wheels for the free-threaded build.\r\n\r\nHope this all sounds good! Let me know in case there's something that doesn't seem right.\n\n### Describe alternatives you've considered\n\n- We could say that people testing on the free-threaded build should only install the pure-Python wheels, but that doesn't seem like the best say forward, since the required changes are not that intrusive.\n\n### Additional context\n\n_No response_\n\n### Code of Conduct\n\n- [X] I agree to follow the aio-libs Code of Conduct",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 0,
+        "created_at": "2024-12-20T16:54:52Z",
+        "updated_at": "2025-04-16T22:37:13Z",
+        "html_url": "https://github.com/aio-libs/yarl/issues/1455",
+        "author": "lysnikolaou"
+      },
+      "fix_pr_number": 1456,
+      "fix_pr_title": "Support the free-threaded build of CPython 3.13",
+      "fix_pr_url": "https://github.com/aio-libs/yarl/pull/1456",
+      "fix_pr_merged_at": "2025-04-16T22:37:12Z",
+      "merge_commit_sha": "7ad86e83b0a3a7b58c0acc6ba3d27bfd1288c0b7",
+      "pre_fix_sha": "3967268196259d81bf9d3df858bbe9cc4bc04f7a",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "packaging/pep517_backend/_backend.py"
+      ],
+      "changed_files": [
+        {
+          "path": ".coveragerc",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 9,
+          "deletions": 5,
+          "changes": 14,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": ".github/workflows/ci-cd.yml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 6,
+          "deletions": 2,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "CHANGES/1456.feature.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "CHANGES/1456.packaging.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "docs/spelling_wordlist.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "packaging/pep517_backend/_backend.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 4,
+          "changes": 11,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 0,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/codspeed.txt",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/cython-freethreading.txt",
+          "status": "added",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/dev.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/test-freethreading.txt",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/test-pure.txt",
+          "status": "added",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 0,
+          "changes": 8,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "requirements/test.txt",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 9,
+          "changes": 10,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "tests/test_quoting_benchmarks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 16,
+          "deletions": 11,
+          "changes": 27,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "tests/test_url_benchmarks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 177,
+          "deletions": 91,
+          "changes": 268,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "yarl/_quoting_c.pyx",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 22,
+          "deletions": 15,
+          "changes": 37,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: aio-libs/yarl"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-04-16T22:37:12Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2024-12-20T16:54:52+00:00, pr_merged_at=2025-04-16T22:37:12+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "47 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "2135 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=enhancement",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The automatic scope omits the material yarl/_quoting_c.pyx free-threading implementation."
+      ]
+    },
+    {
+      "id": "sqlalchemy-sqlalchemy-issue-13132-pr-13155",
+      "repository": "sqlalchemy/sqlalchemy",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 13132,
+        "title": "Some references are not resolved in the relationship docs, like has/any",
+        "body": "In https://docs.sqlalchemy.org/en/20/orm/internals.html#sqlalchemy.orm.RelationshipProperty.Comparator.has or https://docs.sqlalchemy.org/en/20/orm/internals.html#sqlalchemy.orm.RelationshipProperty.Comparator.any there are several references that are not resolved.\n\n<sub>(this is mainly a reminder for myself)</sub>",
+        "labels": [
+          "documentation"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-02-19T11:24:28Z",
+        "updated_at": "2026-03-06T21:57:06Z",
+        "html_url": "https://github.com/sqlalchemy/sqlalchemy/issues/13132",
+        "author": "CaselIT"
+      },
+      "fix_pr_number": 13155,
+      "fix_pr_title": "docs: fix RelationshipProperty comparator cross-references",
+      "fix_pr_url": "https://github.com/sqlalchemy/sqlalchemy/pull/13155",
+      "fix_pr_merged_at": "2026-03-06T21:57:04Z",
+      "merge_commit_sha": "1eff7bbc96014e6d0d6f0ac4d11c29c5ad187f22",
+      "pre_fix_sha": "f09778c70050391ab77e97e8043083f6a5177038",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/sqlalchemy/orm/relationships.py"
+      ],
+      "changed_files": [
+        {
+          "path": "lib/sqlalchemy/orm/relationships.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 17,
+          "deletions": 17,
+          "changes": 34,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: sqlalchemy/sqlalchemy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-03-06T21:57:04Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-02-19T11:24:28+00:00, pr_merged_at=2026-03-06T21:57:04+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "316 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=documentation"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=documentation",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR is documentation-only and changes no runtime behavior."
+      ]
+    },
+    {
+      "id": "pytest-dev-pluggy-issue-37-pr-42",
+      "repository": "pytest-dev/pluggy",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 37,
+        "title": "Add some benchmark tests",
+        "body": "There's been some discussion (#15, #23) surrounding performance mostly as it pertains to the [`_Multicall.execute()`](https://github.com/pytest-dev/pluggy/blob/master/pluggy.py#L601) loop.\r\n\r\nI propose we add some tests which use [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark/) or something similar to audit changes we make to critical code paths. This encourages being objective about future changes.",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 3,
+        "created_at": "2016-11-18T23:56:33Z",
+        "updated_at": "2026-05-27T08:34:18Z",
+        "html_url": "https://github.com/pytest-dev/pluggy/issues/37",
+        "author": "goodboy"
+      },
+      "fix_pr_number": 42,
+      "fix_pr_title": "Hook call mismatch warnings",
+      "fix_pr_url": "https://github.com/pytest-dev/pluggy/pull/42",
+      "fix_pr_merged_at": "2017-02-25T03:19:20Z",
+      "merge_commit_sha": "26ddfe43f78cf3264895cbb16f39dc4fded1445d",
+      "pre_fix_sha": "cf059aa272ac64e54df6056965c49d08f01c2086",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "pluggy.py"
+      ],
+      "changed_files": [
+        {
+          "path": "pluggy.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 63,
+          "deletions": 37,
+          "changes": 100,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "testing/test_details.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 0,
+          "changes": 31,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "testing/test_helpers.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 8,
+          "deletions": 8,
+          "changes": 16,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pytest-dev/pluggy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2017-02-25T03:19:20Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2016-11-18T23:56:33+00:00, pr_merged_at=2017-02-25T03:19:20+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "5 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "418 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=enhancement",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: PR #42 addresses hook signature warnings and is not the benchmark-test feature requested by Issue #37."
+      ]
+    },
+    {
+      "id": "boto-boto3-issue-3787-pr-3863",
+      "repository": "boto/boto3",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 3787,
+        "title": "Missing cross-reference links",
+        "body": "### Describe the issue\r\n\r\nhttps://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_paginator.html\r\n<img width=\"291\" alt=\"image\" src=\"https://github.com/boto/boto3/assets/87778557/fe0e690f-3232-495b-9e34-a144f1c5f9c9\">\r\n\r\nShould this link to [Paginators](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html)?\r\n\r\nAnd should [get_waiter](\r\nhttps://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/get_waiter.html) methods should link to https://boto3.amazonaws.com/v1/documentation/api/latest/guide/clients.html#waiters?\r\n\r\n----\r\nhttps://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/upload_file.html\r\n\r\n`see boto3.s3.transfer.S3Transfer.ALLOWED_UPLOAD_ARGS` should link to https://boto3.amazonaws.com/v1/documentation/api/latest/reference/customizations/s3.html#boto3.s3.transfer.S3Transfer.ALLOWED_UPLOAD_ARGS\r\n<img width=\"718\" alt=\"image\" src=\"https://github.com/boto/boto3/assets/87778557/2b0cfa82-4615-4e95-a65b-c28ed1fe45a0\">\r\n\r\n(Same issue with `boto3.s3.transfer.S3Transfer.ALLOWED_DOWNLOAD_ARGS`)",
+        "labels": [
+          "documentation",
+          "p3"
+        ],
+        "comments_count": 2,
+        "created_at": "2023-07-18T19:25:13Z",
+        "updated_at": "2024-10-15T21:29:18Z",
+        "html_url": "https://github.com/boto/boto3/issues/3787",
+        "author": "tim-finnigan"
+      },
+      "fix_pr_number": 3863,
+      "fix_pr_title": "Add internal links to S3 upload/download args",
+      "fix_pr_url": "https://github.com/boto/boto3/pull/3863",
+      "fix_pr_merged_at": "2024-10-15T20:58:09Z",
+      "merge_commit_sha": "0bb608c031c24c1fbf2354ad640ca001e1198b47",
+      "pre_fix_sha": "daf14a736b3160ced03d1223c14d47bcd3aeb8fd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "boto3/s3/inject.py"
+      ],
+      "changed_files": [
+        {
+          "path": "boto3/s3/inject.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 15,
+          "changes": 30,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: boto/boto3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2024-10-15T20:58:09Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-07-18T19:25:13+00:00, pr_merged_at=2024-10-15T20:58:09+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1119 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=documentation, p3"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=documentation, p3",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: The PR only adds docstring links and changes no production behavior."
+      ]
+    },
+    {
+      "id": "scikit-learn-scikit-learn-issue-34719-pr-34726",
+      "repository": "scikit-learn/scikit-learn",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 34719,
+        "title": "CI Add bot comment when linting job fails early",
+        "body": "Seen in https://github.com/scikit-learn/scikit-learn/pull/34676#issuecomment-5249089742. The linting fails early so there is no `linting_output.txt` from the linting workflow.\n\nThe bot comment workflow then fails [build log](https://github.com/scikit-learn/scikit-learn/actions/runs/31459117010/job/93678907739)\n\nThat means there is no bot comment indicating there is a linting issue ...\n\nProbably the simplest thing to do when there is no `linting_output.txt` is to say click \"Update branch\" or run a command like `git pull upstream main --no-rebase` which should get rid of the error.\n\ncc @AnneBeyer if you are interested 😉.",
+        "labels": [
+          "Build / CI"
+        ],
+        "comments_count": 10,
+        "created_at": "2026-08-11T05:00:17Z",
+        "updated_at": "2026-08-12T15:06:22Z",
+        "html_url": "https://github.com/scikit-learn/scikit-learn/issues/34719",
+        "author": "lesteve"
+      },
+      "fix_pr_number": 34726,
+      "fix_pr_title": "MNT Add bot comment if Linter logs were not created",
+      "fix_pr_url": "https://github.com/scikit-learn/scikit-learn/pull/34726",
+      "fix_pr_merged_at": "2026-08-12T13:39:52Z",
+      "merge_commit_sha": "7bf10a5318f65d415a374176452eb2d930fa9ff2",
+      "pre_fix_sha": "e27ccf58592fcfe8c7ca87f53dde840c436093b2",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "build_tools/get_comment.py"
+      ],
+      "changed_files": [
+        {
+          "path": "build_tools/get_comment.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 18,
+          "deletions": 6,
+          "changes": 24,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: scikit-learn/scikit-learn"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-12T13:39:52Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-11T05:00:17+00:00, pr_merged_at=2026-08-12T13:39:52+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "7 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "626 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=Build / CI"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR is CI/build integration support rather than production library behavior."
+      ]
+    },
+    {
+      "id": "pyo3-pyo3-issue-5344-pr-5602",
+      "repository": "PyO3/pyo3",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 5344,
+        "title": "chrono-tz tests fail",
+        "body": "### Bug Description\n\nI noticed as a result of Debian's automatic tests that the `chrono-tz` feature tests fail on current `main` (12a1792c4364466a0fda880252dffdc82655c1a5); see attached backtrace.  I don't know much about this, but this looks a bit like what was fixed in #4790, although that was in a different conversions file.\n\n### Steps to Reproduce\n\n`cargo test --all-targets --no-default-features --features chrono-tz`\n\n### Backtrace\n\n```shell\nerror[E0599]: no method named `into_pyobject` found for struct `DateTime` in the current scope\n   --> src/conversions/chrono_tz.rs:120:45\n    |\n120 |             let pydates = dates.map(|dt| dt.into_pyobject(py).unwrap());\n    |                                             ^^^^^^^^^^^^^ method not found in `DateTime<Tz>`\n    |\n    = help: items from traits can only be used if the trait is implemented and in scope\nnote: `conversion::IntoPyObject` defines an item `into_pyobject`, perhaps you need to implement it\n   --> src/conversion.rs:38:1\n    |\n38  | pub trait IntoPyObject<'py>: Sized {\n    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n```\n\n### Your operating system and version\n\nDebian testing\n\n### Your Python version (`python --version`)\n\nPython 3.13.6\n\n### Your Rust version (`rustc --version`)\n\nrustc 1.86.0 (05f9846f8 2025-03-31) (built from a source tarball)\n\n### Your PyO3 version\n\nmain (post-0.25.0)\n\n### How did you install python? Did you use a virtualenv?\n\napt\n\n### Additional Info\n\n_No response_",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2025-08-20T23:40:51Z",
+        "updated_at": "2026-08-16T12:42:08Z",
+        "html_url": "https://github.com/PyO3/pyo3/issues/5344",
+        "author": "cjwatson"
+      },
+      "fix_pr_number": 5602,
+      "fix_pr_title": "fix: Replace macro use in ordered_float tests",
+      "fix_pr_url": "https://github.com/PyO3/pyo3/pull/5602",
+      "fix_pr_merged_at": "2025-11-24T23:54:15Z",
+      "merge_commit_sha": "17449b59e036180a97163bd815ad0b4aff65e07f",
+      "pre_fix_sha": "5e35cc16b9e234c5340730a9364c267bdb0ffb22",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/conversions/ordered_float.rs"
+      ],
+      "changed_files": [
+        {
+          "path": "src/conversions/ordered_float.rs",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 31,
+          "deletions": 29,
+          "changes": 60,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyO3/pyo3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2025-11-24T23:54:15Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-08-20T23:40:51+00:00, pr_merged_at=2025-11-24T23:54:15+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "8 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1457 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "Manual rejection: PR #5602 closes a different Issue and its hunks are test-only."
+      ]
+    },
+    {
+      "id": "hypothesisworks-hypothesis-issue-4858-pr-4853",
+      "repository": "HypothesisWorks/hypothesis",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 4858,
+        "title": "`st.from_regex` incorrectly considers `re.ASCII` flag for inverted classes",
+        "body": "Consider:\n\n```\nregex = re.compile(r\"\\D\", re.ASCII)\nassert regex.fullmatch(\"٣\")\nst.from_regex(regex, alphabet=\"٣\").example()  # AssertionError\n```\n\nFor inverse classes like `\\D` (inverse of `\\d`), `re.ASCII` is applied to the underlying representation of `\\d`, before inversion. From the re docs:\n\n> Matches [^0-9] if the [ASCII](https://docs.python.org/3/library/re.html#re.ASCII) flag is used.\n\nWe instead seem to be treating this as \"`\\D`, restricted to ASCII\".\n\nBe sure that whatever fix includes this test case as well:\n\n\n```\nregex = re.compile(\"[Ï-İ]\", re.IGNORECASE | re.ASCII)\nassert regex.fullmatch(\"Ï\")\nst.from_regex(regex, fullmatch=True).example()  # AssertionError\n```",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-13T19:20:04Z",
+        "updated_at": "2026-08-15T17:39:39Z",
+        "html_url": "https://github.com/HypothesisWorks/hypothesis/issues/4858",
+        "author": "Liam-DeVoe"
+      },
+      "fix_pr_number": 4853,
+      "fix_pr_title": "Raise rather than crash when a charset matches nothing in the alphabet",
+      "fix_pr_url": "https://github.com/HypothesisWorks/hypothesis/pull/4853",
+      "fix_pr_merged_at": "2026-08-14T13:15:33Z",
+      "merge_commit_sha": "e2d8a955ebdb1ab2ccc8336bd4d190734735f335",
+      "pre_fix_sha": "2f49474d4eac805cb851dc6b75f7cea3cc40354f",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "hypothesis/src/hypothesis/strategies/_internal/regex.py"
+      ],
+      "changed_files": [
+        {
+          "path": "hypothesis/RELEASE.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "hypothesis/src/hypothesis/strategies/_internal/regex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 24,
+          "deletions": 7,
+          "changes": 31,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "hypothesis/tests/cover/test_regex.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 30,
+          "deletions": 0,
+          "changes": 30,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: HypothesisWorks/hypothesis"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-08-14T13:15:33Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-08-13T19:20:04+00:00, pr_merged_at=2026-08-14T13:15:33+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "680 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "labels=bug"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": true,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        },
+        {
+          "code": "unique_fix_pr",
+          "passed": false,
+          "blocking": false,
+          "detail": "PR #4853 already has another reviewable Issue; select only one case during manual audit."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "PR body should explicitly close, fix, or resolve the Issue.",
+        "PR #4853 already has another reviewable Issue; select only one case during manual audit.",
+        "Manual rejection: PR #4853 does not close Issue #4858; the actual fix is the non-unique PR #4862."
+      ]
+    },
+    {
+      "id": "pypa-build-issue-557-pr-1084",
+      "repository": "pypa/build",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 557,
+        "title": "Validate dependencies in non-isolated builds",
+        "body": "Currently, if a non-isolated build is invoked, it simply attempts to invoke the build hook expecting the invoker to have supplied the dependencies. But if the environment doesn't have the dependencies and if the lack of dependencies doesn't create a failure in the build, the build proceeds without its declared dependencies (see https://github.com/jaraco/jaraco.packaging/pull/9#issuecomment-1261433024 for an example).\r\n\r\nBetter would be for build to enforce that the declared dependencies are met before invoking the build.",
+        "labels": [
+          "enhancement"
+        ],
+        "comments_count": 2,
+        "created_at": "2022-12-28T19:49:23Z",
+        "updated_at": "2026-07-19T20:34:58Z",
+        "html_url": "https://github.com/pypa/build/issues/557",
+        "author": "jaraco"
+      },
+      "fix_pr_number": 1084,
+      "fix_pr_title": "⚠️ feat(util): deprecate project_wheel_metadata",
+      "fix_pr_url": "https://github.com/pypa/build/pull/1084",
+      "fix_pr_merged_at": "2026-06-09T13:18:12Z",
+      "merge_commit_sha": "cd56622ee63b97c272941a286f4e8d96919cfc4f",
+      "pre_fix_sha": "1904c7768d7591f40e5bf95014f9c383fc9d524d",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/build/util.py"
+      ],
+      "changed_files": [
+        {
+          "path": "docs/changelog/557.removal.rst",
+          "status": "added",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 0,
+          "changes": 2,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "src/build/util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 10,
+          "deletions": 2,
+          "changes": 12,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tests/test_util.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 11,
+          "deletions": 0,
+          "changes": 11,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: pypa/build"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-09T13:18:12Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2022-12-28T19:49:23+00:00, pr_merged_at=2026-06-09T13:18:12+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "526 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=enhancement"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=enhancement",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: PR #1084 is an API deprecation change and does not implement the requested non-isolated dependency validation."
+      ]
+    },
+    {
+      "id": "urllib3-urllib3-issue-2936-pr-5054",
+      "repository": "urllib3/urllib3",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 2936,
+        "title": "ProxyManager doesn't honor HTTPConnection.default_socket_options",
+        "body": "ProxyManager doesn't honor HTTPConnection.default_socket_options. I'm attempting to enable TCP Keep Alive which I monitor via \"netstat -tnope\" on Linux. Only the third block below works when using a Proxy. \r\n\r\n**Without a proxy, default_socket_options enables TCP Keep Alive successfully**\r\nfrom urllib3.connection import HTTPConnection\r\nimport urllib3\r\nHTTPConnection.default_socket_options = HTTPConnection.default_socket_options + [\r\n    (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),\r\n]\r\nhttp = urllib3.PoolManager()\r\nhttp.request('GET', url)\r\n\r\n**With a proxy, default_socket_options does not enable TCP Keep Alive (or any other socket option)**\r\nfrom urllib3.connection import HTTPConnection\r\nimport urllib3\r\nHTTPConnection.default_socket_options = HTTPConnection.default_socket_options + [\r\n    (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1),\r\n]\r\nhttp = urllib3.ProxyManager(proxy_url)\r\nhttp.request('GET', url)\r\n\r\n\r\n**With a proxy, ProxyManager constructor param \"socket_options\" does enable TCP Keep Alive**\r\nfrom urllib3.connection import HTTPConnection\r\nimport urllib3\r\nhttp = urllib3.ProxyManager(proxy_url, socket_options=HTTPConnection.default_socket_options + [\r\n    (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)\r\n])\r\nhttp.request('GET', url)\r\n\r\n\r\nThis was observed while using the \"requests\" module to connect to a URL via a proxy that has a short idle timeout, and the common \"HTTPConnection.default_socket_options\" workaround did nothing. I couldn't find a way to pass \"socket_options\" to ProxyManager through \"requests\" methods.\r\n",
+        "labels": [
+          "Contributor Friendly ♥",
+          "💰 Bounty $100"
+        ],
+        "comments_count": 10,
+        "created_at": "2023-03-14T17:35:50Z",
+        "updated_at": "2026-06-18T09:19:30Z",
+        "html_url": "https://github.com/urllib3/urllib3/issues/2936",
+        "author": "jbrunette"
+      },
+      "fix_pr_number": 5054,
+      "fix_pr_title": "Document that `default_socket_options` is not supposed to be changed",
+      "fix_pr_url": "https://github.com/urllib3/urllib3/pull/5054",
+      "fix_pr_merged_at": "2026-06-18T09:19:29Z",
+      "merge_commit_sha": "12ef275e392164e2ae13ea92c9b873da3cbdcdd4",
+      "pre_fix_sha": "29ae1419530857dc43f5d28907da5d6fbc229739",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/connection.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/urllib3/connection.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 7,
+          "deletions": 3,
+          "changes": 10,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: urllib3/urllib3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-06-18T09:19:29Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-03-14T17:35:50+00:00, pr_merged_at=2026-06-18T09:19:29+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "1540 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=Contributor Friendly ♥, 💰 Bounty $100"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=Contributor Friendly ♥, 💰 Bounty $100",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR documents intended socket_options behavior and changes no runtime behavior."
+      ]
+    },
+    {
+      "id": "pycqa-flake8-issue-1823-pr-1824",
+      "repository": "PyCQA/flake8",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 1823,
+        "title": "Outdated regex101 link in source comments",
+        "body": "### describe the problem\r\n\r\nThe regex101 link at https://github.com/PyCQA/flake8/blob/80e6cdf55ffdc8b8fc9b994a34e0bc8dbc433031/src/flake8/defaults.py#L39 is outdated and does not reflect the regex defined at https://github.com/PyCQA/flake8/blob/80e6cdf55ffdc8b8fc9b994a34e0bc8dbc433031/src/flake8/defaults.py#L40\r\n\r\nThis should just be a matter of copy-pasting the new regex to a new regex101 instance, adding an example with the new allowed patterns (probably adding it to the comment in the file as well), and updating the url.",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2023-04-30T18:59:34Z",
+        "updated_at": "2023-04-30T19:05:29Z",
+        "html_url": "https://github.com/PyCQA/flake8/issues/1823",
+        "author": "jakkdl"
+      },
+      "fix_pr_number": 1824,
+      "fix_pr_title": "remove regex link",
+      "fix_pr_url": "https://github.com/PyCQA/flake8/pull/1824",
+      "fix_pr_merged_at": "2023-04-30T19:05:28Z",
+      "merge_commit_sha": "6491971bed632000f93c1a5e05fc602e67c86107",
+      "pre_fix_sha": "d016204366a22d382b5b56dc14b6cbff28ce929e",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/flake8/defaults.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/flake8/defaults.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 1,
+          "changes": 1,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: PyCQA/flake8"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2023-04-30T19:05:28Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2023-04-30T18:59:34+00:00, pr_merged_at=2023-04-30T19:05:28+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "529 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=none",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR removes an outdated source comment link only."
+      ]
+    },
+    {
+      "id": "urllib3-urllib3-issue-3546-pr-5120",
+      "repository": "urllib3/urllib3",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 3546,
+        "title": "Misleading description for `RETRY_AFTER_STATUS_CODES`",
+        "body": "In [the docs](https://urllib3.readthedocs.io/en/2.3.0/reference/urllib3.util.html#urllib3.util.Retry.RETRY_AFTER_STATUS_CODES), it says:\r\n\r\n> `RETRY_AFTER_STATUS_CODES = frozenset({413, 429, 503})`\r\n> Default status codes to be used for `status_forcelist`\r\n\r\nBut this doesn't seem correct. `status_forcelist` defaults to `None`. Looking at the code, there doesn't seem to be any connection between `RETRY_AFTER_STATUS_CODES` and `status_forcelist`.",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2025-01-09T12:46:43Z",
+        "updated_at": "2026-07-29T09:42:33Z",
+        "html_url": "https://github.com/urllib3/urllib3/issues/3546",
+        "author": "SpecLad"
+      },
+      "fix_pr_number": 5120,
+      "fix_pr_title": "docs: correct description of Retry.RETRY_AFTER_STATUS_CODES",
+      "fix_pr_url": "https://github.com/urllib3/urllib3/pull/5120",
+      "fix_pr_merged_at": "2026-07-29T09:42:32Z",
+      "merge_commit_sha": "e6cc4bf15798176c22bfcec7e4854cc42b6e25e2",
+      "pre_fix_sha": "470374abd485b6705dfea82689b1e29c345785f1",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "src/urllib3/util/retry.py"
+      ],
+      "changed_files": [
+        {
+          "path": "src/urllib3/util/retry.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 1,
+          "changes": 3,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: urllib3/urllib3"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-29T09:42:32Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2025-01-09T12:46:43+00:00, pr_merged_at=2026-07-29T09:42:32+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "4 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "448 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=none",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR corrects a docstring description only."
+      ]
+    },
+    {
+      "id": "sqlalchemy-sqlalchemy-issue-13462-pr-13463",
+      "repository": "sqlalchemy/sqlalchemy",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 13462,
+        "title": "Documentation fault: sqlite DATETIME regex/storage_format pair example out of sync",
+        "body": "This is the documentation in question:\n\nhttps://github.com/sqlalchemy/sqlalchemy/blob/aa1a5575358d3aa14953b04dced02f4763fed2e7/lib/sqlalchemy/dialects/sqlite/base.py#L1127-L1132\n\nThe problem being that the regular expression here is matching the character `-` but the `storage_format` string uses `:` for hour/minute/second delimiting.\n\nFrom what I can tell, this discrepancy was introduced in 55b4295e39454430211a3c30cb8303a58a024f28.\n\nPreviously the `storage_format` *did* use `-` characters:\n\nhttps://github.com/sqlalchemy/sqlalchemy/blob/754e7290b46d96500aea52da76f7c1230cb46fb8/lib/sqlalchemy/dialects/sqlite/base.py#L101-L104",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-07-28T14:31:09Z",
+        "updated_at": "2026-07-28T18:03:12Z",
+        "html_url": "https://github.com/sqlalchemy/sqlalchemy/issues/13462",
+        "author": "sof202"
+      },
+      "fix_pr_number": 13463,
+      "fix_pr_title": "Synchronise sqlite DATETIME doc example (regexp and storage_format)",
+      "fix_pr_url": "https://github.com/sqlalchemy/sqlalchemy/pull/13463",
+      "fix_pr_merged_at": "2026-07-28T18:03:11Z",
+      "merge_commit_sha": "d25b6ce2ed97d7cc29fed06e3ebe6c68945cb5a6",
+      "pre_fix_sha": "aa1a5575358d3aa14953b04dced02f4763fed2e7",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "lib/sqlalchemy/dialects/sqlite/base.py"
+      ],
+      "changed_files": [
+        {
+          "path": "lib/sqlalchemy/dialects/sqlite/base.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "eligible_source": true,
+          "exclusion_reason": null
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: sqlalchemy/sqlalchemy"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2026-07-28T18:03:11Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2026-07-28T14:31:09+00:00, pr_merged_at=2026-07-28T18:03:11+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": true,
+          "blocking": false,
+          "detail": "631 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "labels=none",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR is explicitly a documentation/typographical correction."
+      ]
+    },
+    {
+      "id": "python-hyper-h11-issue-28-pr-93",
+      "repository": "python-hyper/h11",
+      "suggested_tier": null,
+      "issue_snapshot": {
+        "number": 28,
+        "title": "pep8 examples please",
+        "body": "",
+        "labels": [],
+        "comments_count": 5,
+        "created_at": "2017-02-02T16:03:25Z",
+        "updated_at": "2020-08-13T09:33:53Z",
+        "html_url": "https://github.com/python-hyper/h11/issues/28",
+        "author": "dimaqq"
+      },
+      "fix_pr_number": 93,
+      "fix_pr_title": "Format bench, examples, fuzz",
+      "fix_pr_url": "https://github.com/python-hyper/h11/pull/93",
+      "fix_pr_merged_at": "2020-08-13T09:33:53Z",
+      "merge_commit_sha": "664b1116734f6430f2b174ec43b40bd42a249ee6",
+      "pre_fix_sha": "68e32dbb475d5241f077afaa278b6ef248b1f9bd",
+      "pre_fix_sha_source": "first_pull_commit_parent",
+      "expected_files": [
+        "fuzz/afl-server.py"
+      ],
+      "changed_files": [
+        {
+          "path": "CONTRIBUTING.md",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        },
+        {
+          "path": "bench/benchmarks/__init__.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 0,
+          "deletions": 1,
+          "changes": 1,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "bench/benchmarks/benchmarks.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 38,
+          "deletions": 28,
+          "changes": 66,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "examples/basic-client.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 15,
+          "deletions": 6,
+          "changes": 21,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "examples/trio-server.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 30,
+          "deletions": 29,
+          "changes": 59,
+          "eligible_source": false,
+          "exclusion_reason": "test, documentation, example, generated, or vendored path"
+        },
+        {
+          "path": "fuzz/afl-server.py",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 4,
+          "deletions": 3,
+          "changes": 7,
+          "eligible_source": true,
+          "exclusion_reason": null
+        },
+        {
+          "path": "tox.ini",
+          "status": "modified",
+          "previous_path": null,
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "eligible_source": false,
+          "exclusion_reason": "unsupported source suffix"
+        }
+      ],
+      "audit_checks": [
+        {
+          "code": "same_repository",
+          "passed": true,
+          "blocking": true,
+          "detail": "PR base repository: python-hyper/h11"
+        },
+        {
+          "code": "merged_pull_request",
+          "passed": true,
+          "blocking": true,
+          "detail": "merged_at=2020-08-13T09:33:53Z"
+        },
+        {
+          "code": "issue_precedes_fix",
+          "passed": true,
+          "blocking": true,
+          "detail": "issue_created_at=2017-02-02T16:03:25+00:00, pr_merged_at=2020-08-13T09:33:53+00:00"
+        },
+        {
+          "code": "pre_fix_sha_identified",
+          "passed": true,
+          "blocking": true,
+          "detail": "Derived from the parent of the first PR commit."
+        },
+        {
+          "code": "pull_commit_history",
+          "passed": true,
+          "blocking": true,
+          "detail": "2 ordered PR commit(s) loaded"
+        },
+        {
+          "code": "pre_fix_outside_pull_commits",
+          "passed": true,
+          "blocking": true,
+          "detail": "The pre-fix SHA must be the parent of the first PR commit, not a commit inside the fix PR."
+        },
+        {
+          "code": "production_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible production source file(s)"
+        },
+        {
+          "code": "bounded_source_files",
+          "passed": true,
+          "blocking": true,
+          "detail": "1 eligible file(s); maximum is 8"
+        },
+        {
+          "code": "issue_has_body",
+          "passed": false,
+          "blocking": false,
+          "detail": "0 body character(s)"
+        },
+        {
+          "code": "bug_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "labels=none"
+        },
+        {
+          "code": "diagnostic_signal",
+          "passed": false,
+          "blocking": false,
+          "detail": "Issue should contain reproduction, expected/actual behavior, or an error."
+        },
+        {
+          "code": "closing_reference",
+          "passed": true,
+          "blocking": false,
+          "detail": "PR body should explicitly close, fix, or resolve the Issue."
+        }
+      ],
+      "status": "rejected",
+      "review_notes": [
+        "0 body character(s)",
+        "labels=none",
+        "Issue should contain reproduction, expected/actual behavior, or an error.",
+        "Manual rejection: The PR formats benchmark, example, and fuzz files and changes no h11 runtime behavior."
+      ]
+    }
+  ]
+}

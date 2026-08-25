@@ -333,6 +333,8 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
 
 
 def test_benchmark_discover_writes_audit_catalog(tmp_path: Path, monkeypatch) -> None:
+    base_manifest = Path("benchmarks/cases-v0.3.json").resolve()
+
     class FakeClient:
         def __init__(self, token):
             self.token = token
@@ -346,6 +348,8 @@ def test_benchmark_discover_writes_audit_catalog(tmp_path: Path, monkeypatch) ->
         assert options["suggested_tiers"] == {
             "example/project": BenchmarkTier.GENERALIZATION
         }
+        assert ("encode/starlette", 3048) in options["excluded_issue_keys"]
+        assert ("encode/starlette", 3189) in options["excluded_pull_request_keys"]
         return CandidateCatalog(
             name="test-candidates",
             version=1,
@@ -374,6 +378,8 @@ def test_benchmark_discover_writes_audit_catalog(tmp_path: Path, monkeypatch) ->
             "2",
             "--scan-limit-per-repository",
             "10",
+            "--base-manifest",
+            str(base_manifest),
             "--tier",
             "example/project=generalization",
             "--output",

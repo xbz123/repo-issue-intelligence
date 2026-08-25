@@ -21,7 +21,7 @@ from .benchmark import (
 )
 from .github_client import REPOSITORY_PATTERN
 from .models import IssueRecord
-from .repository_index import LANGUAGE_BY_SUFFIX
+from .repository_index import repository_file_language
 
 PULL_NUMBER_PATTERN = re.compile(r"/(?:pull|pulls)/(\d+)(?:$|[/?#])")
 BUG_TERMS = {"bug", "regression", "crash", "incorrect", "error", "broken"}
@@ -309,7 +309,7 @@ def _is_excluded_source_path(path: str) -> str | None:
         )
     ):
         return "test file"
-    if Path(path).suffix.lower() not in LANGUAGE_BY_SUFFIX:
+    if repository_file_language(path) is None:
         return "unsupported source suffix"
     return None
 
@@ -487,7 +487,7 @@ def audit_candidate(
             code="production_source_files",
             passed=bool(expected_files),
             blocking=True,
-            detail=f"{len(expected_files)} eligible production source file(s)",
+            detail=f"{len(expected_files)} eligible production file(s)",
         ),
         CandidateAuditCheck(
             code="bounded_source_files",
@@ -611,6 +611,8 @@ def discover_candidates(
     scan_limit_per_repository: int = 50,
     max_source_files: int = 5,
     suggested_tiers: dict[str, BenchmarkTier] | None = None,
+    excluded_issue_keys: AbstractSet[tuple[str, int]] = frozenset(),
+    excluded_pull_request_keys: AbstractSet[tuple[str, int]] = frozenset(),
 ) -> CandidateCatalog:
     if target_per_repository < 1:
         raise ValueError("target_per_repository must be at least 1")
@@ -624,6 +626,14 @@ def discover_candidates(
     for repository in normalized_repositories:
         if REPOSITORY_PATTERN.fullmatch(repository) is None:
             raise ValueError("repository must use the owner/name format")
+    normalized_excluded_issue_keys = {
+        (repository.lower(), number)
+        for repository, number in excluded_issue_keys
+    }
+    normalized_excluded_pull_request_keys = {
+        (repository.lower(), number)
+        for repository, number in excluded_pull_request_keys
+    }
 
     candidates: list[BenchmarkCandidate] = []
     for repository in normalized_repositories:
@@ -634,12 +644,18 @@ def discover_candidates(
             limit=scan_limit_per_repository,
         )
         for search_issue in issues:
+            issue_key = (repository.lower(), search_issue.number)
+            if issue_key in normalized_excluded_issue_keys:
+                continue
             timeline = client.fetch_issue_timeline(repository, search_issue.number)
             pull_numbers = linked_pull_request_numbers(timeline, repository)
             if not pull_numbers:
                 continue
             issue = client.fetch_issue(repository, search_issue.number)
             for pull_number in pull_numbers:
+                pull_key = (repository.lower(), pull_number)
+                if pull_key in normalized_excluded_pull_request_keys:
+                    continue
                 pull_request = client.fetch_pull_request(repository, pull_number)
                 base_repository = str(
                     (
@@ -1285,6 +1301,12 @@ def curate_benchmark_expansion(
         raise ValueError(
             "Candidates cannot be both selected and rejected: "
             + ", ".join(sorted(overlapping_ids))
+        )
+    unknown_rejected_ids = set(rejected_ids) - candidates_by_id.keys()
+    if unknown_rejected_ids:
+        raise ValueError(
+            "Selection contains unknown rejected candidate IDs: "
+            + ", ".join(sorted(unknown_rejected_ids))
         )
     case_ids = [entry.case_id for entry in selection.selections]
     if len(case_ids) != len(set(case_ids)):
