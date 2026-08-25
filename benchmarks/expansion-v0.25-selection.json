@@ -8,12 +8,13 @@
       "case_id": "tox-schema-conditional-replacements",
       "tier": "generalization",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "expected_symbols": [],
       "review_notes": [
         "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3939-pr-3941.",
-        "Retain src/tox/session/cmd/schema.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+        "Retain src/tox/session/cmd/schema.py and the shipped src/tox/tox.schema.json as file-level ground truth; tests, docs, changelog, and auxiliary files are excluded."
       ]
     },
     {
@@ -219,7 +220,8 @@
       "case_id": "tox-schema-env-deps",
       "tier": "generalization",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "expected_symbols": [
         {
@@ -229,7 +231,7 @@
       ],
       "review_notes": [
         "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3929-pr-3931.",
-        "Retain src/tox/session/cmd/schema.py with pre-fix symbol target _process_type; tests, docs, changelog, generated, and auxiliary files are excluded."
+        "Retain src/tox/session/cmd/schema.py with pre-fix symbol target _process_type and the shipped src/tox/tox.schema.json as file-level ground truth; tests, docs, changelog, and auxiliary files are excluded."
       ]
     },
     {

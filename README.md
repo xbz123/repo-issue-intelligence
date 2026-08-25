@@ -11,7 +11,8 @@ The project is an initial, runnable Agent MVP. It does not require an LLM API to
 - Separates severity, urgency, and engineering priority.
 - Applies weighted scoring plus hard P0/P1 override rules.
 - Builds a cacheable repository map with languages, runtime files, entrypoints, imports, classes,
-  functions, lexically scoped file-and-symbol-resolved call edges, tests, and detected frameworks.
+  functions, shipped `*.schema.json` artifacts, lexically scoped file-and-symbol-resolved call
+  edges, tests, and detected frameworks.
 - Ranks candidate files and symbols using issue-to-code evidence.
 - Produces confirmed facts, confidence-scored hypotheses, and a safe reproduction plan.
 - Uses LangGraph to route Top-K issues through a repository investigation workflow.
@@ -179,7 +180,7 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.28-pool40-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.29-pool40-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
@@ -215,6 +216,7 @@ uv run rii benchmark-discover agronholm/anyio fastapi/fastapi pytest-dev/pytest 
   Textualize/rich \
   --target-per-repository 3 \
   --scan-limit-per-repository 50 \
+  --base-manifest benchmarks/cases-v0.24-expanded-160-cases.json \
   --output benchmarks/candidates/discovered.json
 
 uv run rii benchmark-audit pytest-dev/pytest 634 1766 \
@@ -227,20 +229,10 @@ uv run rii benchmark-audit agronholm/anyio 1220 1224 \
 
 uv run rii benchmark-plan benchmarks/cases-v0.24-expanded-160-cases.json \
   benchmarks/candidates/discovered.json \
-  --target-total-cases 200 \
-  --reserve-cases 25 \
-  --max-primary-per-repository 5 \
-  --target-multi-file-share 0.23 \
-  --review-decisions benchmarks/expansion-v0.15-selection.json \
-  --review-decisions benchmarks/expansion-v0.16-selection.json \
-  --review-decisions benchmarks/expansion-v0.17-selection.json \
-  --review-decisions benchmarks/expansion-v0.18-selection.json \
-  --review-decisions benchmarks/expansion-v0.19-selection.json \
-  --review-decisions benchmarks/expansion-v0.20-selection.json \
-  --review-decisions benchmarks/expansion-v0.21-selection.json \
-  --review-decisions benchmarks/expansion-v0.22-selection.json \
-  --review-decisions benchmarks/expansion-v0.23-selection.json \
-  --review-decisions benchmarks/expansion-v0.24-selection.json \
+  --target-total-cases 162 \
+  --reserve-cases 0 \
+  --max-primary-per-repository 2 \
+  --target-multi-file-share 0 \
   --output benchmarks/candidates/discovered-review-queue.json
 ```
 
@@ -250,17 +242,24 @@ only through a committed manual selection file with review notes; generated raw 
 uses the parent of the first PR commit as pre-fix SHA, and rejects a proposed pre-fix SHA that
 appears inside the fix PR. The historical v0.4 catalog is retained for provenance;
 `benchmarks/candidates-v0.7.json` contains the corrected expansion audit records.
-The command above creates a new ignored working queue from the example discovery source; it does
-not reproduce or overwrite the committed `benchmarks/expansion-v200-review-queue-v19.json`
-provenance archive.
+The two `benchmark-audit` commands are independent single-case audit examples; their outputs are
+not inputs to the queue command shown. That command creates a small ignored working queue from the
+example discovery source. The
+base-manifest filter keeps discovery scanning past Issue/fix-PR identities already frozen in the
+160-case input. It does not reproduce or overwrite the committed
+`benchmarks/expansion-v200-review-queue-v19.json` provenance archive. Planning a 160-to-200
+expansion requires candidate catalogs with at least 40 feasible primary cases plus the requested
+reserves; the four-repository discovery example is intentionally not presented as that full pool.
 `benchmark-plan` uses maximum-cardinality Issue/fix-PR matching for overlapping catalogs, requires
 the complete blocking-audit set, jointly enforces repository and multi-file quotas, and records the
 pre-fix SHA provenance in a `needs_review` queue. A manual selection may only narrow the audited
-file list, never add an unseen path, and can record rejected candidate IDs; passing that selection
-with `--review-decisions` prevents reviewed rejections from returning to later queues.
+file list, never add an unseen path, and can record rejected candidate IDs. A selection passed with
+`--review-decisions` prevents reviewed rejections from returning only when every referenced
+candidate ID is present in the supplied catalogs; unknown IDs fail closed instead of being silently
+ignored.
 `benchmark-plan` cannot accept candidates or alter the frozen manifest. The archived v19 queue
 records the final review pool used to complete manifest v20; it is provenance, not an active queue.
-The original 30% multi-file target was reduced to the observed 45/200 final count:
+The original 30% multi-file target was reduced to the observed 47/200 final count:
 manual review rejected or narrowed most automatically classified multi-file records because they
 were documentation-only, partial, mismatched, auxiliary, or omitted a material production file.
 The suite does not lower the ground-truth standard to satisfy a quota.
@@ -368,27 +367,28 @@ See `docs/architecture.md` for system boundaries and
 ## Evaluation
 
 The current frozen benchmark contains 200 closed issues with linked fix PRs across 58 projects:
-17 main, 11 calibration, and 172 generalization cases. It records 265 reviewed production-file
+17 main, 11 calibration, and 172 generalization cases. It records 267 reviewed production-file
 targets and 177 reviewed symbols across 143 cases. Each case uses a committed Issue snapshot and the
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v20 deterministic v0.27 runs completed 200/200 cases and produced identical
-candidates, symbols, and metrics after excluding timestamps, elapsed fields, and cache provenance.
-File Recall@1 is `0.3510`, Recall@5 `0.6567`, Recall@10 `0.7555`, Recall@20 `0.8665`, and MRR
+Three manifest-v20 deterministic v0.29 schema-corrected runs, using the v0.27 retrieval logic,
+completed 200/200 cases and produced identical candidates, symbols, and metrics after excluding
+timestamps, elapsed fields, and cache provenance.
+File Recall@1 is `0.3510`, Recall@5 `0.6517`, Recall@10 `0.7505`, Recall@20 `0.8665`, and MRR
 `0.5396`. Symbol Recall@1 is `0.2378`, Recall@5 `0.3840`, Recall@10 `0.4155`, Recall@20 `0.4645`,
-and symbol MRR `0.3349`. Forty-six of 265 production targets remain outside Top-20 and stay in the
+and symbol MRR `0.3349`. Forty-six of 267 production targets remain outside Top-20 and stay in the
 denominator.
 
 Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed 600/600 valid
 rank requests in one attempt with zero fallback. Mean File Recall@1/5/10/20 was
-`0.5722/0.7844/0.8286/0.8790`, with MRR `0.7479`; population standard deviation was `0.0041` for
-Recall@1 and `0.0013` for MRR. The Top-40 pool covered 229/265 production targets and the final
-Top-20 covered 222/265, recovering `tornado/locks.py`, Pylint `class_checker.py`, and SciPy
+`0.5705/0.7922/0.8321/0.8807`, with MRR `0.7526`; population standard deviation was `0.0062` for
+Recall@1 and `0.0030` for MRR. The Top-40 pool covered 231/267 production targets and the final
+Top-20 covered 224, 225, and 224, recovering `tornado/locks.py`, Pylint `class_checker.py`, and SciPy
 `_matfuncs.py` in every run without losing an existing deterministic Top-20 ground-truth target. Symbol
-Recall@20 remained `0.4645`; mean symbol MRR rose to `0.4856` through file reordering. Only 135/200
+Recall@20 remained `0.4645`; mean symbol MRR rose to `0.4909` through file reordering. Only 144/200
 complete candidate orders were identical across all repeats, so seed 1337 remains best effort.
-The three runs used 10,348,059 input tokens and 5,908 output tokens. See the compact
+The three runs used 10,349,727 input tokens and 5,896 output tokens. See the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git.
 
@@ -491,8 +491,9 @@ and bounded ordering gain on this frozen pool, not deterministic generation, new
 or root-cause accuracy.
 
 The completed expansion accepts 150 manually reviewed additions and reaches 200 total cases;
-multi-file coverage is 45/200. The final direct batch accepts 40 audited cases and records 21
-explicit rejections while leaving four archived queue candidates unselected. Forty-six of the 265
+multi-file coverage is 47/200 after the tox ground-truth correction. The final direct batch accepts
+40 audited cases and records 21 explicit rejections while leaving four archived queue candidates
+unselected. Forty-six of the 267
 reviewed production targets remain outside the deterministic Top-20, and the current index provides
 file-only symbol ground truth for TypeScript, Rust, and C. Superseded manifests and retained
 50-case DeepSeek runs remain provenance only and must not be mixed with manifest-v20 metrics.

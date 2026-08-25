@@ -4925,7 +4925,8 @@
       "fix_pr_number": 3941,
       "pre_fix_sha": "1ad47ddaab21c891f136a9627d1c6cdb6ea655d7",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "expected_symbols": []
     },
@@ -5276,7 +5277,8 @@
       "fix_pr_number": 3931,
       "pre_fix_sha": "59b6cd2c5cd7b7ebc44f65646f239ec6f2382f6e",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "expected_symbols": [
         {

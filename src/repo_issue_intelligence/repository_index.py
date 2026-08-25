@@ -39,6 +39,7 @@ LANGUAGE_BY_SUFFIX = {
     ".cc": "C++",
     ".cpp": "C++",
 }
+JSON_SCHEMA_SUFFIX = ".schema.json"
 RUNTIME_FILES = {
     "pyproject.toml",
     "requirements.txt",
@@ -62,7 +63,15 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 1
+REPOSITORY_MAP_INDEX_VERSION = 2
+
+
+def repository_file_language(path: str | Path) -> str | None:
+    """Return the indexed language for source files and shipped JSON schemas."""
+    candidate = Path(path)
+    if candidate.name.lower().endswith(JSON_SCHEMA_SUFFIX):
+        return "JSON Schema"
+    return LANGUAGE_BY_SUFFIX.get(candidate.suffix.lower())
 
 
 @dataclass(frozen=True)
@@ -814,7 +823,7 @@ def repository_map_input_files(
     return [
         str(relative)
         for path, relative in _repository_files(root, included_files)
-        if path.suffix.lower() in LANGUAGE_BY_SUFFIX
+        if repository_file_language(path) is not None
     ]
 
 
@@ -1107,7 +1116,7 @@ def build_repository_map(
             runtime_files.append(str(relative))
         if filename in ENTRYPOINT_NAMES:
             entrypoints.append(str(relative))
-        language = LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
+        language = repository_file_language(path)
         if not language:
             continue
         languages[language] += 1

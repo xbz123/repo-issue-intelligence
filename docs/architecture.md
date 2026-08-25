@@ -39,6 +39,9 @@ reflection is not resolved. `name_calls` and qualified-caller maps are compatibi
 from these resolved edges; ranking never falls back to their broader historical forms. A `src/` or
 `lib/` prefix is removed only when that directory is a source-layout root without a root
 `__init__.py`; top-level `src.py`, `lib.py`, and real `src`/`lib` packages keep their module names.
+The map also admits the controlled `*.schema.json` form as file-only `JSON Schema` so a shipped
+validation artifact can participate in path and bounded content retrieval without creating symbols,
+imports, or call edges. Ordinary JSON and lock files remain excluded.
 
 ### Investigation
 
@@ -249,6 +252,7 @@ and latency totals.
 
 ```text
 GitHub closed linked Issues
+  -> exclude Issue/fix-PR identities in an optional base manifest
   -> discover linked fix PRs
   -> load ordered PR commits
   -> derive pre-fix SHA from the first PR commit's parent
@@ -262,10 +266,12 @@ GitHub closed linked Issues
 
 Blocking checks require a same-repository merged PR, an Issue that predates the fix, ordered PR
 commit history, a pre-fix SHA outside the PR commit set, and a bounded non-empty set of existing
-production source files. Advisory checks flag weak Issue descriptions, missing bug/diagnostic
+production files. Advisory checks flag weak Issue descriptions, missing bug/diagnostic
 signals, and missing textual closing references. Automation never changes a candidate to
 `accepted`; only the explicit curation step can do that, and duplicate Issues, fix PRs, and case
-IDs are rejected.
+IDs are rejected. Selected and rejected candidate IDs must both resolve inside the supplied audit
+catalogs; provenance cannot claim a decision for an unknown record. The final 200-case replay uses
+the accepted `candidates-v0.25.json` and the compact `rejections-v0.25.json` audit catalog together.
 
 `agent_store.py` persists three SQLite records:
 
@@ -286,8 +292,8 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded OpenCode DeepSeek analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
-The current benchmark contains 200 cases across 58 repositories and 177 manually reviewed symbol
-targets across 143 cases. This is materially stronger for error analysis but still not a balanced
+The current benchmark contains 200 cases across 58 repositories, 267 production-file targets, and
+177 manually reviewed symbol targets across 143 cases. This is materially stronger for error analysis but still not a balanced
 population sample or a production-quality guarantee.
 Manifest versions 2 and 3 are retained only as superseded
 historical artifacts because their pre-fix audit was incorrect. Manifest version 5 is retained as

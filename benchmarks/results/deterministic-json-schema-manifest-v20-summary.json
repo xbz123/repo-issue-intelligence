@@ -1,0 +1,94 @@
+{
+  "protocol": "deterministic-json-schema-v0.29",
+  "manifest_version": 20,
+  "repository_map_index_version": 2,
+  "cases": 200,
+  "repositories": 58,
+  "production_targets": 267,
+  "multi_file_cases": 47,
+  "symbol_cases": 143,
+  "symbol_targets": 177,
+  "runs": [
+    {
+      "run": 1,
+      "completed": 200,
+      "failed": 0,
+      "file_recall_at_1": 0.3510,
+      "file_recall_at_5": 0.6517,
+      "file_recall_at_10": 0.7505,
+      "file_recall_at_20": 0.8665,
+      "mean_reciprocal_rank": 0.5396,
+      "average_analysis_elapsed_ms": 7370.823,
+      "repository_map_cache_hits": 9,
+      "repository_map_cache_misses": 191
+    },
+    {
+      "run": 2,
+      "completed": 200,
+      "failed": 0,
+      "file_recall_at_1": 0.3510,
+      "file_recall_at_5": 0.6517,
+      "file_recall_at_10": 0.7505,
+      "file_recall_at_20": 0.8665,
+      "mean_reciprocal_rank": 0.5396,
+      "average_analysis_elapsed_ms": 4211.005,
+      "repository_map_cache_hits": 200,
+      "repository_map_cache_misses": 0
+    },
+    {
+      "run": 3,
+      "completed": 200,
+      "failed": 0,
+      "file_recall_at_1": 0.3510,
+      "file_recall_at_5": 0.6517,
+      "file_recall_at_10": 0.7505,
+      "file_recall_at_20": 0.8665,
+      "mean_reciprocal_rank": 0.5396,
+      "average_analysis_elapsed_ms": 4181.947,
+      "repository_map_cache_hits": 200,
+      "repository_map_cache_misses": 0
+    }
+  ],
+  "three_run_aggregate": {
+    "case_runs": 600,
+    "completed": 600,
+    "failed": 0,
+    "structurally_identical_after_timing_and_cache_fields": true,
+    "file_recall_at_1": 0.3510,
+    "file_recall_at_5": 0.6517,
+    "file_recall_at_10": 0.7505,
+    "file_recall_at_20": 0.8665,
+    "mean_reciprocal_rank": 0.5396,
+    "matched_production_targets_at_20": 221,
+    "missing_production_targets_at_20": 46,
+    "symbol_recall_at_1": 0.2378,
+    "symbol_recall_at_5": 0.3840,
+    "symbol_recall_at_10": 0.4155,
+    "symbol_recall_at_20": 0.4645,
+    "mean_symbol_reciprocal_rank": 0.3349,
+    "average_analysis_elapsed_ms_mean": 5254.592,
+    "average_analysis_elapsed_ms_population_stddev": 1496.449
+  },
+  "integrity_correction": {
+    "cases": [
+      "tox-schema-conditional-replacements",
+      "tox-schema-env-deps"
+    ],
+    "added_ground_truth_file": "src/tox/tox.schema.json",
+    "newly_indexed_language": "JSON Schema",
+    "corrected_files_retrieved_at_20": true,
+    "candidate_lists_changed_from_v0.27": 4,
+    "changed_cases": [
+      "black-fmtoff-class-blank-lines",
+      "black-starred-type-params-trailing-comma",
+      "tox-schema-conditional-replacements",
+      "tox-schema-env-deps"
+    ]
+  },
+  "raw_run_artifacts_committed": false,
+  "notes": [
+    "The shipped tox JSON schema is material ground truth because both Issues and fix PRs directly target the published artifact.",
+    "Only files ending in .schema.json are added to the repository map; ordinary JSON and lock files remain excluded.",
+    "The three raw runs were validated locally but are not committed to avoid another copy of large candidate lists."
+  ]
+}

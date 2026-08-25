@@ -134,10 +134,21 @@ def test_real_benchmark_manifest_has_expected_project_tiers() -> None:
     assert all(case.issue_snapshot.updated_at == case.issue_updated_at for case in manifest.cases)
     assert all(case.issue_snapshot.title for case in manifest.cases)
     assert all(case.issue_snapshot.body for case in manifest.cases)
-    assert sum(len(case.expected_files) for case in manifest.cases) == 265
-    assert sum(len(case.expected_files) > 1 for case in manifest.cases) == 45
+    assert sum(len(case.expected_files) for case in manifest.cases) == 267
+    assert sum(len(case.expected_files) > 1 for case in manifest.cases) == 47
     assert sum(bool(case.expected_symbols) for case in manifest.cases) == 143
     assert sum(len(case.expected_symbols) for case in manifest.cases) == 177
+    tox_schema_cases = {
+        case.id: case for case in manifest.cases if case.id.startswith("tox-schema-")
+    }
+    assert set(tox_schema_cases) == {
+        "tox-schema-conditional-replacements",
+        "tox-schema-env-deps",
+    }
+    assert all(
+        "src/tox/tox.schema.json" in case.expected_files
+        for case in tox_schema_cases.values()
+    )
 
     qualified_base = load_manifest(
         Path("benchmarks/cases-v0.12-qualified-symbols-32-cases.json")

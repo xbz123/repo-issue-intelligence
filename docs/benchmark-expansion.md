@@ -6,6 +6,13 @@
 > manifests and results are retained for provenance and must not be used as current quality
 > evidence.
 
+> **Ground-truth correction (2026-08-25):** tox Issues #3939 and #3929 and their fix PRs directly
+> modify both the schema generator and the published `src/tox/tox.schema.json`. The final selection,
+> candidate audit, and 200-case manifest now retain both material files. Repository indexing accepts
+> only the controlled `*.schema.json` form as `JSON Schema`; ordinary JSON and lock files remain out
+> of scope. The corrected suite has 267 production targets and 47 multi-file cases. Earlier
+> manifest-v20 metrics are superseded by the compact corrected summaries.
+
 ## v0.25 direct completion of the 200-case suite
 
 At the user's direction, the expansion skips separate 170/180/190 evaluation releases after the
@@ -24,21 +31,23 @@ file-only. Repository and file concentration break ties between equally valid ca
 accepted failure is removed to improve metrics.
 
 The completed suite contains 200 cases across 58 repositories: 17 main, 11 calibration, and 172
-generalization cases. It records 265 production-file targets, 45 multi-file cases, and 177 reviewed
+generalization cases. It records 267 production-file targets, 47 multi-file cases, and 177 reviewed
 symbol targets across 143 cases. Case IDs, `(repository, Issue)`, and `(repository, fix PR)` are all
 unique. The final 40 accepted cases add no multi-file fix because the last automatic multi-file
 record omitted a material C header; the earlier 30% aspiration is therefore reported as infeasible
 under the final ground-truth standard rather than filled with incomplete cases.
 
-Three deterministic v0.27 runs completed 200/200 cases with zero failures. After removing
-timestamps, elapsed fields, and cache provenance, all candidate files, candidate symbols, per-case
-metrics, tier metrics, and aggregates were identical. The retained 160 cases were unchanged from
-manifest v19. File Recall@1/5/10/20 is `0.3510/0.6567/0.7555/0.8665`, with MRR `0.5396`. Across the
+Three deterministic v0.29 schema-corrected runs, using the v0.27 retrieval logic, completed
+200/200 cases with zero failures. After removing timestamps, elapsed fields, and cache provenance,
+all candidate files, candidate symbols, per-case metrics, tier metrics, and aggregates were
+identical. The retained 160 cases were unchanged from manifest v19. File Recall@1/5/10/20 is
+`0.3510/0.6517/0.7505/0.8665`, with MRR `0.5396`. Across the
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
-`0.3349`. Top-20 coverage is 219 of 265 production targets; all 46 misses remain in the denominator.
+`0.3349`. Top-20 coverage is 221 of 267 production targets; all 46 misses remain in the denominator.
 
-Run 1 reused 162 repository maps and rebuilt 38; runs 2 and 3 recorded 200/200 hits. Warm reuse
-reduced mean in-process analysis time from 6,619 to 4,435 ms per case, a 32.99% reduction, without
+Run 1 reused nine repository maps and rebuilt 191 after the index-version correction; runs 2 and 3
+recorded 200/200 hits. Warm reuse reduced mean in-process analysis time from 7,371 to 4,196 ms per
+case, a 43.07% reduction, without
 changing any non-timing result. `benchmarks/expansion-v200-review-queue-v19.json` archives the final
 160-to-200 review pool; there is no active expansion queue after manifest v20.
 
@@ -557,7 +566,8 @@ rii benchmark benchmarks/cases.json \
 ```
 
 Raw discovery catalogs are ignored because they are large, mutable review queues. The accepted
-catalog, manual selection, frozen manifest, and evaluated results are committed. Current audits
+catalog, rejected-candidate provenance, manual selection, frozen manifest, and evaluated results
+are committed. Current audits
 must use the corrected ordered-commit checks. The current accepted catalog and decisions are
 `candidates-v0.13.json` and `expansion-v0.13-selection.json`; the v0.11 and v0.7 catalogs retain
 the prior 32-case and corrected 20-case provenance.
@@ -612,7 +622,10 @@ verify every expected file at the recorded pre-fix commit, decide the tier, and 
 ground truth where the fix hunk supports it. A reviewer may narrow the automatic file list but may
 not add an unaudited path. Explicit rejection decisions are fed back into planning so rejected
 candidates do not return to later queues. Final accepted and rejected decisions are recorded in
-`benchmarks/expansion-v0.25-selection.json`; unselected entries remain non-ground-truth provenance.
+`benchmarks/expansion-v0.25-selection.json`; the 21 rejected audit records required to verify those
+IDs are retained in `benchmarks/rejections-v0.25.json`. Replaying the final curation must load both
+that file and `benchmarks/candidates-v0.25.json`; an unknown selected or rejected ID fails closed.
+Unselected entries remain non-ground-truth provenance.
 
 The raw discovery catalogs remain ignored because they contain repeated, mutable Issue snapshots.
 The v19 compact queue is archived so review order, advisory signals, pre-fix SHA provenance,

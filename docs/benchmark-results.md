@@ -3,24 +3,25 @@
 ## Current result: manifest v20 on 200 frozen cases
 
 Manifest v20 contains 200 reviewed Issue/Fix-PR cases across 58 public repositories: 17 main,
-11 calibration, and 172 generalization cases. It records 265 production-file targets and 177 reviewed
+11 calibration, and 172 generalization cases. It records 267 production-file targets and 177 reviewed
 symbol targets across 143 cases. Every case embeds the complete Issue snapshot, merged same-repository
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete deterministic v0.27 runs finished 200/200 cases. After excluding timestamps,
+Three complete corrected deterministic runs finished 200/200 cases. After excluding timestamps,
 elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
 and aggregates were identical. The retained 160 cases were also unchanged from manifest v19.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Run 1 / warm analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 200/200 | 0.3510 | 0.6567 | 0.7555 | 0.8665 | 0.5396 | 6,619 / 4,435 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 5,744 / 5,702 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,508 / 1,168 ms |
-| Generalization | 172/172 | 0.3413 | 0.6590 | 0.7535 | 0.8448 | 0.5334 | 7,033 / 4,519 ms |
+| Overall | 200/200 | 0.3510 | 0.6517 | 0.7505 | 0.8665 | 0.5396 | 7,371 / 4,196 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 8,124 / 5,671 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,917 / 1,207 ms |
+| Generalization | 172/172 | 0.3413 | 0.6532 | 0.7477 | 0.8448 | 0.5334 | 7,645 / 4,242 ms |
 
-Run 1 recorded 162 repository-map cache hits and 38 misses; runs 2 and 3 recorded 200 hits. Warm
-reuse reduced the overall in-process mean by 32.99%, from 6,619 to 4,435 ms per case. Timing is
+Run 1 recorded nine repository-map cache hits and 191 misses after the index-version correction;
+runs 2 and 3 recorded 200 hits. Warm reuse reduced the overall in-process mean by 43.07%, from
+7,371 to 4,196 ms per case. Timing is
 observational and not part of the reproducibility gate. Measurements start after repository preparation and do not
 include clone, fetch, checkout, or Issue retrieval time.
 
@@ -42,34 +43,40 @@ final direct batch adds uv's PEP 508 formatter, Airflow's Snowflake hook and use
 SciPy's Remez C++ guard, and SciPy `signm`. These failures define concrete
 retrieval work for the next stage.
 
+The correction adds `src/tox/tox.schema.json` to both tox schema cases and indexes only the
+controlled `*.schema.json` form as file-only `JSON Schema`. Both published artifacts are retrieved
+inside Top-20. Four candidate lists change relative to v0.27: the two tox cases and two Black cases
+whose repository contains `black.schema.json`; no Top-20 ground-truth match regresses.
+
 ## Manifest-v20 DeepSeek pool-40 result
 
-The v0.28 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
+The corrected v0.29 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
 separate Top-40 pool to OpenCode `deepseek-v4-flash`. Each of the 40 snippets receives at most 2,500
 characters and 200 source lines under the unchanged 100,000-character total budget. The model may
 promote at most three files; unselected base files retain deterministic order.
 
 | Run | Valid ranks | File R@1 | R@5 | R@10 | R@20 | Pool R | MRR | Mean LLM latency |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 200/200 | 0.5772 | 0.7830 | 0.8272 | 0.8790 | 0.8973 | 0.7497 | 5.47 s |
-| 2 | 200/200 | 0.5672 | 0.7847 | 0.8288 | 0.8790 | 0.8973 | 0.7467 | 3.18 s |
-| 3 | 200/200 | 0.5722 | 0.7855 | 0.8297 | 0.8790 | 0.8973 | 0.7472 | 3.73 s |
-| Mean | 600/600 | 0.5722 | 0.7844 | 0.8286 | 0.8790 | 0.8973 | 0.7479 | 4.13 s |
+| 1 | 200/200 | 0.5722 | 0.7947 | 0.8313 | 0.8790 | 0.8973 | 0.7551 | 2.33 s |
+| 2 | 200/200 | 0.5622 | 0.7922 | 0.8338 | 0.8840 | 0.8973 | 0.7483 | 1.97 s |
+| 3 | 200/200 | 0.5772 | 0.7897 | 0.8313 | 0.8790 | 0.8973 | 0.7543 | 3.03 s |
+| Mean | 600/600 | 0.5705 | 0.7922 | 0.8321 | 0.8807 | 0.8973 | 0.7526 | 2.44 s |
 
 All requests succeeded on their first attempt; fallback, unknown-ID, invalid-rank, HTTP, and
-transport failure counts are zero. The three runs used 10,348,059 input tokens and 5,908 output
-tokens. File R@20 is stable across runs, while Recall@1 has population standard deviation `0.0041`
-and MRR `0.0013`.
+transport failure counts are zero. The three runs used 10,349,727 input tokens and 5,896 output
+tokens. Recall@1 has population standard deviation `0.0062`, R@20 `0.0024`, and MRR `0.0030`.
 
-The Top-40 pool contains 229/265 production targets and the final Top-20 contains 222/265. Every
+The Top-40 pool contains 231/267 production targets and the final Top-20 contains 224, 225, and 224
+across the three runs. Every
 run recovers `tornado/locks.py`, `pylint/checkers/classes/class_checker.py`, and
 `scipy/linalg/_matfuncs.py` from outside the deterministic Top-20 without losing existing
-ground truth. The remaining seven pool-visible misses were not selected, and 36 targets remain
+ground truth; run 2 also recovers `setuptools/config/_apply_pyprojecttoml.py`. The remaining six or
+seven pool-visible misses were not selected, and 36 targets remain
 outside the bounded pool. Mean Symbol Recall@1/5/10/20 is
-`0.4167/0.4493/0.4587/0.4645`, with symbol MRR `0.4856`.
+`0.4237/0.4528/0.4598/0.4645`, with symbol MRR `0.4909`.
 
-Only 135/200 complete candidate orders are identical across all repeats; pairwise order changes
-affect 41, 48, and 45 cases, and eight cases vary in expected-file reciprocal rank. The result
+Only 144/200 complete candidate orders are identical across all repeats; pairwise order changes
+affect 34, 39, and 43 cases, and 12 cases vary in expected-file reciprocal rank. The result
 supports a reliable plain-rank contract and a repeatable three-file pool expansion on this suite,
 not deterministic generation or root-cause accuracy.
 
@@ -207,6 +214,7 @@ new symbols.
 
 Machine-readable artifacts:
 
+- `benchmarks/results/deterministic-json-schema-manifest-v20-summary.json`
 - `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run2.json`
@@ -282,7 +290,7 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-Two hundred nineteen of the 265 reviewed production-file targets appear in the deterministic Top-20.
+Two hundred twenty-one of the 267 reviewed production-file targets appear in the deterministic Top-20.
 The reported macro-average File Recall@20 is `0.8665`; the 46 missing targets are grouped in the current
 result section. This is benchmark coverage, not a population-level recall estimate.
 
@@ -306,15 +314,16 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 - The 200-case suite is reviewed but not a balanced population sample; 90 cases were created in
   2026 and repository representation remains uneven.
-- Forty-five of 200 cases have multi-file production ground truth. The original 30% aspiration was
+- Forty-seven of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
 - Deterministic File Recall@20 is `0.8665`; 46 reviewed targets remain outside its Top-20. The
-  hybrid Top-40 pool misses 36 targets and its final Top-20 misses 43.
+  hybrid Top-40 pool misses 36 targets and its final Top-20 misses 43, 42, and 43 across the three
+  runs.
 - Symbol Recall@20 is `0.4645`, so within-file localization remains a major bottleneck.
 - TypeScript, Rust, and C participate in file localization but have no parsed symbol or cross-language graph.
 - Manifest v20 has a three-run rank-only evaluation, but no full hypothesis-quality evaluation.
-- Full hypothesis generation reached 140/150 valid final contracts in the current three-run
-  real-project evaluation, but run-level success still ranged from 86% to 100%.
+- Historical v0.25 full hypothesis generation reached 140/150 valid final contracts in its
+  three-run real-project evaluation, but run-level success ranged from 86% to 100%.
 
 ## Next experiment
 
@@ -323,5 +332,5 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 3. Investigate the 36 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
 4. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
-5. Diagnose the seven pool-visible targets that DeepSeek did not promote and the eight cases whose
-   expected-file reciprocal rank varied across repeats.
+5. Diagnose the six or seven pool-visible targets that DeepSeek did not promote and the 12 cases
+   whose expected-file reciprocal rank varied across repeats.

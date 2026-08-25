@@ -28,7 +28,8 @@
       "pre_fix_sha": "1ad47ddaab21c891f136a9627d1c6cdb6ea655d7",
       "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "changed_files": [
         {
@@ -68,8 +69,8 @@
           "additions": 229,
           "deletions": 67,
           "changes": 296,
-          "eligible_source": false,
-          "exclusion_reason": "unsupported source suffix"
+          "eligible_source": true,
+          "exclusion_reason": null
         },
         {
           "path": "tests/session/cmd/test_schema.py",
@@ -123,13 +124,13 @@
           "code": "production_source_files",
           "passed": true,
           "blocking": true,
-          "detail": "1 eligible production source file(s)"
+          "detail": "2 eligible production file(s)"
         },
         {
           "code": "bounded_source_files",
           "passed": true,
           "blocking": true,
-          "detail": "1 eligible file(s); maximum is 8"
+          "detail": "2 eligible file(s); maximum is 8"
         },
         {
           "code": "issue_has_body",
@@ -159,7 +160,7 @@
       "status": "accepted",
       "review_notes": [
         "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3939-pr-3941.",
-        "Retain src/tox/session/cmd/schema.py as file-level ground truth; tests, docs, changelog, generated, and auxiliary files are excluded."
+        "Retain src/tox/session/cmd/schema.py and the shipped src/tox/tox.schema.json as file-level ground truth; tests, docs, changelog, and auxiliary files are excluded."
       ]
     },
     {
@@ -1796,7 +1797,8 @@
       "pre_fix_sha": "59b6cd2c5cd7b7ebc44f65646f239ec6f2382f6e",
       "pre_fix_sha_source": "first_pull_commit_parent",
       "expected_files": [
-        "src/tox/session/cmd/schema.py"
+        "src/tox/session/cmd/schema.py",
+        "src/tox/tox.schema.json"
       ],
       "changed_files": [
         {
@@ -1826,8 +1828,8 @@
           "additions": 11,
           "deletions": 1,
           "changes": 12,
-          "eligible_source": false,
-          "exclusion_reason": "unsupported source suffix"
+          "eligible_source": true,
+          "exclusion_reason": null
         },
         {
           "path": "tests/session/cmd/test_schema.py",
@@ -1881,13 +1883,13 @@
           "code": "production_source_files",
           "passed": true,
           "blocking": true,
-          "detail": "1 eligible production source file(s)"
+          "detail": "2 eligible production file(s)"
         },
         {
           "code": "bounded_source_files",
           "passed": true,
           "blocking": true,
-          "detail": "1 eligible file(s); maximum is 8"
+          "detail": "2 eligible file(s); maximum is 8"
         },
         {
           "code": "issue_has_body",
@@ -1917,7 +1919,7 @@
       "status": "accepted",
       "review_notes": [
         "Manual audit confirmed a merged same-repository fix PR with the first ordered commit parent recorded as the frozen pre-fix SHA for tox-dev-tox-issue-3929-pr-3931.",
-        "Retain src/tox/session/cmd/schema.py with pre-fix symbol target _process_type; tests, docs, changelog, generated, and auxiliary files are excluded."
+        "Retain src/tox/session/cmd/schema.py with pre-fix symbol target _process_type and the shipped src/tox/tox.schema.json as file-level ground truth; tests, docs, changelog, and auxiliary files are excluded."
       ]
     },
     {
