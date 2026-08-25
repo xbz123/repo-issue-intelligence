@@ -292,6 +292,9 @@ The persisted snapshots make intermediate state inspectable. Automatic process-r
 The MVP uses LangGraph and persistent Agent state and remains synchronous. Its default path is
 deterministic and offline; the CLI can optionally add a bounded OpenCode DeepSeek analysis step. It does
 not include background workers, automatic snapshot resume, or generated-command execution.
+The deterministic Top-20 reserves one slot for a directly supported path. The separate hybrid
+Top-40 pool reserves three such slots so strong path or symbol evidence is less likely to be buried
+by weak lexical matches; the broader policy cannot change the deterministic fallback.
 The current benchmark contains 200 cases across 58 repositories, 267 production-file targets, and
 177 manually reviewed symbol targets across 143 cases. This is materially stronger for error analysis but still not a balanced
 population sample or a production-quality guarantee.

@@ -180,7 +180,7 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.29-pool40-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.30-pool40-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
@@ -372,7 +372,7 @@ targets and 177 reviewed symbols across 143 cases. Each case uses a committed Is
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v20 deterministic v0.29 schema-corrected runs, using the v0.27 retrieval logic,
+Three manifest-v20 deterministic v0.30 runs, using the unchanged v0.29 Top-20 retrieval logic,
 completed 200/200 cases and produced identical candidates, symbols, and metrics after excluding
 timestamps, elapsed fields, and cache provenance.
 File Recall@1 is `0.3510`, Recall@5 `0.6517`, Recall@10 `0.7505`, Recall@20 `0.8665`, and MRR
@@ -381,16 +381,20 @@ and symbol MRR `0.3349`. Forty-six of 267 production targets remain outside Top-
 denominator.
 
 Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed 600/600 valid
-rank requests in one attempt with zero fallback. Mean File Recall@1/5/10/20 was
-`0.5705/0.7922/0.8321/0.8807`, with MRR `0.7526`; population standard deviation was `0.0062` for
-Recall@1 and `0.0030` for MRR. The Top-40 pool covered 231/267 production targets and the final
-Top-20 covered 224, 225, and 224, recovering `tornado/locks.py`, Pylint `class_checker.py`, and SciPy
-`_matfuncs.py` in every run without losing an existing deterministic Top-20 ground-truth target. Symbol
-Recall@20 remained `0.4645`; mean symbol MRR rose to `0.4909` through file reordering. Only 144/200
-complete candidate orders were identical across all repeats, so seed 1337 remains best effort.
-The three runs used 10,349,727 input tokens and 5,896 output tokens. See the compact
+rank requests with zero fallback; 598 succeeded on the first attempt and two recovered through the
+bounded truncation retry. Mean File Recall@1/5/10/20 was
+`0.5622/0.7952/0.8377/0.8890`, with MRR `0.7516`. The expanded pool reserves three slots for
+directly supported paths while the deterministic Top-20 keeps one. Pool coverage improved from
+231/267 to 234/267 production targets, and the final Top-20 covered 227, 227, and 226. NumPy
+`dlpack.c` and pandas `_arrow_string_mixins.py` were newly promoted in every run without losing an
+existing deterministic Top-20 ground-truth target. Mean Symbol Recall@20 was `0.4668`, with symbol
+MRR `0.4867`. Only 138/200 complete candidate orders were identical across all repeats, so seed
+1337 remains best effort. Mean Recall@1 and MRR are slightly below v0.29 and remain reported as
+tradeoffs rather than hidden.
+The three runs used 10,331,931 input tokens and 5,896 output tokens. See the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
-the duplicate raw run files remain outside Git.
+the duplicate raw run files remain outside Git. The compact pre-change miss audit is
+[`pool40-miss-taxonomy-manifest-v20.json`](benchmarks/results/pool40-miss-taxonomy-manifest-v20.json).
 
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
