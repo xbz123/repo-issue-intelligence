@@ -40,14 +40,16 @@ under the final ground-truth standard rather than filled with incomplete cases.
 Three deterministic v0.31 runs completed 200/200 cases with zero failures. After removing
 timestamps, elapsed fields, and cache provenance, all candidate files, candidate symbols, per-case
 metrics, tier metrics, and aggregates were identical. The repository map adds conservative Rust
-declaration symbols without inferred Rust call edges; TypeScript, TSX, C, and C++ remain file-only.
+declaration symbols without inferred Rust call edges, normalizes raw identifiers, and accepts Rust
+2024 safe foreign functions; TypeScript, TSX, C, and C++ remain file-only.
 File Recall@1/5/10/20 is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Across the
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
 `0.3349`; all reviewed symbol labels remain Python-only. Top-20 coverage is 222 of 267 production
 targets, and all 45 misses remain in the denominator.
 
-The first v0.31 run recorded 18 repository-map cache hits and 182 misses after the index-version
-change; runs 2 and 3 recorded 200/200 hits. The three-run mean analysis time was 6,913 ms per case.
+The first v0.31 run recorded seven repository-map cache hits and 193 misses after the final
+index-version change; runs 2 and 3 recorded 200/200 hits. The three-run mean analysis time was
+5,582 ms per case.
 Compared with v0.30, Recall@1, Recall@5, Recall@20, and MRR improve while Recall@10 decreases from
 `0.7505` to `0.7493`; one target enters Top-20 and none leave it.
 `benchmarks/expansion-v200-review-queue-v19.json`
@@ -61,7 +63,10 @@ without changing the deterministic Top-20. The v0.31 declaration index then reco
 coverage to 236/267 without losing a prior Top-20 target. Three DeepSeek runs select both new uv
 targets every time; mean Recall@1/5/10/20 becomes `0.5747/0.8008/0.8433/0.8965`, with MRR
 `0.7606`. Across 600 case-runs, 595 return valid model ranks and five use deterministic fallback
-after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. The compact taxonomy is
+after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. Those model runs
+were generated under index v14. The review-only v15 parser expansion changed one of 193 unique
+maps but no Top-40 report or rerank input, so DeepSeek was not called again; the next provider
+evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
 ## v0.23 tenth 200-case expansion batch

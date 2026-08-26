@@ -1088,11 +1088,16 @@ def test_repository_map_records_conservative_rust_symbols(
         repository,
         "crates/parser/src/lib.rs",
         "pub struct Pep508Error { message: String }\n"
+        "pub struct r#type { value: String }\n"
         "pub unsafe trait UnsafeReporter {}\n"
         "pub auto trait AutoReporter {}\n"
         "pub union ReporterValue { integer: u64 }\n"
         "pub extern fn foreign_reporter() {}\n"
         'pub unsafe extern "C" fn abi_reporter() {}\n'
+        "pub fn r#match() {}\n"
+        'unsafe extern "C" {\n'
+        "    safe fn exposed();\n"
+        "}\n"
         "macro_rules! generated {\n"
         "    ($value:expr) => {{\n"
         "        fn ignored_macro_function() {}\n"
@@ -1139,11 +1144,14 @@ def test_repository_map_records_conservative_rust_symbols(
 
     assert [(symbol.name, symbol.kind) for symbol in rust.symbols] == [
         ("Pep508Error", "struct"),
+        ("type", "struct"),
         ("UnsafeReporter", "trait"),
         ("AutoReporter", "trait"),
         ("ReporterValue", "union"),
         ("foreign_reporter", "function"),
         ("abi_reporter", "function"),
+        ("match", "function"),
+        ("exposed", "function"),
         ("real_with_macro", "function"),
         ("render_caret", "function"),
     ]

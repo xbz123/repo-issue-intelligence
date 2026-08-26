@@ -64,17 +64,17 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 14
+REPOSITORY_MAP_INDEX_VERSION = 15
 
 RUST_FUNCTION_DECLARATION = re.compile(
-    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|default)\s+)*"
+    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|safe|default)\s+)*"
     r'(?:extern(?:\s+(?:"[^"]+"|value))?\s+)?'
-    r"fn\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    r"fn\s+(?:r#)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
 )
 RUST_TYPE_DECLARATION = re.compile(
     r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto)\s+)*"
     r"(?P<kind>struct|enum|trait|type|union)\s+"
-    r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    r"(?:r#)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
 )
 RUST_CHAR_LITERAL = re.compile(
     r"'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]+\}|.)|[^\\'\r\n])'"

@@ -1,7 +1,19 @@
 {
   "protocol": "hybrid-rust-symbol-v0.31",
   "manifest_version": 20,
-  "repository_map_index_version": 14,
+  "repository_map_index_version": 15,
+  "source_run_repository_map_index_version": 14,
+  "post_review_input_equivalence": {
+    "cases_covered": 200,
+    "unique_repository_maps_compared": 193,
+    "changed_repository_maps": 1,
+    "changed_map_case_id": "pyo3-reference-pool-dirty-fastpath",
+    "changed_candidate_pool_reports": 0,
+    "candidate_pool_reports_identical_for_all_cases": true,
+    "rerank_inputs_identical": true,
+    "deepseek_rerun_performed": false,
+    "next_provider": "codex-cli/gpt-5.3-codex-spark"
+  },
   "cases": 200,
   "repositories": 58,
   "provider": "opencode",
@@ -260,7 +272,8 @@
     "Mean Recall@1/5/10/20 improves from 0.5622/0.7952/0.8377/0.8890 to 0.5747/0.8008/0.8433/0.8965, and MRR improves from 0.7516 to 0.7606.",
     "Across 600 case-runs, 595 produce valid model ranks: 580 on the first attempt and 15 after one bounded retry. Five deterministic fallbacks are all OpenCode HTTP 500 server errors; invalid structure and unknown evidence IDs remain zero.",
     "No deterministic Top-20 ground-truth target is lost in any run. The 177 reviewed symbol targets remain Python-only; Rust symbol quality is covered by regression tests but not by aggregate symbol recall.",
-    "The three raw run files were validated locally but are not committed to avoid duplicating large candidate lists.",
+    "The three raw run files were generated under index v14. After review expanded raw-identifier and Rust 2024 safe-foreign parsing in index v15, all 193 unique maps were compared; the only changed map produced an identical Top-40 report, so every rerank input remained identical and no new DeepSeek call was made.",
+    "The validated raw run files are not committed to avoid duplicating large candidate lists; the next provider evaluation is intentionally moved to Codex CLI gpt-5.3-codex-spark.",
     "This is a localization result, not evidence of root-cause accuracy or production reliability on unseen repositories."
   ]
 }
