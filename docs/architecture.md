@@ -242,14 +242,15 @@ current checkout; corrupt or stale entries rebuild through an atomic replacement
 benchmark success semantics. Per-case results retain the cache hit/miss state so cold and warm
 latency remain auditable. It runs deterministic retrieval and preserves that Top-20 as the exact
 hybrid fallback. A separate retrieval pass appends unique files to form a model-only Top-40 pool;
-OpenCode `deepseek-v4-flash` may promote at most three selected evidence IDs before the unchanged
-base order fills the final Top-20. The benchmark
-does not expose provider or model overrides, and it no longer has a full-analysis variant. DeepSeek
-receives a plain chat-completions request without `response_format`; the response contract is one
-unique `RANK:` line containing at most three evidence IDs. Reasoning is disabled, output starts at
-8,192 tokens and expands once to 20,000 only after truncation. Issue bodies remain complete. The
-default 100,000-character evidence budget is divided across the 40-candidate pool, limiting each
-snippet to 2,500 characters and 200 source lines. Root-cause hypotheses are
+Codex CLI `gpt-5.6-luna` may promote at most three selected evidence IDs before the unchanged base
+order fills the final Top-20. The benchmark does not expose provider, model, temperature, or seed
+overrides, and it no longer has a full-analysis variant. Each request runs ephemeral non-interactive
+`codex exec` in an empty temporary directory with tool features disabled, a read-only sandbox, and
+the prompt on stdin. The final response must satisfy a strict JSON Schema containing only one to
+three evidence IDs, then pass local duplicate and known-ID checks. Reasoning effort is fixed to
+medium; Codex CLI controls its own response budget. Issue bodies remain complete. The default
+100,000-character evidence budget is divided across the 40-candidate pool, limiting each snippet
+to 2,500 characters and 200 source lines. Root-cause hypotheses are
 intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
 normalizes paths and identifiers, rejects
 dotted-name/URL false path matches, gives explicit stack-trace/source-path references the strongest
@@ -261,12 +262,12 @@ Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.
 
-The runner retries only transport failures, HTTP 429, and HTTP 5xx responses. Other HTTP errors,
-missing or multiple `RANK:` lines, empty ranks, and unknown evidence IDs immediately use the
-deterministic fallback. Aggregate output keeps fallback cases in the denominator and records
-protocol success rate, successful-rerank MRR, overall MRR, and fallback reasons separately.
-Provider attempts, including failed attempts and the truncation retry, contribute to stored token
-and latency totals.
+The runner retries only timeouts, rate limits, transport failures, and provider 5xx errors.
+Authentication, quota, unavailable-model, launch, missing-output, invalid-structure, and unknown-ID
+errors immediately use the deterministic fallback. Aggregate output keeps fallback cases in the
+denominator and records protocol success rate, successful-rerank MRR, overall MRR, and fallback
+reasons separately. Failed and successful provider attempts contribute to stored token and latency
+totals.
 
 ### Benchmark candidate pipeline
 
