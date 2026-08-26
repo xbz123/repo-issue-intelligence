@@ -104,9 +104,9 @@ These DeepSeek runs were generated under repository-map index v14. Review expans
 v18 preserved every Top-40 report and rerank input. A direct v18/v19 audit found changed Top-40
 evidence only for the Prefect and PyO3 cases above; the v19/v20 audit found no further Top-40 input
 changes despite the four corrected Ruff maps, and all 193 v20/v21 maps are identical. The DeepSeek
-metrics are therefore retained only as historical provenance and were not rerun;
-the next provider evaluation moves to Codex CLI
-`gpt-5.3-codex-spark`.
+metrics are therefore retained only as historical provenance and were not rerun. The current
+hybrid runtime now uses Codex CLI `gpt-5.6-luna`; no Luna metric is claimed here until a
+complete live run is recorded.
 
 The Top-40 pool contains 236/267 production targets and the final Top-20 contains 229, 228, and 229
 across the three runs. The declaration index moves uv `crates/uv/src/commands/project/mod.rs` into

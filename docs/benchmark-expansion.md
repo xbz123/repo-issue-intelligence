@@ -77,8 +77,9 @@ after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. T
 were generated under index v14, and review expansion through index v18 preserved every Top-40 input.
 Index v19 leaves all 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3
 case. Index v20 changes four Ruff maps but not their Top-40 reports or evidence. DeepSeek was not
-rerun; index v21 is map-identical to v20. The next provider
-evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
+rerun; index v21 is map-identical to v20. The current hybrid runtime uses Codex CLI
+`gpt-5.6-luna`, but no Luna result is claimed until a complete live run is recorded. The
+compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
 ## v0.23 tenth 200-case expansion batch

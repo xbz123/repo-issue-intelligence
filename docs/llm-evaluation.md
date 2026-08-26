@@ -119,8 +119,8 @@ unchanged but changes Top-40 evidence for `prefect-anyof-copy-new-run` and
 v19. Index v20 restores `Truthiness` in four Ruff maps, but direct comparison confirms identical
 Top-40 candidate reports and evidence for all four affected cases. Index v21 is identical to v20
 across all 193 maps and introduces no additional input change. The historical runs were not
-rerun. Per user direction, the next provider
-evaluation uses non-interactive Codex CLI `gpt-5.3-codex-spark` instead of another OpenCode run.
+rerun. The hybrid runtime now uses non-interactive Codex CLI `gpt-5.6-luna` instead of another
+OpenCode run; a complete live run is still required before publishing Luna metrics.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON
