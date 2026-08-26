@@ -77,6 +77,44 @@ controlled `*.schema.json` form as file-only `JSON Schema`. Both published artif
 inside Top-20. Four candidate lists change relative to v0.27: the two tox cases and two Black cases
 whose repository contains `black.schema.json`; no Top-20 ground-truth match regresses.
 
+## Manifest-v20 Codex CLI Luna pool-40 result
+
+One authorized v0.32 run evaluated all 200 frozen public cases through isolated non-interactive
+Codex CLI `gpt-5.6-luna` at medium reasoning effort. All 200 requests returned a valid known-ID
+rank on the first attempt: protocol success was `1.0000`, with no retry, fallback, execution
+failure, malformed structure, or unknown ID.
+
+| Variant | Valid ranks | File R@1 | R@5 | R@10 | R@20 | Pool R | MRR | Mean LLM latency |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Luna run 1 | 200/200 | 0.6147 | 0.8192 | 0.8501 | 0.9007 | 0.9132 | 0.7860 | 6.64 s |
+| DeepSeek three-run mean | 595/600 | 0.5747 | 0.8008 | 0.8433 | 0.8965 | 0.9132 | 0.7606 | 6.69 s |
+| Deterministic | - | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.9132 | 0.5443 | - |
+
+Against deterministic retrieval, Luna improves Recall@1/5/10/20 by
+`0.2587/0.1625/0.1008/0.0317` and MRR by `0.2417`. Against the historical DeepSeek three-run
+mean, it improves those metrics by `0.0400/0.0184/0.0068/0.0042` and MRR by `0.0254`. These are
+one-run comparisons, not evidence that Luna has lower variance or a stable model-ordering
+advantage.
+
+Luna improves expected-file reciprocal rank in 82 cases, worsens it in 26, and leaves 92
+unchanged relative to deterministic. It recovers seven ground-truth files from outside
+deterministic Top-20: NumPy `dlpack.c`, pandas `_arrow_string_mixins.py`, Jinja `idtracking.py`,
+Pylint `class_checker.py`, Setuptools `_apply_pyprojecttoml.py`, uv `uv-pep508/src/lib.rs`, and
+SciPy `_matfuncs.py`. No deterministic Top-20 ground-truth file is displaced; final Top-20 covers
+229 of 267 production targets, versus 222 deterministically.
+
+Across 143 symbol-labeled cases, Recall@1/5/10/20 is
+`0.4435/0.4528/0.4598/0.4668`, with symbol MRR `0.5049`. Luna uses 4,948,048 input and 30,945
+output tokens, with median/p95/max LLM latency `6.42/9.27/13.27` seconds. Codex CLI accounting
+includes its agent context and reasoning, so token totals are not directly comparable with the
+historical chat-completions protocol. The run had 192 repository-map cache misses; aggregate
+analysis latency is not a warm-cache comparison.
+
+Per the one-run-first policy, no repeat was launched because every case succeeded. Stability
+therefore remains unmeasured. The compact machine-readable artifact is
+`benchmarks/results/gpt-5.6-luna-pool40-manifest-v20-run1-summary.json`; the 1.19 MB raw result
+remains outside Git.
+
 ## Manifest-v20 DeepSeek Rust-symbol pool-40 result
 
 The v0.31 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
@@ -105,8 +143,7 @@ v18 preserved every Top-40 report and rerank input. A direct v18/v19 audit found
 evidence only for the Prefect and PyO3 cases above; the v19/v20 audit found no further Top-40 input
 changes despite the four corrected Ruff maps, and all 193 v20/v21 maps are identical. The DeepSeek
 metrics are therefore retained only as historical provenance and were not rerun. The current
-hybrid runtime now uses Codex CLI `gpt-5.6-luna`; no Luna metric is claimed here until a
-complete live run is recorded.
+hybrid runtime uses Codex CLI `gpt-5.6-luna`; its first complete result is reported above.
 
 The Top-40 pool contains 236/267 production targets and the final Top-20 contains 229, 228, and 229
 across the three runs. The declaration index moves uv `crates/uv/src/commands/project/mod.rs` into

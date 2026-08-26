@@ -78,8 +78,9 @@ were generated under index v14, and review expansion through index v18 preserved
 Index v19 leaves all 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3
 case. Index v20 changes four Ruff maps but not their Top-40 reports or evidence. DeepSeek was not
 rerun; index v21 is map-identical to v20. The current hybrid runtime uses Codex CLI
-`gpt-5.6-luna`, but no Luna result is claimed until a complete live run is recorded. The
-compact taxonomy is
+`gpt-5.6-luna`; its first 200-case run completed 200/200 valid first-attempt ranks with no fallback,
+File Recall@1/5/10/20 `0.6147/0.8192/0.8501/0.9007`, and MRR `0.7860`. This is a single run, so
+stability remains unmeasured. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
 ## v0.23 tenth 200-case expansion batch

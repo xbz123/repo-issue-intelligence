@@ -1,0 +1,218 @@
+{
+  "name": "gpt-5.6-luna-pool40-manifest-v20-run1-summary",
+  "version": 1,
+  "created_at": "2026-08-26T23:32:37.629143Z",
+  "source_commit": "1e7675d4682e26d8f98073113fe876d925793bcb",
+  "manifest_version": 20,
+  "repository_map_index_version": 21,
+  "repository_map_cache_schema_version": 2,
+  "provider": "codex-cli",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "temperature": null,
+  "seed": null,
+  "protocol": {
+    "variant": "hybrid",
+    "candidate_pool_limit": 40,
+    "final_candidate_limit": 20,
+    "max_promoted_files": 3,
+    "max_evidence_chars": 100000,
+    "max_chars_per_evidence": 2500,
+    "max_lines_per_evidence": 200,
+    "max_llm_attempts": 2,
+    "llm_delay_seconds": 0,
+    "timeout_seconds": 180,
+    "output_schema": "one to three known reranked_evidence_ids",
+    "prompt_transport": "UTF-8 stdin",
+    "execution": "ephemeral read-only codex exec",
+    "user_config_loaded": false,
+    "global_agents_loaded": false,
+    "project_doc_max_bytes": 0,
+    "disabled_features": [
+      "shell_tool",
+      "unified_exec",
+      "apps",
+      "browser_use",
+      "computer_use",
+      "image_generation",
+      "multi_agent",
+      "memories"
+    ]
+  },
+  "run": {
+    "cases": 200,
+    "completed": 200,
+    "failed": 0,
+    "provider_attempts": 200,
+    "first_attempt_successes": 200,
+    "fallbacks": 0,
+    "fallback_reasons": {},
+    "request_ids_nonnull": 200,
+    "request_ids_unique": 200,
+    "file_recall_at_1": 0.6147,
+    "file_recall_at_5": 0.8192,
+    "file_recall_at_10": 0.8501,
+    "file_recall_at_20": 0.9007,
+    "candidate_pool_recall": 0.9132,
+    "mean_reciprocal_rank": 0.786,
+    "symbol_cases": 143,
+    "symbol_recall_at_1": 0.4435,
+    "symbol_recall_at_5": 0.4528,
+    "symbol_recall_at_10": 0.4598,
+    "symbol_recall_at_20": 0.4668,
+    "mean_symbol_reciprocal_rank": 0.5049,
+    "input_tokens": 4948048,
+    "output_tokens": 30945,
+    "average_input_tokens": 24740.24,
+    "average_output_tokens": 154.725,
+    "average_llm_elapsed_ms": 6641.27,
+    "median_llm_elapsed_ms": 6422.7,
+    "p95_llm_elapsed_ms": 9273.281,
+    "min_llm_elapsed_ms": 3621.346,
+    "max_llm_elapsed_ms": 13274.071,
+    "average_analysis_elapsed_ms": 18664.822,
+    "repository_map_cache_hits": 8,
+    "repository_map_cache_misses": 192,
+    "production_targets": 267,
+    "candidate_pool_matched_production_targets": 236,
+    "final_top20_matched_production_targets": 229
+  },
+  "by_tier": {
+    "main": {
+      "cases": 17,
+      "file_recall_at_1": 0.7059,
+      "file_recall_at_5": 0.8529,
+      "file_recall_at_10": 0.9118,
+      "file_recall_at_20": 1.0,
+      "mean_reciprocal_rank": 0.833,
+      "symbol_cases": 9,
+      "symbol_recall_at_20": 0.6111,
+      "mean_symbol_reciprocal_rank": 0.6667
+    },
+    "calibration": {
+      "cases": 11,
+      "file_recall_at_1": 0.6364,
+      "file_recall_at_5": 0.8182,
+      "file_recall_at_10": 0.8182,
+      "file_recall_at_20": 1.0,
+      "mean_reciprocal_rank": 0.8024,
+      "symbol_cases": 9,
+      "symbol_recall_at_20": 0.6667,
+      "mean_symbol_reciprocal_rank": 0.6667
+    },
+    "generalization": {
+      "cases": 172,
+      "file_recall_at_1": 0.6044,
+      "file_recall_at_5": 0.816,
+      "file_recall_at_10": 0.846,
+      "file_recall_at_20": 0.8845,
+      "mean_reciprocal_rank": 0.7803,
+      "symbol_cases": 125,
+      "symbol_recall_at_20": 0.442,
+      "mean_symbol_reciprocal_rank": 0.4816
+    }
+  },
+  "ranking_changes_vs_deterministic": {
+    "candidate_orders_identical": 23,
+    "candidate_orders_changed": 177,
+    "reciprocal_rank_improved_cases": 82,
+    "reciprocal_rank_worsened_cases": 26,
+    "reciprocal_rank_unchanged_cases": 92,
+    "tail_promotion_cases": 70,
+    "ground_truth_tail_promotion_cases": 7,
+    "lost_deterministic_top20_ground_truth": [],
+    "recovered_tail_targets": [
+      {
+        "case_id": "numpy-scalar-dlpack",
+        "file": "numpy/_core/src/multiarray/dlpack.c"
+      },
+      {
+        "case_id": "pandas-string-match-ascii",
+        "file": "pandas/core/arrays/_arrow_string_mixins.py"
+      },
+      {
+        "case_id": "jinja-branch-set-tracking",
+        "file": "src/jinja2/idtracking.py"
+      },
+      {
+        "case_id": "pylint-setattr-outside-init",
+        "file": "pylint/checkers/classes/class_checker.py"
+      },
+      {
+        "case_id": "setuptools-pyproject-define-macros",
+        "file": "setuptools/config/_apply_pyprojecttoml.py"
+      },
+      {
+        "case_id": "uv-empty-pep508-error",
+        "file": "crates/uv-pep508/src/lib.rs"
+      },
+      {
+        "case_id": "scipy-signm-dtype",
+        "file": "scipy/linalg/_matfuncs.py"
+      }
+    ]
+  },
+  "comparison": {
+    "deterministic_baseline": {
+      "file_recall_at_1": 0.356,
+      "file_recall_at_5": 0.6567,
+      "file_recall_at_10": 0.7493,
+      "file_recall_at_20": 0.869,
+      "mean_reciprocal_rank": 0.5443,
+      "symbol_recall_at_1": 0.2378,
+      "symbol_recall_at_5": 0.384,
+      "symbol_recall_at_10": 0.4155,
+      "symbol_recall_at_20": 0.4645,
+      "mean_symbol_reciprocal_rank": 0.3349
+    },
+    "delta_vs_deterministic": {
+      "file_recall_at_1": 0.2587,
+      "file_recall_at_5": 0.1625,
+      "file_recall_at_10": 0.1008,
+      "file_recall_at_20": 0.0317,
+      "mean_reciprocal_rank": 0.2417,
+      "symbol_recall_at_1": 0.2057,
+      "symbol_recall_at_5": 0.0688,
+      "symbol_recall_at_10": 0.0443,
+      "symbol_recall_at_20": 0.0023,
+      "mean_symbol_reciprocal_rank": 0.17
+    },
+    "deepseek_three_run_mean": {
+      "protocol_success_rate": 0.9917,
+      "file_recall_at_1": 0.5747,
+      "file_recall_at_5": 0.8008,
+      "file_recall_at_10": 0.8433,
+      "file_recall_at_20": 0.8965,
+      "mean_reciprocal_rank": 0.7606,
+      "symbol_recall_at_1": 0.4143,
+      "symbol_recall_at_5": 0.4528,
+      "symbol_recall_at_10": 0.4621,
+      "symbol_recall_at_20": 0.4668,
+      "mean_symbol_reciprocal_rank": 0.487,
+      "average_llm_elapsed_ms": 6693.685
+    },
+    "delta_vs_deepseek_three_run_mean": {
+      "protocol_success_rate": 0.0083,
+      "file_recall_at_1": 0.04,
+      "file_recall_at_5": 0.0184,
+      "file_recall_at_10": 0.0068,
+      "file_recall_at_20": 0.0042,
+      "mean_reciprocal_rank": 0.0254,
+      "symbol_recall_at_1": 0.0292,
+      "symbol_recall_at_5": 0.0,
+      "symbol_recall_at_10": -0.0023,
+      "symbol_recall_at_20": 0.0,
+      "mean_symbol_reciprocal_rank": 0.0179,
+      "average_llm_elapsed_ms": -52.415
+    }
+  },
+  "raw_run_artifact_committed": false,
+  "raw_run_bytes": 1189394,
+  "notes": [
+    "This is one complete run by design; it does not establish repeat-to-repeat stability.",
+    "All 200 cases produced a valid first-attempt rank, so no additional run was triggered.",
+    "The run had 192 repository-map cache misses; total analysis latency is not a warm-cache comparison.",
+    "Codex CLI token accounting includes agent context and reasoning, so its token totals are not directly comparable with the historical chat-completions protocol.",
+    "The full raw run remains outside Git because it duplicates per-case candidate lists."
+  ]
+}
