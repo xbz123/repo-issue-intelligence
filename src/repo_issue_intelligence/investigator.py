@@ -94,25 +94,24 @@ PATH_REFERENCE_PATTERN = re.compile(
 )
 CODE_SPAN_PATTERN = re.compile(r"(?<!`)`([^`\n]{1,120})`(?!`)")
 FENCED_CODE_PATTERN = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+ECMASCRIPT_FENCE_PREFIX_PATTERN = re.compile(
+    r"^```[ \t]*(?:javascript|js|typescript|ts|jsx|tsx)\b",
+    re.IGNORECASE,
+)
 IDENTIFIER_PATTERN = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b"
 )
 CALLED_IDENTIFIER_PATTERN = re.compile(
     r"\b((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
-TRACEBACK_IDENTIFIER_PATTERN = re.compile(
-    r"\bin\s+((?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*)\b"
-)
 CANONICAL_TRACEBACK_FRAME_PATTERN = re.compile(
     r'^\s*File\s+["\'](?P<path>.+?\.py)["\'],\s+line\s+\d+,\s+in\s+'
-    r"(?P<symbol>(?:[A-Za-z_][A-Za-z0-9_]*\.)*"
-    r"[A-Za-z_][A-Za-z0-9_]*)\s*$",
+    r"(?P<symbol>\S+)\s*$",
     re.MULTILINE,
 )
 COMPACT_TRACEBACK_FRAME_PATTERN = re.compile(
     r"^\s*(?:(?:\d+|at)\s+)?(?P<path>.+?\.py):\d+\s+in\s+"
-    r"(?P<symbol>(?:[A-Za-z_][A-Za-z0-9_]*\.)*"
-    r"[A-Za-z_][A-Za-z0-9_]*)\s*$",
+    r"(?P<symbol>\S+)\s*$",
     re.MULTILINE,
 )
 IMMUTABLE_SOURCE_LINE_REFERENCE_PATTERN = re.compile(
@@ -196,6 +195,10 @@ SYMBOL_EVIDENCE_PREFIXES = (
     "Issue-matching symbols call ",
 )
 ECMASCRIPT_LANGUAGES = {"JavaScript", "TypeScript"}
+DIRECT_SYMBOL_KINDS = {"function", "struct", "enum", "trait", "type", "union"}
+DECLARATION_CALL_PREFIX_PATTERN = re.compile(
+    r"\b(?:class|def|fn|struct|enum|trait|type|union|macro)\s+$"
+)
 UNICODE_ID_CONTINUE_CATEGORIES = {
     "Lu",
     "Ll",
@@ -208,6 +211,7 @@ UNICODE_ID_CONTINUE_CATEGORIES = {
     "Nd",
     "Pc",
 }
+ECMASCRIPT_IDENTIFIER_START_CATEGORIES = {"Lu", "Ll", "Lt", "Lm", "Lo", "Nl"}
 UNICODE_OTHER_ID_START = {"\u2118", "\u212e", "\u309b", "\u309c"}
 UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da", "\u30fb", "\uff65"}
 UNICODE_ID_CONTINUE_EXCLUSIONS = {"\u2e2f"}
@@ -236,6 +240,7 @@ class IssueSignals:
     raw_title_term_sequence: tuple[str, ...]
     primary_terms: frozenset[str]
     identifiers: frozenset[str]
+    verbatim_identifiers: frozenset[str]
     title_identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
     explicit_identifiers: frozenset[str]
@@ -270,15 +275,190 @@ class SymbolMatch:
     semantic_terms: frozenset[str]
 
 
+def _normalized_qualified_identifier(value: str) -> str | None:
+    components = [
+        component[2:] if component.startswith("r#") else component
+        for component in re.split(r"(?:::|\.)", value)
+    ]
+    normalized = [unicodedata.normalize("NFC", component) for component in components]
+    if not normalized or any(
+        component == "_" or not component.isidentifier()
+        for component in normalized
+    ):
+        return None
+    return ".".join(normalized)
+
+
+def _unicode_identifier_matches(value: str) -> list[tuple[int, int, str]]:
+    matches: list[tuple[int, int, str]] = []
+    index = 0
+    while index < len(value):
+        if index and _unicode_identifier_continue(value[index - 1]):
+            index += 1
+            continue
+        identifier = _qualified_identifier_at(value, index)
+        if identifier is None:
+            index += 1
+            continue
+        normalized, cursor = identifier
+        if any(not character.isascii() for character in normalized):
+            matches.append((index, cursor, normalized))
+        index = cursor
+    return matches
+
+
+def _qualified_identifier_at(value: str, index: int) -> tuple[str, int] | None:
+    component = _unicode_identifier_at(value, index)
+    if component is None:
+        return None
+    components = [component[0]]
+    cursor = component[1]
+    while cursor < len(value):
+        separator_length = (
+            2 if value.startswith("::", cursor) else 1 if value[cursor] == "." else 0
+        )
+        if not separator_length:
+            break
+        next_component = _unicode_identifier_at(value, cursor + separator_length)
+        if next_component is None:
+            break
+        components.append(next_component[0])
+        cursor = next_component[1]
+    return ".".join(components), cursor
+
+
+def _ecmascript_dollar_identifier_matches(
+    value: str,
+) -> list[tuple[int, int, str]]:
+    matches: list[tuple[int, int, str]] = []
+    index = 0
+    while index < len(value):
+        if index and _is_identifier_continuation(value[index - 1], "JavaScript"):
+            index += 1
+            continue
+        identifier = _ecmascript_qualified_identifier_at(value, index)
+        if identifier is None:
+            index += 1
+            continue
+        candidate, cursor = identifier
+        if "$" in candidate:
+            matches.append((index, cursor, candidate))
+        index = cursor
+    return matches
+
+
+def _ecmascript_qualified_identifier_at(
+    value: str,
+    index: int,
+) -> tuple[str, int] | None:
+    component = _ecmascript_identifier_at(value, index)
+    if component is None:
+        return None
+    cursor = component
+    while cursor < len(value) and value[cursor] == ".":
+        next_component = _ecmascript_identifier_at(value, cursor + 1)
+        if next_component is None:
+            break
+        cursor = next_component
+    return value[index:cursor], cursor
+
+
+def _ecmascript_identifier_at(value: str, index: int) -> int | None:
+    if index >= len(value) or not _is_ecmascript_identifier_start(value[index]):
+        return None
+    cursor = index + 1
+    while cursor < len(value) and _is_identifier_continuation(
+        value[cursor],
+        "JavaScript",
+    ):
+        cursor += 1
+    return cursor
+
+
+def _verbatim_qualified_identifier(
+    value: str,
+    *,
+    allow_ecmascript: bool = False,
+) -> str | None:
+    if "::" in value or any(
+        component.startswith("r#") for component in value.split(".")
+    ):
+        return None
+    if _normalized_qualified_identifier(value) is None and not (
+        allow_ecmascript
+        and all(
+            _is_ecmascript_identifier_component(component)
+            for component in value.split(".")
+        )
+    ):
+        return None
+    return value
+
+
+def _is_ecmascript_identifier_component(value: str) -> bool:
+    return bool(value) and _is_ecmascript_identifier_start(value[0]) and all(
+        _is_identifier_continuation(character, "JavaScript")
+        for character in value[1:]
+    )
+
+
+def _is_ecmascript_identifier_start(value: str) -> bool:
+    return (
+        value in {"$", "_"}
+        or unicodedata.category(value) in ECMASCRIPT_IDENTIFIER_START_CATEGORIES
+        or value in UNICODE_OTHER_ID_START
+    )
+
+
+def _unicode_identifier_at(value: str, index: int) -> tuple[str, int] | None:
+    cursor = index + 2 if value.startswith("r#", index) else index
+    if cursor >= len(value) or not _unicode_identifier_start(value[cursor]):
+        return None
+    start = cursor
+    cursor += 1
+    while cursor < len(value) and _unicode_identifier_continue(value[cursor]):
+        cursor += 1
+    identifier = unicodedata.normalize("NFC", value[start:cursor])
+    if identifier == "_" or not identifier.isidentifier():
+        return None
+    return identifier, cursor
+
+
+def _unicode_identifier_start(value: str) -> bool:
+    return value == "_" or value.isidentifier()
+
+
+def _unicode_identifier_continue(value: str) -> bool:
+    return ("a" + value).isidentifier()
+
+
 def _ordered_terms(value: str) -> list[str]:
     value = value.replace("\\", "/")
     value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", value)
     value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
-    return [
+    terms = [
         term
         for term in re.findall(r"[a-z][a-z0-9]{1,}", value.lower())
         if term not in GENERIC_TERMS
     ]
+    unicode_identifiers: list[str] = []
+    whole_identifier = _normalized_qualified_identifier(
+        value.strip("`'\"()[]{}:,"),
+    )
+    if whole_identifier is not None:
+        unicode_identifiers.append(whole_identifier)
+    for span in CODE_SPAN_PATTERN.findall(value):
+        identifier = _normalized_qualified_identifier(span.strip())
+        if identifier is not None:
+            unicode_identifiers.append(identifier)
+    terms.extend(
+        component.casefold()
+        for identifier in unicode_identifiers
+        if any(not character.isascii() for character in identifier)
+        for component in identifier.split(".")
+        if component.casefold() not in GENERIC_TERMS
+    )
+    return list(dict.fromkeys(terms))
 
 
 def _terms(value: str) -> set[str]:
@@ -294,7 +474,11 @@ def _identifier_variants(value: str) -> set[str]:
     if parts:
         variants.add("_".join(parts))
         variants.add("".join(parts))
-    return {variant for variant in variants if len(variant) >= 3}
+    return {
+        variant
+        for variant in variants
+        if len(variant) >= 3 or any(not character.isascii() for character in variant)
+    }
 
 
 def _compact_identifier_variants(value: str) -> set[str]:
@@ -305,22 +489,97 @@ def _compact_identifier_variants(value: str) -> set[str]:
     return {variant for variant in variants if len(variant) >= 4}
 
 
+def _extract_verbatim_identifiers(text: str) -> set[str]:
+    identifiers: set[str] = set()
+    for pattern in (CODE_SPAN_PATTERN, FENCED_CODE_PATTERN):
+        for match in pattern.finditer(text):
+            region = match.group(1)
+            stripped_region = region.strip()
+            ecmascript_fence = (
+                pattern is FENCED_CODE_PATTERN
+                and ECMASCRIPT_FENCE_PREFIX_PATTERN.match(match.group(0)) is not None
+            )
+            candidate = _verbatim_qualified_identifier(
+                stripped_region,
+                allow_ecmascript=ecmascript_fence
+                or (
+                    "$" in stripped_region
+                    and any(not character.isascii() for character in stripped_region)
+                ),
+            )
+            if candidate is not None:
+                identifiers.add(candidate)
+            dollar_matches = (
+                _ecmascript_dollar_identifier_matches(region)
+                if ecmascript_fence
+                else []
+            )
+            identifiers.update(candidate for _, _, candidate in dollar_matches)
+            for start, end, _ in _unicode_identifier_matches(region):
+                if any(
+                    dollar_start <= start and end <= dollar_end
+                    for dollar_start, dollar_end, _ in dollar_matches
+                ):
+                    continue
+                if (
+                    start > 0
+                    and _is_identifier_continuation(region[start - 1], "JavaScript")
+                ) or (
+                    end < len(region)
+                    and _is_identifier_continuation(region[end], "JavaScript")
+                ):
+                    continue
+                candidate = _verbatim_qualified_identifier(region[start:end])
+                if candidate is not None:
+                    identifiers.add(candidate)
+    return identifiers
+
+
+def _is_declaration_call_prefix(value: str) -> bool:
+    return DECLARATION_CALL_PREFIX_PATTERN.search(value) is not None
+
+
 def _extract_explicit_identifiers(text: str) -> set[str]:
     fenced_regions = FENCED_CODE_PATTERN.findall(text)
     code_regions = [*CODE_SPAN_PATTERN.findall(text), *fenced_regions]
     identifiers: set[str] = set()
     for region in code_regions:
         candidate = region.strip()
-        if IDENTIFIER_PATTERN.fullmatch(candidate):
-            identifiers.add(candidate)
+        normalized_candidate = _normalized_qualified_identifier(candidate)
+        if normalized_candidate is not None:
+            identifiers.add(normalized_candidate)
+            if "::" in candidate:
+                identifiers.add(normalized_candidate.rsplit(".", maxsplit=1)[-1])
         for match in CALLED_IDENTIFIER_PATTERN.finditer(region):
             prefix = region[max(0, match.start() - 12) : match.start()]
-            if re.search(r"\b(?:class|def)\s+$", prefix):
+            if _is_declaration_call_prefix(prefix):
                 continue
             called_identifier = match.group(1)
             identifiers.add(called_identifier)
             identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
+        for start, end, called_identifier in _unicode_identifier_matches(region):
+            cursor = end
+            while cursor < len(region) and region[cursor].isspace():
+                cursor += 1
+            if cursor >= len(region) or region[cursor] != "(":
+                continue
+            prefix = region[max(0, start - 12) : start]
+            if _is_declaration_call_prefix(prefix):
+                continue
+            identifiers.add(called_identifier)
+            identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
     for region in fenced_regions:
+        for start, end, identifier in _unicode_identifier_matches(region):
+            if "." not in identifier and not (
+                identifier.startswith("__") and identifier.endswith("__")
+            ):
+                continue
+            prefix = region[max(0, start - 12) : start]
+            if _is_declaration_call_prefix(prefix):
+                continue
+            identifiers.add(identifier)
+            if "::" in region[start:end]:
+                identifiers.add(identifier.rsplit(".", maxsplit=1)[-1])
         for match in IDENTIFIER_PATTERN.finditer(region):
             identifier = match.group(0)
             if "." not in identifier and not (
@@ -328,15 +587,19 @@ def _extract_explicit_identifiers(text: str) -> set[str]:
             ):
                 continue
             prefix = region[max(0, match.start() - 12) : match.start()]
-            if re.search(r"\b(?:class|def)\s+$", prefix):
+            if _is_declaration_call_prefix(prefix):
                 continue
             identifiers.add(identifier)
-    for match in TRACEBACK_IDENTIFIER_PATTERN.finditer(text):
-        identifier = match.group(1)
-        if "." in identifier or (
-            identifier.startswith("__") and identifier.endswith("__")
+    for prefix in re.finditer(r"\bin\s+", text):
+        identifier = _qualified_identifier_at(text, prefix.end())
+        if identifier is None:
+            continue
+        normalized = identifier[0]
+        if (
+            "." in normalized
+            or (normalized.startswith("__") and normalized.endswith("__"))
         ):
-            identifiers.add(identifier)
+            identifiers.add(normalized)
     return identifiers
 
 
@@ -350,11 +613,21 @@ def _extract_called_identifiers(text: str) -> tuple[str, ...]:
     for region_start, region in sorted(positioned_regions):
         for match in CALLED_IDENTIFIER_PATTERN.finditer(region):
             prefix = region[max(0, match.start() - 12) : match.start()]
-            if re.search(r"\b(?:class|def)\s+$", prefix):
+            if _is_declaration_call_prefix(prefix):
                 continue
             positioned_calls.append(
                 (region_start + match.start(), match.group(1))
             )
+        for start, end, identifier in _unicode_identifier_matches(region):
+            cursor = end
+            while cursor < len(region) and region[cursor].isspace():
+                cursor += 1
+            if cursor >= len(region) or region[cursor] != "(":
+                continue
+            prefix = region[max(0, start - 12) : start]
+            if _is_declaration_call_prefix(prefix):
+                continue
+            positioned_calls.append((region_start + start, identifier))
     return tuple(
         identifier
         for _, identifier in sorted(positioned_calls)
@@ -362,11 +635,13 @@ def _extract_called_identifiers(text: str) -> tuple[str, ...]:
 
 
 def _extract_identifiers(text: str) -> set[str]:
-    identifiers = {
-        span.strip()
-        for span in CODE_SPAN_PATTERN.findall(text)
-        if IDENTIFIER_PATTERN.fullmatch(span.strip())
-    }
+    identifiers = set()
+    for span in CODE_SPAN_PATTERN.findall(text):
+        identifier = _normalized_qualified_identifier(span.strip())
+        if identifier is not None:
+            identifiers.add(identifier)
+            if "::" in span:
+                identifiers.add(identifier.rsplit(".", maxsplit=1)[-1])
     for identifier in IDENTIFIER_PATTERN.findall(text):
         if (
             "_" in identifier
@@ -383,6 +658,12 @@ def _extract_identifier_mentions(text: str) -> tuple[str, ...]:
         match.group(0)
         for match in IDENTIFIER_PATTERN.finditer(text_without_fenced_code)
     ]
+    for span in CODE_SPAN_PATTERN.findall(text_without_fenced_code):
+        identifier = _normalized_qualified_identifier(span.strip())
+        if identifier is not None and any(
+            not character.isascii() for character in identifier
+        ):
+            mentions.append(identifier)
     for match in CALLED_IDENTIFIER_PATTERN.finditer(text_without_fenced_code):
         identifier = match.group(1)
         if "." in identifier:
@@ -390,28 +671,38 @@ def _extract_identifier_mentions(text: str) -> tuple[str, ...]:
     return tuple(mentions)
 
 
+def _without_dotted_identifiers(text: str) -> str:
+    characters = list(text)
+    for start, end, identifier in _unicode_identifier_matches(text):
+        if "." in identifier:
+            characters[start:end] = " " * (end - start)
+    return IDENTIFIER_PATTERN.sub(
+        lambda match: " " if "." in match.group(0) else match.group(0),
+        "".join(characters),
+    )
+
+
 def _extract_traceback_frames(text: str) -> tuple[TracebackFrame, ...]:
     positioned_frames = [
-        (
-            match.start(),
-            TracebackFrame(
-                path=match.group("path").replace("\\", "/"),
-                symbol=match.group("symbol"),
-            ),
-        )
+        (match.start(), match)
         for pattern in (
             CANONICAL_TRACEBACK_FRAME_PATTERN,
             COMPACT_TRACEBACK_FRAME_PATTERN,
         )
         for match in pattern.finditer(text)
     ]
-    return tuple(
-        frame
-        for _, frame in sorted(
-            positioned_frames,
-            key=lambda positioned: positioned[0],
+    frames: list[TracebackFrame] = []
+    for _, match in sorted(positioned_frames, key=lambda positioned: positioned[0]):
+        symbol = _normalized_qualified_identifier(match.group("symbol"))
+        if symbol is None:
+            continue
+        frames.append(
+            TracebackFrame(
+                path=match.group("path").replace("\\", "/"),
+                symbol=symbol,
+            )
         )
-    )
+    return tuple(frames)
 
 
 def _extract_source_line_references(
@@ -491,10 +782,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
     explicit_identifiers = _extract_explicit_identifiers(text)
-    text_without_dotted_identifiers = IDENTIFIER_PATTERN.sub(
-        lambda match: " " if "." in match.group(0) else match.group(0),
-        text,
-    )
+    text_without_dotted_identifiers = _without_dotted_identifiers(text)
     content_terms = _terms(text_without_dotted_identifiers)
     content_terms.update(
         term
@@ -514,6 +802,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         raw_title_term_sequence=_raw_semantic_term_sequence(issue.title),
         primary_terms=frozenset(_terms(primary_text)),
         identifiers=frozenset(_extract_identifiers(text)),
+        verbatim_identifiers=frozenset(_extract_verbatim_identifiers(text)),
         title_identifiers=frozenset(_extract_identifiers(issue.title)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         explicit_identifiers=frozenset(explicit_identifiers),
@@ -794,10 +1083,13 @@ def _select_symbol(
         ]
 
     functions = [match for match in matches if match.symbol.kind == "function"]
+    directly_selectable = [
+        match for match in matches if match.symbol.kind in DIRECT_SYMBOL_KINDS
+    ]
 
     directly_referenced = [
         match
-        for match in functions
+        for match in directly_selectable
         if match.scoped_identifier_match
         or match.qualified_identifier_match
         or (
@@ -1588,6 +1880,10 @@ def _source_content(
         return set(), set(), None
 
     all_identifiers = signals.identifiers | signals.explicit_identifiers
+    if language in ECMASCRIPT_LANGUAGES:
+        all_identifiers = {
+            identifier for identifier in all_identifiers if identifier.isascii()
+        } | set(signals.verbatim_identifiers)
     bare_identifiers = {
         identifier
         for identifier in all_identifiers
@@ -1674,6 +1970,17 @@ def _content_matches_identifier(
     candidate = identifier.strip("`'\"()[]{}:,")
     if not candidate:
         return False
+    if language in ECMASCRIPT_LANGUAGES:
+        return any(
+            _has_valid_identifier_boundaries(
+                text,
+                match.start(),
+                match.end(),
+                reject_dot="." in candidate,
+                language=language,
+            )
+            for match in re.finditer(re.escape(candidate), text)
+        )
     if "." in candidate:
         return any(
             _has_valid_identifier_boundaries(
@@ -2489,7 +2796,7 @@ def locate_candidates(
         symbol.name
         for file in repository_map.files
         for symbol in file.symbols
-        if symbol.kind == "function"
+        if symbol.kind in DIRECT_SYMBOL_KINDS
     )
     unique_symbol_names = frozenset(
         name for name, count in symbol_name_counts.items() if count == 1
@@ -2948,7 +3255,7 @@ def locate_candidates(
         symbol.name
         for path in reranked_paths
         for symbol in files_by_path[path].symbols
-        if symbol.kind == "function"
+        if symbol.kind in DIRECT_SYMBOL_KINDS
     )
     candidate_unique_symbol_names = frozenset(
         name

@@ -37,25 +37,48 @@ unique. The final 40 accepted cases add no multi-file fix because the last autom
 record omitted a material C header; the earlier 30% aspiration is therefore reported as infeasible
 under the final ground-truth standard rather than filled with incomplete cases.
 
-Three deterministic v0.30 runs, using the unchanged v0.29 Top-20 retrieval logic, completed
-200/200 cases with zero failures. After removing timestamps, elapsed fields, and cache provenance,
-all candidate files, candidate symbols, per-case metrics, tier metrics, and aggregates were
-identical. The retained 160 cases were unchanged from manifest v19. File Recall@1/5/10/20 is
-`0.3510/0.6517/0.7505/0.8665`, with MRR `0.5396`. Across the
+Three deterministic v0.31 index-v19 runs completed 200/200 cases with zero failures. After removing
+timestamps, elapsed fields, and cache provenance, all candidate-file orders, per-case metrics, tier
+metrics, and aggregates were identical; candidate-symbol lists were identical for 199/200 cases.
+The repository map adds conservative Rust
+declaration symbols without inferred Rust call edges, normalizes XID-compatible identifiers to NFC,
+skips attributes and macro token trees across line breaks, recognizes declarations that span lines
+and multiple declarations per line, and accepts Rust 2024 safe foreign functions; TypeScript, TSX,
+C, and C++ remain file-only.
+One index-v20 review-validation run then completed 200/200 with zero failures and matched index-v19
+run 1 candidate files, candidate symbols, and metrics exactly. Four Ruff maps restore the real
+`Truthiness` enum previously hidden by `if !...`; direct Top-40 comparison found identical candidate
+reports and evidence, so no anomaly-triggered repeat was required.
+One index-v21 run also completed 200/200 with zero failures and matched index v20 across all 193
+maps, candidate lists, and metrics. The frozen suite did not exercise its older-edition keyword
+macro support, so no anomaly-triggered repeat was required.
+File Recall@1/5/10/20 is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Across the
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
-`0.3349`. Top-20 coverage is 221 of 267 production targets; all 46 misses remain in the denominator.
+`0.3349`; all reviewed symbol labels remain Python-only. Top-20 coverage is 222 of 267 production
+targets, and all 45 misses remain in the denominator.
 
-All three v0.30 runs recorded 200/200 repository-map cache hits and averaged 4,552 ms per case.
-They remained structurally identical to the corrected v0.29 deterministic baseline without
-changing any non-timing result. `benchmarks/expansion-v200-review-queue-v19.json` archives the final
-160-to-200 review pool; there is no active expansion queue after manifest v20.
+The first v0.31 run recorded seven repository-map cache hits and 193 misses after the final
+index-version change; runs 2 and 3 recorded 200/200 hits. The three-run mean analysis time was
+6,026 ms per case.
+Compared with v0.30, Recall@1, Recall@5, Recall@20, and MRR improve while Recall@10 decreases from
+`0.7505` to `0.7493`; one target enters Top-20 and none leave it.
+`benchmarks/expansion-v200-review-queue-v19.json`
+archives the final 160-to-200 review pool; there is no active expansion queue after manifest v20.
 
 The pre-change Top-40 audit found 36 missed targets: 15 Python, 14 Rust, five TypeScript, one C,
 and one C++. Reserving three directly supported paths only in the expanded pool recovered NumPy
 `dlpack.c` plus two pandas Arrow-string targets, increasing pool coverage from 231/267 to 234/267
-without changing the deterministic Top-20. Three DeepSeek runs promoted `dlpack.c` and the pandas
-mixin every time; mean Recall@20 rose from `0.8807` to `0.8890`. Mean Recall@1 and MRR declined
-slightly and remain documented as tradeoffs. The compact taxonomy is
+without changing the deterministic Top-20. The v0.31 declaration index then recovers uv
+`project/mod.rs` in deterministic Top-20 and `uv-pep508/src/lib.rs` in Top-40, increasing pool
+coverage to 236/267 without losing a prior Top-20 target. Three DeepSeek runs select both new uv
+targets every time; mean Recall@1/5/10/20 becomes `0.5747/0.8008/0.8433/0.8965`, with MRR
+`0.7606`. Across 600 case-runs, 595 return valid model ranks and five use deterministic fallback
+after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. Those model runs
+were generated under index v14, and review expansion through index v18 preserved every Top-40 input.
+Index v19 leaves all 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3
+case. Index v20 changes four Ruff maps but not their Top-40 reports or evidence. DeepSeek was not
+rerun; index v21 is map-identical to v20. The next provider
+evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
 ## v0.23 tenth 200-case expansion batch

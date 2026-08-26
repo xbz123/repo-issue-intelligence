@@ -1,6 +1,7 @@
 {
-  "protocol": "pool40-miss-taxonomy-v0.30",
+  "protocol": "pool40-miss-taxonomy-rust-v0.31",
   "manifest_version": 20,
+  "repository_map_index_version": 21,
   "baseline_candidate_pool_limit": 40,
   "missed_production_targets": 36,
   "language_counts": {
@@ -46,6 +47,23 @@
       "pandas/core/arrays/_arrow_string_mixins.py"
     ],
     "regressed_pool_targets": []
+  },
+  "rust_symbol_index_result": {
+    "candidate_pool_matched_targets_before": 234,
+    "candidate_pool_matched_targets_after": 236,
+    "candidate_pool_missing_targets_after": 31,
+    "new_pool_targets": [
+      "crates/uv-pep508/src/lib.rs",
+      "crates/uv/src/commands/project/mod.rs"
+    ],
+    "new_deterministic_top20_targets": [
+      "crates/uv/src/commands/project/mod.rs"
+    ],
+    "promoted_in_every_deepseek_run": [
+      "crates/uv-pep508/src/lib.rs",
+      "crates/uv/src/commands/project/mod.rs"
+    ],
+    "regressed_top20_targets": []
   },
   "targets": [
     {
@@ -513,6 +531,7 @@
   "notes": [
     "wide_candidate_rank is diagnostic ordering from an intentionally wide positive-score run; it is not a production Top-40 rank.",
     "The artifact contains no Issue bodies or source snippets; full raw diagnostics remain outside Git.",
-    "The policy preserves the single protected slot for the deterministic Top-20 and uses three slots only for candidate limits of at least 40."
+    "The protected-path policy preserves one slot for deterministic Top-20 and uses three slots only for candidate limits of at least 40.",
+    "The 36-target taxonomy predates both v0.30 and the Rust-only v0.31 recovery step; after both policies, 31 production targets remain outside Top-40."
   ]
 }

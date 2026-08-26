@@ -8,26 +8,54 @@ symbol targets across 143 cases. Every case embeds the complete Issue snapshot, 
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete v0.30 deterministic runs finished 200/200 cases. After excluding timestamps,
-elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
-and aggregates were identical to one another and to the v0.29 Top-20 baseline. The retained 160
-cases were also unchanged from manifest v19.
+Three complete v0.31 index-v19 deterministic runs finished 200/200 cases. After excluding
+timestamps, elapsed fields, and cache provenance, their candidate-file orders, per-case metrics,
+tier metrics, and aggregates were identical. Candidate-symbol lists were identical for 199/200
+cases; `uv-check-no-install-project` selected `no_install_project` only in run 3 instead of the
+earlier same-file test function, while five immediate single-case repeats reproduced runs 1 and 2.
+Conservative Rust declarations now participate in
+localization without inferred Rust call edges; XID-compatible identifiers are normalized to NFC,
+macro token trees and outer attributes are skipped across line breaks, declarations may span lines,
+multiple declarations per line and Rust 2024 safe foreign functions are accepted, and TypeScript,
+TSX, C, and C++ remain file-only.
 
-| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Mean warm analysis per case |
+One index-v20 review-validation run also completed 200/200 with zero failures. Candidate-file and
+candidate-symbol lists and every per-case metric exactly match index-v19 run 1. Four Ruff maps add
+the real `Truthiness` enum that `if !...` had previously caused the macro scanner to hide; the other
+map fields are unchanged. A direct audit of those four frozen cases found identical Top-40
+candidate reports and evidence inputs. Under the anomaly-triggered repeat policy, no additional
+run was required. Its mean analysis time was 8,794 ms per case with seven cache hits and 193 misses.
+One index-v21 run then completed 200/200 with zero failures and matched index v20 across all 193
+repository maps, candidate files, candidate symbols, and metrics. It adds conservative handling for
+keyword-named macros from older Rust editions and a mixed definition/invocation linearity guard;
+the frozen suite did not exercise those legacy forms, so no additional run was required. Mean
+analysis time was 8,707 ms per case with seven cache hits and 193 misses.
+The final dollar-identifier scope guard changes only the frozen signal set for
+`poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
+matches the index-v21 full-run candidate files, candidate symbols, and metrics.
+
+| Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 200/200 | 0.3510 | 0.6517 | 0.7505 | 0.8665 | 0.5396 | 4,552 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 6,323 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,256 ms |
-| Generalization | 172/172 | 0.3413 | 0.6532 | 0.7477 | 0.8448 | 0.5334 | 4,587 ms |
+| Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 6,026 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 7,784 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,574 ms |
+| Generalization | 172/172 | 0.3471 | 0.6590 | 0.7462 | 0.8477 | 0.5389 | 6,137 ms |
 
-All three runs recorded 200 repository-map cache hits; overall mean analysis time was 4,552 ms per
-case with population standard deviation 281 ms. Timing is
-observational and not part of the reproducibility gate. Measurements start after repository preparation and do not
-include clone, fetch, checkout, or Issue retrieval time.
+Run 1 recorded seven repository-map cache hits and 193 misses after the final index-version change;
+runs 2 and 3 recorded 200 hits. Overall mean analysis time was 6,026 ms per case with population
+standard deviation 1,892 ms. Timing is observational and not part of the reproducibility gate. Measurements
+start after repository preparation and do not include clone, fetch, checkout, or Issue retrieval
+time.
+
+All 193 index-v18 and index-v19 maps were identical. Relative to index v18,
+`prefect-anyof-copy-new-run` changes one Top-20 tail file under exact ECMAScript spelling, and
+`pyo3-reference-pool-dirty-fastpath` selects the explicitly referenced `ReferencePool` type instead
+of `get_pool`; aggregate metrics do not change.
 
 Across the 143 labeled cases, Symbol Recall@1/5/10/20 is
-`0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`. Forty-six production targets are absent from the
-deterministic Top-20. Six are retained-suite misses: `paramiko/common.py`, `boto3/compat.py`,
+`0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`; all 177 labels are Python-only. Forty-five
+production targets are absent from deterministic Top-20. Six are retained-suite misses:
+`paramiko/common.py`, `boto3/compat.py`,
 `lib/matplotlib/cbook/__init__.py`, `src/tox/tox_env/python/runner.py`,
 `pylint/config/callback_actions.py`, and `tornado/locks.py`. The second batch adds 13 misses across
 NumPy's C DLPack implementation, Ruff's shared Rust helper, Ansible's oneline callback, three
@@ -36,8 +64,9 @@ adds both Prefect null-form TSX files and Jinja's `idtracking.py`; the fourth ad
 TSX files and tox's cross-section resolver. The fifth adds Pylint's class checker, Pandas `isin`,
 and Paramiko's dependency declaration. The sixth adds Setuptools
 `setuptools/config/_apply_pyprojecttoml.py` and Flake8 `src/flake8/options/config.py`. They remain in
-the denominator; the seventh batch adds no miss. The eighth adds Prefect's AnyOf utility, both uv
-stale-interpreter-cache files, and three uv check plumbing files. The ninth adds Ruff's printer,
+the denominator; the seventh batch adds no miss. The eighth adds Prefect's AnyOf utility, uv
+`uv-python/src/interpreter.rs`, and three uv check plumbing files; the declaration index recovers
+the other stale-interpreter target, `uv/src/commands/project/mod.rs`. The ninth adds Ruff's printer,
 diagnostic export, and stylesheet helper files. The tenth adds both Airflow provider files. The
 final direct batch adds uv's PEP 508 formatter, Airflow's Snowflake hook and user-settings UI,
 SciPy's Remez C++ guard, and SciPy `signm`. These failures define concrete
@@ -48,9 +77,9 @@ controlled `*.schema.json` form as file-only `JSON Schema`. Both published artif
 inside Top-20. Four candidate lists change relative to v0.27: the two tox cases and two Black cases
 whose repository contains `black.schema.json`; no Top-20 ground-truth match regresses.
 
-## Manifest-v20 DeepSeek protected pool-40 result
+## Manifest-v20 DeepSeek Rust-symbol pool-40 result
 
-The v0.30 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
+The v0.31 hybrid protocol preserves the deterministic Top-20 as its exact fallback and supplies a
 separate Top-40 pool to OpenCode `deepseek-v4-flash`. The default Top-20 retains one reservation
 slot for directly supported paths; only the expanded pool uses three. Each of the 40 snippets
 receives at most 2,500 characters and 200 source lines under the unchanged 100,000-character total
@@ -58,31 +87,42 @@ budget. The model may promote at most three files; unselected base files retain 
 
 | Run | Valid ranks | File R@1 | R@5 | R@10 | R@20 | Pool R | MRR | Mean LLM latency |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 200/200 | 0.5572 | 0.7972 | 0.8388 | 0.8907 | 0.9057 | 0.7483 | 6.00 s |
-| 2 | 200/200 | 0.5622 | 0.7922 | 0.8388 | 0.8907 | 0.9057 | 0.7521 | 6.31 s |
-| 3 | 200/200 | 0.5672 | 0.7963 | 0.8355 | 0.8857 | 0.9057 | 0.7543 | 5.79 s |
-| Mean | 600/600 | 0.5622 | 0.7952 | 0.8377 | 0.8890 | 0.9057 | 0.7516 | 6.03 s |
+| 1 | 196/200 | 0.5672 | 0.7963 | 0.8455 | 0.8982 | 0.9132 | 0.7546 | 5.61 s |
+| 2 | 199/200 | 0.5747 | 0.8047 | 0.8388 | 0.8932 | 0.9132 | 0.7606 | 7.63 s |
+| 3 | 200/200 | 0.5822 | 0.8013 | 0.8455 | 0.8982 | 0.9132 | 0.7667 | 6.84 s |
+| Mean | 595/600 | 0.5747 | 0.8008 | 0.8433 | 0.8965 | 0.9132 | 0.7606 | 6.69 s |
 
-All 600 case-runs returned valid known-ID ranks with zero fallback or unknown ID. Of these, 598
-succeeded on the first attempt; one case in each of runs 1 and 2 recovered through the bounded
-truncation retry, for 602 provider attempts. The runs used 10,331,931 input tokens and 5,896 output
-tokens. Recall@1 has population standard deviation `0.0041`, R@20 `0.0024`, and MRR `0.0025`.
+All 600 case-runs completed. The provider returned 595 valid known-ID ranks: 580 on the first
+attempt and 15 after one bounded retry. Five cases used deterministic fallback after two OpenCode
+HTTP 500 responses; invalid structure and unknown evidence IDs remained zero across 620 provider
+attempts. The runs used 10,070,864 input tokens and 5,846 output tokens. Recall@1 has population
+standard deviation `0.0061`, R@20 `0.0024`, and MRR `0.0049`. Across only the 595 valid model
+responses, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with MRR `0.7611`; the overall row
+above retains fallbacks in the denominator.
 
-The Top-40 pool contains 234/267 production targets and the final Top-20 contains 227, 227, and 226
-across the three runs. NumPy `numpy/_core/src/multiarray/dlpack.c` and pandas
-`pandas/core/arrays/_arrow_string_mixins.py` are newly promoted in every run; pandas
-`string_arrow.py` enters the pool but is not promoted. Every run also recovers `tornado/locks.py`,
-Pylint's `class_checker.py`, and SciPy `_matfuncs.py`; runs 1 and 2 additionally recover Setuptools
-`_apply_pyprojecttoml.py`. No deterministic Top-20 ground truth is lost. Seven, seven, and eight
-pool-visible targets are not selected, while 33 remain outside the bounded pool. Mean Symbol
-Recall@1/5/10/20 is `0.4143/0.4528/0.4598/0.4668`, with symbol MRR `0.4867`.
+These DeepSeek runs were generated under repository-map index v14. Review expansion through index
+v18 preserved every Top-40 report and rerank input. A direct v18/v19 audit found changed Top-40
+evidence only for the Prefect and PyO3 cases above; the v19/v20 audit found no further Top-40 input
+changes despite the four corrected Ruff maps, and all 193 v20/v21 maps are identical. The DeepSeek
+metrics are therefore retained only as historical provenance and were not rerun;
+the next provider evaluation moves to Codex CLI
+`gpt-5.3-codex-spark`.
 
-Only 138/200 complete candidate orders are identical across all repeats; pairwise order changes
-affect 43, 46, and 43 cases, and nine cases vary in expected-file reciprocal rank. Compared with
-v0.29, mean Recall@20 improves from `0.8807` to `0.8890`, while mean Recall@1 decreases from
-`0.5705` to `0.5622` and MRR from `0.7526` to `0.7516`. These tradeoffs remain visible: the result
-supports a bounded candidate-recall improvement, not deterministic generation or uniformly better
-ranking.
+The Top-40 pool contains 236/267 production targets and the final Top-20 contains 229, 228, and 229
+across the three runs. The declaration index moves uv `crates/uv/src/commands/project/mod.rs` into
+deterministic Top-20 and `crates/uv-pep508/src/lib.rs` into Top-40; DeepSeek selects both in every
+run. Every run also recovers NumPy `dlpack.c`, pandas `_arrow_string_mixins.py`, `tornado/locks.py`,
+Pylint's `class_checker.py`, and SciPy `_matfuncs.py`; runs 1 and 3 additionally recover Setuptools
+`_apply_pyprojecttoml.py`. No deterministic Top-20 ground truth is lost. Seven, eight, and seven
+pool-visible targets are not selected, while 31 remain outside the bounded pool. Mean Symbol
+Recall@1/5/10/20 is `0.4143/0.4528/0.4621/0.4668`, with symbol MRR `0.4870`; Rust symbol quality
+is not represented because the reviewed symbol labels are Python-only.
+
+Only 125/200 complete candidate orders are identical across all repeats; pairwise order changes
+affect 53, 52, and 56 cases, and 22 cases vary in expected-file reciprocal rank. Compared with
+v0.30, mean Recall@1/5/10/20 improves from `0.5622/0.7952/0.8377/0.8890` to
+`0.5747/0.8008/0.8433/0.8965`, and MRR from `0.7516` to `0.7606`. The result supports a bounded
+retrieval improvement; complete model ordering remains best effort rather than deterministic.
 
 v0.27 also makes Git co-change evidence reproducible. It scans the 100 most recent commits reachable
 from the frozen HEAD and consumes at most 50 commits touching a lexical seed. The previous
@@ -295,8 +335,8 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-Two hundred twenty-one of the 267 reviewed production-file targets appear in the deterministic Top-20.
-The reported macro-average File Recall@20 is `0.8665`; the 46 missing targets are grouped in the current
+Two hundred twenty-two of the 267 reviewed production-file targets appear in the deterministic Top-20.
+The reported macro-average File Recall@20 is `0.8690`; the 45 missing targets are grouped in the current
 result section. This is benchmark coverage, not a population-level recall estimate.
 
 ## Previous 32-case deterministic result
@@ -321,11 +361,12 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
   2026 and repository representation remains uneven.
 - Forty-seven of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
-- Deterministic File Recall@20 is `0.8665`; 46 reviewed targets remain outside its Top-20. The
-  hybrid Top-40 pool misses 33 targets and its final Top-20 misses 40, 40, and 41 across the three
+- Deterministic File Recall@20 is `0.8690`; 45 reviewed targets remain outside its Top-20. The
+  hybrid Top-40 pool misses 31 targets and its final Top-20 misses 38, 39, and 38 across the three
   runs.
 - Symbol Recall@20 is `0.4645`, so within-file localization remains a major bottleneck.
-- TypeScript, Rust, and C participate in file localization but have no parsed symbol or cross-language graph.
+- Rust has conservative declaration symbols but no parsed call graph; TypeScript, TSX, C, and C++
+  remain file-only, and no cross-language graph is inferred.
 - Manifest v20 has a three-run rank-only evaluation, but no full hypothesis-quality evaluation.
 - Historical v0.25 full hypothesis generation reached 140/150 valid final contracts in its
   three-run real-project evaluation, but run-level success ranged from 86% to 100%.
@@ -334,8 +375,8 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 
 1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
 2. Add semantic test-to-source mapping and import-alias resolution.
-3. Investigate the 33 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
+3. Investigate the 31 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
 4. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
-5. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the nine cases
+5. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases
    whose expected-file reciprocal rank varied across repeats.

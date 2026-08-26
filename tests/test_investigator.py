@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import repo_issue_intelligence.investigator as investigator_module
+import repo_issue_intelligence.repository_index as repository_index_module
 from repo_issue_intelligence.investigator import (
     DEFAULT_CANDIDATE_LIMIT,
     _content_matches_identifier,
@@ -118,6 +119,55 @@ def test_extract_issue_signals_records_ordered_traceback_frames() -> None:
         ("/tmp/project/src/package/api.py", "inner"),
         ("/usr/lib/python3.11/pathlib.py", "resolve"),
     ]
+
+
+def test_extract_issue_signals_records_unicode_traceback_frames() -> None:
+    record = issue(
+        "Unicode traceback",
+        '  File "/tmp/project/src/package/api.py", line 8, in 包.解析\n'
+        "  /tmp/project/src/package/api.py:12 in 模块.e\u0301\n",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert [(frame.path, frame.symbol) for frame in signals.traceback_frames] == [
+        ("/tmp/project/src/package/api.py", "包.解析"),
+        ("/tmp/project/src/package/api.py", "模块.é"),
+    ]
+    assert {"包.解析", "模块.é"} <= signals.explicit_identifiers
+
+
+def test_unicode_prose_after_in_is_not_an_explicit_identifier() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Locale rendering failure",
+            "Rendering fails in 日本語 locale, but the parser is otherwise healthy.",
+        )
+    )
+
+    assert "日本語" not in signals.explicit_identifiers
+
+
+def test_fenced_non_call_qualified_unicode_identifier_is_explicit(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/model.py",
+        "class 对象:\n    def 处理(self):\n        return None\n",
+    )
+    record = issue(
+        "Callback replacement failure",
+        "The failure is in src/model.py:\n```python\n对象.处理 = replacement\n```",
+    )
+
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert "对象.处理" in signals.explicit_identifiers
+    assert candidates[0].symbol == "处理"
+    assert candidates[0].qualified_symbol == "对象.处理"
 
 
 def test_extract_issue_signals_records_exact_source_line_references() -> None:
@@ -275,6 +325,142 @@ def test_content_identifier_matching_uses_ecmascript_continuations(
         "data",
         language=language,
     )
+
+
+@pytest.mark.parametrize("language", ["JavaScript", "TypeScript"])
+def test_ecmascript_content_matching_preserves_unicode_spelling(
+    language: str,
+) -> None:
+    decomposed = "e\u0301"
+
+    assert _content_matches_identifier(
+        f"const {decomposed} = 1;",
+        decomposed,
+        language=language,
+    )
+    assert not _content_matches_identifier(
+        "const é = 1;",
+        decomposed,
+        language=language,
+    )
+
+
+def test_typescript_localization_uses_verbatim_unicode_identifier(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    decomposed = "e\u0301"
+    write_source(repository, "src/decomposed.ts", f"const {decomposed} = 1;\n")
+    write_source(repository, "src/composed.ts", "const é = 1;\n")
+
+    record = issue(
+        "Binding lookup failure",
+        f"The backticked `{decomposed}` binding cannot be resolved.",
+    )
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "src/decomposed.ts"
+    decomposed_candidate = next(
+        candidate for candidate in candidates if candidate.file == "src/decomposed.ts"
+    )
+    composed_candidate = next(
+        candidate for candidate in candidates if candidate.file == "src/composed.ts"
+    )
+    assert "Source contains issue identifiers: e\u0301" in decomposed_candidate.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in composed_candidate.evidence
+    )
+    assert decomposed_candidate.confidence > composed_candidate.confidence
+
+
+@pytest.mark.parametrize(
+    ("identifier", "fragment_identifier"),
+    [
+        ("$解析", "解析"),
+        ("解析$value", "解析"),
+    ],
+)
+def test_typescript_localization_preserves_dollar_identifiers(
+    tmp_path: Path,
+    identifier: str,
+    fragment_identifier: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/target.ts", f"const {identifier} = 1;\n")
+    write_source(
+        repository,
+        "src/fragment.ts",
+        f"const {fragment_identifier} = 1;\n",
+    )
+
+    record = issue(
+        "Binding lookup failure",
+        f"The backticked `{identifier}` binding cannot be resolved.",
+    )
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert signals.verbatim_identifiers == frozenset({identifier})
+    target = next(candidate for candidate in candidates if candidate.file == "src/target.ts")
+    fragment = next(
+        candidate for candidate in candidates if candidate.file == "src/fragment.ts"
+    )
+    assert f"Source contains issue identifiers: {identifier}" in target.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in fragment.evidence
+    )
+    assert target.confidence > fragment.confidence
+
+
+@pytest.mark.parametrize("identifier", ["$state", "namespace.$解析"])
+def test_typescript_fenced_code_preserves_embedded_dollar_identifier(
+    tmp_path: Path,
+    identifier: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/target.ts",
+        f"{identifier} = replacement;\n",
+    )
+    fragment_identifier = identifier.rsplit("$", maxsplit=1)[-1]
+    write_source(
+        repository,
+        "src/fragment.ts",
+        f"const {fragment_identifier} = replacement;\n",
+    )
+
+    record = issue(
+        "Binding assignment failure",
+        f"```ts\nconst replacement = build();\n{identifier} = replacement;\n```",
+    )
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert signals.verbatim_identifiers == frozenset({identifier})
+    target = next(candidate for candidate in candidates if candidate.file == "src/target.ts")
+    fragment = next(
+        candidate for candidate in candidates if candidate.file == "src/fragment.ts"
+    )
+    assert f"Source contains issue identifiers: {identifier}" in target.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in fragment.evidence
+    )
+    assert target.confidence > fragment.confidence
+
+
+def test_shell_dollar_variables_do_not_become_ecmascript_identifiers() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Shell environment failure",
+            "The `$HOME` value is missing.\n```bash\necho $USER\n```",
+        )
+    )
+
+    assert not {"$HOME", "$USER"} & set(signals.verbatim_identifiers)
 
 
 @pytest.mark.parametrize(
@@ -1078,6 +1264,465 @@ def test_repository_map_records_qualified_method_names(tmp_path: Path) -> None:
         for symbol in source.symbols
         if symbol.name == "__init__"
     } == {"Unrelated.__init__", "WorkerThread.__init__"}
+
+
+def test_repository_map_records_conservative_rust_symbols(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "crates/parser/src/lib.rs",
+        "pub struct Pep508Error { message: String }\n"
+        "pub struct r#type { value: String }\n"
+        "pub struct 类型 { value: String }\n"
+        "pub unsafe trait UnsafeReporter {}\n"
+        "pub auto trait AutoReporter {}\n"
+        "pub union ReporterValue { integer: u64 }\n"
+        "pub extern fn foreign_reporter() {}\n"
+        'pub unsafe extern "C" fn abi_reporter() {}\n'
+        "pub fn r#match() {}\n"
+        "pub fn 解析() {}\n"
+        'unsafe extern "C" {\n'
+        "    safe fn exposed();\n"
+        "}\n"
+        "#[inline] pub fn attributed() {}\n"
+        "# [inline] pub fn spaced_attributed() {}\n"
+        "#[cfg_attr(any(), allow(dead_code))] pub fn nested_attributed() {}\n"
+        "#[cfg(\n"
+        '    any(target_os = "linux", target_os = "macos"),\n'
+        ")] pub fn multiline_attributed() {}\n"
+        "macro_rules! generated {\n"
+        "    ($value:expr) => {{\n"
+        "        fn ignored_macro_function() {}\n"
+        "    }};\n"
+        "}\n"
+        "macro_rules\n"
+        "! generated_multiline {\n"
+        "    () => { fn ignored_multiline_macro_rules_function() {} };\n"
+        "}\n"
+        "generate! {\n"
+        "    fn ignored_invocation_function() {}\n"
+        "}\n"
+        "generate_paren!(\n"
+        "    fn ignored_paren_function() {}\n"
+        ");\n"
+        "generate_bracket![\n"
+        "    fn ignored_bracket_function() {}\n"
+        "];\n"
+        "生成! { fn ignored_unicode_macro_function() {} }\n"
+        "::路径::生成![fn ignored_absolute_unicode_macro_function() {}];\n"
+        "fn real_with_macro() { generate! { fn ignored_inline_function() {} } }\n"
+        "impl Pep508Error {\n"
+        "    default type Item = u8;\n"
+        "    pub(crate) async fn render_caret(&self) {}\n"
+        "}\n"
+        "/* outer\n/* nested */\nfn ignored_rust_comment() {}\n*/\n",
+    )
+    write_source(
+        repository,
+        "ui/schema-form-input.ts",
+        "export function TypeScriptRemainsFileOnly() { return null; }\n",
+    )
+    write_source(
+        repository,
+        "ui/schema-form-input.tsx",
+        "export function TsxRemainsFileOnly() { return <div>/*</div>; }\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    rust = next(file for file in repository_map.files if file.language == "Rust")
+    typescript = next(
+        file
+        for file in repository_map.files
+        if file.path == "ui/schema-form-input.ts"
+    )
+    tsx = next(
+        file
+        for file in repository_map.files
+        if file.path == "ui/schema-form-input.tsx"
+    )
+
+    assert [(symbol.name, symbol.kind) for symbol in rust.symbols] == [
+        ("Pep508Error", "struct"),
+        ("type", "struct"),
+        ("类型", "struct"),
+        ("UnsafeReporter", "trait"),
+        ("AutoReporter", "trait"),
+        ("ReporterValue", "union"),
+        ("foreign_reporter", "function"),
+        ("abi_reporter", "function"),
+        ("match", "function"),
+        ("解析", "function"),
+        ("exposed", "function"),
+        ("attributed", "function"),
+        ("spaced_attributed", "function"),
+        ("nested_attributed", "function"),
+        ("multiline_attributed", "function"),
+        ("real_with_macro", "function"),
+        ("Item", "type"),
+        ("render_caret", "function"),
+    ]
+    assert typescript.symbols == []
+    assert tsx.symbols == []
+
+
+def test_repository_map_preserves_rust_lexical_boundaries(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(
+        repository,
+        "src/lib.rs",
+        "pub/**/fn block_comment_target() {}\n"
+        "fn first() {} fn target() {}\n"
+        "fn e\u0301() {}\n"
+        "e\u0301! {\n"
+        "    fn ignored_decomposed_macro_function() {}\n"
+        "}\n"
+        "discard\n"
+        "! {\n"
+        "    fn ignored_cross_line_macro_function() {}\n"
+        "}\n"
+        "pub macro discard($value:tt) {\n"
+        "    fn ignored_declarative_macro_function() {}\n"
+        "}\n"
+        "pub macro body_only\n"
+        "{\n"
+        "    fn ignored_body_only_macro_function() {}\n"
+        "}\n"
+        "fn after_macro() {}\n"
+        "fn\n"
+        "multiline_function() {}\n"
+        "struct\n"
+        "MultilineType {}\n"
+        "if !condition { fn control_flow_target() {} }\n"
+        "if !{ fn unary_block_target() {} true } {}\n"
+        "try! { fn ignored_legacy_try_macro_function() {} }\n"
+        "dyn! { fn ignored_legacy_dyn_macro_function() {} }\n"
+        "await! { fn ignored_legacy_await_macro_function() {} }\n"
+        "crate::discard! { fn ignored_path_macro_function() {} }\n"
+        "union! { fn ignored_reserved_macro_function() {} }\n"
+        "r#if! { fn ignored_raw_keyword_macro_function() {} }\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [
+        ("block_comment_target", 1),
+        ("first", 2),
+        ("target", 2),
+        ("é", 3),
+        ("after_macro", 18),
+        ("multiline_function", 19),
+        ("MultilineType", 21),
+        ("control_flow_target", 23),
+        ("unary_block_target", 24),
+    ]
+
+
+def test_unicode_rust_symbol_issue_reference_matches(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn 解析() {}\n")
+
+    record = issue(
+        "Parser regression",
+        "The backticked `解析` function fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "解析" in signals.identifiers
+    assert "解析" in signals.explicit_identifiers
+    assert "解析" in signals.terms
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_raw_unicode_rust_symbol_issue_reference_normalizes(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn r#解析() {}\n")
+
+    record = issue(
+        "Raw identifier parser failure",
+        "The backticked `r#解析` function fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "解析" in signals.identifiers
+    assert "解析" in signals.explicit_identifiers
+    assert "解析" in signals.terms
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_qualified_raw_rust_path_issue_reference_normalizes(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn r#解析() {}\n")
+
+    record = issue(
+        "Qualified raw identifier parser failure",
+        "The backticked `crate::r#解析` symbol fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "crate.解析" in signals.identifiers
+    assert "crate.解析" in signals.explicit_identifiers
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_rust_declarations_are_not_extracted_as_unicode_calls() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Rust declaration example",
+            "```rust\nfn 解析() {}\nstruct 类型(u8);\nfn helper() {}\n```",
+        )
+    )
+
+    assert signals.called_identifiers == ()
+    assert not {"解析", "类型", "helper"} & set(signals.explicit_identifiers)
+
+
+def test_explicit_unique_rust_type_reference_selects_symbol(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(
+        repository,
+        "src/error.rs",
+        "pub struct Pep508Error;\npub fn unrelated() {}\n",
+    )
+
+    record = issue(
+        "Parsing failure",
+        "The failure is in `Pep508Error`.",
+    )
+    report = investigate(record, build_repository_map(repository))
+
+    candidate = next(item for item in report.candidates if item.file == "src/error.rs")
+    assert candidate.symbol == "Pep508Error"
+
+
+def test_rust_macro_definitions_are_scanned_once_per_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/generated.rs",
+        "noop!();\n" * 4000 + "pub fn target() {}\n",
+    )
+    original = repository_index_module._rust_macro_definition_candidates
+    calls = 0
+
+    def counting_candidates(value: str) -> list[tuple[int, int, int]]:
+        nonlocal calls
+        calls += 1
+        return original(value)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_rust_macro_definition_candidates",
+        counting_candidates,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert calls == 1
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
+def test_rust_macro_invocation_scan_is_bounded_by_definitions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    source = "".join(
+        f"macro_rules! generated_{index} {{ () => {{}} }}\n"
+        for index in range(4000)
+    ) + "pub fn target() {}\n"
+    write_source(repository, "src/generated.rs", source)
+    original = repository_index_module._next_rust_macro_invocation
+    scanned_characters = 0
+
+    def counting_invocations(
+        value: str,
+        start: int,
+        stop: int,
+    ) -> tuple[int, int] | None:
+        nonlocal scanned_characters
+        scanned_characters += max(0, min(stop, len(value)) - start)
+        return original(value, start, stop)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_next_rust_macro_invocation",
+        counting_invocations,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert scanned_characters <= len(source)
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
+def test_rust_macro_scan_is_linear_with_mixed_definitions_and_invocations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    pair_count = 2000
+    source = "".join(
+        f"macro_rules! generated_{index} {{ () => {{}} }}\n"
+        f"generated_{index}! {{ fn ignored_{index}() {{}} }}\n"
+        for index in range(pair_count)
+    ) + "pub fn target() {}\n"
+    write_source(repository, "src/generated.rs", source)
+    original = repository_index_module._rust_identifier_at
+    identifier_lookups = 0
+
+    def counting_identifiers(value: str, index: int) -> tuple[str, int] | None:
+        nonlocal identifier_lookups
+        identifier_lookups += 1
+        return original(value, index)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_rust_identifier_at",
+        counting_identifiers,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert identifier_lookups <= 3 * pair_count + 10
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
+def test_rust_script_shebang_preserves_first_declaration(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "script.rs",
+        "#!/usr/bin/env rust-script\nfn main() {}\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [("main", 2)]
+
+
+@pytest.mark.parametrize(
+    "source, expected_line",
+    [
+        ("\ufefffn main() {}\n", 1),
+        ("\ufeff#!/usr/bin/env rust-script\nfn main() {}\n", 2),
+    ],
+)
+def test_rust_utf8_bom_preserves_first_declaration(
+    tmp_path: Path,
+    source: str,
+    expected_line: int,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "script.rs", source)
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [("main", expected_line)]
+
+
+def test_rust_declaration_line_assignment_scales_forward(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/generated.rs",
+        "".join(f"fn generated_{index}() {{}}\n" for index in range(4000)),
+    )
+
+    symbols = build_repository_map(repository).files[0].symbols
+
+    assert len(symbols) == 4000
+    assert (symbols[0].name, symbols[0].line) == ("generated_0", 1)
+    assert (symbols[-1].name, symbols[-1].line) == ("generated_3999", 4000)
+
+
+def test_decomposed_unicode_call_normalizes_for_symbol_matching(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn e\u0301() {}\n")
+
+    record = issue(
+        "Parser regression",
+        "The backticked `e\u0301()` call fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "é" in signals.explicit_identifiers
+    assert signals.called_identifiers == ("é",)
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "é"
+
+
+def test_rust_symbol_scanner_respects_literal_boundaries(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "crates/parser/src/literals.rs",
+        'const COMMENT_MARKER: &str = "/*";\n'
+        "const QUOTE: char = '\"';\n"
+        'const QUOTED: &str = "\nfn ignored_quoted_string() {}\n";\n'
+        'const EXAMPLE: &str = r#"\nfn ignored_raw_string() {}\n"#;\n'
+        'const BYTE_EXAMPLE: &[u8] = br##"\nfn ignored_byte_raw_string() {}\n"##;\n'
+        'const C_EXAMPLE: &CStr = cr#"\nfn ignored_c_raw_string() {}\n"#;\n'
+        "fn real_rust_function() {}\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    rust = next(file for file in repository_map.files if file.language == "Rust")
+
+    assert [symbol.name for symbol in rust.symbols] == ["real_rust_function"]
+
+
+def test_rust_symbol_evidence_can_enter_expanded_candidate_pool(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    for index in range(40):
+        write_source(
+            repository,
+            f"crates/noise-{index:02d}/src/runtime.rs",
+            'const MESSAGE: &str = "interpreter cache";\n',
+        )
+    target = "crates/uv-python/src/interpreter.rs"
+    write_source(
+        repository,
+        target,
+        "pub struct Interpreter { executable: String }\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Stale interpreter cache",
+            "The project uses the wrong Python executable.",
+        ),
+        build_repository_map(repository),
+        limit=40,
+    )
+
+    assert target in [candidate.file for candidate in candidates]
+    selected = next(candidate for candidate in candidates if candidate.file == target)
+    assert selected.symbol == "Interpreter"
 
 
 def test_duplicate_method_call_edges_do_not_leak_into_symbol_selection(
