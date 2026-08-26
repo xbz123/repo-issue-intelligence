@@ -37,9 +37,10 @@ unique. The final 40 accepted cases add no multi-file fix because the last autom
 record omitted a material C header; the earlier 30% aspiration is therefore reported as infeasible
 under the final ground-truth standard rather than filled with incomplete cases.
 
-Three deterministic v0.31 runs completed 200/200 cases with zero failures. After removing
-timestamps, elapsed fields, and cache provenance, all candidate files, candidate symbols, per-case
-metrics, tier metrics, and aggregates were identical. The repository map adds conservative Rust
+Three deterministic v0.31 index-v19 runs completed 200/200 cases with zero failures. After removing
+timestamps, elapsed fields, and cache provenance, all candidate-file orders, per-case metrics, tier
+metrics, and aggregates were identical; candidate-symbol lists were identical for 199/200 cases.
+The repository map adds conservative Rust
 declaration symbols without inferred Rust call edges, normalizes XID-compatible identifiers to NFC,
 skips attributes and macro token trees across line breaks, recognizes declarations that span lines
 and multiple declarations per line, and accepts Rust 2024 safe foreign functions; TypeScript, TSX,
@@ -51,7 +52,7 @@ targets, and all 45 misses remain in the denominator.
 
 The first v0.31 run recorded seven repository-map cache hits and 193 misses after the final
 index-version change; runs 2 and 3 recorded 200/200 hits. The three-run mean analysis time was
-6,336 ms per case.
+6,026 ms per case.
 Compared with v0.30, Recall@1, Recall@5, Recall@20, and MRR improve while Recall@10 decreases from
 `0.7505` to `0.7493`; one target enters Top-20 and none leave it.
 `benchmarks/expansion-v200-review-queue-v19.json`
@@ -66,9 +67,9 @@ coverage to 236/267 without losing a prior Top-20 target. Three DeepSeek runs se
 targets every time; mean Recall@1/5/10/20 becomes `0.5747/0.8008/0.8433/0.8965`, with MRR
 `0.7606`. Across 600 case-runs, 595 return valid model ranks and five use deterministic fallback
 after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. Those model runs
-were generated under index v14. The review-only parser expansion through index v18 changed five of
-193 unique maps by v16 and none from v16 through v18; no complete Top-40 report or rerank input changed,
-so DeepSeek was not called again; the next provider
+were generated under index v14, and review expansion through index v18 preserved every Top-40 input.
+Index v19 leaves all 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3
+case. DeepSeek was not rerun because the next provider
 evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 

@@ -112,11 +112,11 @@ model responses alone, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with M
 Provider load is uncontrolled, so latency changes are observational and are not attributed to the
 index modification.
 
-The three DeepSeek raw runs were generated under repository-map index v14. Subsequent review fixes
-expanded conservative Rust parsing through index v18. All 193 unique maps were compared; one PyO3
-map and four Ruff maps changed by v16, while v16 through v18 changed none. Every complete Top-40 report
-and rerank input remained identical.
-DeepSeek was not called again. Per user direction, the next provider
+The three DeepSeek raw runs were generated under repository-map index v14. Review fixes through
+index v18 preserved every complete Top-40 report and rerank input. Index v19 leaves all 193 maps
+unchanged but changes Top-40 evidence for `prefect-anyof-copy-new-run` and
+`pyo3-reference-pool-dirty-fastpath`; the historical DeepSeek metrics are not input-equivalent to
+v19 and were not rerun. Per user direction, the next provider
 evaluation uses non-interactive Codex CLI `gpt-5.3-codex-spark` instead of another OpenCode run.
 
 The compact reviewed artifact is

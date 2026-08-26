@@ -8,9 +8,12 @@ symbol targets across 143 cases. Every case embeds the complete Issue snapshot, 
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
 
-Three complete v0.31 deterministic runs finished 200/200 cases. After excluding timestamps,
-elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
-and aggregates were identical to one another. Conservative Rust declarations now participate in
+Three complete v0.31 index-v19 deterministic runs finished 200/200 cases. After excluding
+timestamps, elapsed fields, and cache provenance, their candidate-file orders, per-case metrics,
+tier metrics, and aggregates were identical. Candidate-symbol lists were identical for 199/200
+cases; `uv-check-no-install-project` selected `no_install_project` only in run 3 instead of the
+earlier same-file test function, while five immediate single-case repeats reproduced runs 1 and 2.
+Conservative Rust declarations now participate in
 localization without inferred Rust call edges; XID-compatible identifiers are normalized to NFC,
 macro token trees and outer attributes are skipped across line breaks, declarations may span lines,
 multiple declarations per line and Rust 2024 safe foreign functions are accepted, and TypeScript,
@@ -18,22 +21,21 @@ TSX, C, and C++ remain file-only.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 6,336 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 7,530 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,569 ms |
-| Generalization | 172/172 | 0.3471 | 0.6590 | 0.7462 | 0.8477 | 0.5389 | 6,522 ms |
+| Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 6,026 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 7,784 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,574 ms |
+| Generalization | 172/172 | 0.3471 | 0.6590 | 0.7462 | 0.8477 | 0.5389 | 6,137 ms |
 
 Run 1 recorded seven repository-map cache hits and 193 misses after the final index-version change;
-runs 2 and 3 recorded 200 hits. Overall mean analysis time was 6,336 ms per case with population
-standard deviation 2,467 ms. Timing is observational and not part of the reproducibility gate. Measurements
+runs 2 and 3 recorded 200 hits. Overall mean analysis time was 6,026 ms per case with population
+standard deviation 1,892 ms. Timing is observational and not part of the reproducibility gate. Measurements
 start after repository preparation and do not include clone, fetch, checkout, or Issue retrieval
 time.
 
-After the final review fixes for raw Rust Issue spellings, fenced non-call Unicode references, and
-macro-scan complexity, three additional warm-cache validation runs completed 600/600 case-runs with
-200 cache hits per run. Their full semantic outputs were identical to one another and to the primary
-index-v18 runs after excluding timing and cache fields; their mean analysis time was 4,647 ms per
-case with population standard deviation 2 ms.
+All 193 index-v18 and index-v19 maps were identical. Relative to index v18,
+`prefect-anyof-copy-new-run` changes one Top-20 tail file under exact ECMAScript spelling, and
+`pyo3-reference-pool-dirty-fastpath` selects the explicitly referenced `ReferencePool` type instead
+of `get_pool`; aggregate metrics do not change.
 
 Across the 143 labeled cases, Symbol Recall@1/5/10/20 is
 `0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`; all 177 labels are Python-only. Forty-five
@@ -83,10 +85,10 @@ standard deviation `0.0061`, R@20 `0.0024`, and MRR `0.0049`. Across only the 59
 responses, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with MRR `0.7611`; the overall row
 above retains fallbacks in the denominator.
 
-These DeepSeek runs were generated under repository-map index v14. The review-only parser expansion
-through index v18 compared all 193 unique maps: one PyO3 map and four Ruff maps changed by v16,
-while v16 through v18 changed none. Every complete Top-40 report and rerank input remained identical.
-DeepSeek was therefore not called again;
+These DeepSeek runs were generated under repository-map index v14. Review expansion through index
+v18 preserved every Top-40 report and rerank input. A direct v18/v19 audit found changed Top-40
+evidence only for the Prefect and PyO3 cases above. The DeepSeek metrics are therefore retained only
+as historical provenance and were not rerun;
 the next provider evaluation moves to Codex CLI
 `gpt-5.3-codex-spark`.
 

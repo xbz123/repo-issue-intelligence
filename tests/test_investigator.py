@@ -327,6 +327,53 @@ def test_content_identifier_matching_uses_ecmascript_continuations(
     )
 
 
+@pytest.mark.parametrize("language", ["JavaScript", "TypeScript"])
+def test_ecmascript_content_matching_preserves_unicode_spelling(
+    language: str,
+) -> None:
+    decomposed = "e\u0301"
+
+    assert _content_matches_identifier(
+        f"const {decomposed} = 1;",
+        decomposed,
+        language=language,
+    )
+    assert not _content_matches_identifier(
+        "const é = 1;",
+        decomposed,
+        language=language,
+    )
+
+
+def test_typescript_localization_uses_verbatim_unicode_identifier(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    decomposed = "e\u0301"
+    write_source(repository, "src/decomposed.ts", f"const {decomposed} = 1;\n")
+    write_source(repository, "src/composed.ts", "const é = 1;\n")
+
+    record = issue(
+        "Binding lookup failure",
+        f"The backticked `{decomposed}` binding cannot be resolved.",
+    )
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert candidates[0].file == "src/decomposed.ts"
+    decomposed_candidate = next(
+        candidate for candidate in candidates if candidate.file == "src/decomposed.ts"
+    )
+    composed_candidate = next(
+        candidate for candidate in candidates if candidate.file == "src/composed.ts"
+    )
+    assert "Source contains issue identifiers: e\u0301" in decomposed_candidate.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in composed_candidate.evidence
+    )
+    assert decomposed_candidate.confidence > composed_candidate.confidence
+
+
 @pytest.mark.parametrize(
     ("extension", "source"),
     [
@@ -1308,6 +1355,53 @@ def test_raw_unicode_rust_symbol_issue_reference_normalizes(tmp_path: Path) -> N
     assert candidate.symbol == "解析"
 
 
+def test_qualified_raw_rust_path_issue_reference_normalizes(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn r#解析() {}\n")
+
+    record = issue(
+        "Qualified raw identifier parser failure",
+        "The backticked `crate::r#解析` symbol fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "crate.解析" in signals.identifiers
+    assert "crate.解析" in signals.explicit_identifiers
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_rust_declarations_are_not_extracted_as_unicode_calls() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Rust declaration example",
+            "```rust\nfn 解析() {}\nstruct 类型(u8);\nfn helper() {}\n```",
+        )
+    )
+
+    assert signals.called_identifiers == ()
+    assert not {"解析", "类型", "helper"} & set(signals.explicit_identifiers)
+
+
+def test_explicit_unique_rust_type_reference_selects_symbol(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(
+        repository,
+        "src/error.rs",
+        "pub struct Pep508Error;\npub fn unrelated() {}\n",
+    )
+
+    record = issue(
+        "Parsing failure",
+        "The failure is in `Pep508Error`.",
+    )
+    report = investigate(record, build_repository_map(repository))
+
+    candidate = next(item for item in report.candidates if item.file == "src/error.rs")
+    assert candidate.symbol == "Pep508Error"
+
+
 def test_rust_macro_definitions_are_scanned_once_per_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1336,6 +1430,37 @@ def test_rust_macro_definitions_are_scanned_once_per_file(
 
     assert calls == 1
     assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
+def test_rust_script_shebang_preserves_first_declaration(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "script.rs",
+        "#!/usr/bin/env rust-script\nfn main() {}\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [("main", 2)]
+
+
+def test_rust_declaration_line_assignment_scales_forward(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/generated.rs",
+        "".join(f"fn generated_{index}() {{}}\n" for index in range(4000)),
+    )
+
+    symbols = build_repository_map(repository).files[0].symbols
+
+    assert len(symbols) == 4000
+    assert (symbols[0].name, symbols[0].line) == ("generated_0", 1)
+    assert (symbols[-1].name, symbols[-1].line) == ("generated_3999", 4000)
 
 
 def test_decomposed_unicode_call_normalizes_for_symbol_matching(tmp_path: Path) -> None:

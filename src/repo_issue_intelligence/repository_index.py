@@ -65,7 +65,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 18
+REPOSITORY_MAP_INDEX_VERSION = 19
 
 RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
@@ -167,8 +167,9 @@ def _rust_declaration_source(path: Path) -> str:
             index += 1
         cleaned_lines.append("".join(code))
 
+    source = _without_rust_shebang("\n".join(cleaned_lines))
     source, attribute_depth = _without_rust_attribute_tokens(
-        "\n".join(cleaned_lines),
+        source,
         0,
     )
     if attribute_depth:
@@ -184,6 +185,20 @@ def _character_is_escaped(value: str, index: int) -> bool:
         backslashes += 1
         index -= 1
     return backslashes % 2 == 1
+
+
+def _without_rust_shebang(source: str) -> str:
+    if not source.startswith("#!"):
+        return source
+    cursor = 2
+    while cursor < len(source) and source[cursor] in {" ", "\t"}:
+        cursor += 1
+    if cursor < len(source) and source[cursor] == "[":
+        return source
+    line_end = source.find("\n")
+    if line_end < 0:
+        return _masked_rust_tokens(source)
+    return _masked_rust_tokens(source[:line_end]) + source[line_end:]
 
 
 def _without_rust_attribute_tokens(
@@ -415,12 +430,16 @@ def _rust_declaration_symbols(path: Path) -> list[SymbolRecord]:
                     ),
                 )
             )
+    line_number = 1
+    previous_position = 0
     for position, name, kind in sorted(declarations):
+        line_number += source.count("\n", previous_position, position)
+        previous_position = position
         symbols.append(
             SymbolRecord(
                 name=name,
                 kind=kind,
-                line=source.count("\n", 0, position) + 1,
+                line=line_number,
             )
         )
     return symbols

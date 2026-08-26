@@ -1,7 +1,7 @@
 {
   "protocol": "hybrid-rust-symbol-v0.31",
   "manifest_version": 20,
-  "repository_map_index_version": 18,
+  "repository_map_index_version": 19,
   "source_run_repository_map_index_version": 14,
   "post_review_input_equivalence": {
     "cases_covered": 200,
@@ -14,17 +14,23 @@
       "ruff-delete-full-slice-dict",
       "ruff-subprocess-keyword-arguments"
     ],
-    "changed_candidate_pool_reports": 0,
-    "candidate_pool_reports_identical_for_all_cases": true,
-    "rerank_inputs_identical": true,
+    "changed_candidate_pool_reports": 2,
+    "changed_candidate_pool_case_ids": [
+      "prefect-anyof-copy-new-run",
+      "pyo3-reference-pool-dirty-fastpath"
+    ],
+    "candidate_pool_reports_identical_for_all_cases": false,
+    "rerank_inputs_identical": false,
     "deepseek_rerun_performed": false,
     "next_provider": "codex-cli/gpt-5.3-codex-spark"
   },
   "latest_review_map_comparison": {
-    "from_repository_map_index_version": 17,
-    "to_repository_map_index_version": 18,
+    "from_repository_map_index_version": 18,
+    "to_repository_map_index_version": 19,
     "unique_repository_maps_compared": 193,
-    "changed_repository_maps": 0
+    "changed_repository_maps": 0,
+    "changed_candidate_pool_reports": 2,
+    "changed_rerank_inputs": 2
   },
   "cases": 200,
   "repositories": 58,
@@ -284,7 +290,7 @@
     "Mean Recall@1/5/10/20 improves from 0.5622/0.7952/0.8377/0.8890 to 0.5747/0.8008/0.8433/0.8965, and MRR improves from 0.7516 to 0.7606.",
     "Across 600 case-runs, 595 produce valid model ranks: 580 on the first attempt and 15 after one bounded retry. Five deterministic fallbacks are all OpenCode HTTP 500 server errors; invalid structure and unknown evidence IDs remain zero.",
     "No deterministic Top-20 ground-truth target is lost in any run. The 177 reviewed symbol targets remain Python-only; Rust symbol quality is covered by regression tests but not by aggregate symbol recall.",
-    "The three raw run files were generated under index v14. After review expanded conservative Rust parsing through index v18, all 193 unique maps were compared. Five maps changed between v14 and v16, while v16 through v18 changed none; every complete Top-40 report and rerank input remained identical, so no new DeepSeek call was made.",
+    "The three raw run files were generated under index v14. Review expansion through index v18 preserved every complete Top-40 report and rerank input. Index v19 leaves all 193 maps unchanged but corrects exact ECMAScript content matching and Rust type selection, changing Top-40 evidence for prefect-anyof-copy-new-run and pyo3-reference-pool-dirty-fastpath. These DeepSeek metrics are therefore retained only as historical index-v14 provenance and were not rerun because the next provider evaluation uses Codex CLI gpt-5.3-codex-spark.",
     "The validated raw run files are not committed to avoid duplicating large candidate lists; the next provider evaluation is intentionally moved to Codex CLI gpt-5.3-codex-spark.",
     "This is a localization result, not evidence of root-cause accuracy or production reliability on unseen repositories."
   ]
