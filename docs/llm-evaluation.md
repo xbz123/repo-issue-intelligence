@@ -1,26 +1,32 @@
 # LLM Evaluation Protocol
 
-Every OpenCode model path must be compared with the existing deterministic baseline before any
+Every external-model path must be compared with the existing deterministic baseline before any
 quality improvement is claimed.
 
 ## Variants
 
 1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
    bounded static-graph reranking inside fixed Top-10 bands.
-2. `hybrid`: deterministic retrieval followed only by OpenCode
-   `deepseek-v4-flash` evidence-ID reranking.
+2. `hybrid`: deterministic retrieval followed only by Codex CLI
+   `gpt-5.6-luna` evidence-ID reranking.
 
 An `llm-only` variant remains future work. Hybrid preserves the deterministic Top-20 as its exact
 fallback and appends unique files from a separate Top-40 retrieval pass to a model-only candidate
 pool. The Top-20 reserves one slot for a directly supported path; the Top-40 pass reserves three,
 without changing the deterministic fallback. The model can promote at most three selected pool
-files before the unchanged deterministic order fills the final Top-20. It sends no
-`response_format` and accepts one unique plain-text
-`RANK:` line; the CLI does not accept a different provider or model. The rank request disables
-reasoning, starts with an 8,192-token output budget, and retries once at 20,000 tokens only if the
-first completion is truncated. The complete frozen Issue is sent. Under the default 100,000-character
-total evidence budget, each of the 40 candidate snippets is limited to 2,500 characters and at most
-200 source lines. The provider context window remains an additional request-size limit.
+files before the unchanged deterministic order fills the final Top-20. Each request launches an
+ephemeral non-interactive `codex exec` process in an empty temporary directory and a separate
+temporary `CODEX_HOME` containing only a link to file-based authentication state. User config and
+global `AGENTS.md` are therefore absent. The process disables tool features, sets project
+instruction discovery to a zero-byte budget, uses a read-only sandbox, and supplies UTF-8 streams
+through pipes. A strict JSON Schema
+accepts only one to three evidence IDs; local validation removes duplicates and rejects unknown
+IDs, extra fields, empty output, and malformed JSON. The project CLI does not accept a different
+provider, model, temperature, or seed. The rank request uses medium reasoning effort, while Codex
+CLI controls its own response budget. The complete frozen Issue is sent. Under the default
+100,000-character total evidence budget, each of the 40 candidate snippets is limited to 2,500
+characters and at most 200 source lines. The provider context window remains an additional
+request-size limit.
 
 The full Agent analysis path also disables model reasoning before requesting its strict JSON
 object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
@@ -119,8 +125,8 @@ unchanged but changes Top-40 evidence for `prefect-anyof-copy-new-run` and
 v19. Index v20 restores `Truthiness` in four Ruff maps, but direct comparison confirms identical
 Top-40 candidate reports and evidence for all four affected cases. Index v21 is identical to v20
 across all 193 maps and introduces no additional input change. The historical runs were not
-rerun. Per user direction, the next provider
-evaluation uses non-interactive Codex CLI `gpt-5.3-codex-spark` instead of another OpenCode run.
+rerun. The hybrid runtime now uses non-interactive Codex CLI `gpt-5.6-luna` instead of another
+OpenCode run; a complete live run is still required before publishing Luna metrics.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON

@@ -12,6 +12,10 @@ from repo_issue_intelligence.cli import (
     _build_benchmark_reranker,
     app,
 )
+from repo_issue_intelligence.codex_cli import (
+    CODEX_CLI_DEFAULT_MODEL,
+    CODEX_CLI_PROVIDER,
+)
 from repo_issue_intelligence.config import Settings
 from repo_issue_intelligence.models import LLMAnalysis, LLMAnalysisResult
 
@@ -20,6 +24,7 @@ runner = CliRunner()
 
 def test_investigate_issue_accepts_documented_options(tmp_path: Path) -> None:
     output = tmp_path / "investigation.json"
+    repository = Path("examples/demo_repository").resolve()
 
     result = runner.invoke(
         app,
@@ -29,7 +34,7 @@ def test_investigate_issue_accepts_documented_options(tmp_path: Path) -> None:
             "--issue",
             "184",
             "--repo",
-            ".",
+            str(repository),
             "--output",
             str(output),
         ],
@@ -104,25 +109,6 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     assert "OPENCODE_API_KEY is required" in result.output
 
 
-def test_hybrid_benchmark_requires_opencode_key(tmp_path: Path, monkeypatch) -> None:
-    manifest = Path("benchmarks/cases.json").resolve()
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
-
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            str(manifest),
-            "--variant",
-            "hybrid",
-        ],
-    )
-
-    assert result.exit_code == 2
-    assert "OPENCODE_API_KEY is required" in result.output
-
-
 def test_agent_evaluate_requires_opencode_key(tmp_path: Path, monkeypatch) -> None:
     manifest = Path("benchmarks/cases.json").resolve()
     monkeypatch.chdir(tmp_path)
@@ -142,8 +128,13 @@ def test_agent_evaluate_requires_opencode_key(tmp_path: Path, monkeypatch) -> No
     assert "OPENCODE_API_KEY is required" in result.output
 
 
-def test_benchmark_does_not_accept_provider_or_model_overrides() -> None:
-    for option, value in (("--provider", "other"), ("--model", "other-model")):
+def test_benchmark_does_not_accept_provider_model_or_sampling_overrides() -> None:
+    for option, value in (
+        ("--provider", "other"),
+        ("--model", "other-model"),
+        ("--temperature", "0.1"),
+        ("--seed", "1337"),
+    ):
         result = runner.invoke(
             app,
             [
@@ -198,19 +189,15 @@ def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
     assert "hybrid-full" in result.output
 
 
-def test_benchmark_reranker_uses_long_read_timeout() -> None:
-    settings = Settings(
-        opencode_api_key="test-key",
-        opencode_timeout_seconds=1,
-        _env_file=None,
-    )
+def test_benchmark_reranker_uses_fixed_codex_cli_contract() -> None:
+    analyzer = _build_benchmark_reranker()
 
-    analyzer = _build_benchmark_reranker(settings, temperature=0.1, seed=1337)
-
+    assert analyzer.provider == CODEX_CLI_PROVIDER
+    assert analyzer.model == CODEX_CLI_DEFAULT_MODEL
     assert analyzer.timeout_seconds == 180
-    assert analyzer.rerank_initial_output_tokens == 8_192
-    assert analyzer.rerank_max_output_tokens == 20_000
-    assert analyzer.rerank_reasoning_effort == "none"
+    assert analyzer.rerank_reasoning_effort == "medium"
+    assert analyzer.temperature is None
+    assert analyzer.seed is None
     analyzer.close()
 
 

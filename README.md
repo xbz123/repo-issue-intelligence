@@ -2,7 +2,7 @@
 
 Repository-aware GitHub issue prioritization and investigation, built around an explicit two-stage workflow: rank every open issue cheaply, then investigate only the highest-value issues against the codebase.
 
-The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect selected code evidence for Top-K issues while preserving the offline baseline.
+The project is an initial, runnable Agent MVP. It does not require an LLM API to produce useful results. Priority decisions are explainable, repository evidence is collected deterministically, and root causes are represented as hypotheses rather than unsupported conclusions. An optional OpenCode DeepSeek V4 Flash analysis step can inspect selected code evidence for Top-K issues, while the rank-only hybrid benchmark can use Codex CLI GPT-5.6-Luna without changing the offline baseline.
 
 ## What it does
 
@@ -177,29 +177,31 @@ uv run rii benchmark benchmarks/cases.json \
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
-  --temperature 0.1 \
-  --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.31-pool40-latest.json
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
 ```
 
-The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
-accept provider or model overrides. The reranker requests no grammar-constrained response format
-and parses exactly one `RANK: E3,E1,E2` line. Duplicate IDs are removed, unknown IDs are rejected,
-and omitted base candidates keep their deterministic order. Hybrid preserves the deterministic
-Top-20 as its exact fallback and appends unique candidates from a separate Top-40 retrieval pass to
-the model-only pool. At most three model-selected files can be promoted before the unchanged base
-order fills the final Top-20. Only transport errors, HTTP 429, and HTTP 5xx responses are retried
-with bounded exponential backoff; invalid ranks and HTTP 4xx responses fall back immediately. This
-isolates file ordering from hypothesis generation and removes the unreliable JSON-schema path from
-the benchmark. Reasoning is disabled for this narrow ranking task, and the completion budget starts
-at 8,192 tokens with one 20,000-token truncation retry. The full frozen Issue is sent with at most
-40 source snippets. Under the default 100,000-character total evidence budget, each snippet is
-limited to 2,500 characters and 200 source lines. Current manifest version 20 embeds 200 complete Issue
-snapshots across 58 repositories, corrected pre-fix SHAs, and 177 manually reviewed symbol targets
-across 143 cases. Older deterministic and DeepSeek artifacts remain committed as historical
-provenance, but the current benchmark runtime supports only deterministic and DeepSeek rank
-variants.
+The Hybrid benchmark is intentionally fixed to Codex CLI `gpt-5.6-luna`; it does not accept
+provider, model, temperature, or seed overrides. Install and authenticate Codex CLI before running
+it. Each rerank launches an ephemeral non-interactive `codex exec` process in an empty temporary
+directory and a separate temporary `CODEX_HOME` that links only file-based authentication state,
+never user configuration or global `AGENTS.md`. It disables tool-oriented features, uses a
+zero-byte project-instruction budget and read-only sandbox, and sends UTF-8 prompt/output streams
+through pipes. Reasoning effort is fixed to `medium`. A strict JSON Schema allows only one
+`reranked_evidence_ids` array containing one to three strings; local
+validation removes duplicate IDs and rejects unknown IDs, extra fields, empty output, and malformed
+JSON. Provider errors are classified without persisting raw CLI diagnostics. Authentication,
+quota, model, and invalid-output failures fall back immediately; timeouts, rate limits, transport
+failures, and provider 5xx errors retain the existing single bounded retry.
+
+Hybrid preserves the deterministic Top-20 as its exact fallback and appends unique candidates from
+a separate Top-40 retrieval pass to the model-only pool. At most three model-selected files can be
+promoted before the unchanged base order fills the final Top-20. The full frozen Issue is sent with
+at most 40 source snippets. Under the default 100,000-character total evidence budget, each snippet
+is limited to 2,500 characters and 200 source lines. Current manifest version 20 embeds 200 complete
+Issue snapshots across 58 repositories, corrected pre-fix SHAs, and 177 manually reviewed symbol
+targets across 143 cases. Older deterministic and DeepSeek artifacts remain committed as historical
+provenance; the current runtime variants are deterministic and Codex CLI rank-only hybrid.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
 reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
 network request. The runner also keeps an ignored repository-map cache under the benchmark
@@ -418,9 +420,9 @@ index v14, and review expansion through index v18 preserved all Top-40 inputs. I
 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3 case. Index v20 changes
 four Ruff maps but leaves their Top-40 reports and evidence byte-for-byte equivalent, so the DeepSeek
 inputs remain unchanged. Index v21 is map-identical to v20. The DeepSeek metrics are retained only as
-historical provenance and were not rerun. The next provider evaluation
-uses Codex CLI
-`gpt-5.3-codex-spark`. See the compact
+historical provenance and were not rerun. The hybrid runtime now uses Codex CLI
+`gpt-5.6-luna`; a complete live run is still required before publishing Luna metrics. See
+the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git. The compact pre-change miss audit is
 [`pool40-miss-taxonomy-manifest-v20.json`](benchmarks/results/pool40-miss-taxonomy-manifest-v20.json).

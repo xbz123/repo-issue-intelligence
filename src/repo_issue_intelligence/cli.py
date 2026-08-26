@@ -32,13 +32,13 @@ from .benchmark_discovery import (
     save_candidate_review_queue,
     save_curated_expansion,
 )
+from .codex_cli import CodexCLIReranker
 from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import (
     OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
-    OPENCODE_RERANK_TIMEOUT_SECONDS,
     IssueAnalyzer,
     OpenCodeIssueAnalyzer,
 )
@@ -72,23 +72,8 @@ def _build_issue_analyzer(
     )
 
 
-def _build_benchmark_reranker(
-    settings: Settings,
-    temperature: float,
-    seed: int,
-) -> OpenCodeIssueAnalyzer:
-    if settings.opencode_api_key is None:
-        raise typer.BadParameter("OPENCODE_API_KEY is required for the hybrid benchmark")
-    return OpenCodeIssueAnalyzer(
-        api_key=settings.opencode_api_key.get_secret_value(),
-        max_output_tokens=settings.opencode_max_output_tokens,
-        timeout_seconds=max(
-            settings.opencode_timeout_seconds,
-            OPENCODE_RERANK_TIMEOUT_SECONDS,
-        ),
-        temperature=temperature,
-        seed=seed,
-    )
+def _build_benchmark_reranker() -> CodexCLIReranker:
+    return CodexCLIReranker()
 
 
 def _build_analysis_evaluator(
@@ -344,7 +329,7 @@ def benchmark(
         BenchmarkVariant,
         typer.Option(
             "--variant",
-            help="Deterministic or DeepSeek V4 Flash hybrid variant.",
+            help="Deterministic or GPT-5.6-Luna hybrid variant.",
         ),
     ] = BenchmarkVariant.DETERMINISTIC,
     case_id: Annotated[
@@ -361,25 +346,12 @@ def benchmark(
             help="Delay between hybrid cases and failed LLM retries.",
         ),
     ] = 0,
-    temperature: Annotated[
-        float,
-        typer.Option(
-            "--temperature",
-            min=0,
-            max=2,
-            help="Sampling temperature for reproducible model comparisons.",
-        ),
-    ] = 0.1,
-    seed: Annotated[
-        int,
-        typer.Option("--seed", help="Best-effort deterministic sampling seed."),
-    ] = 1337,
 ) -> None:
     """Evaluate file localization against historical Issue/Fix-PR pairs."""
     settings = Settings()
     analyzer = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
-        analyzer = _build_benchmark_reranker(settings, temperature, seed)
+        analyzer = _build_benchmark_reranker()
     try:
         run = run_benchmark(
             load_manifest(manifest),
