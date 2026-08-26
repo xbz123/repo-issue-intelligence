@@ -65,7 +65,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 17
+REPOSITORY_MAP_INDEX_VERSION = 18
 
 RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
@@ -73,7 +73,7 @@ RUST_FUNCTION_DECLARATION = re.compile(
     rf"{RUST_DECLARATION_BOUNDARY}\s*"
     r"(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|safe|default)\s+)*"
     r'(?:extern(?:\s+(?:"[^"]+"|value))?\s+)?'
-    r"fn\s+"
+    r"(?P<function_keyword>fn)\s+"
 )
 RUST_TYPE_DECLARATION = re.compile(
     rf"{RUST_DECLARATION_BOUNDARY}\s*"
@@ -98,20 +98,18 @@ def repository_file_language(path: str | Path) -> str | None:
     return LANGUAGE_BY_SUFFIX.get(candidate.suffix.lower())
 
 
-def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
-    """Yield Rust declaration lines outside strings and nested comments."""
+def _rust_declaration_source(path: Path) -> str:
+    """Return Rust source with non-declaration token trees replaced."""
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError):
-        return
+        return ""
 
     block_comment_depth = 0
     quoted_string = False
     rust_raw_terminator: str | None = None
-    rust_attribute_depth = 0
-    macro_token_trees_pending = 0
-    macro_delimiters: list[str] = []
-    for line_number, raw_line in enumerate(lines, start=1):
+    cleaned_lines: list[str] = []
+    for raw_line in lines:
         code: list[str] = []
         index = 0
         while index < len(raw_line):
@@ -167,19 +165,16 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
                 continue
             code.append(raw_line[index])
             index += 1
-        line = "".join(code)
+        cleaned_lines.append("".join(code))
 
-        line, rust_attribute_depth = _without_rust_attribute_tokens(
-            line,
-            rust_attribute_depth,
-        )
-        line, macro_token_trees_pending, macro_delimiters = _without_rust_macro_tokens(
-            line,
-            macro_token_trees_pending,
-            macro_delimiters,
-        )
-        if line.strip():
-            yield line_number, line
+    source, attribute_depth = _without_rust_attribute_tokens(
+        "\n".join(cleaned_lines),
+        0,
+    )
+    if attribute_depth:
+        return source
+    source, _, _ = _without_rust_macro_tokens(source, 0, [])
+    return source
 
 
 def _character_is_escaped(value: str, index: int) -> bool:
@@ -199,6 +194,7 @@ def _without_rust_attribute_tokens(
     index = 0
     while index < len(line):
         if attribute_depth:
+            visible.append("\n" if line[index] == "\n" else " ")
             if line[index] == "[":
                 attribute_depth += 1
             elif line[index] == "]":
@@ -220,8 +216,7 @@ def _without_rust_attribute_tokens(
             visible.append(line[index])
             index += 1
             continue
-        if visible and not visible[-1].isspace():
-            visible.append(" ")
+        visible.append(_masked_rust_tokens(line[index : cursor + 1]))
         attribute_depth = 1
         index = cursor + 1
     return "".join(visible), attribute_depth
@@ -236,6 +231,7 @@ def _without_rust_macro_tokens(
     index = 0
     while index < len(line):
         if macro_delimiters:
+            visible.append("\n" if line[index] == "\n" else " ")
             if line[index] in RUST_DELIMITER_PAIRS:
                 macro_delimiters.append(line[index])
             elif line[index] == RUST_DELIMITER_PAIRS[macro_delimiters[-1]]:
@@ -245,6 +241,7 @@ def _without_rust_macro_tokens(
             index += 1
             continue
         if token_trees_pending:
+            visible.append("\n" if line[index] == "\n" else " ")
             if line[index] in RUST_DELIMITER_PAIRS:
                 macro_delimiters.append(line[index])
             index += 1
@@ -255,10 +252,13 @@ def _without_rust_macro_tokens(
             break
         start, end, token_trees_pending = macro_match
         visible.append(line[index:start])
-        if visible and visible[-1] and not visible[-1][-1].isspace():
-            visible.append(" ")
+        visible.append(_masked_rust_tokens(line[start:end]))
         index = end
     return "".join(visible), token_trees_pending, macro_delimiters
+
+
+def _masked_rust_tokens(value: str) -> str:
+    return "".join("\n" if character == "\n" else " " for character in value)
 
 
 def _next_rust_macro(
@@ -371,34 +371,39 @@ def _rust_raw_string_terminator(
 
 def _rust_declaration_symbols(path: Path) -> list[SymbolRecord]:
     symbols: list[SymbolRecord] = []
-    for line_number, line in _rust_declaration_source_lines(path):
-        declarations: list[tuple[int, str, str]] = []
-        for pattern in (RUST_FUNCTION_DECLARATION, RUST_TYPE_DECLARATION):
-            for match in pattern.finditer(line):
-                identifier = _rust_identifier_at(line, match.end())
-                if identifier is None:
-                    continue
-                name, _ = identifier
-                declaration_kind = match.groupdict().get("kind")
-                declarations.append(
+    source = _rust_declaration_source(path)
+    declarations: list[tuple[int, str, str]] = []
+    for pattern in (RUST_FUNCTION_DECLARATION, RUST_TYPE_DECLARATION):
+        for match in pattern.finditer(source):
+            identifier = _rust_identifier_at(source, match.end())
+            if identifier is None:
+                continue
+            name, _ = identifier
+            declaration_kind = match.groupdict().get("kind")
+            declaration_position = match.start(
+                "function_keyword"
+                if pattern is RUST_FUNCTION_DECLARATION
+                else "kind"
+            )
+            declarations.append(
+                (
+                    declaration_position,
+                    name,
                     (
-                        match.start(),
-                        name,
-                        (
-                            "function"
-                            if pattern is RUST_FUNCTION_DECLARATION
-                            else declaration_kind or "class"
-                        ),
-                    )
-                )
-        for _, name, kind in sorted(declarations):
-            symbols.append(
-                SymbolRecord(
-                    name=name,
-                    kind=kind,
-                    line=line_number,
+                        "function"
+                        if pattern is RUST_FUNCTION_DECLARATION
+                        else declaration_kind or "class"
+                    ),
                 )
             )
+    for position, name, kind in sorted(declarations):
+        symbols.append(
+            SymbolRecord(
+                name=name,
+                kind=kind,
+                line=source.count("\n", 0, position) + 1,
+            )
+        )
     return symbols
 
 

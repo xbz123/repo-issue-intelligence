@@ -1,7 +1,7 @@
 {
   "protocol": "deterministic-rust-symbol-v0.31",
   "manifest_version": 20,
-  "repository_map_index_version": 17,
+  "repository_map_index_version": 18,
   "cases": 200,
   "repositories": 58,
   "production_targets": 267,
@@ -18,7 +18,7 @@
       "file_recall_at_10": 0.7493,
       "file_recall_at_20": 0.869,
       "mean_reciprocal_rank": 0.5443,
-      "average_analysis_elapsed_ms": 8116.623,
+      "average_analysis_elapsed_ms": 9824.16,
       "repository_map_cache_hits": 7,
       "repository_map_cache_misses": 193
     },
@@ -31,7 +31,7 @@
       "file_recall_at_10": 0.7493,
       "file_recall_at_20": 0.869,
       "mean_reciprocal_rank": 0.5443,
-      "average_analysis_elapsed_ms": 4118.747,
+      "average_analysis_elapsed_ms": 4574.068,
       "repository_map_cache_hits": 200,
       "repository_map_cache_misses": 0
     },
@@ -44,7 +44,7 @@
       "file_recall_at_10": 0.7493,
       "file_recall_at_20": 0.869,
       "mean_reciprocal_rank": 0.5443,
-      "average_analysis_elapsed_ms": 4126.076,
+      "average_analysis_elapsed_ms": 4608.374,
       "repository_map_cache_hits": 200,
       "repository_map_cache_misses": 0
     }
@@ -66,8 +66,8 @@
     "symbol_recall_at_10": 0.4155,
     "symbol_recall_at_20": 0.4645,
     "mean_symbol_reciprocal_rank": 0.3349,
-    "average_analysis_elapsed_ms_mean": 5453.815,
-    "average_analysis_elapsed_ms_population_stddev": 1882.892
+    "average_analysis_elapsed_ms_mean": 6335.534,
+    "average_analysis_elapsed_ms_population_stddev": 2466.871
   },
   "integrity_correction": {
     "cases": [
@@ -88,8 +88,9 @@
   "raw_run_artifacts_committed": false,
   "notes": [
     "The deterministic Top-20 retains its single directly-supported-path reservation slot.",
-    "Rust contributes conservative declaration symbols without inferred call edges. The scanner preserves comment token boundaries, normalizes XID-compatible identifiers to NFC, accepts Rust 2024 safe foreign functions, skips outer attributes and macro_rules or macro 2.0 token trees, recognizes multiple declarations per line, and records default associated types. TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.",
+    "Rust contributes conservative declaration symbols without inferred call edges. The scanner preserves comment token boundaries, normalizes XID-compatible identifiers to NFC, accepts Rust 2024 safe foreign functions, skips outer attributes and macro_rules or macro 2.0 token trees across line breaks, recognizes declarations whose keyword and name span lines, recognizes multiple declarations per line, and records default associated types. TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.",
     "All three runs are structurally identical after excluding timing and cache fields.",
+    "All 193 index-v17 and index-v18 repository maps were identical after excluding the index version. None of the 200 frozen Issues contains a Unicode identifier signal that exercises the new NFC-aware downstream matching, so candidate reports and rerank inputs remain equivalent to index v17.",
     "Compared with v0.30, 10 candidate and symbol lists change. Recall@1, Recall@5, Recall@20, and MRR improve; Recall@10 decreases from 0.7505 to 0.7493. One new production target enters Top-20 and no prior Top-20 target is lost.",
     "The 177 reviewed symbol targets are Python-only, so aggregate symbol metrics remain unchanged despite the new Rust symbol records.",
     "The three raw runs were validated locally but are not committed to avoid another copy of large candidate lists."

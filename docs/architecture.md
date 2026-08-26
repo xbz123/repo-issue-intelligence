@@ -30,10 +30,12 @@ locally resolved Python import targets, imported symbols, called names, loaded s
 classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
 Rust contributes a separate conservative declaration index for functions and types. It skips
 strings, raw strings, character literals, nested comments, outer attributes, `macro_rules!`, macro
-2.0 definitions, and macro invocation token trees; preserves comment token boundaries; normalizes
-raw and XID-compatible identifiers to NFC; recognizes multiple declarations per line, Rust 2024
-`safe fn` foreign declarations, and default associated types; and creates no inferred Rust call
-edges. TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
+2.0 definitions, and macro invocation token trees even when their path or delimiter spans lines;
+preserves comment token boundaries; normalizes raw and XID-compatible identifiers to NFC; recognizes
+declarations whose keyword and name span lines, multiple declarations per line, Rust 2024 `safe fn`
+foreign declarations, and default associated types; and creates no inferred Rust call edges. Issue
+identifier, call, and traceback extraction uses the same NFC-normalized Unicode identifier boundary
+rules. TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
 symbol. It is built with Python `symtable` scope information and accepts a direct `ast.Name` call

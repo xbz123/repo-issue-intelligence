@@ -120,6 +120,33 @@ def test_extract_issue_signals_records_ordered_traceback_frames() -> None:
     ]
 
 
+def test_extract_issue_signals_records_unicode_traceback_frames() -> None:
+    record = issue(
+        "Unicode traceback",
+        '  File "/tmp/project/src/package/api.py", line 8, in 包.解析\n'
+        "  /tmp/project/src/package/api.py:12 in 模块.e\u0301\n",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert [(frame.path, frame.symbol) for frame in signals.traceback_frames] == [
+        ("/tmp/project/src/package/api.py", "包.解析"),
+        ("/tmp/project/src/package/api.py", "模块.é"),
+    ]
+    assert {"包.解析", "模块.é"} <= signals.explicit_identifiers
+
+
+def test_unicode_prose_after_in_is_not_an_explicit_identifier() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Locale rendering failure",
+            "Rendering fails in 日本語 locale, but the parser is otherwise healthy.",
+        )
+    )
+
+    assert "日本語" not in signals.explicit_identifiers
+
+
 def test_extract_issue_signals_records_exact_source_line_references() -> None:
     revision = "a" * 40
     record = issue(
@@ -1188,21 +1215,73 @@ def test_repository_map_preserves_rust_lexical_boundaries(tmp_path: Path) -> Non
         "e\u0301! {\n"
         "    fn ignored_decomposed_macro_function() {}\n"
         "}\n"
+        "discard\n"
+        "! {\n"
+        "    fn ignored_cross_line_macro_function() {}\n"
+        "}\n"
         "pub macro discard($value:tt) {\n"
         "    fn ignored_declarative_macro_function() {}\n"
         "}\n"
-        "fn after_macro() {}\n",
+        "pub macro body_only\n"
+        "{\n"
+        "    fn ignored_body_only_macro_function() {}\n"
+        "}\n"
+        "fn after_macro() {}\n"
+        "fn\n"
+        "multiline_function() {}\n"
+        "struct\n"
+        "MultilineType {}\n",
     )
 
     repository_map = build_repository_map(repository)
 
-    assert [symbol.name for symbol in repository_map.files[0].symbols] == [
-        "block_comment_target",
-        "first",
-        "target",
-        "é",
-        "after_macro",
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [
+        ("block_comment_target", 1),
+        ("first", 2),
+        ("target", 2),
+        ("é", 3),
+        ("after_macro", 18),
+        ("multiline_function", 19),
+        ("MultilineType", 21),
     ]
+
+
+def test_unicode_rust_symbol_issue_reference_matches(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn 解析() {}\n")
+
+    record = issue(
+        "Parser regression",
+        "The backticked `解析` function fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "解析" in signals.identifiers
+    assert "解析" in signals.explicit_identifiers
+    assert "解析" in signals.terms
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_decomposed_unicode_call_normalizes_for_symbol_matching(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn e\u0301() {}\n")
+
+    record = issue(
+        "Parser regression",
+        "The backticked `e\u0301()` call fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "é" in signals.explicit_identifiers
+    assert signals.called_identifiers == ("é",)
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "é"
 
 
 def test_rust_symbol_scanner_respects_literal_boundaries(

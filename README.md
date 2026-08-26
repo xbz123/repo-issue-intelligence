@@ -375,8 +375,9 @@ for candidate retrieval.
 Three manifest-v20 deterministic v0.31 runs completed 200/200 cases and produced identical
 candidates, symbols, and metrics after excluding timestamps, elapsed fields, and cache provenance.
 The repository map adds conservative Rust declarations without inferred Rust call edges, normalizes
-raw identifiers, and accepts Rust 2024 safe foreign functions; TypeScript, TSX, C, and C++ remain
-file-only. File Recall@1/5/10/20 is
+raw identifiers, accepts Rust 2024 safe foreign functions, and handles macro paths and declarations
+that span lines; Unicode Issue identifiers and traceback symbols are matched with NFC-normalized
+identifier boundaries. TypeScript, TSX, C, and C++ remain file-only. File Recall@1/5/10/20 is
 `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Compared with v0.30, Recall@1, Recall@5,
 Recall@20, and MRR improve while Recall@10 decreases from `0.7505` to `0.7493`; one new target
 enters Top-20 and none leave it. Symbol Recall@1/5/10/20 remains
@@ -397,8 +398,8 @@ Top-20 ground-truth target is lost. Mean Symbol Recall@20 is `0.4668`, with MRR 
 labels remain Python-only. Only 125/200 complete candidate orders are identical across all repeats,
 so seed 1337 remains best effort despite the improved mean file metrics.
 The three runs used 10,070,864 input tokens and 5,846 output tokens. They were generated under
-index v14; after review expanded conservative Rust parsing through index v17, all 193 unique maps
-were compared. Five maps changed by v16 and none changed from v16 to v17; every complete Top-40
+index v14; after review expanded conservative Rust parsing through index v18, all 193 unique maps
+were compared. Five maps changed by v16 and none changed from v16 through v18; every complete Top-40
 report and rerank input remained identical, so DeepSeek was not called again. The next provider
 evaluation uses Codex CLI
 `gpt-5.3-codex-spark`. See the compact

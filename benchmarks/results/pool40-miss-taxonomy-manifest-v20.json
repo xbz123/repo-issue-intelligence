@@ -1,7 +1,7 @@
 {
   "protocol": "pool40-miss-taxonomy-rust-v0.31",
   "manifest_version": 20,
-  "repository_map_index_version": 17,
+  "repository_map_index_version": 18,
   "baseline_candidate_pool_limit": 40,
   "missed_production_targets": 36,
   "language_counts": {
