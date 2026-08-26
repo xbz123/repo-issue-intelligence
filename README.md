@@ -186,8 +186,9 @@ provider, model, temperature, or seed overrides. Install and authenticate Codex 
 it. Each rerank launches an ephemeral non-interactive `codex exec` process in an empty temporary
 directory and a separate temporary `CODEX_HOME` that links only file-based authentication state,
 never user configuration or global `AGENTS.md`. It disables tool-oriented features, uses a
-read-only sandbox, and sends UTF-8 prompt/output streams through pipes. Reasoning effort is fixed to
-`medium`. A strict JSON Schema allows only one `reranked_evidence_ids` array containing one to three strings; local
+zero-byte project-instruction budget and read-only sandbox, and sends UTF-8 prompt/output streams
+through pipes. Reasoning effort is fixed to `medium`. A strict JSON Schema allows only one
+`reranked_evidence_ids` array containing one to three strings; local
 validation removes duplicate IDs and rejects unknown IDs, extra fields, empty output, and malformed
 JSON. Provider errors are classified without persisting raw CLI diagnostics. Authentication,
 quota, model, and invalid-output failures fall back immediately; timeouts, rate limits, transport

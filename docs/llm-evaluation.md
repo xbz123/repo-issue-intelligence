@@ -17,8 +17,9 @@ without changing the deterministic fallback. The model can promote at most three
 files before the unchanged deterministic order fills the final Top-20. Each request launches an
 ephemeral non-interactive `codex exec` process in an empty temporary directory and a separate
 temporary `CODEX_HOME` containing only a link to file-based authentication state. User config and
-global `AGENTS.md` are therefore absent. The process disables tool features, uses a read-only
-sandbox, and supplies UTF-8 prompt/output streams through pipes. A strict JSON Schema
+global `AGENTS.md` are therefore absent. The process disables tool features, sets project
+instruction discovery to a zero-byte budget, uses a read-only sandbox, and supplies UTF-8 streams
+through pipes. A strict JSON Schema
 accepts only one to three evidence IDs; local validation removes duplicates and rejects unknown
 IDs, extra fields, empty output, and malformed JSON. The project CLI does not accept a different
 provider, model, temperature, or seed. The rank request uses medium reasoning effort, while Codex

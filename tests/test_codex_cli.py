@@ -100,7 +100,15 @@ def test_codex_cli_reranker_uses_isolated_strict_contract(tmp_path: Path) -> Non
     assert command[:2] == ["codex", "exec"]
     assert command[command.index("--model") + 1] == CODEX_CLI_DEFAULT_MODEL
     assert command[command.index("--sandbox") + 1] == "read-only"
-    assert command[command.index("--config") + 1] == 'model_reasoning_effort="medium"'
+    config_values = {
+        command[index + 1]
+        for index, argument in enumerate(command)
+        if argument == "--config"
+    }
+    assert config_values == {
+        'model_reasoning_effort="medium"',
+        "project_doc_max_bytes=0",
+    }
     assert "--ignore-user-config" in command
     assert "--ignore-rules" in command
     assert "--ephemeral" in command

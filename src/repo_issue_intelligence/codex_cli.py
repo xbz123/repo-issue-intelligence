@@ -215,6 +215,8 @@ class CodexCLIReranker:
             self.model,
             "--config",
             f'model_reasoning_effort="{self.rerank_reasoning_effort}"',
+            "--config",
+            "project_doc_max_bytes=0",
             "--ephemeral",
             "--sandbox",
             "read-only",
