@@ -64,25 +64,27 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 15
+REPOSITORY_MAP_INDEX_VERSION = 16
+
+RUST_IDENTIFIER_BODY = r"[^\W\d]\w*"
 
 RUST_FUNCTION_DECLARATION = re.compile(
     r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|safe|default)\s+)*"
     r'(?:extern(?:\s+(?:"[^"]+"|value))?\s+)?'
-    r"fn\s+(?:r#)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    rf"fn\s+(?:r#)?(?P<name>{RUST_IDENTIFIER_BODY})\b"
 )
 RUST_TYPE_DECLARATION = re.compile(
-    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto)\s+)*"
+    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto|default)\s+)*"
     r"(?P<kind>struct|enum|trait|type|union)\s+"
-    r"(?:r#)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+    rf"(?:r#)?(?P<name>{RUST_IDENTIFIER_BODY})\b"
 )
 RUST_CHAR_LITERAL = re.compile(
     r"'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]+\}|.)|[^\\'\r\n])'"
 )
 RUST_MACRO_INVOCATION = re.compile(
-    r"(?<![A-Za-z0-9_$])"
-    r"(?:(?:(?:r#)?[A-Za-z_][A-Za-z0-9_]*)\s*::\s*)*"
-    r"(?:r#)?[A-Za-z_][A-Za-z0-9_]*\s*!(?!=)"
+    r"(?<![\w$])(?:::\s*)?"
+    rf"(?:(?:(?:r#)?{RUST_IDENTIFIER_BODY})\s*::\s*)*"
+    rf"(?:r#)?{RUST_IDENTIFIER_BODY}\s*!(?!=)"
 )
 RUST_DELIMITER_PAIRS = {"(": ")", "[": "]", "{": "}"}
 
@@ -105,6 +107,7 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
     block_comment_depth = 0
     quoted_string = False
     rust_raw_terminator: str | None = None
+    rust_attribute_depth = 0
     macro_pending = False
     macro_delimiters: list[str] = []
     for line_number, raw_line in enumerate(lines, start=1):
@@ -163,6 +166,10 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
             index += 1
         line = "".join(code)
 
+        line, rust_attribute_depth = _without_rust_attribute_tokens(
+            line,
+            rust_attribute_depth,
+        )
         line, macro_pending, macro_delimiters = _without_rust_macro_tokens(
             line,
             macro_pending,
@@ -179,6 +186,38 @@ def _character_is_escaped(value: str, index: int) -> bool:
         backslashes += 1
         index -= 1
     return backslashes % 2 == 1
+
+
+def _without_rust_attribute_tokens(
+    line: str,
+    attribute_depth: int,
+) -> tuple[str, int]:
+    index = 0
+    while index < len(line):
+        if attribute_depth:
+            if line[index] == "[":
+                attribute_depth += 1
+            elif line[index] == "]":
+                attribute_depth -= 1
+            index += 1
+            continue
+        if line[index].isspace():
+            index += 1
+            continue
+        if line[index] != "#":
+            return line[index:], attribute_depth
+        cursor = index + 1
+        while cursor < len(line) and line[cursor].isspace():
+            cursor += 1
+        if cursor < len(line) and line[cursor] == "!":
+            cursor += 1
+        while cursor < len(line) and line[cursor].isspace():
+            cursor += 1
+        if cursor >= len(line) or line[cursor] != "[":
+            return line[index:], attribute_depth
+        attribute_depth = 1
+        index = cursor + 1
+    return "", attribute_depth
 
 
 def _without_rust_macro_tokens(

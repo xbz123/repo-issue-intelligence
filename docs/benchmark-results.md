@@ -75,10 +75,10 @@ standard deviation `0.0061`, R@20 `0.0024`, and MRR `0.0049`. Across only the 59
 responses, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with MRR `0.7611`; the overall row
 above retains fallbacks in the denominator.
 
-These DeepSeek runs were generated under repository-map index v14. The review-only v15 expansion
-for raw identifiers and Rust 2024 safe foreign functions compared all 193 unique maps: one PyO3 map
-changed, but its complete Top-40 report remained identical, as did all other reports and rerank
-inputs. DeepSeek was therefore not called again; the next provider evaluation moves to Codex CLI
+These DeepSeek runs were generated under repository-map index v14. The review-only parser expansion
+through index v16 compared all 193 unique maps: one PyO3 map and four Ruff maps changed, but every
+complete Top-40 report and rerank input remained identical. DeepSeek was therefore not called again;
+the next provider evaluation moves to Codex CLI
 `gpt-5.3-codex-spark`.
 
 The Top-40 pool contains 236/267 production targets and the final Top-20 contains 229, 228, and 229

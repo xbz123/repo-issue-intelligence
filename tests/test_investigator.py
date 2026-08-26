@@ -1089,15 +1089,23 @@ def test_repository_map_records_conservative_rust_symbols(
         "crates/parser/src/lib.rs",
         "pub struct Pep508Error { message: String }\n"
         "pub struct r#type { value: String }\n"
+        "pub struct 类型 { value: String }\n"
         "pub unsafe trait UnsafeReporter {}\n"
         "pub auto trait AutoReporter {}\n"
         "pub union ReporterValue { integer: u64 }\n"
         "pub extern fn foreign_reporter() {}\n"
         'pub unsafe extern "C" fn abi_reporter() {}\n'
         "pub fn r#match() {}\n"
+        "pub fn 解析() {}\n"
         'unsafe extern "C" {\n'
         "    safe fn exposed();\n"
         "}\n"
+        "#[inline] pub fn attributed() {}\n"
+        "# [inline] pub fn spaced_attributed() {}\n"
+        "#[cfg_attr(any(), allow(dead_code))] pub fn nested_attributed() {}\n"
+        "#[cfg(\n"
+        '    any(target_os = "linux", target_os = "macos"),\n'
+        ")] pub fn multiline_attributed() {}\n"
         "macro_rules! generated {\n"
         "    ($value:expr) => {{\n"
         "        fn ignored_macro_function() {}\n"
@@ -1112,8 +1120,11 @@ def test_repository_map_records_conservative_rust_symbols(
         "generate_bracket![\n"
         "    fn ignored_bracket_function() {}\n"
         "];\n"
+        "生成! { fn ignored_unicode_macro_function() {} }\n"
+        "::路径::生成![fn ignored_absolute_unicode_macro_function() {}];\n"
         "fn real_with_macro() { generate! { fn ignored_inline_function() {} } }\n"
         "impl Pep508Error {\n"
+        "    default type Item = u8;\n"
         "    pub(crate) async fn render_caret(&self) {}\n"
         "}\n"
         "/* outer\n/* nested */\nfn ignored_rust_comment() {}\n*/\n",
@@ -1145,14 +1156,21 @@ def test_repository_map_records_conservative_rust_symbols(
     assert [(symbol.name, symbol.kind) for symbol in rust.symbols] == [
         ("Pep508Error", "struct"),
         ("type", "struct"),
+        ("类型", "struct"),
         ("UnsafeReporter", "trait"),
         ("AutoReporter", "trait"),
         ("ReporterValue", "union"),
         ("foreign_reporter", "function"),
         ("abi_reporter", "function"),
         ("match", "function"),
+        ("解析", "function"),
         ("exposed", "function"),
+        ("attributed", "function"),
+        ("spaced_attributed", "function"),
+        ("nested_attributed", "function"),
+        ("multiline_attributed", "function"),
         ("real_with_macro", "function"),
+        ("Item", "type"),
         ("render_caret", "function"),
     ]
     assert typescript.symbols == []

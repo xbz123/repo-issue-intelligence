@@ -64,8 +64,8 @@ coverage to 236/267 without losing a prior Top-20 target. Three DeepSeek runs se
 targets every time; mean Recall@1/5/10/20 becomes `0.5747/0.8008/0.8433/0.8965`, with MRR
 `0.7606`. Across 600 case-runs, 595 return valid model ranks and five use deterministic fallback
 after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. Those model runs
-were generated under index v14. The review-only v15 parser expansion changed one of 193 unique
-maps but no Top-40 report or rerank input, so DeepSeek was not called again; the next provider
+were generated under index v14. The review-only parser expansion through index v16 changed five of
+193 unique maps but no complete Top-40 report or rerank input, so DeepSeek was not called again; the next provider
 evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 

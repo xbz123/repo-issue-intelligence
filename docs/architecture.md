@@ -29,8 +29,9 @@ The current MVP ends at a human review gate. It does not execute generated comma
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
 classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
 Rust contributes a separate conservative declaration index for functions and types. It skips
-strings, raw strings, character literals, nested comments, macro definitions, and macro invocation
-token trees, normalizes `r#` raw identifiers, accepts Rust 2024 `safe fn` foreign declarations, and
+strings, raw strings, character literals, nested comments, outer attributes, macro definitions, and
+macro invocation token trees; normalizes `r#` raw identifiers; recognizes Unicode declaration and
+macro identifiers, Rust 2024 `safe fn` foreign declarations, and default associated types; and
 creates no inferred Rust call edges. TypeScript, TSX, C, and C++ remain file-only until a
 parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative

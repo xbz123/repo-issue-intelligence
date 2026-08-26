@@ -397,9 +397,9 @@ Top-20 ground-truth target is lost. Mean Symbol Recall@20 is `0.4668`, with MRR 
 labels remain Python-only. Only 125/200 complete candidate orders are identical across all repeats,
 so seed 1337 remains best effort despite the improved mean file metrics.
 The three runs used 10,070,864 input tokens and 5,846 output tokens. They were generated under
-index v14; after review expanded raw-identifier and safe-foreign parsing in v15, all 193 unique maps
-were compared and the only changed map retained an identical Top-40 report, so every rerank input
-was unchanged and DeepSeek was not called again. The next provider evaluation uses Codex CLI
+index v14; after review expanded conservative Rust parsing through index v16, all 193 unique maps
+were compared. Five maps changed, but every complete Top-40 report and rerank input remained
+identical, so DeepSeek was not called again. The next provider evaluation uses Codex CLI
 `gpt-5.3-codex-spark`. See the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git. The compact pre-change miss audit is
