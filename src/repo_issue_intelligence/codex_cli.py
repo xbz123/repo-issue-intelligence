@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from collections.abc import Callable, Sequence
@@ -32,7 +33,6 @@ _DISABLED_CODEX_FEATURES = (
     "computer_use",
     "image_generation",
     "multi_agent",
-    "skill_search",
     "memories",
 )
 
@@ -147,6 +147,7 @@ class CodexCLIReranker:
         executable: str = "codex",
         model: str = CODEX_CLI_DEFAULT_MODEL,
         timeout_seconds: float = CODEX_CLI_RERANK_TIMEOUT_SECONDS,
+        auth_file: Path | None = None,
         run_command: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     ) -> None:
         if not executable:
@@ -162,10 +163,42 @@ class CodexCLIReranker:
         self.temperature = None
         self.seed = None
         self._executable = executable
+        self._auth_file = (
+            auth_file.expanduser().resolve()
+            if auth_file is not None
+            else self._default_auth_file()
+        )
         self._run_command = run_command or subprocess.run
 
     def close(self) -> None:
         return None
+
+    @staticmethod
+    def _default_auth_file() -> Path:
+        configured_home = os.environ.get("CODEX_HOME")
+        codex_home = (
+            Path(configured_home).expanduser()
+            if configured_home
+            else Path.home() / ".codex"
+        )
+        return (codex_home / "auth.json").resolve()
+
+    def _link_auth_file(self, isolated_home: Path) -> None:
+        if not self._auth_file.is_file():
+            return
+        destination = isolated_home / "auth.json"
+        try:
+            os.link(self._auth_file, destination)
+            return
+        except OSError:
+            pass
+        try:
+            destination.symlink_to(self._auth_file)
+        except OSError as error:
+            raise LLMProviderError(
+                "Codex CLI authentication could not be isolated",
+                category="auth_isolation",
+            ) from error
 
     def _command(
         self,
@@ -233,7 +266,12 @@ class CodexCLIReranker:
         )
 
         with tempfile.TemporaryDirectory(prefix="rii-codex-rerank-") as temporary:
-            working_directory = Path(temporary)
+            temporary_root = Path(temporary)
+            working_directory = temporary_root / "workspace"
+            isolated_home = temporary_root / "codex-home"
+            working_directory.mkdir()
+            isolated_home.mkdir()
+            self._link_auth_file(isolated_home)
             schema_path = working_directory / "rerank-schema.json"
             output_path = working_directory / "rerank-output.json"
             schema_path.write_text(
@@ -245,6 +283,8 @@ class CodexCLIReranker:
                 encoding="utf-8",
             )
             command = self._command(working_directory, schema_path, output_path)
+            environment = os.environ.copy()
+            environment["CODEX_HOME"] = str(isolated_home)
             started = perf_counter()
             try:
                 completed = self._run_command(
@@ -252,7 +292,9 @@ class CodexCLIReranker:
                     input=prompt,
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
                     cwd=working_directory,
+                    env=environment,
                     timeout=self.timeout_seconds,
                     check=False,
                     shell=False,
@@ -277,6 +319,13 @@ class CodexCLIReranker:
                 raise LLMProviderError(
                     "Codex CLI could not be started",
                     category="cli_launch",
+                    elapsed_ms=elapsed_ms,
+                ) from error
+            except UnicodeError as error:
+                elapsed_ms = round((perf_counter() - started) * 1000, 3)
+                raise LLMProviderError(
+                    "Codex CLI pipes did not contain valid UTF-8",
+                    category="cli_encoding",
                     elapsed_ms=elapsed_ms,
                 ) from error
             elapsed_ms = round((perf_counter() - started) * 1000, 3)

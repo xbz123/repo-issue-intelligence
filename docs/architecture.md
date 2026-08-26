@@ -245,8 +245,9 @@ hybrid fallback. A separate retrieval pass appends unique files to form a model-
 Codex CLI `gpt-5.6-luna` may promote at most three selected evidence IDs before the unchanged base
 order fills the final Top-20. The benchmark does not expose provider, model, temperature, or seed
 overrides, and it no longer has a full-analysis variant. Each request runs ephemeral non-interactive
-`codex exec` in an empty temporary directory with tool features disabled, a read-only sandbox, and
-the prompt on stdin. The final response must satisfy a strict JSON Schema containing only one to
+`codex exec` in an empty temporary directory and a separate temporary `CODEX_HOME` that links only
+file-based authentication state, excluding user config and global `AGENTS.md`. Tool features are
+disabled, the sandbox is read-only, and prompt/output pipes use UTF-8. The final response must satisfy a strict JSON Schema containing only one to
 three evidence IDs, then pass local duplicate and known-ID checks. Reasoning effort is fixed to
 medium; Codex CLI controls its own response budget. Issue bodies remain complete. The default
 100,000-character evidence budget is divided across the 40-candidate pool, limiting each snippet

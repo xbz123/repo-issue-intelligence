@@ -184,9 +184,10 @@ uv run rii benchmark benchmarks/cases.json \
 The Hybrid benchmark is intentionally fixed to Codex CLI `gpt-5.6-luna`; it does not accept
 provider, model, temperature, or seed overrides. Install and authenticate Codex CLI before running
 it. Each rerank launches an ephemeral non-interactive `codex exec` process in an empty temporary
-directory, ignores user configuration and execution rules, disables tool-oriented features, uses a
-read-only sandbox, and sends the prompt through stdin. Reasoning effort is fixed to `medium`. A strict
-JSON Schema allows only one `reranked_evidence_ids` array containing one to three strings; local
+directory and a separate temporary `CODEX_HOME` that links only file-based authentication state,
+never user configuration or global `AGENTS.md`. It disables tool-oriented features, uses a
+read-only sandbox, and sends UTF-8 prompt/output streams through pipes. Reasoning effort is fixed to
+`medium`. A strict JSON Schema allows only one `reranked_evidence_ids` array containing one to three strings; local
 validation removes duplicate IDs and rejects unknown IDs, extra fields, empty output, and malformed
 JSON. Provider errors are classified without persisting raw CLI diagnostics. Authentication,
 quota, model, and invalid-output failures fall back immediately; timeouts, rate limits, transport

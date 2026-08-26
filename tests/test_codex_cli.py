@@ -20,8 +20,8 @@ def _issue() -> IssueRecord:
     return IssueRecord(
         number=42,
         title="Refresh token failure",
-        body="The refresh path returns an unexpected error.",
-        labels=["bug"],
+        body="刷新路径 returns an unexpected error. 🔒",
+        labels=["bug", "国际化"],
         created_at=datetime(2026, 8, 1, tzinfo=UTC),
         updated_at=datetime(2026, 8, 2, tzinfo=UTC),
     )
@@ -50,14 +50,23 @@ def _output_path(command: list[str]) -> Path:
     return Path(command[command.index("--output-last-message") + 1])
 
 
-def test_codex_cli_reranker_uses_isolated_strict_contract() -> None:
+def test_codex_cli_reranker_uses_isolated_strict_contract(tmp_path: Path) -> None:
     observed: dict[str, object] = {}
+    source_home = tmp_path / "source-codex-home"
+    source_home.mkdir()
+    auth_file = source_home / "auth.json"
+    auth_file.write_text('{"test":"credential"}', encoding="utf-8")
+    (source_home / "AGENTS.md").write_text("contaminating guidance", encoding="utf-8")
 
     def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
         observed["command"] = command
         observed["options"] = options
         schema_path = Path(command[command.index("--output-schema") + 1])
         observed["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
+        isolated_home = Path(options["env"]["CODEX_HOME"])
+        observed["isolated_home"] = isolated_home
+        observed["isolated_files"] = sorted(path.name for path in isolated_home.iterdir())
+        observed["auth"] = (isolated_home / "auth.json").read_text(encoding="utf-8")
         _output_path(command).write_text(
             json.dumps({"reranked_evidence_ids": ["E2", "E2", "E1"]}),
             encoding="utf-8",
@@ -79,7 +88,7 @@ def test_codex_cli_reranker_uses_isolated_strict_contract() -> None:
         )
         return subprocess.CompletedProcess(command, 0, stdout, "")
 
-    reranker = CodexCLIReranker(run_command=fake_run)
+    reranker = CodexCLIReranker(auth_file=auth_file, run_command=fake_run)
     result = reranker.rerank(_issue(), _evidence())
 
     command = observed["command"]
@@ -103,15 +112,22 @@ def test_codex_cli_reranker_uses_isolated_strict_contract() -> None:
         if argument == "--disable"
     }
     assert {"shell_tool", "unified_exec", "apps", "browser_use"} <= disabled
+    assert "skill_search" not in disabled
     assert options["capture_output"] is True
     assert options["text"] is True
+    assert options["encoding"] == "utf-8"
     assert options["check"] is False
     assert options["shell"] is False
     assert options["timeout"] == 180
+    assert observed["isolated_files"] == ["auth.json"]
+    assert observed["auth"] == '{"test":"credential"}'
+    assert not Path(observed["isolated_home"]).exists()
     assert str(options["cwd"]) == command[command.index("--cd") + 1]
     prompt = options["input"]
     assert isinstance(prompt, str)
     assert "Refresh token failure" in prompt
+    assert "刷新路径" in prompt
+    assert "🔒" in prompt
     assert "src/auth.py" in prompt
     assert "Refresh token failure" not in " ".join(command)
     property_schema = schema["properties"]["reranked_evidence_ids"]
