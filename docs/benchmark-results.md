@@ -29,6 +29,12 @@ standard deviation 2,467 ms. Timing is observational and not part of the reprodu
 start after repository preparation and do not include clone, fetch, checkout, or Issue retrieval
 time.
 
+After the final review fixes for raw Rust Issue spellings, fenced non-call Unicode references, and
+macro-scan complexity, three additional warm-cache validation runs completed 600/600 case-runs with
+200 cache hits per run. Their full semantic outputs were identical to one another and to the primary
+index-v18 runs after excluding timing and cache fields; their mean analysis time was 4,647 ms per
+case with population standard deviation 2 ms.
+
 Across the 143 labeled cases, Symbol Recall@1/5/10/20 is
 `0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`; all 177 labels are Python-only. Forty-five
 production targets are absent from deterministic Top-20. Six are retained-suite misses:
@@ -354,5 +360,5 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 3. Investigate the 31 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
 4. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
-5. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 14 cases
+5. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases
    whose expected-file reciprocal rank varied across repeats.

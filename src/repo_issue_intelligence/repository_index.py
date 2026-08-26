@@ -229,6 +229,8 @@ def _without_rust_macro_tokens(
 ) -> tuple[str, int, list[str]]:
     visible: list[str] = []
     index = 0
+    definitions = _rust_macro_definition_candidates(line)
+    definition_index = 0
     while index < len(line):
         if macro_delimiters:
             visible.append("\n" if line[index] == "\n" else " ")
@@ -246,7 +248,17 @@ def _without_rust_macro_tokens(
                 macro_delimiters.append(line[index])
             index += 1
             continue
-        macro_match = _next_rust_macro(line, index)
+        while (
+            definition_index < len(definitions)
+            and definitions[definition_index][0] < index
+        ):
+            definition_index += 1
+        next_definition = (
+            definitions[definition_index]
+            if definition_index < len(definitions)
+            else None
+        )
+        macro_match = _next_rust_macro(line, index, next_definition)
         if macro_match is None:
             visible.append(line[index:])
             break
@@ -264,9 +276,20 @@ def _masked_rust_tokens(value: str) -> str:
 def _next_rust_macro(
     value: str,
     start: int,
+    next_definition: tuple[int, int, int] | None,
 ) -> tuple[int, int, int] | None:
+    candidates = [next_definition] if next_definition is not None else []
+    invocation = _next_rust_macro_invocation(value, start)
+    if invocation is not None:
+        candidates.append((*invocation, 1))
+    return min(candidates, default=None, key=lambda candidate: candidate[0])
+
+
+def _rust_macro_definition_candidates(
+    value: str,
+) -> list[tuple[int, int, int]]:
     candidates: list[tuple[int, int, int]] = []
-    for match in RUST_MACRO_DEFINITION.finditer(value, start):
+    for match in RUST_MACRO_DEFINITION.finditer(value):
         identifier = _rust_identifier_at(value, match.end())
         if identifier is None:
             continue
@@ -276,11 +299,7 @@ def _next_rust_macro(
             cursor += 1
         token_trees = 1 if cursor < len(value) and value[cursor] == "{" else 2
         candidates.append((match.start(), end, token_trees))
-        break
-    invocation = _next_rust_macro_invocation(value, start)
-    if invocation is not None:
-        candidates.append((*invocation, 1))
-    return min(candidates, default=None, key=lambda candidate: candidate[0])
+    return candidates
 
 
 def _next_rust_macro_invocation(value: str, start: int) -> tuple[int, int] | None:

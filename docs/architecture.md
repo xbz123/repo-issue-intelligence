@@ -35,7 +35,9 @@ preserves comment token boundaries; normalizes raw and XID-compatible identifier
 declarations whose keyword and name span lines, multiple declarations per line, Rust 2024 `safe fn`
 foreign declarations, and default associated types; and creates no inferred Rust call edges. Issue
 identifier, call, and traceback extraction uses the same NFC-normalized Unicode identifier boundary
-rules. TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
+rules, including normalization of Rust `r#` spellings. Macro-definition candidates are discovered
+once per Rust file so repeated invocations do not rescan the remaining source. TypeScript, TSX, C,
+and C++ remain file-only until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
 symbol. It is built with Python `symtable` scope information and accepts a direct `ast.Name` call

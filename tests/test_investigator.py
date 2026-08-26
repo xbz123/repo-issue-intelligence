@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import repo_issue_intelligence.investigator as investigator_module
+import repo_issue_intelligence.repository_index as repository_index_module
 from repo_issue_intelligence.investigator import (
     DEFAULT_CANDIDATE_LIMIT,
     _content_matches_identifier,
@@ -145,6 +146,28 @@ def test_unicode_prose_after_in_is_not_an_explicit_identifier() -> None:
     )
 
     assert "日本語" not in signals.explicit_identifiers
+
+
+def test_fenced_non_call_qualified_unicode_identifier_is_explicit(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/model.py",
+        "class 对象:\n    def 处理(self):\n        return None\n",
+    )
+    record = issue(
+        "Callback replacement failure",
+        "The failure is in src/model.py:\n```python\n对象.处理 = replacement\n```",
+    )
+
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert "对象.处理" in signals.explicit_identifiers
+    assert candidates[0].symbol == "处理"
+    assert candidates[0].qualified_symbol == "对象.处理"
 
 
 def test_extract_issue_signals_records_exact_source_line_references() -> None:
@@ -1265,6 +1288,54 @@ def test_unicode_rust_symbol_issue_reference_matches(tmp_path: Path) -> None:
     assert "解析" in signals.terms
     candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
     assert candidate.symbol == "解析"
+
+
+def test_raw_unicode_rust_symbol_issue_reference_normalizes(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(repository, "src/parser.rs", "pub fn r#解析() {}\n")
+
+    record = issue(
+        "Raw identifier parser failure",
+        "The backticked `r#解析` function fails for this input.",
+    )
+    signals = extract_issue_signals(record)
+    report = investigate(record, build_repository_map(repository))
+
+    assert "解析" in signals.identifiers
+    assert "解析" in signals.explicit_identifiers
+    assert "解析" in signals.terms
+    candidate = next(item for item in report.candidates if item.file == "src/parser.rs")
+    assert candidate.symbol == "解析"
+
+
+def test_rust_macro_definitions_are_scanned_once_per_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/generated.rs",
+        "noop!();\n" * 4000 + "pub fn target() {}\n",
+    )
+    original = repository_index_module._rust_macro_definition_candidates
+    calls = 0
+
+    def counting_candidates(value: str) -> list[tuple[int, int, int]]:
+        nonlocal calls
+        calls += 1
+        return original(value)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_rust_macro_definition_candidates",
+        counting_candidates,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert calls == 1
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
 
 
 def test_decomposed_unicode_call_normalizes_for_symbol_matching(tmp_path: Path) -> None:

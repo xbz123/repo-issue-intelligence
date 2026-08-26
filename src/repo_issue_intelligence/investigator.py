@@ -266,7 +266,10 @@ class SymbolMatch:
 
 
 def _normalized_qualified_identifier(value: str) -> str | None:
-    components = value.split(".")
+    components = [
+        component[2:] if component.startswith("r#") else component
+        for component in value.split(".")
+    ]
     normalized = [unicodedata.normalize("NFC", component) for component in components]
     if not normalized or any(
         component == "_" or not component.isidentifier()
@@ -310,12 +313,14 @@ def _qualified_identifier_at(value: str, index: int) -> tuple[str, int] | None:
 
 
 def _unicode_identifier_at(value: str, index: int) -> tuple[str, int] | None:
-    if index >= len(value) or not _unicode_identifier_start(value[index]):
+    cursor = index + 2 if value.startswith("r#", index) else index
+    if cursor >= len(value) or not _unicode_identifier_start(value[cursor]):
         return None
-    cursor = index + 1
+    start = cursor
+    cursor += 1
     while cursor < len(value) and _unicode_identifier_continue(value[cursor]):
         cursor += 1
-    identifier = unicodedata.normalize("NFC", value[index:cursor])
+    identifier = unicodedata.normalize("NFC", value[start:cursor])
     if identifier == "_" or not identifier.isidentifier():
         return None
     return identifier, cursor
@@ -414,6 +419,15 @@ def _extract_explicit_identifiers(text: str) -> set[str]:
             identifiers.add(called_identifier)
             identifiers.add(called_identifier.rsplit(".", maxsplit=1)[-1])
     for region in fenced_regions:
+        for start, _, identifier in _unicode_identifier_matches(region):
+            if "." not in identifier and not (
+                identifier.startswith("__") and identifier.endswith("__")
+            ):
+                continue
+            prefix = region[max(0, start - 12) : start]
+            if re.search(r"\b(?:class|def)\s+$", prefix):
+                continue
+            identifiers.add(identifier)
         for match in IDENTIFIER_PATTERN.finditer(region):
             identifier = match.group(0)
             if "." not in identifier and not (
