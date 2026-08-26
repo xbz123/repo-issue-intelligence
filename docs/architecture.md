@@ -28,6 +28,10 @@ The current MVP ends at a human review gate. It does not execute generated comma
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
 classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
+Rust contributes a separate conservative declaration index for functions and types. It skips
+strings, raw strings, character literals, nested comments, macro definitions, and macro invocation
+token trees, and creates no inferred Rust call edges. TypeScript, TSX, C, and C++ remain file-only
+until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
 symbol. It is built with Python `symtable` scope information and accepts a direct `ast.Name` call
@@ -235,7 +239,8 @@ dotted-name/URL false path matches, gives explicit stack-trace/source-path refer
 signal, searches bounded source content, downranks tests and documentation, retains 20 candidates,
 and applies bounded graph/history evidence. Compound identifier variants preserve source term
 order rather than depending on set iteration. Python AST symbols retain both their local name and qualified
-class/function ownership. Optional symbol labels are aggregated only across labeled cases; exact
+class/function ownership; Rust declarations retain their local name and source line.
+Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.
 

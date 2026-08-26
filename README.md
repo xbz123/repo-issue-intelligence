@@ -180,7 +180,7 @@ uv run rii benchmark benchmarks/cases.json \
   --temperature 0.1 \
   --seed 1337 \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.30-pool40-latest.json
+  --output benchmarks/results/hybrid-deepseek-v4-flash-go-v0.31-pool40-latest.json
 ```
 
 The Hybrid benchmark is intentionally fixed to OpenCode `deepseek-v4-flash`; it does not
@@ -356,7 +356,7 @@ src/repo_issue_intelligence/
   evidence.py            bounded repository source evidence collection
   llm_client.py           OpenCode DeepSeek analysis and reranking
   models.py              typed domain models
-  repository_index.py    repository map and Python AST index
+  repository_index.py    repository map, Python AST, and bounded declaration index
   scoring.py             severity, urgency, priority rules
   service.py             ranking orchestration
 ```
@@ -372,26 +372,30 @@ targets and 177 reviewed symbols across 143 cases. Each case uses a committed Is
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
 
-Three manifest-v20 deterministic v0.30 runs, using the unchanged v0.29 Top-20 retrieval logic,
-completed 200/200 cases and produced identical candidates, symbols, and metrics after excluding
-timestamps, elapsed fields, and cache provenance.
-File Recall@1 is `0.3510`, Recall@5 `0.6517`, Recall@10 `0.7505`, Recall@20 `0.8665`, and MRR
-`0.5396`. Symbol Recall@1 is `0.2378`, Recall@5 `0.3840`, Recall@10 `0.4155`, Recall@20 `0.4645`,
-and symbol MRR `0.3349`. Forty-six of 267 production targets remain outside Top-20 and stay in the
-denominator.
+Three manifest-v20 deterministic v0.31 runs completed 200/200 cases and produced identical
+candidates, symbols, and metrics after excluding timestamps, elapsed fields, and cache provenance.
+The repository map adds conservative Rust declarations without inferred Rust call edges;
+TypeScript, TSX, C, and C++ remain file-only. File Recall@1/5/10/20 is
+`0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Compared with v0.30, Recall@1, Recall@5,
+Recall@20, and MRR improve while Recall@10 decreases from `0.7505` to `0.7493`; one new target
+enters Top-20 and none leave it. Symbol Recall@1/5/10/20 remains
+`0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`, because all 177 reviewed symbol labels are
+Python-only. Forty-five of 267 production targets remain outside deterministic Top-20 and stay in
+the denominator.
 
-Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed 600/600 valid
-rank requests with zero fallback; 598 succeeded on the first attempt and two recovered through the
-bounded truncation retry. Mean File Recall@1/5/10/20 was
-`0.5622/0.7952/0.8377/0.8890`, with MRR `0.7516`. The expanded pool reserves three slots for
-directly supported paths while the deterministic Top-20 keeps one. Pool coverage improved from
-231/267 to 234/267 production targets, and the final Top-20 covered 227, 227, and 226. NumPy
-`dlpack.c` and pandas `_arrow_string_mixins.py` were newly promoted in every run without losing an
-existing deterministic Top-20 ground-truth target. Mean Symbol Recall@20 was `0.4668`, with symbol
-MRR `0.4867`. Only 138/200 complete candidate orders were identical across all repeats, so seed
-1337 remains best effort. Mean Recall@1 and MRR are slightly below v0.29 and remain reported as
-tradeoffs rather than hidden.
-The three runs used 10,331,931 input tokens and 5,896 output tokens. See the compact
+Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed all 600 case-runs.
+The provider returned 595 valid ranks (580 on the first attempt and 15 after one retry); five cases
+used deterministic fallback after two OpenCode HTTP 500 responses. Invalid structure and unknown
+evidence IDs remained zero. Mean File Recall@1/5/10/20 was
+`0.5747/0.8008/0.8433/0.8965`, with MRR `0.7606`. The expanded pool reserves three slots for
+directly supported paths while deterministic Top-20 keeps one. Rust declarations increase pool
+coverage from 234/267 to 236/267 production targets, and the final Top-20 covers 229, 228, and 229.
+The uv stale-interpreter `project/mod.rs` target enters deterministic Top-20 and
+`uv-pep508/src/lib.rs` enters Top-40; DeepSeek selects both in every run, and no deterministic
+Top-20 ground-truth target is lost. Mean Symbol Recall@20 is `0.4668`, with MRR `0.4870`; these
+labels remain Python-only. Only 125/200 complete candidate orders are identical across all repeats,
+so seed 1337 remains best effort despite the improved mean file metrics.
+The three runs used 10,070,864 input tokens and 5,846 output tokens. See the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git. The compact pre-change miss audit is
 [`pool40-miss-taxonomy-manifest-v20.json`](benchmarks/results/pool40-miss-taxonomy-manifest-v20.json).

@@ -79,33 +79,38 @@ Machine-readable results are saved under `benchmarks/results/`; the reviewed res
 
 ## Manifest-v20 pool-40 external result
 
-Three authorized v0.30 zero-delay runs evaluated all 200 frozen public cases with OpenCode
+Three authorized v0.31 zero-delay runs evaluated all 200 frozen public cases with OpenCode
 `deepseek-v4-flash`, temperature `0.1`, seed `1337`, and the bounded Top-40 protocol. All 600
-case-runs returned one valid known-ID `RANK:` line. Of these, 598 succeeded on the first attempt and
-two recovered through the bounded truncation retry. No case used fallback, reported an unknown
-evidence ID, or failed execution.
+case-runs completed; 595 returned a valid known-ID `RANK:` line, 580 on the first attempt and 15
+after one bounded retry. Five cases used deterministic fallback after two OpenCode HTTP 500
+responses. Invalid structure and unknown evidence IDs remained zero.
 
 | Run | File R@1 | R@5 | R@10 | R@20 | MRR | Pool R | Mean LLM latency | Input / output tokens |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.5572 | 0.7972 | 0.8388 | 0.8907 | 0.7483 | 0.9057 | 6.00 s | 3,443,977 / 1,964 |
-| 2 | 0.5622 | 0.7922 | 0.8388 | 0.8907 | 0.7521 | 0.9057 | 6.31 s | 3,443,977 / 1,968 |
-| 3 | 0.5672 | 0.7963 | 0.8355 | 0.8857 | 0.7543 | 0.9057 | 5.79 s | 3,443,977 / 1,964 |
-| Mean | 0.5622 | 0.7952 | 0.8377 | 0.8890 | 0.7516 | 0.9057 | 6.03 s | - |
+| 1 | 0.5672 | 0.7963 | 0.8455 | 0.8982 | 0.7546 | 0.9132 | 5.61 s | 3,317,345 / 1,924 |
+| 2 | 0.5747 | 0.8047 | 0.8388 | 0.8932 | 0.7606 | 0.9132 | 7.63 s | 3,365,963 / 1,954 |
+| 3 | 0.5822 | 0.8013 | 0.8455 | 0.8982 | 0.7667 | 0.9132 | 6.84 s | 3,387,556 / 1,968 |
+| Mean | 0.5747 | 0.8008 | 0.8433 | 0.8965 | 0.7606 | 0.9132 | 6.69 s | - |
 
-The corrected deterministic baseline is `0.3510/0.6517/0.7505/0.8665`, with MRR `0.5396`.
-The model-only pool contains 234 of 267 production targets; the final Top-20 contains 227, 227,
-and 226, compared with 221 in the deterministic Top-20. NumPy `dlpack.c` and pandas
-`_arrow_string_mixins.py` are newly promoted in every run. Every run also recovers
-`tornado/locks.py`, Pylint `class_checker.py`, and SciPy `_matfuncs.py`; runs 1 and 2 recover
-Setuptools `_apply_pyprojecttoml.py`. No deterministic Top-20 ground-truth file is displaced.
+The deterministic baseline is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`.
+The model-only pool contains 236 of 267 production targets; the final Top-20 contains 229, 228,
+and 229, compared with 222 in deterministic Top-20. Conservative Rust declarations
+move uv `project/mod.rs` into deterministic Top-20 and `uv-pep508/src/lib.rs` into Top-40; DeepSeek
+selects both in every run. Every run also recovers NumPy `dlpack.c`, pandas
+`_arrow_string_mixins.py`, `tornado/locks.py`, Pylint `class_checker.py`, and SciPy `_matfuncs.py`;
+runs 1 and 3 recover Setuptools `_apply_pyprojecttoml.py`. No deterministic Top-20 ground-truth
+file is displaced.
 
-Across the three runs, 138/200 complete candidate orders were identical and nine cases changed
-expected-file reciprocal rank. Pairwise ordering changes affected 43, 46, and 43 cases. Fixed seed
+Across the three runs, 125/200 complete candidate orders were identical and 22 cases changed
+expected-file reciprocal rank. Pairwise ordering changes affected 53, 52, and 56 cases. Fixed seed
 therefore remains best effort even though protocol success and Recall@20 were stable. Symbol
-Recall@20 was `0.4668`; mean symbol MRR was `0.4867`. The runs used 10,331,931 input tokens and
-5,896 output tokens in total. Relative to v0.29, mean Recall@20 improves from `0.8807` to `0.8890`,
-while Recall@1 decreases from `0.5705` to `0.5622` and MRR from `0.7526` to `0.7516`; the change is
-therefore a candidate-recall improvement, not a uniform ranking improvement.
+Recall@20 was `0.4668`; mean symbol MRR was `0.4870`, but all reviewed symbol labels remain
+Python-only. The runs used 10,070,864 input tokens and 5,846 output tokens in total. Relative to
+v0.30, mean Recall@1/5/10/20 improves from `0.5622/0.7952/0.8377/0.8890` to
+`0.5747/0.8008/0.8433/0.8965`, and MRR improves from `0.7516` to `0.7606`. Across the 595 valid
+model responses alone, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with MRR `0.7611`.
+Provider load is uncontrolled, so latency changes are observational and are not attributed to the
+index modification.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON

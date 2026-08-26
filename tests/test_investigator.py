@@ -1080,6 +1080,130 @@ def test_repository_map_records_qualified_method_names(tmp_path: Path) -> None:
     } == {"Unrelated.__init__", "WorkerThread.__init__"}
 
 
+def test_repository_map_records_conservative_rust_symbols(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "crates/parser/src/lib.rs",
+        "pub struct Pep508Error { message: String }\n"
+        "pub unsafe trait UnsafeReporter {}\n"
+        "pub auto trait AutoReporter {}\n"
+        "pub union ReporterValue { integer: u64 }\n"
+        "pub extern fn foreign_reporter() {}\n"
+        'pub unsafe extern "C" fn abi_reporter() {}\n'
+        "macro_rules! generated {\n"
+        "    ($value:expr) => {{\n"
+        "        fn ignored_macro_function() {}\n"
+        "    }};\n"
+        "}\n"
+        "generate! {\n"
+        "    fn ignored_invocation_function() {}\n"
+        "}\n"
+        "generate_paren!(\n"
+        "    fn ignored_paren_function() {}\n"
+        ");\n"
+        "generate_bracket![\n"
+        "    fn ignored_bracket_function() {}\n"
+        "];\n"
+        "fn real_with_macro() { generate! { fn ignored_inline_function() {} } }\n"
+        "impl Pep508Error {\n"
+        "    pub(crate) async fn render_caret(&self) {}\n"
+        "}\n"
+        "/* outer\n/* nested */\nfn ignored_rust_comment() {}\n*/\n",
+    )
+    write_source(
+        repository,
+        "ui/schema-form-input.ts",
+        "export function TypeScriptRemainsFileOnly() { return null; }\n",
+    )
+    write_source(
+        repository,
+        "ui/schema-form-input.tsx",
+        "export function TsxRemainsFileOnly() { return <div>/*</div>; }\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    rust = next(file for file in repository_map.files if file.language == "Rust")
+    typescript = next(
+        file
+        for file in repository_map.files
+        if file.path == "ui/schema-form-input.ts"
+    )
+    tsx = next(
+        file
+        for file in repository_map.files
+        if file.path == "ui/schema-form-input.tsx"
+    )
+
+    assert [(symbol.name, symbol.kind) for symbol in rust.symbols] == [
+        ("Pep508Error", "struct"),
+        ("UnsafeReporter", "trait"),
+        ("AutoReporter", "trait"),
+        ("ReporterValue", "union"),
+        ("foreign_reporter", "function"),
+        ("abi_reporter", "function"),
+        ("real_with_macro", "function"),
+        ("render_caret", "function"),
+    ]
+    assert typescript.symbols == []
+    assert tsx.symbols == []
+
+
+def test_rust_symbol_scanner_respects_literal_boundaries(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "crates/parser/src/literals.rs",
+        'const COMMENT_MARKER: &str = "/*";\n'
+        "const QUOTE: char = '\"';\n"
+        'const QUOTED: &str = "\nfn ignored_quoted_string() {}\n";\n'
+        'const EXAMPLE: &str = r#"\nfn ignored_raw_string() {}\n"#;\n'
+        'const BYTE_EXAMPLE: &[u8] = br##"\nfn ignored_byte_raw_string() {}\n"##;\n'
+        'const C_EXAMPLE: &CStr = cr#"\nfn ignored_c_raw_string() {}\n"#;\n'
+        "fn real_rust_function() {}\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    rust = next(file for file in repository_map.files if file.language == "Rust")
+
+    assert [symbol.name for symbol in rust.symbols] == ["real_rust_function"]
+
+
+def test_rust_symbol_evidence_can_enter_expanded_candidate_pool(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    for index in range(40):
+        write_source(
+            repository,
+            f"crates/noise-{index:02d}/src/runtime.rs",
+            'const MESSAGE: &str = "interpreter cache";\n',
+        )
+    target = "crates/uv-python/src/interpreter.rs"
+    write_source(
+        repository,
+        target,
+        "pub struct Interpreter { executable: String }\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Stale interpreter cache",
+            "The project uses the wrong Python executable.",
+        ),
+        build_repository_map(repository),
+        limit=40,
+    )
+
+    assert target in [candidate.file for candidate in candidates]
+    selected = next(candidate for candidate in candidates if candidate.file == target)
+    assert selected.symbol == "Interpreter"
+
+
 def test_duplicate_method_call_edges_do_not_leak_into_symbol_selection(
     tmp_path: Path,
 ) -> None:

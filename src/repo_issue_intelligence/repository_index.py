@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import re
 import symtable
 from collections import Counter
 from collections.abc import Iterable
@@ -63,7 +64,27 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 2
+REPOSITORY_MAP_INDEX_VERSION = 14
+
+RUST_FUNCTION_DECLARATION = re.compile(
+    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|default)\s+)*"
+    r'(?:extern(?:\s+(?:"[^"]+"|value))?\s+)?'
+    r"fn\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+)
+RUST_TYPE_DECLARATION = re.compile(
+    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto)\s+)*"
+    r"(?P<kind>struct|enum|trait|type|union)\s+"
+    r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b"
+)
+RUST_CHAR_LITERAL = re.compile(
+    r"'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]+\}|.)|[^\\'\r\n])'"
+)
+RUST_MACRO_INVOCATION = re.compile(
+    r"(?<![A-Za-z0-9_$])"
+    r"(?:(?:(?:r#)?[A-Za-z_][A-Za-z0-9_]*)\s*::\s*)*"
+    r"(?:r#)?[A-Za-z_][A-Za-z0-9_]*\s*!(?!=)"
+)
+RUST_DELIMITER_PAIRS = {"(": ")", "[": "]", "{": "}"}
 
 
 def repository_file_language(path: str | Path) -> str | None:
@@ -72,6 +93,172 @@ def repository_file_language(path: str | Path) -> str | None:
     if candidate.name.lower().endswith(JSON_SCHEMA_SUFFIX):
         return "JSON Schema"
     return LANGUAGE_BY_SUFFIX.get(candidate.suffix.lower())
+
+
+def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
+    """Yield Rust declaration lines outside strings and nested comments."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return
+
+    block_comment_depth = 0
+    quoted_string = False
+    rust_raw_terminator: str | None = None
+    macro_pending = False
+    macro_delimiters: list[str] = []
+    for line_number, raw_line in enumerate(lines, start=1):
+        code: list[str] = []
+        index = 0
+        while index < len(raw_line):
+            if rust_raw_terminator is not None:
+                raw_end = raw_line.find(rust_raw_terminator, index)
+                if raw_end < 0:
+                    break
+                index = raw_end + len(rust_raw_terminator)
+                rust_raw_terminator = None
+                continue
+            if quoted_string:
+                if raw_line[index] == '"' and not _character_is_escaped(
+                    raw_line,
+                    index,
+                ):
+                    quoted_string = False
+                index += 1
+                continue
+            if block_comment_depth:
+                if raw_line.startswith("/*", index):
+                    block_comment_depth += 1
+                    index += 2
+                    continue
+                if raw_line.startswith("*/", index):
+                    block_comment_depth -= 1
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if raw_line.startswith("//", index):
+                break
+            if raw_line.startswith("/*", index):
+                block_comment_depth = 1
+                index += 2
+                continue
+            raw_terminator = _rust_raw_string_terminator(raw_line, index)
+            if raw_terminator is not None:
+                code.extend("value")
+                rust_raw_terminator, index = raw_terminator
+                continue
+            if raw_line[index] == "'":
+                char_literal = RUST_CHAR_LITERAL.match(raw_line, index)
+                if char_literal is not None:
+                    code.extend("value")
+                    index = char_literal.end()
+                    continue
+            if raw_line[index] == '"':
+                code.extend("value")
+                quoted_string = True
+                index += 1
+                continue
+            code.append(raw_line[index])
+            index += 1
+        line = "".join(code)
+
+        line, macro_pending, macro_delimiters = _without_rust_macro_tokens(
+            line,
+            macro_pending,
+            macro_delimiters,
+        )
+        if line.strip():
+            yield line_number, line
+
+
+def _character_is_escaped(value: str, index: int) -> bool:
+    backslashes = 0
+    index -= 1
+    while index >= 0 and value[index] == "\\":
+        backslashes += 1
+        index -= 1
+    return backslashes % 2 == 1
+
+
+def _without_rust_macro_tokens(
+    line: str,
+    macro_pending: bool,
+    macro_delimiters: list[str],
+) -> tuple[str, bool, list[str]]:
+    visible: list[str] = []
+    index = 0
+    while index < len(line):
+        if macro_pending:
+            if line[index] in RUST_DELIMITER_PAIRS:
+                macro_pending = False
+                macro_delimiters.append(line[index])
+            index += 1
+            continue
+        if macro_delimiters:
+            if line[index] in RUST_DELIMITER_PAIRS:
+                macro_delimiters.append(line[index])
+            elif line[index] == RUST_DELIMITER_PAIRS[macro_delimiters[-1]]:
+                macro_delimiters.pop()
+            index += 1
+            continue
+        macro_match = RUST_MACRO_INVOCATION.search(line, index)
+        if macro_match is None:
+            visible.append(line[index:])
+            break
+        visible.append(line[index : macro_match.start()])
+        macro_pending = True
+        index = macro_match.end()
+    return "".join(visible), macro_pending, macro_delimiters
+
+
+def _rust_raw_string_terminator(
+    value: str,
+    index: int,
+) -> tuple[str, int] | None:
+    if index and (value[index - 1].isalnum() or value[index - 1] == "_"):
+        return None
+    prefix_length = (
+        2
+        if value.startswith(("br", "cr"), index)
+        else 1
+    )
+    if not (
+        value.startswith("r", index)
+        or value.startswith("br", index)
+        or value.startswith("cr", index)
+    ):
+        return None
+    cursor = index + prefix_length
+    while cursor < len(value) and value[cursor] == "#":
+        cursor += 1
+    if cursor >= len(value) or value[cursor] != '"':
+        return None
+    hashes = value[index + prefix_length : cursor]
+    return f'"{hashes}', cursor + 1
+
+
+def _rust_declaration_symbols(path: Path) -> list[SymbolRecord]:
+    symbols: list[SymbolRecord] = []
+    for line_number, line in _rust_declaration_source_lines(path):
+        for pattern in (RUST_FUNCTION_DECLARATION, RUST_TYPE_DECLARATION):
+            match = pattern.match(line)
+            if match is None:
+                continue
+            declaration_kind = match.groupdict().get("kind")
+            symbols.append(
+                SymbolRecord(
+                    name=match.group("name"),
+                    kind=(
+                        "function"
+                        if pattern is RUST_FUNCTION_DECLARATION
+                        else declaration_kind or "class"
+                    ),
+                    line=line_number,
+                )
+            )
+            break
+    return symbols
 
 
 @dataclass(frozen=True)
@@ -1134,6 +1321,8 @@ def build_repository_map(
                 framework = FRAMEWORK_IMPORTS.get(imported.split(".", maxsplit=1)[0])
                 if framework:
                     frameworks.add(framework)
+        elif language == "Rust":
+            metadata.symbols = _rust_declaration_symbols(path)
         files.append(
             FileRecord(
                 path=str(relative),
