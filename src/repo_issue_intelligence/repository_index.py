@@ -65,7 +65,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 19
+REPOSITORY_MAP_INDEX_VERSION = 21
 
 RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
@@ -84,10 +84,79 @@ RUST_MACRO_DEFINITION = re.compile(
     rf"{RUST_DECLARATION_BOUNDARY}\s*"
     r"(?:pub(?:\s*\([^)]*\))?\s+)?macro\s+"
 )
+RUST_MACRO_RULES_DEFINITION = re.compile(
+    rf"{RUST_DECLARATION_BOUNDARY}\s*macro_rules\s*!\s*"
+)
 RUST_CHAR_LITERAL = re.compile(
     r"'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]+\}|.)|[^\\'\r\n])'"
 )
 RUST_DELIMITER_PAIRS = {"(": ")", "[": "]", "{": "}"}
+RUST_KEYWORDS = {
+    "Self",
+    "abstract",
+    "as",
+    "async",
+    "await",
+    "become",
+    "box",
+    "break",
+    "const",
+    "continue",
+    "crate",
+    "do",
+    "dyn",
+    "else",
+    "enum",
+    "extern",
+    "false",
+    "final",
+    "fn",
+    "for",
+    "gen",
+    "if",
+    "impl",
+    "in",
+    "let",
+    "loop",
+    "macro",
+    "match",
+    "mod",
+    "move",
+    "mut",
+    "override",
+    "priv",
+    "pub",
+    "ref",
+    "return",
+    "self",
+    "static",
+    "struct",
+    "super",
+    "trait",
+    "true",
+    "try",
+    "type",
+    "typeof",
+    "union",
+    "unsafe",
+    "unsized",
+    "use",
+    "virtual",
+    "where",
+    "while",
+    "yield",
+}
+RUST_MACRO_KEYWORD_IDENTIFIERS = {
+    "async",
+    "await",
+    "default",
+    "dyn",
+    "gen",
+    "raw",
+    "try",
+    "union",
+}
+RUST_PATH_KEYWORDS = {"Self", "crate", "self", "super"}
 
 
 def repository_file_language(path: str | Path) -> str | None:
@@ -101,7 +170,7 @@ def repository_file_language(path: str | Path) -> str | None:
 def _rust_declaration_source(path: Path) -> str:
     """Return Rust source with non-declaration token trees replaced."""
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = path.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeDecodeError):
         return ""
 
@@ -294,7 +363,8 @@ def _next_rust_macro(
     next_definition: tuple[int, int, int] | None,
 ) -> tuple[int, int, int] | None:
     candidates = [next_definition] if next_definition is not None else []
-    invocation = _next_rust_macro_invocation(value, start)
+    invocation_stop = next_definition[0] if next_definition is not None else len(value)
+    invocation = _next_rust_macro_invocation(value, start, invocation_stop)
     if invocation is not None:
         candidates.append((*invocation, 1))
     return min(candidates, default=None, key=lambda candidate: candidate[0])
@@ -304,6 +374,12 @@ def _rust_macro_definition_candidates(
     value: str,
 ) -> list[tuple[int, int, int]]:
     candidates: list[tuple[int, int, int]] = []
+    for match in RUST_MACRO_RULES_DEFINITION.finditer(value):
+        identifier = _rust_identifier_at(value, match.end())
+        if identifier is None:
+            continue
+        _, end = identifier
+        candidates.append((match.start(), end, 1))
     for match in RUST_MACRO_DEFINITION.finditer(value):
         identifier = _rust_identifier_at(value, match.end())
         if identifier is None:
@@ -314,11 +390,15 @@ def _rust_macro_definition_candidates(
             cursor += 1
         token_trees = 1 if cursor < len(value) and value[cursor] == "{" else 2
         candidates.append((match.start(), end, token_trees))
-    return candidates
+    return sorted(candidates)
 
 
-def _next_rust_macro_invocation(value: str, start: int) -> tuple[int, int] | None:
-    for candidate_start in range(start, len(value)):
+def _next_rust_macro_invocation(
+    value: str,
+    start: int,
+    stop: int,
+) -> tuple[int, int] | None:
+    for candidate_start in range(start, min(stop, len(value))):
         if candidate_start and (
             _rust_identifier_continue(value[candidate_start - 1])
             or value[candidate_start - 1] == "$"
@@ -329,10 +409,12 @@ def _next_rust_macro_invocation(value: str, start: int) -> tuple[int, int] | Non
             cursor += 2
             while cursor < len(value) and value[cursor].isspace():
                 cursor += 1
+        raw_identifier = value.startswith("r#", cursor)
         identifier = _rust_identifier_at(value, cursor)
         if identifier is None:
             continue
-        _, cursor = identifier
+        name, cursor = identifier
+        components = [(name, raw_identifier)]
         while True:
             separator = cursor
             while separator < len(value) and value[separator].isspace():
@@ -343,16 +425,42 @@ def _next_rust_macro_invocation(value: str, start: int) -> tuple[int, int] | Non
             cursor = separator + 2
             while cursor < len(value) and value[cursor].isspace():
                 cursor += 1
+            raw_identifier = value.startswith("r#", cursor)
             identifier = _rust_identifier_at(value, cursor)
             if identifier is None:
                 break
-            _, cursor = identifier
-        if cursor < len(value) and value[cursor] == "!" and not value.startswith(
-            "!=",
-            cursor,
+            name, cursor = identifier
+            components.append((name, raw_identifier))
+        if (
+            cursor < len(value)
+            and value[cursor] == "!"
+            and not value.startswith("!=", cursor)
+            and _valid_rust_macro_path(components)
         ):
-            return candidate_start, cursor + 1
+            delimiter = cursor + 1
+            while delimiter < len(value) and value[delimiter].isspace():
+                delimiter += 1
+            if delimiter < len(value) and value[delimiter] in RUST_DELIMITER_PAIRS:
+                return candidate_start, cursor + 1
     return None
+
+
+def _valid_rust_macro_path(components: list[tuple[str, bool]]) -> bool:
+    if not components:
+        return False
+    for name, raw_identifier in components[:-1]:
+        if (
+            not raw_identifier
+            and name in RUST_KEYWORDS
+            and name not in RUST_PATH_KEYWORDS | RUST_MACRO_KEYWORD_IDENTIFIERS
+        ):
+            return False
+    final_name, final_is_raw = components[-1]
+    return (
+        final_is_raw
+        or final_name not in RUST_KEYWORDS
+        or final_name in RUST_MACRO_KEYWORD_IDENTIFIERS
+    )
 
 
 def _rust_identifier_at(value: str, index: int) -> tuple[str, int] | None:

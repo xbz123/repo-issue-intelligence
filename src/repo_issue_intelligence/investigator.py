@@ -94,6 +94,10 @@ PATH_REFERENCE_PATTERN = re.compile(
 )
 CODE_SPAN_PATTERN = re.compile(r"(?<!`)`([^`\n]{1,120})`(?!`)")
 FENCED_CODE_PATTERN = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+ECMASCRIPT_FENCE_PREFIX_PATTERN = re.compile(
+    r"^```[ \t]*(?:javascript|js|typescript|ts|jsx|tsx)\b",
+    re.IGNORECASE,
+)
 IDENTIFIER_PATTERN = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\b"
 )
@@ -207,6 +211,7 @@ UNICODE_ID_CONTINUE_CATEGORIES = {
     "Nd",
     "Pc",
 }
+ECMASCRIPT_IDENTIFIER_START_CATEGORIES = {"Lu", "Ll", "Lt", "Lm", "Lo", "Nl"}
 UNICODE_OTHER_ID_START = {"\u2118", "\u212e", "\u309b", "\u309c"}
 UNICODE_OTHER_ID_CONTINUE = {"\u00b7", "\u0387", "\u19da", "\u30fb", "\uff65"}
 UNICODE_ID_CONTINUE_EXCLUSIONS = {"\u2e2f"}
@@ -322,14 +327,87 @@ def _qualified_identifier_at(value: str, index: int) -> tuple[str, int] | None:
     return ".".join(components), cursor
 
 
-def _verbatim_qualified_identifier(value: str) -> str | None:
+def _ecmascript_dollar_identifier_matches(
+    value: str,
+) -> list[tuple[int, int, str]]:
+    matches: list[tuple[int, int, str]] = []
+    index = 0
+    while index < len(value):
+        if index and _is_identifier_continuation(value[index - 1], "JavaScript"):
+            index += 1
+            continue
+        identifier = _ecmascript_qualified_identifier_at(value, index)
+        if identifier is None:
+            index += 1
+            continue
+        candidate, cursor = identifier
+        if "$" in candidate:
+            matches.append((index, cursor, candidate))
+        index = cursor
+    return matches
+
+
+def _ecmascript_qualified_identifier_at(
+    value: str,
+    index: int,
+) -> tuple[str, int] | None:
+    component = _ecmascript_identifier_at(value, index)
+    if component is None:
+        return None
+    cursor = component
+    while cursor < len(value) and value[cursor] == ".":
+        next_component = _ecmascript_identifier_at(value, cursor + 1)
+        if next_component is None:
+            break
+        cursor = next_component
+    return value[index:cursor], cursor
+
+
+def _ecmascript_identifier_at(value: str, index: int) -> int | None:
+    if index >= len(value) or not _is_ecmascript_identifier_start(value[index]):
+        return None
+    cursor = index + 1
+    while cursor < len(value) and _is_identifier_continuation(
+        value[cursor],
+        "JavaScript",
+    ):
+        cursor += 1
+    return cursor
+
+
+def _verbatim_qualified_identifier(
+    value: str,
+    *,
+    allow_ecmascript: bool = False,
+) -> str | None:
     if "::" in value or any(
         component.startswith("r#") for component in value.split(".")
     ):
         return None
-    if _normalized_qualified_identifier(value) is None:
+    if _normalized_qualified_identifier(value) is None and not (
+        allow_ecmascript
+        and all(
+            _is_ecmascript_identifier_component(component)
+            for component in value.split(".")
+        )
+    ):
         return None
     return value
+
+
+def _is_ecmascript_identifier_component(value: str) -> bool:
+    return bool(value) and _is_ecmascript_identifier_start(value[0]) and all(
+        _is_identifier_continuation(character, "JavaScript")
+        for character in value[1:]
+    )
+
+
+def _is_ecmascript_identifier_start(value: str) -> bool:
+    return (
+        value in {"$", "_"}
+        or unicodedata.category(value) in ECMASCRIPT_IDENTIFIER_START_CATEGORIES
+        or value in UNICODE_OTHER_ID_START
+    )
 
 
 def _unicode_identifier_at(value: str, index: int) -> tuple[str, int] | None:
@@ -416,10 +494,41 @@ def _extract_verbatim_identifiers(text: str) -> set[str]:
     for pattern in (CODE_SPAN_PATTERN, FENCED_CODE_PATTERN):
         for match in pattern.finditer(text):
             region = match.group(1)
-            candidate = _verbatim_qualified_identifier(region.strip())
+            stripped_region = region.strip()
+            ecmascript_fence = (
+                pattern is FENCED_CODE_PATTERN
+                and ECMASCRIPT_FENCE_PREFIX_PATTERN.match(match.group(0)) is not None
+            )
+            candidate = _verbatim_qualified_identifier(
+                stripped_region,
+                allow_ecmascript=ecmascript_fence
+                or (
+                    "$" in stripped_region
+                    and any(not character.isascii() for character in stripped_region)
+                ),
+            )
             if candidate is not None:
                 identifiers.add(candidate)
+            dollar_matches = (
+                _ecmascript_dollar_identifier_matches(region)
+                if ecmascript_fence
+                else []
+            )
+            identifiers.update(candidate for _, _, candidate in dollar_matches)
             for start, end, _ in _unicode_identifier_matches(region):
+                if any(
+                    dollar_start <= start and end <= dollar_end
+                    for dollar_start, dollar_end, _ in dollar_matches
+                ):
+                    continue
+                if (
+                    start > 0
+                    and _is_identifier_continuation(region[start - 1], "JavaScript")
+                ) or (
+                    end < len(region)
+                    and _is_identifier_continuation(region[end], "JavaScript")
+                ):
+                    continue
                 candidate = _verbatim_qualified_identifier(region[start:end])
                 if candidate is not None:
                     identifiers.add(candidate)

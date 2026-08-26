@@ -28,10 +28,13 @@ The current MVP ends at a human review gate. It does not execute generated comma
 `repository_index.py` scans supported source files and uses Python AST parsing to collect imports,
 locally resolved Python import targets, imported symbols, called names, loaded symbol references,
 classes, functions, line ranges, entrypoints, runtime files, tests, and framework indicators.
-Rust contributes a separate conservative declaration index for functions and types. It skips
-strings, raw strings, character literals, nested comments, script shebangs, outer attributes,
+Rust contributes a separate conservative declaration index for functions and types. It consumes an
+optional UTF-8 BOM, then skips strings, raw strings, character literals, nested comments, script
+shebangs, outer attributes,
 `macro_rules!`, macro
 2.0 definitions, and macro invocation token trees even when their path or delimiter spans lines;
+requires a valid macro path, `!`, and a following delimiter so control-flow negation remains visible;
+allows contextual and edition-introduced macro names without treating structural keywords as paths;
 preserves comment token boundaries; normalizes raw and XID-compatible identifiers to NFC; recognizes
 declarations whose keyword and name span lines, multiple declarations per line, Rust 2024 `safe fn`
 foreign declarations, and default associated types; computes declaration line numbers in one
@@ -39,8 +42,12 @@ forward pass; and creates no inferred Rust call edges. Unique explicit Rust type
 select conservative type records. Issue
 identifier, call, and traceback extraction uses the same NFC-normalized Unicode identifier boundary
 rules, including normalization of Rust `r#` spellings and `::` paths. JavaScript and TypeScript
-content matching instead preserves exact Unicode spelling and case. Macro-definition candidates are
-discovered once per Rust file so repeated invocations do not rescan the remaining source.
+content matching instead preserves exact Unicode spelling, case, and `$` identifier components.
+Embedded dollar identifiers are extracted only from explicitly tagged JavaScript or TypeScript
+fences; an untyped inline dollar identifier must contain a non-ASCII component, so shell variables
+do not become cross-language source signals.
+Macro-definition candidates are discovered once per Rust file and bound invocation search to the
+next known definition, so neither repeated invocations nor definitions rescan the remaining source.
 TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target

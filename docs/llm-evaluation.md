@@ -116,7 +116,10 @@ The three DeepSeek raw runs were generated under repository-map index v14. Revie
 index v18 preserved every complete Top-40 report and rerank input. Index v19 leaves all 193 maps
 unchanged but changes Top-40 evidence for `prefect-anyof-copy-new-run` and
 `pyo3-reference-pool-dirty-fastpath`; the historical DeepSeek metrics are not input-equivalent to
-v19 and were not rerun. Per user direction, the next provider
+v19. Index v20 restores `Truthiness` in four Ruff maps, but direct comparison confirms identical
+Top-40 candidate reports and evidence for all four affected cases. Index v21 is identical to v20
+across all 193 maps and introduces no additional input change. The historical runs were not
+rerun. Per user direction, the next provider
 evaluation uses non-interactive Codex CLI `gpt-5.3-codex-spark` instead of another OpenCode run.
 
 The compact reviewed artifact is

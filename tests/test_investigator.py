@@ -375,6 +375,95 @@ def test_typescript_localization_uses_verbatim_unicode_identifier(
 
 
 @pytest.mark.parametrize(
+    ("identifier", "fragment_identifier"),
+    [
+        ("$解析", "解析"),
+        ("解析$value", "解析"),
+    ],
+)
+def test_typescript_localization_preserves_dollar_identifiers(
+    tmp_path: Path,
+    identifier: str,
+    fragment_identifier: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/target.ts", f"const {identifier} = 1;\n")
+    write_source(
+        repository,
+        "src/fragment.ts",
+        f"const {fragment_identifier} = 1;\n",
+    )
+
+    record = issue(
+        "Binding lookup failure",
+        f"The backticked `{identifier}` binding cannot be resolved.",
+    )
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert signals.verbatim_identifiers == frozenset({identifier})
+    target = next(candidate for candidate in candidates if candidate.file == "src/target.ts")
+    fragment = next(
+        candidate for candidate in candidates if candidate.file == "src/fragment.ts"
+    )
+    assert f"Source contains issue identifiers: {identifier}" in target.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in fragment.evidence
+    )
+    assert target.confidence > fragment.confidence
+
+
+@pytest.mark.parametrize("identifier", ["$state", "namespace.$解析"])
+def test_typescript_fenced_code_preserves_embedded_dollar_identifier(
+    tmp_path: Path,
+    identifier: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/target.ts",
+        f"{identifier} = replacement;\n",
+    )
+    fragment_identifier = identifier.rsplit("$", maxsplit=1)[-1]
+    write_source(
+        repository,
+        "src/fragment.ts",
+        f"const {fragment_identifier} = replacement;\n",
+    )
+
+    record = issue(
+        "Binding assignment failure",
+        f"```ts\nconst replacement = build();\n{identifier} = replacement;\n```",
+    )
+    signals = extract_issue_signals(record)
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert signals.verbatim_identifiers == frozenset({identifier})
+    target = next(candidate for candidate in candidates if candidate.file == "src/target.ts")
+    fragment = next(
+        candidate for candidate in candidates if candidate.file == "src/fragment.ts"
+    )
+    assert f"Source contains issue identifiers: {identifier}" in target.evidence
+    assert not any(
+        evidence.startswith("Source contains issue identifiers:")
+        for evidence in fragment.evidence
+    )
+    assert target.confidence > fragment.confidence
+
+
+def test_shell_dollar_variables_do_not_become_ecmascript_identifiers() -> None:
+    signals = extract_issue_signals(
+        issue(
+            "Shell environment failure",
+            "The `$HOME` value is missing.\n```bash\necho $USER\n```",
+        )
+    )
+
+    assert not {"$HOME", "$USER"} & set(signals.verbatim_identifiers)
+
+
+@pytest.mark.parametrize(
     ("extension", "source"),
     [
         ("js", "const $data = 1;\n"),
@@ -1208,6 +1297,10 @@ def test_repository_map_records_conservative_rust_symbols(
         "        fn ignored_macro_function() {}\n"
         "    }};\n"
         "}\n"
+        "macro_rules\n"
+        "! generated_multiline {\n"
+        "    () => { fn ignored_multiline_macro_rules_function() {} };\n"
+        "}\n"
         "generate! {\n"
         "    fn ignored_invocation_function() {}\n"
         "}\n"
@@ -1300,7 +1393,15 @@ def test_repository_map_preserves_rust_lexical_boundaries(tmp_path: Path) -> Non
         "fn\n"
         "multiline_function() {}\n"
         "struct\n"
-        "MultilineType {}\n",
+        "MultilineType {}\n"
+        "if !condition { fn control_flow_target() {} }\n"
+        "if !{ fn unary_block_target() {} true } {}\n"
+        "try! { fn ignored_legacy_try_macro_function() {} }\n"
+        "dyn! { fn ignored_legacy_dyn_macro_function() {} }\n"
+        "await! { fn ignored_legacy_await_macro_function() {} }\n"
+        "crate::discard! { fn ignored_path_macro_function() {} }\n"
+        "union! { fn ignored_reserved_macro_function() {} }\n"
+        "r#if! { fn ignored_raw_keyword_macro_function() {} }\n",
     )
 
     repository_map = build_repository_map(repository)
@@ -1316,6 +1417,8 @@ def test_repository_map_preserves_rust_lexical_boundaries(tmp_path: Path) -> Non
         ("after_macro", 18),
         ("multiline_function", 19),
         ("MultilineType", 21),
+        ("control_flow_target", 23),
+        ("unary_block_target", 24),
     ]
 
 
@@ -1432,6 +1535,72 @@ def test_rust_macro_definitions_are_scanned_once_per_file(
     assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
 
 
+def test_rust_macro_invocation_scan_is_bounded_by_definitions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    source = "".join(
+        f"macro_rules! generated_{index} {{ () => {{}} }}\n"
+        for index in range(4000)
+    ) + "pub fn target() {}\n"
+    write_source(repository, "src/generated.rs", source)
+    original = repository_index_module._next_rust_macro_invocation
+    scanned_characters = 0
+
+    def counting_invocations(
+        value: str,
+        start: int,
+        stop: int,
+    ) -> tuple[int, int] | None:
+        nonlocal scanned_characters
+        scanned_characters += max(0, min(stop, len(value)) - start)
+        return original(value, start, stop)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_next_rust_macro_invocation",
+        counting_invocations,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert scanned_characters <= len(source)
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
+def test_rust_macro_scan_is_linear_with_mixed_definitions_and_invocations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = tmp_path / "repository"
+    pair_count = 2000
+    source = "".join(
+        f"macro_rules! generated_{index} {{ () => {{}} }}\n"
+        f"generated_{index}! {{ fn ignored_{index}() {{}} }}\n"
+        for index in range(pair_count)
+    ) + "pub fn target() {}\n"
+    write_source(repository, "src/generated.rs", source)
+    original = repository_index_module._rust_identifier_at
+    identifier_lookups = 0
+
+    def counting_identifiers(value: str, index: int) -> tuple[str, int] | None:
+        nonlocal identifier_lookups
+        identifier_lookups += 1
+        return original(value, index)
+
+    monkeypatch.setattr(
+        repository_index_module,
+        "_rust_identifier_at",
+        counting_identifiers,
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert identifier_lookups <= 3 * pair_count + 10
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == ["target"]
+
+
 def test_rust_script_shebang_preserves_first_declaration(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     write_source(
@@ -1446,6 +1615,29 @@ def test_rust_script_shebang_preserves_first_declaration(tmp_path: Path) -> None
         (symbol.name, symbol.line)
         for symbol in repository_map.files[0].symbols
     ] == [("main", 2)]
+
+
+@pytest.mark.parametrize(
+    "source, expected_line",
+    [
+        ("\ufefffn main() {}\n", 1),
+        ("\ufeff#!/usr/bin/env rust-script\nfn main() {}\n", 2),
+    ],
+)
+def test_rust_utf8_bom_preserves_first_declaration(
+    tmp_path: Path,
+    source: str,
+    expected_line: int,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "script.rs", source)
+
+    repository_map = build_repository_map(repository)
+
+    assert [
+        (symbol.name, symbol.line)
+        for symbol in repository_map.files[0].symbols
+    ] == [("main", expected_line)]
 
 
 def test_rust_declaration_line_assignment_scales_forward(tmp_path: Path) -> None:

@@ -376,11 +376,24 @@ Three manifest-v20 deterministic v0.31 index-v19 runs completed 200/200 cases. C
 orders and all metrics were identical after excluding timestamps, elapsed fields, and cache
 provenance; candidate-symbol lists were identical for 199/200 cases, with one same-file symbol-only
 variation retained in the report.
+One index-v20 review-validation run then completed 200/200 with zero failures and exactly the same
+candidate files, candidate symbols, and metrics as index-v19 run 1. Four Ruff maps restore the real
+`Truthiness` enum previously hidden by `if !...` macro misclassification; a direct audit found no
+Top-40 candidate or evidence changes, so the anomaly-triggered repeat policy did not require more
+runs.
+One index-v21 run likewise completed 200/200 with zero failures and matched index v20 across all
+193 maps, candidate lists, and metrics. It adds conservative support for keyword-named macros from
+older Rust editions plus a mixed definition/invocation linearity guard; the frozen suite contains
+none of those legacy forms, so no repeat was required.
 The repository map adds conservative Rust declarations without inferred Rust call edges, normalizes
-raw identifiers and `::` paths, masks Rust script shebangs, accepts Rust 2024 safe foreign functions,
-and handles macro paths and declarations that span lines; Unicode Issue identifiers and traceback
-symbols use NFC-normalized boundaries, while JavaScript and TypeScript content matching preserves
-their exact identifier spelling. TypeScript, TSX, C, and C++ remain file-only. File Recall@1/5/10/20 is
+raw identifiers and `::` paths, consumes an optional UTF-8 BOM, masks Rust script shebangs, accepts
+Rust 2024 safe foreign functions, distinguishes control-flow negation from delimiter-backed macro
+calls, and handles macro paths and declarations that span lines; Unicode Issue identifiers and
+traceback symbols use NFC-normalized boundaries, while JavaScript and TypeScript content matching
+preserves exact identifier spelling including `$`; embedded dollar identifiers require an explicit
+JavaScript/TypeScript fence, while untyped shell variables are ignored. TypeScript, TSX, C, and C++
+remain file-only.
+File Recall@1/5/10/20 is
 `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Compared with v0.30, Recall@1, Recall@5,
 Recall@20, and MRR improve while Recall@10 decreases from `0.7505` to `0.7493`; one new target
 enters Top-20 and none leave it. Symbol Recall@1/5/10/20 remains
@@ -402,8 +415,10 @@ labels remain Python-only. Only 125/200 complete candidate orders are identical 
 so seed 1337 remains best effort despite the improved mean file metrics.
 The three runs used 10,070,864 input tokens and 5,846 output tokens. They were generated under
 index v14, and review expansion through index v18 preserved all Top-40 inputs. Index v19 leaves all
-193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3 case, so the DeepSeek
-metrics are retained only as historical provenance and were not rerun. The next provider evaluation
+193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3 case. Index v20 changes
+four Ruff maps but leaves their Top-40 reports and evidence byte-for-byte equivalent, so the DeepSeek
+inputs remain unchanged. Index v21 is map-identical to v20. The DeepSeek metrics are retained only as
+historical provenance and were not rerun. The next provider evaluation
 uses Codex CLI
 `gpt-5.3-codex-spark`. See the compact
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);

@@ -19,6 +19,21 @@ macro token trees and outer attributes are skipped across line breaks, declarati
 multiple declarations per line and Rust 2024 safe foreign functions are accepted, and TypeScript,
 TSX, C, and C++ remain file-only.
 
+One index-v20 review-validation run also completed 200/200 with zero failures. Candidate-file and
+candidate-symbol lists and every per-case metric exactly match index-v19 run 1. Four Ruff maps add
+the real `Truthiness` enum that `if !...` had previously caused the macro scanner to hide; the other
+map fields are unchanged. A direct audit of those four frozen cases found identical Top-40
+candidate reports and evidence inputs. Under the anomaly-triggered repeat policy, no additional
+run was required. Its mean analysis time was 8,794 ms per case with seven cache hits and 193 misses.
+One index-v21 run then completed 200/200 with zero failures and matched index v20 across all 193
+repository maps, candidate files, candidate symbols, and metrics. It adds conservative handling for
+keyword-named macros from older Rust editions and a mixed definition/invocation linearity guard;
+the frozen suite did not exercise those legacy forms, so no additional run was required. Mean
+analysis time was 8,707 ms per case with seven cache hits and 193 misses.
+The final dollar-identifier scope guard changes only the frozen signal set for
+`poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
+matches the index-v21 full-run candidate files, candidate symbols, and metrics.
+
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 6,026 ms |
@@ -87,8 +102,9 @@ above retains fallbacks in the denominator.
 
 These DeepSeek runs were generated under repository-map index v14. Review expansion through index
 v18 preserved every Top-40 report and rerank input. A direct v18/v19 audit found changed Top-40
-evidence only for the Prefect and PyO3 cases above. The DeepSeek metrics are therefore retained only
-as historical provenance and were not rerun;
+evidence only for the Prefect and PyO3 cases above; the v19/v20 audit found no further Top-40 input
+changes despite the four corrected Ruff maps, and all 193 v20/v21 maps are identical. The DeepSeek
+metrics are therefore retained only as historical provenance and were not rerun;
 the next provider evaluation moves to Codex CLI
 `gpt-5.3-codex-spark`.
 

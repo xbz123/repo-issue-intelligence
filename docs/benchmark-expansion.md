@@ -45,6 +45,13 @@ declaration symbols without inferred Rust call edges, normalizes XID-compatible 
 skips attributes and macro token trees across line breaks, recognizes declarations that span lines
 and multiple declarations per line, and accepts Rust 2024 safe foreign functions; TypeScript, TSX,
 C, and C++ remain file-only.
+One index-v20 review-validation run then completed 200/200 with zero failures and matched index-v19
+run 1 candidate files, candidate symbols, and metrics exactly. Four Ruff maps restore the real
+`Truthiness` enum previously hidden by `if !...`; direct Top-40 comparison found identical candidate
+reports and evidence, so no anomaly-triggered repeat was required.
+One index-v21 run also completed 200/200 with zero failures and matched index v20 across all 193
+maps, candidate lists, and metrics. The frozen suite did not exercise its older-edition keyword
+macro support, so no anomaly-triggered repeat was required.
 File Recall@1/5/10/20 is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Across the
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
 `0.3349`; all reviewed symbol labels remain Python-only. Top-20 coverage is 222 of 267 production
@@ -69,7 +76,8 @@ targets every time; mean Recall@1/5/10/20 becomes `0.5747/0.8008/0.8433/0.8965`,
 after OpenCode HTTP 500 responses; no structural or unknown-ID failures occur. Those model runs
 were generated under index v14, and review expansion through index v18 preserved every Top-40 input.
 Index v19 leaves all 193 maps unchanged but changes Top-40 evidence for one Prefect and one PyO3
-case. DeepSeek was not rerun because the next provider
+case. Index v20 changes four Ruff maps but not their Top-40 reports or evidence. DeepSeek was not
+rerun; index v21 is map-identical to v20. The next provider
 evaluation moves to Codex CLI `gpt-5.3-codex-spark`. The compact taxonomy is
 `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
 
