@@ -113,8 +113,9 @@ Provider load is uncontrolled, so latency changes are observational and are not 
 index modification.
 
 The three DeepSeek raw runs were generated under repository-map index v14. Subsequent review fixes
-expanded conservative Rust parsing through index v16. All 193 unique maps were compared; one PyO3
-map and four Ruff maps changed, but every complete Top-40 report and rerank input remained identical.
+expanded conservative Rust parsing through index v17. All 193 unique maps were compared; one PyO3
+map and four Ruff maps changed by v16, while v16 to v17 changed none. Every complete Top-40 report
+and rerank input remained identical.
 DeepSeek was not called again. Per user direction, the next provider
 evaluation uses non-interactive Codex CLI `gpt-5.3-codex-spark` instead of another OpenCode run.
 

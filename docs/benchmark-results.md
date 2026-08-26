@@ -11,19 +11,20 @@ Git-tracked files at the frozen pre-fix commit.
 Three complete v0.31 deterministic runs finished 200/200 cases. After excluding timestamps,
 elapsed fields, and cache provenance, their candidates, symbols, per-case metrics, tier metrics,
 and aggregates were identical to one another. Conservative Rust declarations now participate in
-localization without inferred Rust call edges; raw identifiers are normalized, Rust 2024 safe
-foreign functions are accepted, and TypeScript, TSX, C, and C++ remain file-only.
+localization without inferred Rust call edges; XID-compatible identifiers are normalized to NFC,
+macro token trees and outer attributes are skipped, multiple declarations per line and Rust 2024
+safe foreign functions are accepted, and TypeScript, TSX, C, and C++ remain file-only.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 5,582 ms |
-| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 6,625 ms |
-| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,439 ms |
-| Generalization | 172/172 | 0.3471 | 0.6590 | 0.7462 | 0.8477 | 0.5389 | 5,744 ms |
+| Overall | 200/200 | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.5443 | 5,454 ms |
+| Main | 17/17 | 0.4706 | 0.6176 | 0.7941 | 1.0000 | 0.6160 | 6,576 ms |
+| Calibration | 11/11 | 0.3182 | 0.6818 | 0.7273 | 1.0000 | 0.5183 | 1,436 ms |
+| Generalization | 172/172 | 0.3471 | 0.6590 | 0.7462 | 0.8477 | 0.5389 | 5,600 ms |
 
 Run 1 recorded seven repository-map cache hits and 193 misses after the final index-version change;
-runs 2 and 3 recorded 200 hits. Overall mean analysis time was 5,582 ms per case with population
-standard deviation 1,989 ms. Timing is observational and not part of the reproducibility gate. Measurements
+runs 2 and 3 recorded 200 hits. Overall mean analysis time was 5,454 ms per case with population
+standard deviation 1,883 ms. Timing is observational and not part of the reproducibility gate. Measurements
 start after repository preparation and do not include clone, fetch, checkout, or Issue retrieval
 time.
 
@@ -76,8 +77,9 @@ responses, Recall@1/5/10/20 is `0.5745/0.7999/0.8428/0.8956`, with MRR `0.7611`;
 above retains fallbacks in the denominator.
 
 These DeepSeek runs were generated under repository-map index v14. The review-only parser expansion
-through index v16 compared all 193 unique maps: one PyO3 map and four Ruff maps changed, but every
-complete Top-40 report and rerank input remained identical. DeepSeek was therefore not called again;
+through index v17 compared all 193 unique maps: one PyO3 map and four Ruff maps changed by v16,
+while v16 to v17 changed none. Every complete Top-40 report and rerank input remained identical.
+DeepSeek was therefore not called again;
 the next provider evaluation moves to Codex CLI
 `gpt-5.3-codex-spark`.
 

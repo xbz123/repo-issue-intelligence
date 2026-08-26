@@ -5,6 +5,7 @@ import json
 import os
 import re
 import symtable
+import unicodedata
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -64,27 +65,27 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 16
+REPOSITORY_MAP_INDEX_VERSION = 17
 
-RUST_IDENTIFIER_BODY = r"[^\W\d]\w*"
+RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
 RUST_FUNCTION_DECLARATION = re.compile(
-    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|safe|default)\s+)*"
+    rf"{RUST_DECLARATION_BOUNDARY}\s*"
+    r"(?:(?:pub(?:\s*\([^)]*\))?|async|const|unsafe|safe|default)\s+)*"
     r'(?:extern(?:\s+(?:"[^"]+"|value))?\s+)?'
-    rf"fn\s+(?:r#)?(?P<name>{RUST_IDENTIFIER_BODY})\b"
+    r"fn\s+"
 )
 RUST_TYPE_DECLARATION = re.compile(
-    r"^\s*(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto|default)\s+)*"
+    rf"{RUST_DECLARATION_BOUNDARY}\s*"
+    r"(?:(?:pub(?:\s*\([^)]*\))?|unsafe|auto|default)\s+)*"
     r"(?P<kind>struct|enum|trait|type|union)\s+"
-    rf"(?:r#)?(?P<name>{RUST_IDENTIFIER_BODY})\b"
+)
+RUST_MACRO_DEFINITION = re.compile(
+    rf"{RUST_DECLARATION_BOUNDARY}\s*"
+    r"(?:pub(?:\s*\([^)]*\))?\s+)?macro\s+"
 )
 RUST_CHAR_LITERAL = re.compile(
     r"'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f_]+\}|.)|[^\\'\r\n])'"
-)
-RUST_MACRO_INVOCATION = re.compile(
-    r"(?<![\w$])(?:::\s*)?"
-    rf"(?:(?:(?:r#)?{RUST_IDENTIFIER_BODY})\s*::\s*)*"
-    rf"(?:r#)?{RUST_IDENTIFIER_BODY}\s*!(?!=)"
 )
 RUST_DELIMITER_PAIRS = {"(": ")", "[": "]", "{": "}"}
 
@@ -108,7 +109,7 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
     quoted_string = False
     rust_raw_terminator: str | None = None
     rust_attribute_depth = 0
-    macro_pending = False
+    macro_token_trees_pending = 0
     macro_delimiters: list[str] = []
     for line_number, raw_line in enumerate(lines, start=1):
         code: list[str] = []
@@ -143,6 +144,8 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
             if raw_line.startswith("//", index):
                 break
             if raw_line.startswith("/*", index):
+                if not code or not code[-1].isspace():
+                    code.append(" ")
                 block_comment_depth = 1
                 index += 2
                 continue
@@ -170,9 +173,9 @@ def _rust_declaration_source_lines(path: Path) -> Iterable[tuple[int, str]]:
             line,
             rust_attribute_depth,
         )
-        line, macro_pending, macro_delimiters = _without_rust_macro_tokens(
+        line, macro_token_trees_pending, macro_delimiters = _without_rust_macro_tokens(
             line,
-            macro_pending,
+            macro_token_trees_pending,
             macro_delimiters,
         )
         if line.strip():
@@ -192,6 +195,7 @@ def _without_rust_attribute_tokens(
     line: str,
     attribute_depth: int,
 ) -> tuple[str, int]:
+    visible: list[str] = []
     index = 0
     while index < len(line):
         if attribute_depth:
@@ -201,11 +205,10 @@ def _without_rust_attribute_tokens(
                 attribute_depth -= 1
             index += 1
             continue
-        if line[index].isspace():
+        if line[index] != "#":
+            visible.append(line[index])
             index += 1
             continue
-        if line[index] != "#":
-            return line[index:], attribute_depth
         cursor = index + 1
         while cursor < len(line) and line[cursor].isspace():
             cursor += 1
@@ -214,41 +217,130 @@ def _without_rust_attribute_tokens(
         while cursor < len(line) and line[cursor].isspace():
             cursor += 1
         if cursor >= len(line) or line[cursor] != "[":
-            return line[index:], attribute_depth
+            visible.append(line[index])
+            index += 1
+            continue
+        if visible and not visible[-1].isspace():
+            visible.append(" ")
         attribute_depth = 1
         index = cursor + 1
-    return "", attribute_depth
+    return "".join(visible), attribute_depth
 
 
 def _without_rust_macro_tokens(
     line: str,
-    macro_pending: bool,
+    token_trees_pending: int,
     macro_delimiters: list[str],
-) -> tuple[str, bool, list[str]]:
+) -> tuple[str, int, list[str]]:
     visible: list[str] = []
     index = 0
     while index < len(line):
-        if macro_pending:
-            if line[index] in RUST_DELIMITER_PAIRS:
-                macro_pending = False
-                macro_delimiters.append(line[index])
-            index += 1
-            continue
         if macro_delimiters:
             if line[index] in RUST_DELIMITER_PAIRS:
                 macro_delimiters.append(line[index])
             elif line[index] == RUST_DELIMITER_PAIRS[macro_delimiters[-1]]:
                 macro_delimiters.pop()
+                if not macro_delimiters:
+                    token_trees_pending -= 1
             index += 1
             continue
-        macro_match = RUST_MACRO_INVOCATION.search(line, index)
+        if token_trees_pending:
+            if line[index] in RUST_DELIMITER_PAIRS:
+                macro_delimiters.append(line[index])
+            index += 1
+            continue
+        macro_match = _next_rust_macro(line, index)
         if macro_match is None:
             visible.append(line[index:])
             break
-        visible.append(line[index : macro_match.start()])
-        macro_pending = True
-        index = macro_match.end()
-    return "".join(visible), macro_pending, macro_delimiters
+        start, end, token_trees_pending = macro_match
+        visible.append(line[index:start])
+        if visible and visible[-1] and not visible[-1][-1].isspace():
+            visible.append(" ")
+        index = end
+    return "".join(visible), token_trees_pending, macro_delimiters
+
+
+def _next_rust_macro(
+    value: str,
+    start: int,
+) -> tuple[int, int, int] | None:
+    candidates: list[tuple[int, int, int]] = []
+    for match in RUST_MACRO_DEFINITION.finditer(value, start):
+        identifier = _rust_identifier_at(value, match.end())
+        if identifier is None:
+            continue
+        _, end = identifier
+        cursor = end
+        while cursor < len(value) and value[cursor].isspace():
+            cursor += 1
+        token_trees = 1 if cursor < len(value) and value[cursor] == "{" else 2
+        candidates.append((match.start(), end, token_trees))
+        break
+    invocation = _next_rust_macro_invocation(value, start)
+    if invocation is not None:
+        candidates.append((*invocation, 1))
+    return min(candidates, default=None, key=lambda candidate: candidate[0])
+
+
+def _next_rust_macro_invocation(value: str, start: int) -> tuple[int, int] | None:
+    for candidate_start in range(start, len(value)):
+        if candidate_start and (
+            _rust_identifier_continue(value[candidate_start - 1])
+            or value[candidate_start - 1] == "$"
+        ):
+            continue
+        cursor = candidate_start
+        if value.startswith("::", cursor):
+            cursor += 2
+            while cursor < len(value) and value[cursor].isspace():
+                cursor += 1
+        identifier = _rust_identifier_at(value, cursor)
+        if identifier is None:
+            continue
+        _, cursor = identifier
+        while True:
+            separator = cursor
+            while separator < len(value) and value[separator].isspace():
+                separator += 1
+            if not value.startswith("::", separator):
+                cursor = separator
+                break
+            cursor = separator + 2
+            while cursor < len(value) and value[cursor].isspace():
+                cursor += 1
+            identifier = _rust_identifier_at(value, cursor)
+            if identifier is None:
+                break
+            _, cursor = identifier
+        if cursor < len(value) and value[cursor] == "!" and not value.startswith(
+            "!=",
+            cursor,
+        ):
+            return candidate_start, cursor + 1
+    return None
+
+
+def _rust_identifier_at(value: str, index: int) -> tuple[str, int] | None:
+    cursor = index + 2 if value.startswith("r#", index) else index
+    if cursor >= len(value) or not _rust_identifier_start(value[cursor]):
+        return None
+    start = cursor
+    cursor += 1
+    while cursor < len(value) and _rust_identifier_continue(value[cursor]):
+        cursor += 1
+    identifier = unicodedata.normalize("NFC", value[start:cursor])
+    if identifier == "_" or not identifier.isidentifier():
+        return None
+    return identifier, cursor
+
+
+def _rust_identifier_start(value: str) -> bool:
+    return value == "_" or value.isidentifier()
+
+
+def _rust_identifier_continue(value: str) -> bool:
+    return ("a" + value).isidentifier()
 
 
 def _rust_raw_string_terminator(
@@ -280,23 +372,33 @@ def _rust_raw_string_terminator(
 def _rust_declaration_symbols(path: Path) -> list[SymbolRecord]:
     symbols: list[SymbolRecord] = []
     for line_number, line in _rust_declaration_source_lines(path):
+        declarations: list[tuple[int, str, str]] = []
         for pattern in (RUST_FUNCTION_DECLARATION, RUST_TYPE_DECLARATION):
-            match = pattern.match(line)
-            if match is None:
-                continue
-            declaration_kind = match.groupdict().get("kind")
+            for match in pattern.finditer(line):
+                identifier = _rust_identifier_at(line, match.end())
+                if identifier is None:
+                    continue
+                name, _ = identifier
+                declaration_kind = match.groupdict().get("kind")
+                declarations.append(
+                    (
+                        match.start(),
+                        name,
+                        (
+                            "function"
+                            if pattern is RUST_FUNCTION_DECLARATION
+                            else declaration_kind or "class"
+                        ),
+                    )
+                )
+        for _, name, kind in sorted(declarations):
             symbols.append(
                 SymbolRecord(
-                    name=match.group("name"),
-                    kind=(
-                        "function"
-                        if pattern is RUST_FUNCTION_DECLARATION
-                        else declaration_kind or "class"
-                    ),
+                    name=name,
+                    kind=kind,
                     line=line_number,
                 )
             )
-            break
     return symbols
 
 

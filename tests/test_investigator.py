@@ -1177,6 +1177,34 @@ def test_repository_map_records_conservative_rust_symbols(
     assert tsx.symbols == []
 
 
+def test_repository_map_preserves_rust_lexical_boundaries(tmp_path: Path) -> None:
+    repository = tmp_path / "repo"
+    write_source(
+        repository,
+        "src/lib.rs",
+        "pub/**/fn block_comment_target() {}\n"
+        "fn first() {} fn target() {}\n"
+        "fn e\u0301() {}\n"
+        "e\u0301! {\n"
+        "    fn ignored_decomposed_macro_function() {}\n"
+        "}\n"
+        "pub macro discard($value:tt) {\n"
+        "    fn ignored_declarative_macro_function() {}\n"
+        "}\n"
+        "fn after_macro() {}\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [symbol.name for symbol in repository_map.files[0].symbols] == [
+        "block_comment_target",
+        "first",
+        "target",
+        "é",
+        "after_macro",
+    ]
+
+
 def test_rust_symbol_scanner_respects_literal_boundaries(
     tmp_path: Path,
 ) -> None:
