@@ -83,6 +83,25 @@ not derived correctly. Manifest version 5 is retained as
 Machine-readable results are saved under `benchmarks/results/`; the reviewed result is
 `docs/benchmark-results.md`. All evaluated issues, including failures, must remain in the output.
 
+## Manifest-v20 Codex CLI Luna result
+
+One authorized v0.32 run evaluated all 200 public cases through isolated Codex CLI
+`gpt-5.6-luna` with medium reasoning. All 200 ranks were valid on the first attempt, with zero
+fallback and 200 unique request IDs. File Recall@1/5/10/20 was
+`0.6147/0.8192/0.8501/0.9007`, pool recall was `0.9132`, and MRR was `0.7860`. Symbol
+Recall@1/5/10/20 was `0.4435/0.4528/0.4598/0.4668`, with MRR `0.5049` across 143 labeled cases.
+
+Mean model latency was 6.64 seconds. The run used 4,948,048 input and 30,945 output tokens; Codex
+CLI includes agent context and reasoning in this accounting, so those totals are not directly
+comparable with OpenCode chat completions. There were 192 repository-map cache misses and eight
+hits. The run recovered seven production targets from outside deterministic Top-20 without losing
+a deterministic Top-20 target.
+
+No repeat was launched because the first complete run had no error. This follows the one-run-first
+policy but leaves output stability unmeasured. The compact artifact is
+`benchmarks/results/gpt-5.6-luna-pool40-manifest-v20-run1-summary.json`; the raw per-case result is
+not committed.
+
 ## Manifest-v20 pool-40 external result
 
 Three authorized v0.31 zero-delay runs evaluated all 200 frozen public cases with OpenCode
@@ -126,7 +145,7 @@ v19. Index v20 restores `Truthiness` in four Ruff maps, but direct comparison co
 Top-40 candidate reports and evidence for all four affected cases. Index v21 is identical to v20
 across all 193 maps and introduces no additional input change. The historical runs were not
 rerun. The hybrid runtime now uses non-interactive Codex CLI `gpt-5.6-luna` instead of another
-OpenCode run; a complete live run is still required before publishing Luna metrics.
+OpenCode run; its first complete run is reported above.
 
 The compact reviewed artifact is
 `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`. The three full raw JSON

@@ -421,8 +421,11 @@ index v14, and review expansion through index v18 preserved all Top-40 inputs. I
 four Ruff maps but leaves their Top-40 reports and evidence byte-for-byte equivalent, so the DeepSeek
 inputs remain unchanged. Index v21 is map-identical to v20. The DeepSeek metrics are retained only as
 historical provenance and were not rerun. The hybrid runtime now uses Codex CLI
-`gpt-5.6-luna`; a complete live run is still required before publishing Luna metrics. See
-the compact
+`gpt-5.6-luna`. Its first complete 200-case run returned 200/200 valid first-attempt ranks with no
+fallback. File Recall@1/5/10/20 was `0.6147/0.8192/0.8501/0.9007`, with MRR `0.7860`; Symbol
+Recall@20 was `0.4668`, with MRR `0.5049`. This is one run, so repeat stability remains unmeasured.
+See the compact Luna
+[`run summary`](benchmarks/results/gpt-5.6-luna-pool40-manifest-v20-run1-summary.json) and DeepSeek
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git. The compact pre-change miss audit is
 [`pool40-miss-taxonomy-manifest-v20.json`](benchmarks/results/pool40-miss-taxonomy-manifest-v20.json).
