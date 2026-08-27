@@ -393,6 +393,10 @@ changed-map case: 38 candidate-file orders changed, while only `ruff-os-exit-pri
 changed any metric, improving its first expected-file rank from 2 to 1. No per-case metric regressed
 and no Top-20 ground-truth target was lost, so the anomaly-triggered policy did not require another
 run.
+One index-v23 review-validation run completed 200/200 with zero failures after recognizing
+separator-based test directories such as `test-data/` and serializing the Python 3.11/3.12
+process-global warning-filter context. Its candidate-file orders, candidate-symbol lists, and every
+per-case and aggregate metric exactly matched index v22, so no additional run was required.
 The repository map adds conservative Rust declarations without inferred Rust call edges, normalizes
 raw identifiers and `::` paths, consumes an optional UTF-8 BOM, masks Rust script shebangs, accepts
 Rust 2024 safe foreign functions, distinguishes control-flow negation from delimiter-backed macro

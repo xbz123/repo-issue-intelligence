@@ -167,6 +167,9 @@ def test_classify_changed_files_keeps_test_prefixed_production_directories() -> 
             {"filename": "src/testclient/client.py", "status": "modified"},
             {"filename": "testsuite/client.py", "status": "modified"},
             {"filename": "testdata/client.py", "status": "modified"},
+            {"filename": "test-data/helper.py", "status": "modified"},
+            {"filename": "test_files/parser.py", "status": "modified"},
+            {"filename": "test-resources/config.java", "status": "modified"},
         ]
     )
 

@@ -38,9 +38,18 @@ checked all 127 changed-map cases. Thirty-eight complete candidate-file orders c
 were unchanged, with zero per-case metric regressions or Top-20 ground-truth losses. Mean analysis
 time was 10,381 ms per case with seven cache hits and 193 misses, so no anomaly-triggered repeat was
 required.
+One index-v23 review-validation run completed 200/200 with zero failures after adding
+separator-based test-directory conventions and serializing the process-global warning-filter
+context used by Python 3.11/3.12 parsing. All 200 candidate-file orders, all 200 candidate-symbol
+lists, and every per-case and aggregate metric exactly matched index v22. Mean analysis time was
+8,850 ms per case with seven cache hits and 193 misses, so no anomaly-triggered repeat was required.
 The final dollar-identifier scope guard changes only the frozen signal set for
 `poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
 matches the index-v21 full-run candidate files, candidate symbols, and metrics.
+
+The table below preserves the audited three-run index-v19 baseline. The one-run index-v20 through
+index-v23 validation results are reported above and are not averaged into these historical tier
+values.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|

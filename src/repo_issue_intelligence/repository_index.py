@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Lock
 
 from .models import (
     FileRecord,
@@ -31,6 +32,7 @@ SKIP_DIRS = {
     ".pytest_cache",
 }
 TEST_DIRECTORY_NAMES = {"__tests__", "t", "test", "testing", "tests"}
+TEST_DIRECTORY_PREFIXES = ("test-", "test_")
 TEST_FILENAME_MARKERS = (".spec.", ".stories.", ".story.", ".test.")
 LANGUAGE_BY_SUFFIX = {
     ".py": "Python",
@@ -68,7 +70,11 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 22
+REPOSITORY_MAP_INDEX_VERSION = 23
+
+# warnings.catch_warnings() mutates process-global state on Python 3.11/3.12.
+# Serialize the narrow filter-changing parse section used by concurrent API calls.
+_PYTHON_WARNING_FILTER_LOCK = Lock()
 
 RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
@@ -170,6 +176,13 @@ def repository_file_language(path: str | Path) -> str | None:
     return LANGUAGE_BY_SUFFIX.get(candidate.suffix.lower())
 
 
+def _is_test_directory_name(value: str) -> bool:
+    normalized = value.casefold()
+    return normalized in TEST_DIRECTORY_NAMES or normalized.startswith(
+        TEST_DIRECTORY_PREFIXES
+    )
+
+
 def is_test_source_path(path: str | Path) -> bool:
     candidate = Path(path)
     parts = tuple(part.casefold() for part in candidate.parts)
@@ -177,7 +190,7 @@ def is_test_source_path(path: str | Path) -> bool:
     filename = parts[-1] if parts else ""
     stem = Path(filename).stem
     return (
-        any(part in TEST_DIRECTORY_NAMES for part in parts[:-1])
+        any(_is_test_directory_name(part) for part in parts[:-1])
         or filename == "conftest.py"
         or filename.startswith("test_")
         or stem in {"test", "tests"}
@@ -1067,10 +1080,11 @@ def _python_metadata(
 ) -> _PythonMetadata:
     try:
         source = path.read_text(encoding="utf-8")
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", SyntaxWarning)
-            tree = ast.parse(source)
-            root_table = symtable.symtable(source, str(path), "exec")
+        with _PYTHON_WARNING_FILTER_LOCK:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                tree = ast.parse(source)
+                root_table = symtable.symtable(source, str(path), "exec")
     except (SyntaxError, UnicodeDecodeError, OSError):
         return _PythonMetadata()
     metadata = _PythonMetadata()
@@ -1624,7 +1638,7 @@ def build_repository_map(
     for path, relative in _repository_files(root, included_files):
         filename = relative.name
         for index, part in enumerate(relative.parts[:-1]):
-            if part.casefold() in TEST_DIRECTORY_NAMES:
+            if _is_test_directory_name(part):
                 test_directories.add(str(Path(*relative.parts[: index + 1])))
         if filename in RUNTIME_FILES:
             runtime_files.append(str(relative))

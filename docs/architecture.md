@@ -50,10 +50,11 @@ Macro-definition candidates are discovered once per Rust file and bound invocati
 next known definition, so neither repeated invocations nor definitions rescan the remaining source.
 Repository traversal skips file symlinks whose resolved target leaves the indexed root. Test-source
 classification uses exact test directory and filename conventions, so production modules such as
-`testclient.py` and `contest.py` remain production files while `tests/`, `testing/`, `test_*.py`,
-and `*_test.py` remain auxiliary.
+`testclient.py` and `contest.py` remain production files while `tests/`, `testing/`, separator-based
+directories such as `test-data/` and `test_files/`, `test_*.py`, and `*_test.py` remain auxiliary.
 Python parsing suppresses source-local `SyntaxWarning` noise from intentionally invalid third-party
-fixtures while continuing to skip genuine parse failures conservatively.
+fixtures while continuing to skip genuine parse failures conservatively. A shared lock serializes
+the warning-filter context because Python 3.11/3.12 warning filters are process-global.
 TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
