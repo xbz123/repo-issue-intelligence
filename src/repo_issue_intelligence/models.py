@@ -5,7 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
 class Severity(StrEnum):
@@ -55,13 +55,13 @@ class StrictOutputModel(BaseModel):
 
 
 class IssueRecord(BaseModel):
-    number: int
-    title: str
+    number: int = Field(ge=1)
+    title: str = Field(min_length=1)
     body: str = ""
     labels: list[str] = Field(default_factory=list)
-    comments_count: int = 0
-    created_at: datetime
-    updated_at: datetime
+    comments_count: int = Field(default=0, ge=0)
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
     html_url: str | None = None
     author: str | None = None
 

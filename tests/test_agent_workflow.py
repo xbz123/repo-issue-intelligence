@@ -176,6 +176,25 @@ def test_agent_run_persists_state_traces_snapshots_and_review(tmp_path: Path) ->
     assert reviewed.review_notes == "Evidence looks reasonable"
 
 
+def test_agent_run_rejects_duplicate_issue_numbers(
+    tmp_path: Path,
+) -> None:
+    repository = create_repository(tmp_path)
+    store = AgentStore(tmp_path / "agent.sqlite3")
+
+    with pytest.raises(ValueError, match="Issue numbers must be unique"):
+        run_agent(
+            [
+                issue(1, "First report", "First failure report"),
+                issue(1, "Conflicting report", "Different failure report"),
+            ],
+            repository,
+            top_k=1,
+            store=store,
+        )
+
+
+
 def test_agent_node_retries_once_before_succeeding(tmp_path: Path, monkeypatch) -> None:
     repository = create_repository(tmp_path)
     store = AgentStore(tmp_path / "agent.sqlite3")

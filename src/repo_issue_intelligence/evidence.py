@@ -98,12 +98,13 @@ def collect_evidence(
             content = content[:snippet_limit].rstrip()
         if not content:
             continue
+        included_end = start + content.count("\n")
         snippets.append(
             EvidenceSnippet(
                 id=f"E{len(snippets) + 1}",
                 file=candidate.file,
                 symbol=candidate.qualified_symbol or candidate.symbol,
-                lines=f"{start}-{end}",
+                lines=f"{start}-{included_end}",
                 content=content,
             )
         )

@@ -30,9 +30,26 @@ repository maps, candidate files, candidate symbols, and metrics. It adds conser
 keyword-named macros from older Rust editions and a mixed definition/invocation linearity guard;
 the frozen suite did not exercise those legacy forms, so no additional run was required. Mean
 analysis time was 8,707 ms per case with seven cache hits and 193 misses.
+One index-v22 review-validation run completed 200/200 with zero failures after replacing substring
+test-file detection with exact test path and filename conventions. A full replay using the old maps
+checked all 127 changed-map cases. Thirty-eight complete candidate-file orders changed, but only
+`ruff-os-exit-private-member` changed any metric: its first expected file moved from rank 2 to rank
+1. Aggregate Recall@1 rose to `0.3577` and MRR to `0.5468`; Recall@5/10/20 and all symbol metrics
+were unchanged, with zero per-case metric regressions or Top-20 ground-truth losses. Mean analysis
+time was 10,381 ms per case with seven cache hits and 193 misses, so no anomaly-triggered repeat was
+required.
+One index-v23 review-validation run completed 200/200 with zero failures after adding
+separator-based test-directory conventions and serializing the process-global warning-filter
+context used by Python 3.11/3.12 parsing. All 200 candidate-file orders, all 200 candidate-symbol
+lists, and every per-case and aggregate metric exactly matched index v22. Mean analysis time was
+8,850 ms per case with seven cache hits and 193 misses, so no anomaly-triggered repeat was required.
 The final dollar-identifier scope guard changes only the frozen signal set for
 `poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
 matches the index-v21 full-run candidate files, candidate symbols, and metrics.
+
+The table below preserves the audited three-run index-v19 baseline. The one-run index-v20 through
+index-v23 validation results are reported above and are not averaged into these historical tier
+values.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -88,7 +105,7 @@ failure, malformed structure, or unknown ID.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Luna run 1 | 200/200 | 0.6147 | 0.8192 | 0.8501 | 0.9007 | 0.9132 | 0.7860 | 6.64 s |
 | DeepSeek three-run mean | 595/600 | 0.5747 | 0.8008 | 0.8433 | 0.8965 | 0.9132 | 0.7606 | 6.69 s |
-| Deterministic | - | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.9132 | 0.5443 | - |
+| Deterministic (index v21) | - | 0.3560 | 0.6567 | 0.7493 | 0.8690 | 0.9132 | 0.5443 | - |
 
 Against deterministic retrieval, Luna improves Recall@1/5/10/20 by
 `0.2587/0.1625/0.1008/0.0317` and MRR by `0.2417`. Against the historical DeepSeek three-run

@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     github_token: str | None = None
     agent_db_path: Path = Path("data/agent-runs.sqlite3")
     opencode_api_key: SecretStr | None = None
-    opencode_max_output_tokens: int = 20_000
-    opencode_timeout_seconds: float = 180.0
+    opencode_max_output_tokens: int = Field(default=20_000, ge=1)
+    opencode_timeout_seconds: float = Field(default=180.0, gt=0)
     opencode_temperature: float = Field(default=0.1, ge=0, le=2)
     opencode_max_evidence_chars: int = Field(
         default=DEFAULT_MAX_TOTAL_CHARS,

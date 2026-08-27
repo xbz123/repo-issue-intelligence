@@ -289,6 +289,9 @@ def run_agent(
 ) -> AgentRun:
     if not issues:
         raise ValueError("At least one issue is required")
+    issue_numbers = [issue.number for issue in issues]
+    if len(issue_numbers) != len(set(issue_numbers)):
+        raise ValueError("Issue numbers must be unique")
     if top_k < 1:
         raise ValueError("top_k must be at least 1")
     repository_root = repository_root.expanduser().resolve()

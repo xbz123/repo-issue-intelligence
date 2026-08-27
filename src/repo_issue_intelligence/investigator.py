@@ -850,17 +850,6 @@ def _raw_semantic_term_sequence(value: str) -> tuple[str, ...]:
     )
 
 
-def _is_test_source_path(path: str) -> bool:
-    parts = tuple(part.casefold() for part in Path(path).parts)
-    filename = parts[-1] if parts else ""
-    return (
-        any(part in {"t", "test", "testing", "tests"} for part in parts[:-1])
-        or filename == "conftest.py"
-        or filename.startswith("test_")
-        or filename.endswith("_test.py")
-    )
-
-
 def _matches_qualified_identity(identity: str, identifier: str) -> bool:
     candidate = identifier.strip("`'\"()[]{}:,")
     return candidate == identity or candidate.endswith(f".{identity}")
@@ -2875,7 +2864,7 @@ def locate_candidates(
                 signals,
                 unique_symbol_names,
                 file.path in symbol_scoped_paths,
-                test_file=_is_test_source_path(file.path),
+                test_file=file.test_file,
                 constructor_call_index=constructor_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),
@@ -3286,7 +3275,7 @@ def locate_candidates(
                 signals,
                 candidate_unique_symbol_names,
                 path in symbol_scoped_paths,
-                test_file=_is_test_source_path(file.path),
+                test_file=file.test_file,
                 constructor_call_index=constructor_symbol_positions.get(
                     symbol.qualified_name or symbol.name
                 ),

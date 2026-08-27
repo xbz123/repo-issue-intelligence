@@ -117,7 +117,8 @@ responses. Invalid structure and unknown evidence IDs remained zero.
 | 3 | 0.5822 | 0.8013 | 0.8455 | 0.8982 | 0.7667 | 0.9132 | 6.84 s | 3,387,556 / 1,968 |
 | Mean | 0.5747 | 0.8008 | 0.8433 | 0.8965 | 0.7606 | 0.9132 | 6.69 s | - |
 
-The deterministic baseline is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`.
+The index-v21 deterministic baseline used for these provider runs is
+`0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`.
 The model-only pool contains 236 of 267 production targets; the final Top-20 contains 229, 228,
 and 229, compared with 222 in deterministic Top-20. Conservative Rust declarations
 move uv `project/mod.rs` into deterministic Top-20 and `uv-pep508/src/lib.rs` into Top-40; DeepSeek

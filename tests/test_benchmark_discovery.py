@@ -161,6 +161,23 @@ def test_classify_changed_files_excludes_non_ground_truth_paths() -> None:
     assert files[8].exclusion_reason == "test file"
 
 
+def test_classify_changed_files_keeps_test_prefixed_production_directories() -> None:
+    files = classify_changed_files(
+        [
+            {"filename": "src/testclient/client.py", "status": "modified"},
+            {"filename": "testsuite/client.py", "status": "modified"},
+            {"filename": "testdata/client.py", "status": "modified"},
+            {"filename": "test-data/helper.py", "status": "modified"},
+            {"filename": "test_files/parser.py", "status": "modified"},
+            {"filename": "test-resources/config.java", "status": "modified"},
+        ]
+    )
+
+    assert files[0].eligible_source is True
+    assert files[0].exclusion_reason is None
+    assert all(not item.eligible_source for item in files[1:])
+
+
 def test_final_selection_replays_shipped_tox_schema_ground_truth() -> None:
     base = load_manifest(Path("benchmarks/cases-v0.24-expanded-160-cases.json"))
     candidates = load_candidate_sources(
