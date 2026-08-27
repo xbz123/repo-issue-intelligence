@@ -10,6 +10,7 @@ from repo_issue_intelligence.llm_client import (
     OPENCODE_API_BASE_URL,
     LLMProviderError,
     OpenCodeIssueAnalyzer,
+    _nonnegative_int,
 )
 from repo_issue_intelligence.models import (
     CandidateLocation,
@@ -32,6 +33,39 @@ def issue() -> IssueRecord:
         created_at=timestamp,
         updated_at=timestamp,
     )
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, 0),
+        (True, 0),
+        ({}, 0),
+        (float("inf"), 0),
+        (-1, 0),
+        ("12", 12),
+    ],
+)
+def test_nonnegative_int_rejects_invalid_telemetry(
+    value: object,
+    expected: int,
+) -> None:
+    assert _nonnegative_int(value) == expected
+
+
+@pytest.mark.parametrize(
+    "options, message",
+    [
+        ({"max_output_tokens": 0}, "max_output_tokens must be positive"),
+        ({"timeout_seconds": 0}, "timeout_seconds must be positive"),
+    ],
+)
+def test_analyzer_rejects_non_positive_request_limits(
+    options: dict,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        OpenCodeIssueAnalyzer("test-key", **options)
 
 
 def report(record: IssueRecord) -> InvestigationReport:

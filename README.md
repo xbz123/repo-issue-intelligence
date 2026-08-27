@@ -387,6 +387,12 @@ One index-v21 run likewise completed 200/200 with zero failures and matched inde
 193 maps, candidate lists, and metrics. It adds conservative support for keyword-named macros from
 older Rust editions plus a mixed definition/invocation linearity guard; the frozen suite contains
 none of those legacy forms, so no repeat was required.
+One index-v22 review-validation run completed 200/200 with zero failures after replacing substring
+test-file detection with exact path and filename conventions. A full old-map replay checked every
+changed-map case: 38 candidate-file orders changed, while only `ruff-os-exit-private-member`
+changed any metric, improving its first expected-file rank from 2 to 1. No per-case metric regressed
+and no Top-20 ground-truth target was lost, so the anomaly-triggered policy did not require another
+run.
 The repository map adds conservative Rust declarations without inferred Rust call edges, normalizes
 raw identifiers and `::` paths, consumes an optional UTF-8 BOM, masks Rust script shebangs, accepts
 Rust 2024 safe foreign functions, distinguishes control-flow negation from delimiter-backed macro
@@ -396,7 +402,7 @@ preserves exact identifier spelling including `$`; embedded dollar identifiers r
 JavaScript/TypeScript fence, while untyped shell variables are ignored. TypeScript, TSX, C, and C++
 remain file-only.
 File Recall@1/5/10/20 is
-`0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Compared with v0.30, Recall@1, Recall@5,
+`0.3577/0.6567/0.7493/0.8690`, with MRR `0.5468`. Compared with v0.30, Recall@1, Recall@5,
 Recall@20, and MRR improve while Recall@10 decreases from `0.7505` to `0.7493`; one new target
 enters Top-20 and none leave it. Symbol Recall@1/5/10/20 remains
 `0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`, because all 177 reviewed symbol labels are

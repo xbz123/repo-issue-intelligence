@@ -6,6 +6,7 @@ import os
 import re
 import symtable
 import unicodedata
+import warnings
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -29,6 +30,8 @@ SKIP_DIRS = {
     "__pycache__",
     ".pytest_cache",
 }
+TEST_DIRECTORY_NAMES = {"__tests__", "t", "test", "testing", "tests"}
+TEST_FILENAME_MARKERS = (".spec.", ".stories.", ".story.", ".test.")
 LANGUAGE_BY_SUFFIX = {
     ".py": "Python",
     ".js": "JavaScript",
@@ -65,7 +68,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 21
+REPOSITORY_MAP_INDEX_VERSION = 22
 
 RUST_DECLARATION_BOUNDARY = r"(?:^|(?<=[{};]))"
 
@@ -165,6 +168,23 @@ def repository_file_language(path: str | Path) -> str | None:
     if candidate.name.lower().endswith(JSON_SCHEMA_SUFFIX):
         return "JSON Schema"
     return LANGUAGE_BY_SUFFIX.get(candidate.suffix.lower())
+
+
+def is_test_source_path(path: str | Path) -> bool:
+    candidate = Path(path)
+    parts = tuple(part.casefold() for part in candidate.parts)
+    original_filename = candidate.name
+    filename = parts[-1] if parts else ""
+    stem = Path(filename).stem
+    return (
+        any(part in TEST_DIRECTORY_NAMES for part in parts[:-1])
+        or filename == "conftest.py"
+        or filename.startswith("test_")
+        or stem in {"test", "tests"}
+        or stem.endswith("_test")
+        or any(marker in filename for marker in TEST_FILENAME_MARKERS)
+        or original_filename.endswith(("Test.java", "Tests.java", "TestCase.java"))
+    )
 
 
 def _rust_declaration_source(path: Path) -> str:
@@ -1047,8 +1067,10 @@ def _python_metadata(
 ) -> _PythonMetadata:
     try:
         source = path.read_text(encoding="utf-8")
-        tree = ast.parse(source)
-        root_table = symtable.symtable(source, str(path), "exec")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
+            root_table = symtable.symtable(source, str(path), "exec")
     except (SyntaxError, UnicodeDecodeError, OSError):
         return _PythonMetadata()
     metadata = _PythonMetadata()
@@ -1281,8 +1303,12 @@ def _repository_files(
             relative = Path(value)
             if relative.is_absolute() or ".." in relative.parts:
                 raise ValueError(f"Repository file must be relative to the root: {value}")
-            path = (root / relative).resolve()
-            if path.is_relative_to(root) and path.is_file():
+            path = root / relative
+            try:
+                resolved = path.resolve()
+            except (OSError, RuntimeError):
+                continue
+            if resolved.is_relative_to(root) and resolved.is_file():
                 yield path, relative
         return
 
@@ -1291,7 +1317,12 @@ def _repository_files(
         current = Path(current_root)
         for filename in filenames:
             path = current / filename
-            yield path, path.relative_to(root)
+            try:
+                resolved = path.resolve()
+            except (OSError, RuntimeError):
+                continue
+            if resolved.is_relative_to(root) and resolved.is_file():
+                yield path, path.relative_to(root)
 
 
 def repository_map_input_files(
@@ -1576,7 +1607,11 @@ def build_repository_map(
     root: Path,
     included_files: Iterable[str] | None = None,
 ) -> RepositoryMap:
-    root = root.resolve()
+    root = root.expanduser().resolve()
+    if not root.exists():
+        raise ValueError(f"Repository path does not exist: {root}")
+    if not root.is_dir():
+        raise ValueError(f"Repository path must be a directory: {root}")
     files: list[FileRecord] = []
     languages: Counter[str] = Counter()
     frameworks: set[str] = set()
@@ -1587,9 +1622,9 @@ def build_repository_map(
     pending_references: dict[str, list[_PendingImportUse]] = {}
     module_import_bindings: dict[str, list[_PendingImportUse]] = {}
     for path, relative in _repository_files(root, included_files):
-        filename = path.name
+        filename = relative.name
         for index, part in enumerate(relative.parts[:-1]):
-            if part in {"test", "tests"}:
+            if part.casefold() in TEST_DIRECTORY_NAMES:
                 test_directories.add(str(Path(*relative.parts[: index + 1])))
         if filename in RUNTIME_FILES:
             runtime_files.append(str(relative))
@@ -1626,7 +1661,7 @@ def build_repository_map(
                 resolved_calls=metadata.resolved_calls,
                 qualified_external_calls=metadata.qualified_external_calls,
                 references=metadata.references,
-                test_file="test" in filename.lower() or "tests" in relative.parts,
+                test_file=is_test_source_path(relative),
             )
         )
     _resolve_python_local_imports(

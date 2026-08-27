@@ -107,6 +107,38 @@ def test_collect_evidence_caps_each_snippet_to_preserve_candidate_breadth(
     assert all(len(snippet.content) <= 200 for snippet in evidence)
 
 
+def test_collect_evidence_reports_only_lines_present_after_character_truncation(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    (repository / "large.py").write_text(
+        "\n".join("x" * 30 for _ in range(20)),
+        encoding="utf-8",
+    )
+    report = investigate(issue(), build_repository_map(repository)).model_copy(
+        update={
+            "candidates": [
+                CandidateLocation(
+                    file="large.py",
+                    lines="1-20",
+                    confidence=0.9,
+                    evidence=["Synthetic candidate"],
+                )
+            ]
+        }
+    )
+
+    evidence = collect_evidence(
+        report,
+        max_total_chars=75,
+        max_lines_per_snippet=20,
+    )
+
+    assert evidence[0].lines == "1-3"
+    assert evidence[0].content.splitlines()[-1].startswith("3: ")
+
+
 def test_collect_evidence_applies_default_input_guards(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()

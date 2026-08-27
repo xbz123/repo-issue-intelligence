@@ -1,4 +1,5 @@
 import subprocess
+import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -38,6 +39,80 @@ def write_source(repository: Path, relative_path: str, content: str) -> None:
     path = repository / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def test_repository_map_classifies_test_sources_without_filename_substrings(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/testclient.py", "def client():\n    pass\n")
+    write_source(repository, "src/package/contest.py", "def contest():\n    pass\n")
+    write_source(repository, "src/package/helper_test.py", "def helper():\n    pass\n")
+    write_source(repository, "testing/support.py", "def support():\n    pass\n")
+    write_source(repository, "web/widget.test.ts", "export const widget = 1;\n")
+    write_source(repository, "java/WidgetTest.java", "class WidgetTest {}\n")
+    write_source(repository, "java/Contest.java", "class Contest {}\n")
+
+    files = {
+        file.path: file.test_file for file in build_repository_map(repository).files
+    }
+
+    assert files == {
+        "src/package/contest.py": False,
+        "src/package/helper_test.py": True,
+        "src/package/testclient.py": False,
+        "testing/support.py": True,
+        "web/widget.test.ts": True,
+        "java/WidgetTest.java": True,
+        "java/Contest.java": False,
+    }
+    assert build_repository_map(repository).test_directories == ["testing"]
+
+
+def test_repository_map_skips_symlinks_that_resolve_outside_root(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    outside = tmp_path / "outside.py"
+    outside.write_text(
+        'def private_symbol():\n    """Must not be indexed."""\n',
+        encoding="utf-8",
+    )
+    try:
+        (repository / "linked.py").symlink_to(outside)
+    except OSError as error:
+        pytest.skip(f"Symbolic links are unavailable: {error}")
+
+    repository_map = build_repository_map(repository)
+
+    assert repository_map.files == []
+
+
+def test_repository_map_rejects_missing_or_non_directory_roots(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="does not exist"):
+        build_repository_map(tmp_path / "missing")
+
+    file_path = tmp_path / "file.py"
+    file_path.write_text("pass\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a directory"):
+        build_repository_map(file_path)
+
+
+def test_repository_map_suppresses_source_syntax_warnings(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "fixtures/warning.py",
+        "if 1 is 1:\n    pass\n",
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        repository_map = build_repository_map(repository)
+
+    assert [file.path for file in repository_map.files] == ["fixtures/warning.py"]
+    assert not any(item.category is SyntaxWarning for item in caught)
 
 
 def test_extract_issue_signals_normalizes_paths_and_camel_case() -> None:

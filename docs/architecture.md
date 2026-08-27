@@ -48,6 +48,12 @@ fences; an untyped inline dollar identifier must contain a non-ASCII component, 
 do not become cross-language source signals.
 Macro-definition candidates are discovered once per Rust file and bound invocation search to the
 next known definition, so neither repeated invocations nor definitions rescan the remaining source.
+Repository traversal skips file symlinks whose resolved target leaves the indexed root. Test-source
+classification uses exact test directory and filename conventions, so production modules such as
+`testclient.py` and `contest.py` remain production files while `tests/`, `testing/`, `test_*.py`,
+and `*_test.py` remain auxiliary.
+Python parsing suppresses source-local `SyntaxWarning` noise from intentionally invalid third-party
+fixtures while continuing to skip genuine parse failures conservatively.
 TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementation is available.
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
@@ -190,7 +196,8 @@ rank_issues
 `collect_code_evidence` reads only deterministic candidate locations, verifies that resolved
 paths remain inside the repository, skips sensitive filenames, and enforces a total character
 budget. The default limits are 200 numbered source lines per snippet and 100,000 repository-evidence
-characters per request; both are recorded in evaluation artifacts. Direct library callers must
+characters per request; both are recorded in evaluation artifacts. When a character cap truncates
+a snippet, its recorded line range ends at the final numbered line actually present. Direct library callers must
 explicitly opt out to run a full-file public-repository diagnostic. `llm_analyze` calls OpenCode DeepSeek V4 Flash through
 `https://opencode.ai/zen/go/v1/chat/completions` using `json_object`, an
 explicit compact schema prompt, and local Pydantic validation. The provider returns five fields:

@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from repo_issue_intelligence.config import Settings
 
 
@@ -27,3 +30,22 @@ def test_settings_keeps_opencode_key_secret(tmp_path, monkeypatch) -> None:
     assert settings.opencode_max_evidence_chars == 100_000
     assert settings.opencode_max_lines_per_evidence == 200
     assert "test-opencode-secret" not in repr(settings)
+
+
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "OPENCODE_MAX_OUTPUT_TOKENS=0",
+        "OPENCODE_TIMEOUT_SECONDS=0",
+    ],
+)
+def test_settings_rejects_non_positive_provider_limits(
+    tmp_path,
+    monkeypatch,
+    setting: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(f"{setting}\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError):
+        Settings()

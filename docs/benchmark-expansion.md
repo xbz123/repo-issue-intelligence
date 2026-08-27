@@ -52,7 +52,11 @@ reports and evidence, so no anomaly-triggered repeat was required.
 One index-v21 run also completed 200/200 with zero failures and matched index v20 across all 193
 maps, candidate lists, and metrics. The frozen suite did not exercise its older-edition keyword
 macro support, so no anomaly-triggered repeat was required.
-File Recall@1/5/10/20 is `0.3560/0.6567/0.7493/0.8690`, with MRR `0.5443`. Across the
+One index-v22 review-validation run completed 200/200 with zero failures. Exact test-path
+classification changed 38 candidate-file orders, but a complete old-map replay found only one
+metric change: `ruff-os-exit-private-member` improved from expected-file rank 2 to rank 1. There
+were no per-case metric regressions and no Top-20 target losses, so no additional run was required.
+File Recall@1/5/10/20 is `0.3577/0.6567/0.7493/0.8690`, with MRR `0.5468`. Across the
 143 symbol-labeled cases, Symbol Recall@1/5/10/20 is `0.2378/0.3840/0.4155/0.4645`, with MRR
 `0.3349`; all reviewed symbol labels remain Python-only. Top-20 coverage is 222 of 267 production
 targets, and all 45 misses remain in the denominator.

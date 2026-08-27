@@ -63,6 +63,19 @@ STRUCTURED_RESPONSE_FIELDS = frozenset(
 )
 
 
+def _nonnegative_int(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(
+        value,
+        (str, bytes, bytearray, int, float),
+    ):
+        return 0
+    try:
+        parsed = int(value)
+    except (OverflowError, TypeError, ValueError):
+        return 0
+    return max(parsed, 0)
+
+
 def _structured_validation_detail(error: Exception) -> tuple[str, str]:
     """Classify validation failures without retaining provider response content."""
     if not isinstance(error, ValidationError):
@@ -154,6 +167,10 @@ class OpenCodeIssueAnalyzer:
     ) -> None:
         if not api_key:
             raise ValueError("OpenCode API key is required")
+        if max_output_tokens is not None and max_output_tokens < 1:
+            raise ValueError("max_output_tokens must be positive when provided")
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
         if not 0 <= temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
         self.provider = "opencode"
@@ -300,8 +317,8 @@ class OpenCodeIssueAnalyzer:
             LLMAnalysisResponse.model_json_schema(),
         )
         usage = response_payload.get("usage") or {}
-        input_tokens = int(usage.get("prompt_tokens") or 0)
-        output_tokens = int(usage.get("completion_tokens") or 0)
+        input_tokens = _nonnegative_int(usage.get("prompt_tokens"))
+        output_tokens = _nonnegative_int(usage.get("completion_tokens"))
         request_id = response_payload.get("id")
         system_fingerprint = response_payload.get("system_fingerprint")
         choices = response_payload.get("choices") or []
@@ -510,8 +527,8 @@ class OpenCodeIssueAnalyzer:
                 error.elapsed_ms = round(error.elapsed_ms + total_elapsed_ms, 3)
                 raise
             usage = response_payload.get("usage") or {}
-            total_input_tokens += int(usage.get("prompt_tokens") or 0)
-            total_output_tokens += int(usage.get("completion_tokens") or 0)
+            total_input_tokens += _nonnegative_int(usage.get("prompt_tokens"))
+            total_output_tokens += _nonnegative_int(usage.get("completion_tokens"))
             total_elapsed_ms += elapsed_ms
             rank_lines = RANK_LINE_PATTERN.findall(content)
             finish_reason = (

@@ -21,7 +21,7 @@ from .benchmark import (
 )
 from .github_client import REPOSITORY_PATTERN
 from .models import IssueRecord
-from .repository_index import repository_file_language
+from .repository_index import is_test_source_path, repository_file_language
 
 PULL_NUMBER_PATTERN = re.compile(r"/(?:pull|pulls)/(\d+)(?:$|[/?#])")
 BUG_TERMS = {"bug", "regression", "crash", "incorrect", "error", "broken"}
@@ -51,7 +51,12 @@ EXCLUDED_PATH_PARTS = {
     "script",
     "scripts",
     "test",
+    "test_data",
+    "test_fixtures",
+    "testdata",
+    "testfixtures",
     "tests",
+    "testsuite",
     "vendor",
     "vendored",
 }
@@ -59,7 +64,6 @@ EXCLUDED_PATH_PREFIXES = (
     "benchmark",
     "doc",
     "example",
-    "test",
 )
 ADVISORY_CHECK_WEIGHTS = {
     "issue_has_body": 1,
@@ -292,22 +296,13 @@ def linked_pull_request_numbers(timeline: Sequence[dict], repository: str) -> li
 
 def _is_excluded_source_path(path: str) -> str | None:
     parts = tuple(part.lower() for part in Path(path).parts)
-    filename = parts[-1] if parts else ""
     if any(
         part in EXCLUDED_PATH_PARTS
         or any(part.startswith(prefix) for prefix in EXCLUDED_PATH_PREFIXES)
         for part in parts[:-1]
     ):
         return "test, documentation, example, generated, or vendored path"
-    if (
-        filename == "conftest.py"
-        or filename.startswith("test_")
-        or filename.endswith("_test.py")
-        or any(
-            marker in filename
-            for marker in (".spec.", ".stories.", ".story.", ".test.")
-        )
-    ):
+    if is_test_source_path(path):
         return "test file"
     if repository_file_language(path) is None:
         return "unsupported source suffix"

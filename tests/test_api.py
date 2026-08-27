@@ -33,6 +33,25 @@ def test_score_issue() -> None:
     assert response.json()["issue_number"] == 1
 
 
+def test_score_issue_rejects_naive_github_timestamps() -> None:
+    payload = issue_payload()
+    payload["updated_at"] = "2026-07-27T00:00:00"
+
+    response = client.post("/v1/issues/score", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_score_issue_rejects_invalid_issue_metadata() -> None:
+    payload = issue_payload()
+    payload["number"] = 0
+    payload["comments_count"] = -1
+
+    response = client.post("/v1/issues/score", json=payload)
+
+    assert response.status_code == 422
+
+
 def test_rank_issues() -> None:
     response = client.post(
         "/v1/issues/rank",

@@ -11,6 +11,7 @@ from repo_issue_intelligence.codex_cli import (
     CODEX_CLI_DEFAULT_MODEL,
     CODEX_CLI_PROVIDER,
     CodexCLIReranker,
+    _event_metadata,
 )
 from repo_issue_intelligence.llm_client import LLMProviderError
 from repo_issue_intelligence.models import EvidenceSnippet, IssueRecord
@@ -48,6 +49,20 @@ def _evidence() -> list[EvidenceSnippet]:
 
 def _output_path(command: list[str]) -> Path:
     return Path(command[command.index("--output-last-message") + 1])
+
+
+def test_event_metadata_rejects_boolean_and_object_token_counts() -> None:
+    stdout = json.dumps(
+        {
+            "type": "turn.completed",
+            "usage": {"input_tokens": True, "output_tokens": {}},
+        }
+    )
+
+    _, input_tokens, output_tokens, _ = _event_metadata(stdout)
+
+    assert input_tokens == 0
+    assert output_tokens == 0
 
 
 def test_codex_cli_reranker_uses_isolated_strict_contract(tmp_path: Path) -> None:

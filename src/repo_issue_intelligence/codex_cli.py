@@ -10,7 +10,7 @@ from time import perf_counter
 
 from pydantic import Field, ValidationError
 
-from .llm_client import LLMProviderError
+from .llm_client import LLMProviderError, _nonnegative_int
 from .models import (
     EvidenceRerankAnalysis,
     EvidenceRerankResult,
@@ -56,14 +56,6 @@ class _CodexRerankResponse(StrictOutputModel):
         min_length=1,
         max_length=CODEX_CLI_RERANK_MAX_IDS,
     )
-
-
-def _nonnegative_int(value: object) -> int:
-    try:
-        parsed = int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return 0
-    return max(parsed, 0)
 
 
 def _event_metadata(stdout: str) -> tuple[str | None, int, int, list[str]]:
