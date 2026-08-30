@@ -1,0 +1,171 @@
+{
+  "protocol": "hypothesis-file-grounding-v1",
+  "selection": "benchmarks/hypothesis-quality-v1-review.json",
+  "source_manifest_version": 20,
+  "cases": 24,
+  "repositories": 24,
+  "provider": "opencode",
+  "model": "deepseek-v4-flash",
+  "temperature": 0.1,
+  "seed": 1337,
+  "max_output_tokens": 20000,
+  "max_evidence_chars": 100000,
+  "max_lines_per_evidence": 200,
+  "analysis_successes": 24,
+  "first_attempt_success_rate": 1.0,
+  "persistence_verified": 24,
+  "input_tokens": 418158,
+  "output_tokens": 23228,
+  "average_llm_elapsed_ms": 5299.565,
+  "overall": {
+    "evidence_quality_cases": 24,
+    "expected_file_evidence_hits": 20,
+    "expected_file_evidence_hit_rate": 0.8333,
+    "mean_expected_file_evidence_recall": 0.7396,
+    "hypothesis_quality_cases": 24,
+    "hypothesis_expected_file_hits": 18,
+    "overall_hypothesis_expected_file_hit_rate": 0.75,
+    "hypothesis_expected_file_hit_rate": 0.75,
+    "mean_hypothesis_expected_file_recall": 0.5868,
+    "hypothesis_hit_rate_when_expected_evidence_available": 0.9
+  },
+  "by_stratum": {
+    "non_python": {
+      "cases": 8,
+      "expected_file_evidence_hits": 5,
+      "expected_file_evidence_hit_rate": 0.625,
+      "hypothesis_expected_file_hits": 4,
+      "overall_hypothesis_expected_file_hit_rate": 0.5,
+      "hypothesis_hit_rate_when_expected_evidence_available": 0.8
+    },
+    "python_multi": {
+      "cases": 8,
+      "expected_file_evidence_hits": 7,
+      "expected_file_evidence_hit_rate": 0.875,
+      "hypothesis_expected_file_hits": 7,
+      "overall_hypothesis_expected_file_hit_rate": 0.875,
+      "hypothesis_hit_rate_when_expected_evidence_available": 1.0
+    },
+    "python_single": {
+      "cases": 8,
+      "expected_file_evidence_hits": 8,
+      "expected_file_evidence_hit_rate": 1.0,
+      "hypothesis_expected_file_hits": 7,
+      "overall_hypothesis_expected_file_hit_rate": 0.875,
+      "hypothesis_hit_rate_when_expected_evidence_available": 0.875
+    }
+  },
+  "misses": [
+    {
+      "case_id": "multidict-setdefault-segfault",
+      "stratum": "non_python",
+      "expected_files": [
+        "multidict/_multidict.c"
+      ],
+      "expected_files_in_evidence": [
+        "multidict/_multidict.c"
+      ],
+      "hypothesis_cited_files": [
+        "multidict/_multidict_py.py",
+        "tests/test_mutable_multidict.py",
+        "tests/test_incorrect_args.py",
+        "tests/test_version.py",
+        "multidict/_compat.py",
+        "setup.py"
+      ],
+      "failure_stage": "hypothesis_selection"
+    },
+    {
+      "case_id": "airflow-display-current-user",
+      "stratum": "non_python",
+      "expected_files": [
+        "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
+      ],
+      "expected_files_in_evidence": [],
+      "hypothesis_cited_files": [
+        "task-sdk/src/airflow/sdk/bases/operator.py",
+        "providers/google/src/airflow/providers/google/cloud/hooks/vertex_ai/custom_job.py",
+        "providers/google/src/airflow/providers/google/cloud/operators/vertex_ai/custom_job.py",
+        "task-sdk/src/airflow/sdk/definitions/dag.py",
+        "providers/docker/src/airflow/providers/docker/operators/docker.py",
+        "providers/databricks/src/airflow/providers/databricks/operators/databricks.py",
+        "providers/yandex/src/airflow/providers/yandex/operators/dataproc.py",
+        "providers/google/src/airflow/providers/google/cloud/hooks/vertex_ai/auto_ml.py",
+        "providers/google/src/airflow/providers/google/cloud/transfers/gcs_to_bigquery.py",
+        "providers/google/src/airflow/providers/google/cloud/operators/vertex_ai/hyperparameter_tuning_job.py"
+      ],
+      "failure_stage": "deterministic_evidence_retrieval"
+    },
+    {
+      "case_id": "numpy-scalar-dlpack",
+      "stratum": "non_python",
+      "expected_files": [
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "expected_files_in_evidence": [],
+      "hypothesis_cited_files": [
+        "numpy/_core/fromnumeric.py",
+        "numpy/_core/einsumfunc.py",
+        "numpy/_core/src/multiarray/array_api_standard.c"
+      ],
+      "failure_stage": "deterministic_evidence_retrieval"
+    },
+    {
+      "case_id": "prefect-anyof-copy-new-run",
+      "stratum": "non_python",
+      "expected_files": [
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "expected_files_in_evidence": [],
+      "hypothesis_cited_files": [
+        "ui-v2/src/components/deployments/create-flow-run-form/create-flow-run-form.tsx"
+      ],
+      "failure_stage": "deterministic_evidence_retrieval"
+    },
+    {
+      "case_id": "pandas-string-match-ascii",
+      "stratum": "python_multi",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py"
+      ],
+      "expected_files_in_evidence": [],
+      "hypothesis_cited_files": [
+        "pandas/io/parsers/readers.py"
+      ],
+      "failure_stage": "deterministic_evidence_retrieval"
+    },
+    {
+      "case_id": "paramiko-aes-ctr-pycrypto-iv",
+      "stratum": "python_single",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "expected_files_in_evidence": [
+        "paramiko/transport.py"
+      ],
+      "hypothesis_cited_files": [
+        "paramiko/pkey.py"
+      ],
+      "failure_stage": "hypothesis_selection"
+    }
+  ],
+  "manual_rubric_status": "scored",
+  "raw_run_artifact_committed": false,
+  "notes": [
+    "File-grounding metrics do not score free-text causal correctness.",
+    "Provider, schema, and no-evidence failures remain in the overall hit-rate denominator; this run had none.",
+    "The slice is selected from manifest v20 and is not independent retrieval held-out data."
+  ],
+  "manual_score_summary": {
+    "cases": 24,
+    "maximum_per_dimension": 2,
+    "mean_hypothesis_correctness": 1.625,
+    "mean_evidence_sufficiency": 1.2917,
+    "mean_missing_evidence_quality": 1.7083,
+    "fully_correct_hypotheses": 16,
+    "contradicted_hypotheses": 1
+  },
+  "manual_review_basis": "Frozen Issue snapshot, validated DeepSeek run, and public fix PR title, body, commit messages, and changed-file list."
+}

@@ -1,0 +1,745 @@
+{
+  "name": "hypothesis-quality-evaluation-slice-v1",
+  "version": 1,
+  "cases": [
+    {
+      "id": "multidict-setdefault-segfault",
+      "tier": "generalization",
+      "repository": "aio-libs/multidict",
+      "issue_number": 1159,
+      "issue_updated_at": "2025-05-16T20:09:23Z",
+      "issue_snapshot": {
+        "number": 1159,
+        "title": "Segfault calling `MultiDict().setdefault()`",
+        "body": "Using latest git version of 3.13, calling `MultiDict().setdefault(\"a\")` segfaults:\n\n```python\nimport multidict\nm = multidict.MultiDict()\nm.setdefault(\"a\")\n```\n\nThe backtrace references `cpython-3.13.2`, so I tested the repro code against that version  and still got a segfault.\n\nBacktrace:\n```console\nProgram received signal SIGSEGV, Segmentation fault.\n0x00007ffff6d38402 in Py_INCREF (op=0x0)\n    at /opt/_internal/cpython-3.13.2/include/python3.13/object.h:826\nwarning: 826    /opt/_internal/cpython-3.13.2/include/python3.13/object.h: No such file or directory\n\n#0  0x00007ffff6d38402 in Py_INCREF (op=0x0)\n    at /opt/_internal/cpython-3.13.2/include/python3.13/object.h:826\n#1  _pair_list_add_with_hash (hash=-8311172392442909167, value=0x0,\n    key=0x555555b2e628 <_PyRuntime+94600>, identity=0x555555b2e628 <_PyRuntime+94600>,\n    list=0x555555e8b610) at multidict/_multilib/pair_list.h:360\n#2  pair_list_set_default (value=<optimized out>, key=<optimized out>, list=0x555555e8b610)\n    at multidict/_multilib/pair_list.h:802\n#3  multidict_setdefault (self=0x555555e8b600, args=<optimized out>, nargs=<optimized out>,\n    kwnames=<optimized out>) at multidict/_multidict.c:576\n#4  0x00005555556815b3 in method_vectorcall_FASTCALL_KEYWORDS (func=0x7ffff6da1850,\n    args=0x7ffff7fb0640, nargsf=<optimized out>, kwnames=0x0) at Objects/descrobject.c:420\n#5  0x00005555556746fa in _PyObject_VectorcallTstate (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    callable=callable@entry=0x7ffff6da1850, args=args@entry=0x7ffff7fb0640,\n    nargsf=9223372036854775810, kwnames=kwnames@entry=0x0) at ./Include/internal/pycore_call.h:168\n#6  0x00005555556747d6 in PyObject_Vectorcall (callable=callable@entry=0x7ffff6da1850,\n    args=args@entry=0x7ffff7fb0640, nargsf=<optimized out>, kwnames=kwnames@entry=0x0)\n    at Objects/call.c:327\n#7  0x00005555557a310b in _PyEval_EvalFrameDefault (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    frame=0x7ffff7fb05f0, throwflag=0) at Python/generated_cases.c.h:813\n#8  0x00005555557b4b05 in _PyEval_EvalFrame (\n    tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>, frame=<optimized out>,\n    throwflag=throwflag@entry=0) at ./Include/internal/pycore_ceval.h:119\n#9  0x00005555557b4c34 in _PyEval_Vector (tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>,\n    func=func@entry=0x7ffff6f996d0, locals=locals@entry=0x7ffff7463d70, args=args@entry=0x0,\n    argcount=argcount@entry=0, kwnames=kwnames@entry=0x0) at Python/ceval.c:1816\n#10 0x00005555557b4cf7 in PyEval_EvalCode (co=co@entry=0x7ffff6f25ad0,\n    globals=globals@entry=0x7ffff7463d70, locals=locals@entry=0x7ffff7463d70)\n    at Python/ceval.c:604\n#11 0x00005555557988e1 in builtin_exec_impl (module=module@entry=0x7ffff75a6930,\n    source=0x7ffff6f25ad0, globals=0x7ffff7463d70, locals=0x7ffff7463d70, closure=0x0)\n    at Python/bltinmodule.c:1143\n#12 0x0000555555798a44 in builtin_exec (module=0x7ffff75a6930, args=<optimized out>,\n    args@entry=0x7ffff7fb05e0, nargs=nargs@entry=2, kwnames=kwnames@entry=0x0)\n    at Python/clinic/bltinmodule.c.h:556\n#13 0x00005555557a46de in _PyEval_EvalFrameDefault (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    frame=0x7ffff7fb0578, throwflag=0) at Python/generated_cases.c.h:1217\n#14 0x00005555557b4b05 in _PyEval_EvalFrame (\n    tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>, frame=<optimized out>,\n    throwflag=throwflag@entry=0) at ./Include/internal/pycore_ceval.h:119\n#15 0x00005555557b4c34 in _PyEval_Vector (tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>,\n    func=func@entry=0x7ffff74d7dd0, locals=locals@entry=0x7ffff7463d70, args=args@entry=0x0,\n    argcount=argcount@entry=0, kwnames=kwnames@entry=0x0) at Python/ceval.c:1816\n#16 0x00005555557b4cf7 in PyEval_EvalCode (co=co@entry=0x7ffff73da200,\n    globals=globals@entry=0x7ffff7463d70, locals=locals@entry=0x7ffff7463d70)\n    at Python/ceval.c:604\n#17 0x00005555557988e1 in builtin_exec_impl (module=module@entry=0x7ffff75a6930,\n    source=0x7ffff73da200, globals=0x7ffff7463d70, locals=0x7ffff7463d70, closure=0x0)\n    at Python/bltinmodule.c:1143\n#18 0x0000555555798a44 in builtin_exec (module=0x7ffff75a6930, args=<optimized out>,\n    args@entry=0x7ffff7fb0180, nargs=nargs@entry=2, kwnames=kwnames@entry=0x0)\n    at Python/clinic/bltinmodule.c.h:556\n#19 0x00005555556c6249 in cfunction_vectorcall_FASTCALL_KEYWORDS (func=0x7ffff75a6f90,\n    args=0x7ffff7fb0180, nargsf=<optimized out>, kwnames=0x0) at Objects/methodobject.c:441\n#20 0x00005555556746fa in _PyObject_VectorcallTstate (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    callable=callable@entry=0x7ffff75a6f90, args=args@entry=0x7ffff7fb0180,\n    nargsf=9223372036854775810, kwnames=kwnames@entry=0x0) at ./Include/internal/pycore_call.h:168\n#21 0x00005555556747d6 in PyObject_Vectorcall (callable=callable@entry=0x7ffff75a6f90,\n    args=args@entry=0x7ffff7fb0180, nargsf=<optimized out>, kwnames=kwnames@entry=0x0)\n    at Objects/call.c:327\n#22 0x00005555557a310b in _PyEval_EvalFrameDefault (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    frame=0x7ffff7fb00d8, throwflag=0) at Python/generated_cases.c.h:813\n#23 0x00005555557b4b05 in _PyEval_EvalFrame (\n    tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>, frame=<optimized out>,\n    throwflag=throwflag@entry=0) at ./Include/internal/pycore_ceval.h:119\n#24 0x00005555557b4c34 in _PyEval_Vector (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    func=0x7ffff6f99010, locals=locals@entry=0x0, args=0x7ffff6f71968, argcount=2, kwnames=0x0)\n    at Python/ceval.c:1816\n#25 0x0000555555674391 in _PyFunction_Vectorcall (func=<optimized out>, stack=<optimized out>,\n    nargsf=<optimized out>, kwnames=<optimized out>) at Objects/call.c:413\n#26 0x0000555555676029 in _PyVectorcall_Call (\n    tstate=tstate@entry=0x555555b604c0 <_PyRuntime+299040>,\n    func=0x555555674339 <_PyFunction_Vectorcall>, callable=callable@entry=0x7ffff6f99010,\n    tuple=tuple@entry=0x7ffff6f71950, kwargs=kwargs@entry=0x0) at Objects/call.c:273\n#27 0x0000555555676349 in _PyObject_Call (tstate=0x555555b604c0 <_PyRuntime+299040>,\n    callable=callable@entry=0x7ffff6f99010, args=args@entry=0x7ffff6f71950,\n    kwargs=kwargs@entry=0x0) at Objects/call.c:348\n#28 0x0000555555676385 in PyObject_Call (callable=callable@entry=0x7ffff6f99010,\n    args=args@entry=0x7ffff6f71950, kwargs=kwargs@entry=0x0) at Objects/call.c:373\n#29 0x000055555584aa3f in pymain_run_module (modname=modname@entry=0x55555592e4a8 L\"_pyrepl\",\n    set_argv0=set_argv0@entry=0) at Modules/main.c:349\n```\n\n\n\n\n`multidict.__version__`\n```\n'6.4.3'\n```\n\nPython versions:\n```\nPython 3.13.3+ (heads/3.13:fdcaaad1cc7, Apr 27 2025, 10:17:23) [GCC 14.2.0] on linux\nPython 3.13.2 (tags/v3.13.2:4f8bb3947cf, May  4 2025, 08:34:35) [GCC 14.2.0]\n```\n\nFound using [fusil](https://github.com/devdanzin/fusil) by @vstinner.",
+        "labels": [
+          "bug",
+          "reproducer: present"
+        ],
+        "comments_count": 3,
+        "created_at": "2025-05-04T11:42:35Z",
+        "updated_at": "2025-05-16T20:09:23Z",
+        "html_url": "https://github.com/aio-libs/multidict/issues/1159",
+        "author": "devdanzin"
+      },
+      "fix_pr_number": 1160,
+      "pre_fix_sha": "af420430358d6f0ebb660d6a733c16b7ff491d3f",
+      "expected_files": [
+        "multidict/_multidict.c"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "airflow-display-current-user",
+      "tier": "generalization",
+      "repository": "apache/airflow",
+      "issue_number": 58618,
+      "issue_updated_at": "2026-08-14T18:52:57Z",
+      "issue_snapshot": {
+        "number": 58618,
+        "title": "Display Username in the UI",
+        "body": "### Description\n\nI apologise in advance if I miss something, but in airflow 3 I can see nowhere the user that I am currently logged in as.\nI often switch between users, so it would be important to know that I am logged in with the current one.\n\nIn airflow 2 there was this bubble on the top right corner: \n\n\n<img width=\"2994\" height=\"1740\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/2bb2f1ff-d005-49e9-a482-a782ab35d967\" />\n\nBut in airflow 3 I cannot see it anywhere:\n\n<img width=\"603\" height=\"868\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/3809a573-1444-42ca-b3c7-43f99542006d\" />\n\n### Use case/motivation\n\nBeing able to view who am I logged in as.\n\n### Related issues\n\n_No response_\n\n### Are you willing to submit a PR?\n\n- [x] Yes I am willing to submit a PR! (at least I would happily try)\n\n### Code of Conduct\n\n- [x] I agree to follow this project's [Code of Conduct](https://github.com/apache/airflow/blob/main/CODE_OF_CONDUCT.md)\n",
+        "labels": [
+          "kind:feature",
+          "area:UI"
+        ],
+        "comments_count": 11,
+        "created_at": "2025-11-24T10:54:59Z",
+        "updated_at": "2026-08-14T18:52:57Z",
+        "html_url": "https://github.com/apache/airflow/issues/58618",
+        "author": "alkismavridis"
+      },
+      "fix_pr_number": 58981,
+      "pre_fix_sha": "1f575ab700a5bc3624e47707bc5bf32309227b7d",
+      "expected_files": [
+        "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "ruff-delete-full-slice-dict",
+      "tier": "generalization",
+      "repository": "astral-sh/ruff",
+      "issue_number": 27216,
+      "issue_updated_at": "2026-08-14T19:37:59Z",
+      "issue_snapshot": {
+        "number": 27216,
+        "title": "`delete-full-slice` (FURB131) should not apply to `dict`s",
+        "body": "### Summary\n\n[`delete-full-slice` (FURB131)](https://docs.astral.sh/ruff/rules/delete-full-slice/) should not apply to `dict`s, because slicing `dict`s raises an error, although the rule documentation says it works. The upstream Refurb rule only applies to `list`s. [Example](https://play.ruff.rs/6843ace6-2a9b-4e0e-b501-ac6b1216751c):\n```console\n$ cat >furb131.py <<'# EOF'\nnames = {\"key\": \"value\"}\ndel names[:]\n# EOF\n\n$ python furb131.py 2>&1 | tail -n 1\nKeyError: slice(None, None, None)\n\n$ refurb --enable FURB131 furb131.py; echo $?\n0\n\n$ ruff --isolated check --preview --select FURB131 furb131.py --unsafe-fixes --fix\nFound 1 error (1 fixed, 0 remaining).\n\n$ cat furb131.py\nnames = {\"key\": \"value\"}\nnames.clear()\n\n$ python furb131.py; echo $?\n0\n```\n\n### Version\n\nruff 0.16.0 (a2635fd8f 2026-07-23)",
+        "labels": [
+          "rule",
+          "preview"
+        ],
+        "comments_count": 3,
+        "created_at": "2026-07-27T15:28:26Z",
+        "updated_at": "2026-08-14T19:37:59Z",
+        "html_url": "https://github.com/astral-sh/ruff/issues/27216",
+        "author": "dscorbett"
+      },
+      "fix_pr_number": 27711,
+      "pre_fix_sha": "b8c5e73abe5b15a74fb066e474d30397d1421cfe",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "uv-check-no-install-project",
+      "tier": "generalization",
+      "repository": "astral-sh/uv",
+      "issue_number": 21083,
+      "issue_updated_at": "2026-08-14T18:38:15Z",
+      "issue_snapshot": {
+        "number": 21083,
+        "title": "uv check --no-install-project",
+        "body": "### Summary\n\nMy project has extension modules that are heavy to build and require external non-Python dependencies. I do have *.pyi files for these extensions. I've setup `ty` such that I can install Python dependencies in .venv with `uv sync --no-install-project` and run `ty check` afterwards.\n\nI would like to use `astral-sh/ty-pre-commit` hook, however I cannot figure out how to make it work without uv tying to install the project in  .venv. I'm guessing that `uv check` uses the `uv sync` machinery to setup/update .venv.\n\n`uv check`  inherits most option related to extras/group installation from `uv sync`, but offers no control over the project installation. Therefore, IMHO it would make sense for `uv check` to accept a  `--no-install-project` flag just as `uv sync` does. \n\n### Example\n\n```console\n$ uv check --no-install-project ...\n```",
+        "labels": [
+          "enhancement",
+          "uv check"
+        ],
+        "comments_count": 3,
+        "created_at": "2026-08-13T13:25:11Z",
+        "updated_at": "2026-08-14T18:38:15Z",
+        "html_url": "https://github.com/astral-sh/uv/issues/21083",
+        "author": "dalcinl"
+      },
+      "fix_pr_number": 21085,
+      "pre_fix_sha": "76d653943c6c82d3cca03227c24e98b1d0320aed",
+      "expected_files": [
+        "crates/uv-cli/src/lib.rs",
+        "crates/uv/src/commands/project/check.rs",
+        "crates/uv/src/lib.rs",
+        "crates/uv/src/settings.rs"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "numpy-scalar-dlpack",
+      "tier": "generalization",
+      "repository": "numpy/numpy",
+      "issue_number": 27137,
+      "issue_updated_at": "2026-08-03T04:05:49Z",
+      "issue_snapshot": {
+        "number": 27137,
+        "title": "BUG: scalars don't have dlpack support",
+        "body": "### Describe the issue:\r\n\r\nreduction (e.g. xp.sum) are expected to produce arrays, but in numpy they produce scalars, that don't follow array api specifications (e.g. I can't use dlpack on those).\r\n\r\nIn numpy v1, np.array_api correctly returned arrays in this case\r\n\r\n\r\n\r\n### Reproduce the code example:\r\n\r\n```python\r\nimport numpy as np\r\nx = np.zeros([3, 4])\r\n\r\ntype(x.__array_namespace__().sum(x))\r\n# outputs: numpy.float64 expected: numpy.ndarray\r\n```\r\n\r\n\r\n\r\n### Python and NumPy Versions:\r\n\r\n```\r\n2.0.1\r\n3.11.9 (main, Apr  6 2024, 17:59:24) [GCC 11.4.0]\r\n```",
+        "labels": [
+          "00 - Bug",
+          "40 - array API standard"
+        ],
+        "comments_count": 10,
+        "created_at": "2024-08-08T00:04:59Z",
+        "updated_at": "2026-08-03T04:05:49Z",
+        "html_url": "https://github.com/numpy/numpy/issues/27137",
+        "author": "arogozhnikov"
+      },
+      "fix_pr_number": 32029,
+      "pre_fix_sha": "f67f65a1ab0d0998896703d6f205912d6975f966",
+      "expected_files": [
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "markupsafe-free-threaded-gil",
+      "tier": "generalization",
+      "repository": "pallets/markupsafe",
+      "issue_number": 460,
+      "issue_updated_at": "2024-10-23T00:08:41Z",
+      "issue_snapshot": {
+        "number": 460,
+        "title": "Please could `markupsafe._speedups` declare support (or lack thereof) for free-threaded Python?",
+        "body": "When testing a project downstream of `markupsafe` with `python3.13t` via deadsnakes, the following warning is emitted:\r\n\r\n```pytb\r\n<frozen importlib._bootstrap>:488\r\n  <frozen importlib._bootstrap>:488: RuntimeWarning: The global interpreter lock (GIL) has been enabled to load module 'markupsafe._speedups', which has not declared that it can run safely without the GIL. To override this behavior and keep the GIL disabled (at your own risk), run with PYTHON_GIL=0 or -Xgil=0.\r\n```\r\n\r\nI haven't had the time to look at the source of `_speedups` (sorry), but please would it be possible to declare this one way or the other? I resolved this [with an axe](https://github.com/sphinx-doc/sphinx/blob/1fc780cd781bc71ac71bad1078c09ab71e0949a0/.github/workflows/main.yml#L134-L136) downstream by simply deleting the compiled extension in CI, but this isn't ideal!\r\n\r\nThanks,\r\nAdam\r\n",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2024-08-18T01:11:39Z",
+        "updated_at": "2024-10-23T00:08:41Z",
+        "html_url": "https://github.com/pallets/markupsafe/issues/460",
+        "author": "AA-Turner"
+      },
+      "fix_pr_number": 461,
+      "pre_fix_sha": "b43c029eb1541645454623d46cd6b92df8acbaaa",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "prefect-anyof-copy-new-run",
+      "tier": "generalization",
+      "repository": "PrefectHQ/prefect",
+      "issue_number": 22804,
+      "issue_updated_at": "2026-08-11T15:02:14Z",
+      "issue_snapshot": {
+        "number": 22804,
+        "title": "V2 UI feedback: Bug or incorrect behavior - Copy to new run not working",
+        "body": "### UI switch feedback\n\n- From UI: V2 UI\n- To UI: V1 UI\n- Current path: /dashboard\n- Reason: Bug or incorrect behavior\nIn Deployments/Runs, I selected a failed flow run. From the top-right menu, I selected \"Copy to new run.\" After clicking \"Submit,\" it showed an error.\n### Additional notes\n\n<img width=\"518\" height=\"421\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/e2838ea7-ef49-40ec-aa3a-ad01c627f9ac\" />",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-08-11T13:09:02Z",
+        "updated_at": "2026-08-11T15:02:14Z",
+        "html_url": "https://github.com/PrefectHQ/prefect/issues/22804",
+        "author": "ladocz"
+      },
+      "fix_pr_number": 22806,
+      "pre_fix_sha": "7d377adfd43019a26cc901d7f50491489a86377f",
+      "expected_files": [
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "pyo3-reference-pool-dirty-fastpath",
+      "tier": "generalization",
+      "repository": "PyO3/pyo3",
+      "issue_number": 6199,
+      "issue_updated_at": "2026-08-12T22:13:34Z",
+      "issue_snapshot": {
+        "number": 6199,
+        "title": "Reference pool mutex is taken on every attach which serializes multithreaded embedders",
+        "body": "`ReferencePool::drop_deferred_references` is called on every attach and it checks `is_empty` under a process global mutex.\n\nFor multithreaded embedders it becomes a serialization point. The mutex acquisition rate scales with threads and attach rate. Contended `std` mutex parks threads in the kernel.\n\nI stumbled up on this while profiling the [Pants build system](https://github.com/pantsbuild/pants) engine (a Rust tokio runtime driving Python 3.14t code, pyo3 0.28.3) where I can measure anti-scaling behaviour attributed to `ReferencePool::drop_deferred_references` parking threads.\n\nThe proposed solution is to add an atomic bool to track whether the pool is \"dirty\". This is not a novel idea. #1608 introduced a dirty bool which was later removed. In #4174 it was noted that a dirty flag has the same cache-coherence traffic as the mutex's own futex word in the uncontended case. That does not hold under contention, though. \n\n#4174 also suggested replacing the mutex with a lock-free solution. The dirty flag is a more minimal fix and serves pants needs.",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2026-07-12T21:01:22Z",
+        "updated_at": "2026-08-12T22:13:34Z",
+        "html_url": "https://github.com/PyO3/pyo3/issues/6199",
+        "author": "tobni"
+      },
+      "fix_pr_number": 6200,
+      "pre_fix_sha": "d1e3be6ef10f29f0b0a42551a1ed82973bd1289c",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "anyio-freethreading-runvar",
+      "tier": "generalization",
+      "repository": "agronholm/anyio",
+      "issue_number": 1220,
+      "issue_updated_at": "2026-07-19T20:30:02Z",
+      "issue_snapshot": {
+        "number": 1220,
+        "title": "Test failures with Python 3.14 freethreading",
+        "body": "### Things to check first\n\n- [x] I have searched the existing issues and didn't find my bug already reported there\n\n- [x] I have checked that my bug is still present in the latest release\n\n\n### AnyIO version\n\n1.14.2 (c384f99687c64c59ed8a11c3a0f11a2d57daff71)\n\n### Python version\n\n3.14.6 freethreading\n\n### What happened?\n\nWhen running the test suite on Python 3.14 freethreading, I'm getting a few test failures. Not 100% sure if the issue's in anyio or trio, though (but trio tests pass 100%).\n\n```pytb\npy314t: install_dependency-groups> python -I -m pip install 'blockbuster>=1.5.23; python_version < \"3.15\"' 'coverage[toml]>=7' 'hypothesis>=4.18.2' 'psutil>=5.9' 'pytest-mock>=3.14' 'pytest-timeout>=2.4.0' 'pytest>=9.0' 'trustme>=1.0.0' 'truststore>=0.9.1' 'uvloop>=0.22.1; platform_python_implementation == \"CPython\" and platform_system != \"Windows\" and python_version < \"3.15\"' 'winloop>=0.2.3; platform_python_implementation == \"CPython\" and platform_system == \"Windows\"'\n.pkg-cpython314t: install_requires> python -I -m pip install 'setuptools>=77' 'setuptools_scm>=6.4'\n.pkg-cpython314t: _optional_hooks> python /usr/lib/python3.14/site-packages/pyproject_api/_backend.py True setuptools.build_meta\n.pkg-cpython314t: get_requires_for_build_editable> python /usr/lib/python3.14/site-packages/pyproject_api/_backend.py True setuptools.build_meta\n.pkg-cpython314t: build_editable> python /usr/lib/python3.14/site-packages/pyproject_api/_backend.py True setuptools.build_meta\npy314t: install_package_deps> python -I -m pip install 'exceptiongroup>=1.0.2; python_version < \"3.11\"' 'idna>=2.8' 'trio>=0.32.0' 'typing_extensions>=4.5; python_version < \"3.13\"'                                                    \npy314t: install_package> python -I -m pip install --force-reinstall --no-deps /tmp/anyio/.tox/.tmp/package/1/anyio-4.14.2-0.editable-py3-none-any.whl\npy314t: commands[0]> coverage run -m pytest\n========================================================= test session starts =========================================================\nplatform linux -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0\ncachedir: .tox/py314t/.pytest_cache\nrootdir: /tmp/anyio\nconfigfile: pyproject.toml\ntestpaths: tests\nplugins: anyio-4.14.2, mock-3.15.1, timeout-2.4.0\ntimeout: 20.0s\ntimeout method: signal\ntimeout func_only: False\ncollected 3996 items                                                                                                                  \n\ntests/streams/test_buffered.py ............................................                                                     [  1%]\ntests/streams/test_file.py ................................................                                                     [  2%]\ntests/streams/test_memory.py .................................................................................................. [  4%]\n...........                                                                                                                     [  5%]\ntests/streams/test_stapled.py ................................                                                                  [  5%]\ntests/streams/test_text.py ........................                                                                             [  6%]\ntests/streams/test_tls.py ................................................................................                      [  8%]\ntests/test_all_attributes.py .                                                                                                  [  8%]\ntests/test_contextmanagers.py .................................................                                                 [  9%]\ntests/test_debugging.py ........................s.......                                                                        [ 10%]\ntests/test_deprecations.py .                                                                                                    [ 10%]\ntests/test_eventloop.py .......................s.                                                                               [ 11%]\ntests/test_fileio.py .............................................................................s............................ [ 13%]\n..s...................................ssss..................................................................................... [ 16%]\n........................................................ssss................................................................... [ 20%]\n................................................................                                                                [ 21%]\ntests/test_from_thread.py ..................................................................................................... [ 24%]\n...............................................................................................ssssFFFFFFFx....                 [ 27%]\ntests/test_functools.py ....................................................................................................... [ 29%]\n.................................                                                                                               [ 30%]\ntests/test_itertools.py ....................................................................................................... [ 33%]\n............................................................................................................................... [ 36%]\n............................................................................................................................... [ 39%]\n.......................................                                                                                         [ 40%]\ntests/test_lowlevel.py ............................................                                                             [ 41%]\ntests/test_pytest_plugin.py ......................................                                                              [ 42%]\ntests/test_signals.py ............                                                                                              [ 42%]\ntests/test_sockets.py ......................................................................................................... [ 45%]\n............................................................................................................................... [ 48%]\n............................................................................................................................... [ 51%]\n............................................................................................................................... [ 54%]\n............................................................................................................................... [ 58%]\n............................................................................................................................... [ 61%]\n............................................................................................................................... [ 64%]\n............................................................................................................................... [ 67%]\n............................................................................................................................... [ 70%]\n............................................................................................................................... [ 73%]\n.....                                                                                                                           [ 74%]\ntests/test_subprocesses.py ...................................................................sss..........................     [ 76%]\ntests/test_synchronization.py ................................................................................................. [ 78%]\n............................................................................................................................... [ 82%]\n.................................                                                                                               [ 82%]\ntests/test_taskgroups.py ...................................................................................................... [ 85%]\n...................................................................xxxx........................................................ [ 88%]\n..............................................................................ssss............................................. [ 91%]\n............................................................................................................................... [ 94%]\n...................                                                                                                             [ 95%]\ntests/test_tempfile.py ............................................................                                             [ 96%]\ntests/test_to_interpreter.py ............                                                                                       [ 97%]\ntests/test_to_process.py ............................................                                                           [ 98%]\ntests/test_to_thread.py ............................................................FFF.                                        [ 99%]\ntests/test_typedattr.py .                                                                                                       [100%]\n\n============================================================== FAILURES ===============================================================\n_________________________________________ TestBlockingPortal.test_from_async[asyncio-asyncio] _________________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n__________________________________________ TestBlockingPortal.test_from_async[asyncio-trio] ___________________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n_____________________________________ TestBlockingPortal.test_from_async[asyncio+uvloop-asyncio] ______________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n_______________________________________ TestBlockingPortal.test_from_async[asyncio+uvloop-trio] _______________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n______________________________________ TestBlockingPortal.test_from_async[asyncio+eager-asyncio] ______________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n_______________________________________ TestBlockingPortal.test_from_async[asyncio+eager-trio] ________________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running asyncio in this thread\n__________________________________________ TestBlockingPortal.test_from_async[trio-asyncio] ___________________________________________\ntests/test_from_thread.py:780: in test_from_async\n    with start_blocking_portal(portal_backend_name) as portal:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/contextlib.py:141: in __enter__\n    return next(self.gen)\n           ^^^^^^^^^^^^^^\nsrc/anyio/from_thread.py:548: in start_blocking_portal\n    portal = future.result()\n             ^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:454: in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n/usr/lib/python3.14t/concurrent/futures/_base.py:396: in __get_result\n    raise self._exception\nsrc/anyio/from_thread.py:536: in run_blocking_portal\n    run_eventloop(\nsrc/anyio/_core/_eventloop.py:62: in run\n    raise RuntimeError(f\"Already running {asynclib_name} in this thread\")\nE   RuntimeError: Already running trio in this thread\n___________________________________________ test_run_sync_worker_cyclic_references[asyncio] ___________________________________________\ntests/test_to_thread.py:386: in test_run_sync_worker_cyclic_references\n    assert gc.get_referrers(contextval) == no_other_refs()\nE   assert [<coroutine o...x58b73d7dc80>] == [<coroutine o...x58b800fc600>]\nE     \nE     Left contains one more item: <hamt_bitmap_node object at 0x58b73d7dc80>\nE     Use -v to get more diff\n_______________________________________ test_run_sync_worker_cyclic_references[asyncio+uvloop] ________________________________________\ntests/test_to_thread.py:386: in test_run_sync_worker_cyclic_references\n    assert gc.get_referrers(contextval) == no_other_refs()\nE   assert [<coroutine o...x58b73d76cc0>] == [<coroutine o...x58b800f4f80>]\nE     \nE     Left contains one more item: <hamt_bitmap_node object at 0x58b73d76cc0>\nE     Use -v to get more diff\n________________________________________ test_run_sync_worker_cyclic_references[asyncio+eager] ________________________________________\ntests/test_to_thread.py:386: in test_run_sync_worker_cyclic_references\n    assert gc.get_referrers(contextval) == no_other_refs()\nE   assert [<coroutine o...x58b73d7a740>] == [<coroutine o...x58b800f9f00>]\nE     \nE     Left contains one more item: <hamt_bitmap_node object at 0x58b73d7a740>\nE     Use -v to get more diff\n======================================================= short test summary info =======================================================\nSKIPPED [1] tests/test_debugging.py:102: Generator based coroutines have been removed in Python 3.11\nSKIPPED [1] tests/test_eventloop.py:132: winloop not installed\nSKIPPED [1] tests/test_fileio.py:202: Drive only makes sense on Windows\nSKIPPED [1] tests/test_fileio.py:247: Only makes sense on Windows\nSKIPPED [4] tests/test_fileio.py:317: Could not find a suitable block device\nSKIPPED [4] tests/test_fileio.py:640: os.lchmod() is not available\nSKIPPED [4] tests/test_from_thread.py:745: This test is known to hang often on CI\nSKIPPED [1] tests/test_subprocesses.py:371: the 'user' argument is not supported by uvloop yet\nSKIPPED [1] tests/test_subprocesses.py:371: the 'group' argument is not supported by uvloop yet\nSKIPPED [1] tests/test_subprocesses.py:371: the 'umask' argument is not supported by uvloop yet\nSKIPPED [1] tests/test_taskgroups.py:1315: Generator based coroutines have been removed in Python 3.11\nSKIPPED [3] tests/test_taskgroups.py:1336: Generator based coroutines have been removed in Python 3.11\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio-asyncio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio-trio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio+uvloop-asyncio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio+uvloop-trio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio+eager-asyncio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[asyncio+eager-trio] - RuntimeError: Already running asyncio in this thread\nFAILED tests/test_from_thread.py::TestBlockingPortal::test_from_async[trio-asyncio] - RuntimeError: Already running trio in this thread\nFAILED tests/test_to_thread.py::test_run_sync_worker_cyclic_references[asyncio] - assert [<coroutine o...x58b73d7dc80>] == [<coroutine o...x58b800fc600>]\nFAILED tests/test_to_thread.py::test_run_sync_worker_cyclic_references[asyncio+uvloop] - assert [<coroutine o...x58b73d76cc0>] == [<coroutine o...x58b800f4f80>]\nFAILED tests/test_to_thread.py::test_run_sync_worker_cyclic_references[asyncio+eager] - assert [<coroutine o...x58b73d7a740>] == [<coroutine o...x58b800f9f00>]\n================================= 10 failed, 3958 passed, 23 skipped, 5 xfailed in 231.36s (0:03:51) ==================================\npy314t: exit 1 (232.77 seconds) /tmp/anyio> coverage run -m pytest pid=111401\n  py314t: FAIL code 1 (248.56=setup[15.79]+cmd[232.77] seconds)\n  evaluation failed :( (249.84 seconds)\n```\n\n### How can we reproduce the bug?\n\n```\ntox -e py314t\n```",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-07-13T14:57:39Z",
+        "updated_at": "2026-07-19T20:30:02Z",
+        "html_url": "https://github.com/agronholm/anyio/issues/1220",
+        "author": "mgorny"
+      },
+      "fix_pr_number": 1224,
+      "pre_fix_sha": "c384f99687c64c59ed8a11c3a0f11a2d57daff71",
+      "expected_files": [
+        "src/anyio/_backends/_asyncio.py",
+        "src/anyio/from_thread.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/anyio/from_thread.py",
+          "symbol": "start_blocking_portal"
+        }
+      ]
+    },
+    {
+      "id": "ansible-callback-deprecation-metadata",
+      "tier": "generalization",
+      "repository": "ansible/ansible",
+      "issue_number": 87020,
+      "issue_updated_at": "2026-08-14T00:01:38Z",
+      "issue_snapshot": {
+        "number": 87020,
+        "title": "Tree plugin deprecation notice",
+        "body": "### Summary\n\nHi, \nafter upgrading from Ubuntu 25.10 to 26.04 and getting a new version of ansible (2.20.1), I get plenty of deprecation notices. \n\nWhile most notices tell or hint, what to do instead and how to fix, the tree plugin (for storing output in files per host) just says it is deprecated and will be removed soon, without giving a hint what to use instead. \n\nI also could not find any documentation about it. \n\nThis will run into dysfunction once it is removed. \n\n\n\n### Issue Type\n\nBug Report\n\n### Component Name\n\ntree\n\n### Ansible Version\n\n```console\n$ ansible --version\nnsible [core 2.20.1]\n  config file = /home/hadmut/.GIT/Hadmut_Home/Install/Ansible/ansible.cfg\n  configured module search path = ['/home/hadmut/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']\n  ansible python module location = /usr/lib/python3/dist-packages/ansible\n  ansible collection location = /home/hadmut/.ansible/collections:/usr/share/ansible/collections\n  executable location = /usr/bin/ansible\n  python version = 3.14.4 (main, Apr  8 2026, 04:02:31) [GCC 15.2.0] (/usr/bin/python3)\n  jinja version = 3.1.6\n  pyyaml version = 6.0.3 (with libyaml v0.2.5)\n```\n\n### Configuration\n\n```console\n# if using a version older than ansible-core 2.12 you should omit the '-t all'\n$ ansible-config dump --only-changed -t all\n\nnothing change, the given paths are confidential, and don't matter for this report.\n```\n\n### OS / Environment\n\nUbuntu 26.04\n\n### Steps to Reproduce\n\nANSIBLE_LOAD_CALLBACK_PLUGINS=1 ANSIBLE_CALLBACKS_ENABLED=tree ANSIBLE_CALLBACK_TREE_DIR=${PWD}/Testing  ansible -m ping -u root all -i inventory\n\n### Expected Results\n\nTell me what to use instead of the deprecated plugin\n\n### Actual Results\n\n```console\n[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.\n[DEPRECATION WARNING]: The tree callback plugin is deprecated. This feature will be removed from ansible-core version 2.23.\n```\n\n### Code of Conduct\n\n- [x] I agree to follow the Ansible Code of Conduct",
+        "labels": [
+          "bug",
+          "has_pr"
+        ],
+        "comments_count": 4,
+        "created_at": "2026-05-22T23:06:23Z",
+        "updated_at": "2026-08-14T00:01:38Z",
+        "html_url": "https://github.com/ansible/ansible/issues/87020",
+        "author": "hadmut"
+      },
+      "fix_pr_number": 87072,
+      "pre_fix_sha": "744a880709d7282446d771ab245efc86408a2ca8",
+      "expected_files": [
+        "lib/ansible/plugins/callback/oneline.py",
+        "lib/ansible/plugins/callback/tree.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/ansible/plugins/callback/oneline.py",
+          "symbol": "CallbackModule.__init__"
+        },
+        {
+          "file": "lib/ansible/plugins/callback/tree.py",
+          "symbol": "CallbackModule.__init__"
+        }
+      ]
+    },
+    {
+      "id": "boto3-download-fileobj-append-mode",
+      "tier": "generalization",
+      "repository": "boto/boto3",
+      "issue_number": 1446,
+      "issue_updated_at": "2025-04-11T13:04:23Z",
+      "issue_snapshot": {
+        "number": 1446,
+        "title": "download_fileobj with a file object in append mode can mess up file content",
+        "body": "Environment\r\n-----------------\r\n\r\nPython 3.6.1\r\nboto3 (1.4.5)\r\n\r\nWhy do I use it\r\n--------------------\r\n\r\nI am using the UNLOAD function from Redshift to dump data as a csv to S3.\r\nRedshift maximizes performance by handling multiple chunks simultaneously and writes them on S3 separately.\r\nAs the final destination will be a local file on the user's hard drive, I use _download_fileobj()_ to stream each chunk into a single file.\r\n\r\nThe problem\r\n------------------\r\n\r\nboto3 handles this with a multipart download and often messes with the local file content.\r\nThis does __not__ happen when using a file object in write mode.\r\nThis does __not__ happen when disabling the multi part download with \r\n\r\n`\r\nconfig = boto3.s3.transfer.TransferConfig(\r\n    use_threads = False        \r\n)\r\n`\r\n\r\nRelated issues\r\n---------------------\r\n\r\nThis issue seems to be  related to #1304 \r\n\r\nReproduce the issue\r\n----------------------------\r\n\r\nI created a mock dataset that I put on a public S3 bucket and created a code snippet to reproduce the issue.\r\n\r\n```python\r\nimport boto3\r\nimport csv\r\n\r\nbucket           = 'rl-boto3-issues-mock-data' \r\nfile_key         = 'mock_dataset.csv' \r\noutput_file_path = 'output_file.csv'\r\n\r\ns3     = boto3.resource('s3')\r\nbucket = s3.Bucket(bucket)\r\n\r\n#Create file & write header\r\nheader = 'index1;index2;location;consumption\\n'\r\nwith open(output_file_path, 'wt') as file_object:\r\n    file_object.write(header)\r\n\r\n#Dump binary in append mode\r\nwith open(output_file_path, 'ab') as file_object:\r\n\r\n    bucket.download_fileobj(\r\n        Key     = file_key, \r\n        Fileobj = file_object,\r\n    )\r\n\r\n#Read whole csv\r\nwith open(output_file_path, 'r') as file_object:\r\n\r\n    header = next(file_object)\r\n\r\n    reader = csv.reader(\r\n        file_object,\r\n        delimiter  = ';',\r\n    )\r\n\r\n    csv_data = list(reader)\r\n\r\n#Check csv integrity\r\nfor index, row in enumerate(csv_data):\r\n    \r\n    nb_cells = len(row)\r\n\r\n    if nb_cells != 4:\r\n        print('Row {0} : number of cells is {1} and should be 4 !'.format(index, nb_cells))\r\n        print('Row is : \\n')\r\n        print(row)\r\n        print('\\n')\r\n        break\r\n```\r\n\r\n",
+        "labels": [
+          "bug",
+          "s3",
+          "automation-exempt",
+          "p3"
+        ],
+        "comments_count": 5,
+        "created_at": "2018-02-08T08:50:48Z",
+        "updated_at": "2025-04-11T13:04:23Z",
+        "html_url": "https://github.com/boto/boto3/issues/1446",
+        "author": "remiloze"
+      },
+      "fix_pr_number": 4503,
+      "pre_fix_sha": "018a02be73a5e75dc5431d53e252ca950b6aff43",
+      "expected_files": [
+        "boto3/compat.py",
+        "boto3/s3/inject.py"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "drf-html-dictfield-missing-input",
+      "tier": "generalization",
+      "repository": "encode/django-rest-framework",
+      "issue_number": 6234,
+      "issue_updated_at": "2026-08-06T08:46:25Z",
+      "issue_snapshot": {
+        "number": 6234,
+        "title": "DictField parsing for \"html\" inputs misleadingly returns an empty dict even if the field was not specified",
+        "body": "## Checklist\n\n- [x] I have verified that that issue exists against the `master` branch of Django REST framework.\n- [x] I have searched for similar issues in both open and closed tickets and cannot find a duplicate.\n- [x] This is not a usage question. (Those should be directed to the [discussion group](https://groups.google.com/forum/#!forum/django-rest-framework) instead.)\n- [x] This cannot be dealt with as a third party library. (We prefer new functionality to be [in the form of third party libraries](https://www.django-rest-framework.org/topics/third-party-resources/#about-third-party-packages) where possible.)\n- [x] I have reduced the issue to the simplest possible case.\n- [ ] I have included a failing test as a pull request. (If you are unable to do so we can still accept the issue.)\n\n## Steps to reproduce\n\nUsing a DictField and custom partial update logic in a serializer, a condition such as:\n\n`if not self.partial or \"field-name\" in data:`\n\nIs always true when the request type is `multipart/form-data`, even if the field was not specified.  In fact, in this case, it seems like it is impossible to distinguish between an empty input and an unspecified input for that field.\n\n## Expected behavior\n\nThe condition `if not self.partial or \"field-name\" in data` should only be true when the field was specified by the client, even when using `multipart/form-data` requests.\n\n## Actual behavior\n\nThe condition is always true for `mutlipart/form-data` requests, even when the field was not specified as part of the request, and the update method has no way to distinguish between an empty input and an unspecified field.\n\nNote that this is not the case for ListField, and the problem seems to be in the return of the function at https://github.com/encode/django-rest-framework/blob/master/rest_framework/utils/html.py#L69.  The equivalent function for a list field returns an empty value if no matching elements were found in the input.  For the dict field parsing logic, an empty dictionary is incorrectly returned.",
+        "labels": [],
+        "comments_count": 3,
+        "created_at": "2018-10-07T16:10:49Z",
+        "updated_at": "2026-08-06T08:46:25Z",
+        "html_url": "https://github.com/encode/django-rest-framework/issues/6234",
+        "author": "brett-lempereur"
+      },
+      "fix_pr_number": 9891,
+      "pre_fix_sha": "1b63dce808dae688240dd5d7775ad07276140a9a",
+      "expected_files": [
+        "rest_framework/fields.py",
+        "rest_framework/serializers.py",
+        "rest_framework/utils/html.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/fields.py",
+          "symbol": "DictField.get_value"
+        },
+        {
+          "file": "rest_framework/serializers.py",
+          "symbol": "Serializer.get_value"
+        },
+        {
+          "file": "rest_framework/utils/html.py",
+          "symbol": "parse_html_dict"
+        }
+      ]
+    },
+    {
+      "id": "uvicorn-nonascii-websocket-headers",
+      "tier": "generalization",
+      "repository": "Kludex/uvicorn",
+      "issue_number": 3035,
+      "issue_updated_at": "2026-07-29T11:00:06Z",
+      "issue_snapshot": {
+        "number": 3035,
+        "title": "websockets changed how it handles non-ASCII headers",
+        "body": "### Initial Checks\n\n- [ ] I confirm this was discussed, and the maintainers suggest I open an issue.\n- [x] I'm aware that if I created this issue without a discussion, it may be closed without a response.\n\n_we didn't discuss this, but we collaborated before and I'm sure it's an actual issue_\n\n### Description\n\nIn websockets 16.1 and in the upcoming 17.0, I changed how non-ASCII headers, which the HTTP spec disallows, are handled by websockets. This happened over two releases because I messed up and then cleaned up.\n\nThis will be backwards-incompatible for uvicorn; your tests will blow up next time you run them; and it has already blown up here: https://github.com/streamlit/streamlit/issues/16030 :-(\n\n1. websockets 16.1 changed **receiving non-ASCII headers** from `.decode(\"ascii\", errors=\"surrogateescape\")` to `.decode(\"latin-1\")` which never crashes, is fully reversible, and is what older versions of HTTP more or less tolerated; at least it's less esoteric than surrogate escapes. Currently, you're relying on the (undocumented) decoding algorithm to [undo it by re-encoding](https://github.com/Kludex/uvicorn/blob/7e11cc65f0642c823ef18ea01ff6b23af90aaa9e/uvicorn/protocols/websockets/websockets_sansio_impl.py#L196). This needs to be changed to `value.encode(\"latin-1\"))`. Options for fixing:\n  a. uvicorn switches to latin-1 to match websockets and requires websockets >=16.1\n  b. uvicorn picks ascii + surrogate escapes or latin-1, conditional on the version of websockets — better if you don't want to constrain the version of websockets, but needs cleaning up later\n  c. I release a 16.1.1 that undoes this change, and we solve it with a. or b. for websockets 17.0.\n\n2. websockets 17.0 (not released yet) will change **sending non-ASCII headers** from `.encode()` to `.encode(\"latin-1\")`. This ensures clean round-trips, accounting for the first change. Also this makes it possible to send anything that doesn't break HTTP, while previously only valid UTF-8 could be sent. Currently, you have a [test that sends a non-ASCII header](https://github.com/Kludex/uvicorn/blob/7e11cc65f0642c823ef18ea01ff6b23af90aaa9e/tests/protocols/test_websocket.py#L214). That will break. Options for fixing:\n  a. add a `.encode().decode(\"latin-1\")` somewhere in uvicorn to stick to UTF-8 and require websockets >= 17.0\n  b. same as a., but conditional on the version of websockets \n  c. assert that the header is set to `bytes(\"abraão\", \"latin-1\")` and require websockets >= 17.0; document the backwards incompatibility\n  d. same as c., but conditional on the version of websockets \n\nI'm sorry I underestimated the backwards incompatibility :-(\n\nThis affects only the small subset of users how receive non-spec-compliant headers in the first place, so it's not major drama, but still worth fixing.\n\nI'm happy to provide a PR for your favorite options.\n\n### Python, Uvicorn & OS Version\n\n```Text\n0.51.0\n```",
+        "labels": [],
+        "comments_count": 9,
+        "created_at": "2026-07-16T22:11:43Z",
+        "updated_at": "2026-07-29T11:00:06Z",
+        "html_url": "https://github.com/Kludex/uvicorn/issues/3035",
+        "author": "aaugustin"
+      },
+      "fix_pr_number": 3036,
+      "pre_fix_sha": "7e11cc65f0642c823ef18ea01ff6b23af90aaa9e",
+      "expected_files": [
+        "uvicorn/protocols/websockets/websockets_impl.py",
+        "uvicorn/protocols/websockets/websockets_sansio_impl.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "uvicorn/protocols/websockets/websockets_impl.py",
+          "symbol": "WebSocketProtocol.process_request"
+        },
+        {
+          "file": "uvicorn/protocols/websockets/websockets_sansio_impl.py",
+          "symbol": "WebSocketsSansIOProtocol.handle_connect"
+        }
+      ]
+    },
+    {
+      "id": "matplotlib-tk-close-root-window",
+      "tier": "generalization",
+      "repository": "matplotlib/matplotlib",
+      "issue_number": 13470,
+      "issue_updated_at": "2026-08-09T11:02:55Z",
+      "issue_snapshot": {
+        "number": 13470,
+        "title": "Matplotlib.pyplot.close() interacts with tk.Tk() and closes the tk.Tk() object.",
+        "body": "<!--To help us understand and resolve your issue, please fill out the form to the best of your ability.-->\r\n<!--You can feel free to delete the sections that do not apply.-->\r\n\r\n### Bug report\r\n\r\n**Bug summary**\r\n\r\nThe bug revolves around the interaction between tkinter and matplotlib, while using PdfPages. Specifically, somehow a call to `pyplot.close()` let's the current 'module' finish but afterwards the tk.Tk() instance is closed without warning/error (see the attached MVE code). I expect that this is a bug in the matplotlib domain after hearing that this occurs more often (https://stackoverflow.com/q/54772180/1093485).\r\n\r\n**Code for reproduction**\r\n\r\n<!--A minimum code snippet required to reproduce the bug.\r\nPlease make sure to minimize the number of dependencies required, and provide\r\nany necessary plotted data.\r\nAvoid using threads, as Matplotlib is (explicitly) not thread-safe.-->\r\n\r\n```python\r\nimport tkinter as tk\r\nimport matplotlib.pyplot as plt\r\nimport numpy as np\r\nfrom matplotlib.backends.backend_pdf import PdfPages\r\nfrom pathlib import Path\r\n\r\nclass Pdf(object):\r\n    def __init__(self, master):\r\n        self.master = master\r\n        pdf = PdfPages(Path.cwd() / 'demo.pdf')\r\n\r\n        self.pdf = pdf\r\n\r\n    def plot_initial(self):\r\n        fig = plt.figure(figsize=(8,6))\r\n        fig.add_subplot(111)\r\n\r\n        mu, sigma = 0, 0.1\r\n        s = np.random.normal(mu, sigma, 1000)\r\n        count, bins, ignored = plt.hist(s, 30, density=True)\r\n        plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *\r\n                 np.exp( - (bins - mu)**2 / (2 * sigma**2) ),\r\n                 linewidth=2, color='r')\r\n        plt.title('Overview')\r\n        plt.xlabel('X')\r\n        plt.ylabel('Y')\r\n        self.pdf.savefig(fig)\r\n        # THE CULPRIT\r\n        plt.close(fig)\r\n\r\n    def plot_extra(self):\r\n        fig = plt.figure(figsize=(8,6))\r\n        fig.add_subplot(111)\r\n\r\n        mu, sigma = 0, 0.1\r\n        s = np.random.normal(mu, sigma, 1000)\r\n        count, bins, ignored = plt.hist(s, 30, density=True)\r\n        plt.plot(bins, 1/(sigma * np.sqrt(2 * np.pi)) *\r\n                 np.exp( - (bins - mu)**2 / (2 * sigma**2) ),\r\n                 linewidth=2, color='r')\r\n        plt.title('Extra')\r\n        plt.xlabel('X')\r\n        plt.ylabel('Y')\r\n        self.pdf.savefig(fig)\r\n        plt.close(fig)\r\n\r\n    def close(self):\r\n        self.pdf.close()\r\n\r\nclass MVE(object):\r\n    @classmethod\r\n    def run(cls):\r\n        root = tk.Tk()\r\n        MVE(root)\r\n        root.mainloop()\r\n\r\n    def __init__(self, master):\r\n        self.root = master\r\n        tk.Frame(master)\r\n\r\n        menu = tk.Menu(master)\r\n        master.config(menu=menu)\r\n\r\n        test_menu = tk.Menu(menu, tearoff=0)\r\n        menu.add_cascade(label='Bug', menu=test_menu)\r\n        test_menu.add_command(label='PDF', command=\r\n                              self.generate_pdf)\r\n\r\n    def generate_pdf(self):\r\n        pdf = Pdf(self)\r\n\r\n        pdf.plot_initial()\r\n        for i in range(0,3):\r\n            pdf.plot_extra()\r\n        pdf.close()\r\n\r\nif __name__ == \"__main__\":\r\n    MVE.run()\r\n```\r\n\r\n**Expected outcome**\r\n\r\n<!--A description of the expected outcome from the code snippet-->\r\n<!--If this used to work in an earlier version of Matplotlib, please note the version it used to work on-->\r\nI expect that the initial tk.Tk() window isn't closed once the PDF report has been generated.\r\n\r\n**Matplotlib version**\r\n<!--Please specify your platform and versions of the relevant libraries you are using:-->\r\n  * Operating system: Tested on Win 7 and Win 10\r\n  * Matplotlib version: 2.2.3 from pip\r\n  * Matplotlib backend (`print(matplotlib.get_backend())`): TkAgg\r\n  * Python version: 3.7.0\r\n  * Jupyter version (if applicable):\r\n  * Other libraries: Tkinter 8.6 from pip\r\n\r\n<!--Please tell us how you installed matplotlib and python e.g., from source, pip, conda-->\r\n<!--If you installed from conda, please specify which channel you used if not the default-->\r\n\r\n\r\n",
+        "labels": [
+          "GUI: tk",
+          "Good first issue"
+        ],
+        "comments_count": 15,
+        "created_at": "2019-02-19T18:57:07Z",
+        "updated_at": "2026-08-09T11:02:55Z",
+        "html_url": "https://github.com/matplotlib/matplotlib/issues/13470",
+        "author": "Tarskin"
+      },
+      "fix_pr_number": 17802,
+      "pre_fix_sha": "56d4f69923d5a4bb1158c7d61fbc7e24bd10d9b9",
+      "expected_files": [
+        "lib/matplotlib/backends/_backend_tk.py",
+        "lib/matplotlib/cbook/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/matplotlib/backends/_backend_tk.py",
+          "symbol": "FigureManagerTk.destroy"
+        },
+        {
+          "file": "lib/matplotlib/cbook/__init__.py",
+          "symbol": "_get_running_interactive_framework"
+        }
+      ]
+    },
+    {
+      "id": "jinja-namespace-multi-assignment",
+      "tier": "generalization",
+      "repository": "pallets/jinja",
+      "issue_number": 1413,
+      "issue_updated_at": "2025-01-04T00:18:25Z",
+      "issue_snapshot": {
+        "number": 1413,
+        "title": "Namespaces do not allow multi-variable assignments",
+        "body": "Replace this comment with a clear outline of what the bug is.\r\n-->\r\n\r\nIn Jinja we can use standard python multi-variable assignments like line 3 below, which successfully evaluates but does not confer benefits of namespaces variables.\r\n\r\nHowever, line 4 below throws an error, `jinja2.exceptions.TemplateSyntaxError: expected token 'end of statement block', got ','`\r\n```\r\n            {% set full = namespace(id=\"\", prev_id=\"\") -%}\r\n            {% for id endpoints recursive %}\r\n              {% set prev_id, id = id, id + \"/\" + id -%}\r\n              {% set full.prev_id, full.id = full.id, full.id + \"/\" + id -%}\r\n            {% endfor -%}\r\n```\r\n\r\n\r\nInclude the full traceback if there was an exception.\r\n-->\r\n\r\n```\r\nTraceback (most recent call last):\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2328, in __call__\r\n    return self.wsgi_app(environ, start_response)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2314, in wsgi_app\r\n    response = self.handle_exception(e)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1760, in handle_exception\r\n    reraise(exc_type, exc_value, tb)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/_compat.py\", line 36, in reraise\r\n    raise value\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 2311, in wsgi_app\r\n    response = self.full_dispatch_request()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1834, in full_dispatch_request\r\n    rv = self.handle_user_exception(e)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1737, in handle_user_exception\r\n    reraise(exc_type, exc_value, tb)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/_compat.py\", line 36, in reraise\r\n    raise value\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1832, in full_dispatch_request\r\n    rv = self.dispatch_request()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/app.py\", line 1818, in dispatch_request\r\n    return self.view_functions[rule.endpoint](**req.view_args)\r\n  File \"/home/ubuntu/cap/endpoints/views.py\", line 12, in home_page\r\n    return Response(render_template('home.html'))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/templating.py\", line 135, in render_template\r\n    context, ctx.app)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/flask/templating.py\", line 117, in _render\r\n    rv = template.render(context)\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 1090, in render\r\n    self.environment.handle_exception()\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 832, in handle_exception\r\n    reraise(*rewrite_traceback_stack(source=source))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/_compat.py\", line 28, in reraise\r\n    raise value.with_traceback(tb)\r\n  File \"/home/ubuntu/cap/templates/home.html\", line 1, in top-level template code\r\n    {% extends \"index.html\" %}\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/environment.py\", line 832, in handle_exception\r\n    reraise(*rewrite_traceback_stack(source=source))\r\n  File \"/home/ubuntu/.tox/dev/lib/python3.6/site-packages/jinja2/_compat.py\", line 28, in reraise\r\n    raise value.with_traceback(tb)\r\n  File \"/home/ubuntu/cap/templates/index.html\", line 89, in template\r\n    {% set full.prev_id, full.id = full.id, full.id + \"/\" + id -%}\r\njinja2.exceptions.TemplateSyntaxError: expected token 'end of statement block', got ','\r\n```\r\n\r\nEnvironment:\r\n\r\n- Python version: 3.6.9\r\n- Jinja version: 2.11.3\r\n",
+        "labels": [],
+        "comments_count": 0,
+        "created_at": "2021-05-10T00:10:33Z",
+        "updated_at": "2025-01-04T00:18:25Z",
+        "html_url": "https://github.com/pallets/jinja/issues/1413",
+        "author": "hans2520"
+      },
+      "fix_pr_number": 1664,
+      "pre_fix_sha": "1d55cddbb28e433779511f28f13a2d8c4ec45826",
+      "expected_files": [
+        "src/jinja2/compiler.py",
+        "src/jinja2/parser.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/compiler.py",
+          "symbol": "CodeGenerator.visit_Assign"
+        },
+        {
+          "file": "src/jinja2/parser.py",
+          "symbol": "Parser.parse_assign_target"
+        }
+      ]
+    },
+    {
+      "id": "pandas-string-match-ascii",
+      "tier": "generalization",
+      "repository": "pandas-dev/pandas",
+      "issue_number": 66348,
+      "issue_updated_at": "2026-08-15T19:12:42Z",
+      "issue_snapshot": {
+        "number": 66348,
+        "title": "BUG: ASCII mode is broken for `str.match`",
+        "body": "### Pandas version checks\n\n- [x] I have checked that this issue has not already been reported.\n\n- [x] I have confirmed this bug exists on the [latest version](https://pandas.pydata.org/docs/whatsnew/index.html) of pandas.\n\n- [x] I have confirmed this bug exists on the [main branch](https://pandas.pydata.org/docs/dev/getting_started/install.html#installing-the-development-version-of-pandas) of pandas.\n\n\n### Reproducible Example\n\n```python\ndef test_ascii_flag(df: pd.DataFrame):\n    df[pd.col(\"name\").str.match(pat=r'\\w+', flags=re.ASCII)]\n```\n\n### Issue Description\n\nBy always forcing the unicode support trying to use the ASCII mode is broken as they exclude eachother \n\n\n\n### Expected Behavior\n\nASCII mode should be an explicit option\n\n### Installed Versions\n\n<details>\n\nReplace this line with the output of pd.show_versions()\n\n</details>\n",
+        "labels": [
+          "Bug",
+          "Strings"
+        ],
+        "comments_count": 2,
+        "created_at": "2026-07-16T07:05:44Z",
+        "updated_at": "2026-08-15T19:12:42Z",
+        "html_url": "https://github.com/pandas-dev/pandas/issues/66348",
+        "author": "JensHeinrich"
+      },
+      "fix_pr_number": 66792,
+      "pre_fix_sha": "f9204c7f720ae2ac6b235c4ac959db285decda69",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/core/arrays/_arrow_string_mixins.py",
+          "symbol": "ArrowStringArrayMixin._str_match"
+        },
+        {
+          "file": "pandas/core/arrays/arrow/array.py",
+          "symbol": "ArrowExtensionArray._str_extract"
+        },
+        {
+          "file": "pandas/core/arrays/string_arrow.py",
+          "symbol": "ArrowStringArray._preprocess_re_pattern"
+        }
+      ]
+    },
+    {
+      "id": "aiohttp-last-modified-rounding",
+      "tier": "generalization",
+      "repository": "aio-libs/aiohttp",
+      "issue_number": 5303,
+      "issue_updated_at": "2026-07-20T11:54:34Z",
+      "issue_snapshot": {
+        "number": 5303,
+        "title": "Different rounding for timestamp and datetime when set last_modified",
+        "body": "Setting the `last_modified` property of `StreamResponse` rounds the value to seconds if it is `float` or `datetime`. But different rounding mode is used for `float` or `datetime`. If it is a `float` (timestamp), it is rounded toward +infinity. If it is an instance of `datetime`, it is rounded toward -infinity.\r\n\r\nFor example:\r\n```\r\n$ cat test_last_modified.py\r\nfrom aiohttp.web import StreamResponse\r\nfrom datetime import datetime, timezone\r\n\r\nresp = StreamResponse()\r\ndt = datetime.now(timezone.utc)\r\nresp.last_modified = dt\r\nprint(resp.last_modified)\r\nprint(repr(resp.last_modified))\r\nprint(resp.headers[\"Last-Modified\"])\r\nresp.last_modified = dt.timestamp()\r\nprint(resp.last_modified)\r\nprint(repr(resp.last_modified))\r\nprint(resp.headers[\"Last-Modified\"])\r\n```\r\n```\r\n$ python test_last_modified.py\r\n2020-12-02 09:51:02+00:00\r\ndatetime.datetime(2020, 12, 2, 9, 51, 2, tzinfo=datetime.timezone.utc)\r\nWed, 02 Dec 2020 09:51:02 GMT\r\n2020-12-02 09:51:03+00:00\r\ndatetime.datetime(2020, 12, 2, 9, 51, 3, tzinfo=datetime.timezone.utc)\r\nWed, 02 Dec 2020 09:51:03 GMT\r\n```\r\nI don't know what direction is correct, but it should be the same.",
+        "labels": [
+          "bug"
+        ],
+        "comments_count": 1,
+        "created_at": "2020-12-02T09:52:26Z",
+        "updated_at": "2026-07-20T11:54:34Z",
+        "html_url": "https://github.com/aio-libs/aiohttp/issues/5303",
+        "author": "serhiy-storchaka"
+      },
+      "fix_pr_number": 13170,
+      "pre_fix_sha": "7582e05457bf4308fadcfd17803d474ad8a194aa",
+      "expected_files": [
+        "aiohttp/web_response.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "aiohttp/web_response.py",
+          "symbol": "last_modified"
+        }
+      ]
+    },
+    {
+      "id": "yarl-malformed-bracket-host",
+      "tier": "generalization",
+      "repository": "aio-libs/yarl",
+      "issue_number": 1485,
+      "issue_updated_at": "2025-06-09T22:15:13Z",
+      "issue_snapshot": {
+        "number": 1485,
+        "title": "Unhandled exception (IndexError) in URL parsing",
+        "body": "### Please confirm the following\n\n- [x] I agree to follow the [aio-libs Code of Conduct][CoC]\n\n[CoC]: ../../.github/blob/master/CODE_OF_CONDUCT.md\n\n- [x] I have checked the [current issues][issue search] for duplicates.\n\n[issue search]: ../search?q=is%3Aissue&type=issues\n\n- [x] I understand this is open source software provided for free and that I might not receive a timely response.\n- [x] I am positive I am **NOT** reporting a (potential) security\nvulnerability, to the best of my knowledge. *(These must be shared by\nsubmitting [this report form][vulnerability report form] instead, if\nany hesitation exists.)*\n\n[vulnerability report form]: ../security/advisories/new\n\n- [ ] I am willing to submit a pull request with reporoducers as xfailing test cases or even entire fix. *(Assign this issue to me.)*\n\n### Describe the bug\n\nWe were fuzzing `URL()` parser and have found IndexError.\n\n### To Reproduce\n\n1. install yarl 1.18.3:\n```\npip install --force-reinstall -v \"yarl==1.18.3\"\n```\n2. reproduce IndexError:\n```\nfrom yarl import URL\nURL(\"//]'z[\")\n```\n\n### Expected behavior\n\nParse string without an error\n\n### Logs/tracebacks\n\n```python-traceback\nTraceback (most recent call last):\n  File \"<stdin>\", line 1, in <module>\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_url.py\", line 355, in __new__\n    return pre_encoded_url(val) if encoded else encode_url(val)\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_url.py\", line 147, in encode_url\n    scheme, netloc, path, query, fragment = split_url(url_str)\n  File \"/usr/local/lib/python3.10/dist-packages/yarl/_parse.py\", line 72, in split_url\n    if bracketed_host[0] == \"v\":\nIndexError: string index out of range\n```\n\n### Python Version\n\n```console\n$ python --version\nPython 3.10.12\n```\n\n### multidict Version\n\n```console\n$ python -m pip show multidict\nVersion: 6.2.0\n```\n\n### propcache Version\n\n```console\n$ python -m pip show propcache\nVersion: 0.3.0\n```\n\n### yarl Version\n\n```console\n$ python -m pip show yarl\nVersion: 1.18.3\n```\n\n### OS\n\nUbuntu:22.04\n\n### Additional context\n\n_No response_",
+        "labels": [
+          "bug",
+          "good first issue"
+        ],
+        "comments_count": 2,
+        "created_at": "2025-03-18T10:35:30Z",
+        "updated_at": "2025-06-09T22:15:13Z",
+        "html_url": "https://github.com/aio-libs/yarl/issues/1485",
+        "author": "lenix123"
+      },
+      "fix_pr_number": 1512,
+      "pre_fix_sha": "07d0ba3b7bad907787478ca3637fa03d07a2f8ad",
+      "expected_files": [
+        "yarl/_parse.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "yarl/_parse.py",
+          "symbol": "split_url"
+        }
+      ]
+    },
+    {
+      "id": "botocore-100-continue-reason",
+      "tier": "generalization",
+      "repository": "boto/botocore",
+      "issue_number": 3455,
+      "issue_updated_at": "2025-08-26T21:12:54Z",
+      "issue_snapshot": {
+        "number": 3455,
+        "title": "Botocore mistakenly expects a reason phrase in \"100 Continue\" responses",
+        "body": "### Describe the bug\n\nWhen making HTTP requests, botocore sends a 100-continue request to the server, expecting a `HTTP/1.1 100 Continue` response.\n\n### Regression Issue\n\n- [ ] Select this option if this issue appears to be a regression.\n\n### Expected Behavior\n\nThe reason phrase is optional, so a `HTTP/1.1 100` response from the server is the correct behaviour.\nBotocore should accept a `HTTP/1.1 100` response as correct.\n\n### Current Behavior\n\nIf Botocore receives a `HTTP/1.1 100`, it interprets the response as not correct, and does not continue with the original request.\n\n### Reproduction Steps\n\nStart a service (locally) that sends `HTTP/1.1 100` responses to 100-continue requests, e.g. S3Mock:\n\n```\ndocker run -e initialBuckets=my-bucket --rm -it -p 9090:9090 adobe/s3mock:4.0.0\n```\n\nExecute a `PutObject` request with a random file, e.g. the `README.rst` from the root of this repository, e.g. through `aws-cli` which uses boto3/botocore internally:\n\n```\naws s3api put-object \\\n    --bucket x \\\n    --key y.txt \\\n    --content-type text/plain \\\n    --endpoint http://localhost:9090 \\\n    --body README.rst \\\n    --debug\n```\n\nThe request will fail, as the Tomcat server used in S3Mock sends a `HTTP/1.1 100` as a response to the 100-continue request from botocore.\n\nExample output:\n```\n2025-04-10 01:41:22,320 - MainThread - botocore.hooks - DEBUG - Event request-created.s3.PutObject: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x1052779b0>>\n2025-04-10 01:41:22,320 - MainThread - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=PUT, url=http://localhost:9090/x/y.txt, headers={'Content-Type': b'text/plain', 'x-amz-sdk-checksum-algorithm': b'CRC32', 'User-Agent': b'aws-cli/2.25.13 md/awscrt#0.25.4 ua/2.1 os/macos#24.4.0 md/arch#arm64 lang/python#3.12.10 md/pyimpl#CPython m/N cfg/retry-mode#standard md/installer#source md/prompt#off md/command#s3api.put-object', 'Expect': b'100-continue', 'x-amz-checksum-crc32': b'NGSOug==', 'X-Amz-Date': b'20250409T234122Z', 'X-Amz-Content-SHA256': b'65dbc69741c062892a2842cc5d6099bbf02eefd4628d352d446c6c37cb0967da', 'Authorization': b'AWS4-HMAC-SHA256 Credential=NONE/20250409/us-east-1/s3/aws4_request, SignedHeaders=content-type;host;x-amz-checksum-crc32;x-amz-content-sha256;x-amz-date;x-amz-sdk-checksum-algorithm, Signature=e6a74e4aafab3b1c03e282cf2064d65dbb22af4396cb34460f69439d180f36d3', 'Content-Length': '42443'}>\n2025-04-10 01:41:22,320 - MainThread - urllib3.connectionpool - DEBUG - Starting new HTTP connection (1): localhost:9090\n2025-04-10 01:41:22,321 - MainThread - botocore.awsrequest - DEBUG - Waiting for 100 Continue response.\n2025-04-10 01:41:22,324 - MainThread - botocore.hooks - DEBUG - Event needs-retry.s3.PutObject: calling handler <function _update_status_code at 0x101d1c2c0>\n2025-04-10 01:41:22,324 - MainThread - botocore.hooks - DEBUG - Event needs-retry.s3.PutObject: calling handler <bound method RetryHandler.needs_retry of <botocore.retries.standard.RetryHandler object at 0x105277c80>>\n2025-04-10 01:41:22,324 - MainThread - botocore.retries.standard - DEBUG - Retry needed, retrying request after delay of: 0.2322557477907542\n```\n\n### Possible Solution\n\nIn `botocore/awsrequest.py`, check for only 2 parts in the response instead of 3 since the reason phrase is optional.\nThis will let a `HTTP/1.1 100` response be detected correctly.\n\n```\n    def _is_100_continue_status(self, maybe_status_line):\n        parts = maybe_status_line.split(None, 2)\n\n        # Check for HTTP/<version> 100 (Continue)\\r\\n\n        return (\n            len(parts) >= 2\n            and parts[0].startswith(b'HTTP/')\n            and parts[1] == b'100'\n        )\n```\n\n\n### Additional Information/Context\n\n[S3Mock](https://github.com/adobe/S3Mock) is a library/service to locally test applications that integrate with AWS S3.\n\naws-cli version:\n```\n❯ aws --version\naws-cli/2.22.16 Python/3.12.8 Darwin/24.4.0 source/arm64\n```\n\nReason phrase is optional, see https://www.rfc-editor.org/rfc/rfc9110.html#section-15.1\n\n### SDK version used\n\n1.37.36\n\n### Environment details (OS name and version, etc.)\n\nmacOS, 15.4.1, 24E263",
+        "labels": [
+          "bug",
+          "feature-request",
+          "s3",
+          "p3"
+        ],
+        "comments_count": 5,
+        "created_at": "2025-04-18T15:07:03Z",
+        "updated_at": "2025-08-26T21:12:54Z",
+        "html_url": "https://github.com/boto/botocore/issues/3455",
+        "author": "afranken"
+      },
+      "fix_pr_number": 3543,
+      "pre_fix_sha": "22bdd1723be32bcd318b73bace38026869bdb609",
+      "expected_files": [
+        "botocore/awsrequest.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "botocore/awsrequest.py",
+          "symbol": "AWSConnection._is_100_continue_status"
+        }
+      ]
+    },
+    {
+      "id": "celery-dst-gap-make-aware",
+      "tier": "generalization",
+      "repository": "celery/celery",
+      "issue_number": 10322,
+      "issue_updated_at": "2026-06-08T16:46:51Z",
+      "issue_snapshot": {
+        "number": 10322,
+        "title": "make_aware() silently mishandles spring-forward DST gap — crontab tasks scheduled in a non-existent local time are skipped or run with wrong UTC offset",
+        "body": "# Checklist\n- [x] I have verified that the issue exists against the `main` branch of Celery.\n- [x] This has already been asked to the [discussions forum](https://github.com/celery/celery/discussions) first.\n- [x] I have read the relevant section in the\n  [contribution guide](https://docs.celeryq.dev/en/main/contributing.html#other-bugs)\n  on reporting bugs.\n- [x] I have checked the [issues list](https://github.com/celery/celery/issues?q=is%3Aissue+label%3A%22Issue+Type%3A+Bug+Report%22+-label%3A%22Category%3A+Documentation%22)\n  for similar or identical bug reports.\n- [x] I have checked the [pull requests list](https://github.com/celery/celery/pulls?q=is%3Apr+label%3A%22PR+Type%3A+Bugfix%22+-label%3A%22Category%3A+Documentation%22)\n  for existing proposed fixes.\n- [x] I have checked the [commit log](https://github.com/celery/celery/commits/main)\n  to find out if the bug was already fixed in the main branch.\n- [x] I have included all related issues and possible duplicate issues\n  in this issue (If there are none, check this box anyway).\n- [ ] I have tried to reproduce the issue with [pytest-celery](https://docs.celeryq.dev/projects/pytest-celery/en/latest/userguide/celery-bug-report.html) and added the reproduction script below.\n\n## Mandatory Debugging Information\n\n- [ ] I have included the output of ``celery -A proj report`` in the issue.\n- [x] I have verified that the issue exists against the `main` branch of Celery.\n- [ ] I have included the contents of ``pip freeze`` in the issue.\n- [ ] I have included all the versions of all the external dependencies required\n  to reproduce this bug.\n\n## Optional Debugging Information\n\n- [x] I have tried reproducing the issue on more than one Python version\n  and/or implementation.\n- [x] I have tried reproducing the issue on more than one operating system.\n\n## Related Issues and Possible Duplicates\n\n#### Related Issues\n\n- #10107 — Hourly crontab skips execution during **fall-back** DST transition (the complementary issue; that PR introduced `_is_ambiguous` handling but did not address the spring-forward gap)\n\n#### Possible Duplicates\n\n- None\n\n## Environment & Settings\n\n**Celery version**: main (post-5.4)\n\n**Relevant config**:\n```python\nCELERY_TIMEZONE = \"US/Eastern\"  # or any DST-observing zone\nCELERY_ENABLE_UTC = True\n```\n\n# Steps to Reproduce\n\n## Required Dependencies\n\n- **Minimal Python Version**: 3.9\n- **Minimal Celery Version**: 5.3 (after pytz deprecation / ZoneInfo migration)\n- **Minimal Kombu Version**: N/A\n- **Minimal Broker Version**: N/A\n- **Minimal Result Backend Version**: N/A\n- **Minimal OS and/or Kernel Version**: Any\n- **Minimal Broker Client Version**: N/A\n- **Minimal Result Backend Client Version**: N/A\n\n### Python Packages\n\n<details>\n<summary><b><code>pip freeze</code> Output:</b></summary>\n<p>\ncelery @ git+https://github.com/celery/celery@main\npython-dateutil>=2.8\n</p>\n</details>\n\n## Minimally Reproducible Test Case\n\n<details>\n<p>\n\n```python\nfrom zoneinfo import ZoneInfo\nfrom datetime import datetime\nfrom dateutil import tz as dateutil_tz\nfrom celery.utils.time import make_aware\n\ntz = ZoneInfo(\"US/Eastern\")\n\n# March 10, 2024: clocks spring forward at 2:00 AM -> 3:00 AM\n# 2:30 AM does not exist in US/Eastern on this date\nnon_existent_dt = datetime(2024, 3, 10, 2, 30, 0)\n\n# Confirm it truly doesn't exist\nassert not dateutil_tz.datetime_exists(non_existent_dt.replace(tzinfo=tz)), \\\n    \"Expected non-existent time in spring-forward gap\"\n\nresult = make_aware(non_existent_dt, tz)\n\n# The UTC offset will be -05:00 (EST) instead of the correct post-transition -04:00 (EDT)\n# The function returns silently with no warning or error\nprint(result)\nprint(result.utcoffset())  # prints -1 day, 19:00:00 (i.e. -05:00, which is wrong)\n\n# To see the beat scheduler impact:\nfrom celery.schedules import crontab\nschedule = crontab(hour=2, minute=30, app=None)\n# On the spring-forward night, remaining_delta produces a next-run datetime\n# landing in the gap, which make_aware() resolves incorrectly,\n# causing the task to either be skipped or fire an hour late.\n```\n\n</p>\n</details>\n\n# Expected Behavior\n\n`make_aware()` should detect when a naive datetime falls inside a spring-forward DST gap (a time that does not exist in the given timezone) and advance the datetime to the first valid moment after the gap — consistent with how most DST-aware frameworks (Django, Arrow, pendulum) handle this case.\n\n`dateutil_tz.datetime_exists()` is already available via the existing `from dateutil import tz as dateutil_tz` import in `celery/utils/time.py` and can be used directly.\n\nProposed fix in `celery/utils/time.py`:\n\n```python\ndef make_aware(dt: datetime, tz: tzinfo) -> datetime:\n    \"\"\"Set timezone for a :class:`~datetime.datetime` object.\"\"\"\n    dt = dt.replace(tzinfo=tz)\n    if _is_ambiguous(dt, tz):\n        # Fall-back: two wall-clock instants map to the same local time.\n        # Pick the earlier UTC instant (fold=0, DST still active).\n        dt = min(dt.replace(fold=0), dt.replace(fold=1))\n    elif _can_detect_ambiguous(tz) and not dateutil_tz.datetime_exists(dt):\n        # Spring-forward gap: this local time does not exist.\n        # Advance to the post-transition instant (fold=1).\n        dt = dt.replace(fold=1)\n    return dt\n```\n\nA corresponding `_is_nonexistent()` helper (mirroring `_is_ambiguous()`) could also be added for clarity and testability.\n\n# Actual Behavior\n\n`make_aware()` only guards against ambiguous (fall-back) times via `_is_ambiguous()`. There is no equivalent check for non-existent (spring-forward) times.\n\nWhen a crontab's computed next-run datetime lands inside the spring-forward gap:\n\n1. `make_aware()` calls `dt.replace(tzinfo=tz)` on the non-existent time with no further correction.\n2. The resulting datetime carries the pre-transition UTC offset (e.g. `-05:00` EST instead of `-04:00` EDT).\n3. `remaining_estimate()` therefore computes a next-run time that is **one hour later than intended** in UTC.\n4. On the affected night the task either **fires one hour late** or is **silently skipped** entirely, with no log warning or exception raised.\n\nThis is the exact spring-forward counterpart to #10107 (fall-back skipping), but currently has no handling in the codebase.\n\n\n\nI WOULD LIKE TO WORK ON THIS ISSUE AND GET IT FIXED AS SOON AS POSSIBLE.\nPLEASE ASSIGN IT TO ME.",
+        "labels": [
+          "Issue Type: Bug Report"
+        ],
+        "comments_count": 0,
+        "created_at": "2026-05-21T08:49:12Z",
+        "updated_at": "2026-06-08T16:46:51Z",
+        "html_url": "https://github.com/celery/celery/issues/10322",
+        "author": "HunarBhatia"
+      },
+      "fix_pr_number": 10324,
+      "pre_fix_sha": "be0e2de234324a06c61b5561fdd0ff18fabcea38",
+      "expected_files": [
+        "celery/utils/time.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "celery/utils/time.py",
+          "symbol": "make_aware"
+        }
+      ]
+    },
+    {
+      "id": "hypothesis-target-optimizer-scheduling",
+      "tier": "generalization",
+      "repository": "HypothesisWorks/hypothesis",
+      "issue_number": 3176,
+      "issue_updated_at": "2026-08-12T18:20:07Z",
+      "issue_snapshot": {
+        "number": 3176,
+        "title": "Better heuristic for when to optimize `target()` metrics",
+        "body": "Currently, we run all of our optimizer routines [exactly once, starting at (or just after) half of our `max_examples` budget](https://github.com/HypothesisWorks/hypothesis/blob/9fce400120bcb7fcdf66626a5c6525f84db21e59/hypothesis-python/src/hypothesis/internal/conjecture/engine.py#L738-L743).  This works pretty well for the default `max_examples=100`, but I've noticed increasing use of Hypothesis with very large example budgets (and `target()`) for one-off searches for some example - and we can do much better for this workflow.  Specifically, we should:\r\n\r\n- better support interleaving of ordinary generation with targeted optimization; e.g. \"run an optimize step, then generate that many examples, then the next optimize step...\".  This still aims to spend up-to-half our total examples optimizing.\r\n- pick a smoother heuristic for when-to-optimize.  Initial proposal: maintain current behaviour for `max_examples < 1000`; for `max_examples >= 1000` use the incremental mixture instead, starting after 200 examples generated by our usual means.\r\n- for long runs, we might finish running the optimizer.  How should we decide to start a second full pass?  We don't want unproductive re-runs (as may be implicated in #2985), but an additional run must *sometimes* make sense...\r\n\r\n\r\n\r\n",
+        "labels": [
+          "performance",
+          "internals"
+        ],
+        "comments_count": 0,
+        "created_at": "2021-12-04T13:16:43Z",
+        "updated_at": "2026-08-12T18:20:07Z",
+        "html_url": "https://github.com/HypothesisWorks/hypothesis/issues/3176",
+        "author": "Zac-HD"
+      },
+      "fix_pr_number": 4835,
+      "pre_fix_sha": "4b8467b2e33864d3a71fa297d5f9be3e8fc9120d",
+      "expected_files": [
+        "hypothesis/src/hypothesis/internal/conjecture/engine.py"
+      ],
+      "expected_symbols": []
+    },
+    {
+      "id": "werkzeug-duplicate-100-continue",
+      "tier": "generalization",
+      "repository": "pallets/werkzeug",
+      "issue_number": 3138,
+      "issue_updated_at": "2026-04-08T00:51:03Z",
+      "issue_snapshot": {
+        "number": 3138,
+        "title": "WSGIRequestHandler sends 100 Continue twice when client sends Expect: 100-continue",
+        "body": "`WSGIRequestHandler` sends `HTTP/1.1 100 Continue` twice when a client includes the `Expect: 100-continue` header. Python's `BaseHTTPRequestHandler.parse_request()` calls `handle_expect_100()` which sends the first response. Then `run_wsgi()` ([serving.py L313-314](https://github.com/pallets/werkzeug/blob/main/src/werkzeug/serving.py#L313-L314)) independently checks the same header and writes a second one. Neither layer clears the header after acting on it.\n\nHTTP clients that strictly parse interim responses — notably the AWS SDK's Netty-based async client — treat the second `100 Continue` as the start of the final response, causing all uploads to fail with status code 100.\n\n```python\nimport socket\nimport threading\nfrom werkzeug.serving import make_server\n\n\ndef app(environ, start_response):\n    # Read and discard request body\n    environ[\"wsgi.input\"].read()\n    start_response(\"200 OK\", [(\"Content-Type\", \"text/plain\")])\n    return [b\"ok\"]\n\n\nserver = make_server(\"127.0.0.1\", 9876, app, threaded=True)\nthread = threading.Thread(target=server.handle_request)\nthread.start()\n\nsock = socket.create_connection((\"127.0.0.1\", 9876))\nsock.sendall(\n    b\"PUT /test HTTP/1.1\\r\\n\"\n    b\"Host: 127.0.0.1:9876\\r\\n\"\n    b\"Content-Length: 5\\r\\n\"\n    b\"Expect: 100-continue\\r\\n\"\n    b\"\\r\\n\"\n)\n\n# Collect the full response before sending the body\nimport time\ntime.sleep(0.5)\nresponse = sock.recv(4096)\nprint(response.decode())\n\nsock.sendall(b\"hello\")\ntime.sleep(0.5)\nresponse = sock.recv(4096)\nprint(response.decode())\n\nsock.close()\nthread.join()\nserver.server_close()\n\n```\n\n**Expected:** One `HTTP/1.1 100 Continue` response, followed by the final `200 OK` after the body is sent.\n\n**Actual:** Two `HTTP/1.1 100 Continue` responses are sent before the final `200 OK`. Raw output:\n\n```\nHTTP/1.1 100 Continue\n\nHTTP/1.1 100 Continue\n\nHTTP/1.1 200 OK\n...\n```\n\nA minimal fix would be to override `handle_expect_100` to suppress the stdlib's response, since `run_wsgi()` already handles it:\n\n```python\ndef handle_expect_100(self) -> bool:\n    return True\n```\n\nEnvironment:\n\n- Python version: 3.12\n- Werkzeug version: 3.1.7 (main branch)\n",
+        "labels": [],
+        "comments_count": 2,
+        "created_at": "2026-03-24T16:32:13Z",
+        "updated_at": "2026-04-08T00:51:03Z",
+        "html_url": "https://github.com/pallets/werkzeug/issues/3138",
+        "author": "ByronLudwig"
+      },
+      "fix_pr_number": 3140,
+      "pre_fix_sha": "8bb42611d6cc9eff06f8256efd39e77d21e7e6b2",
+      "expected_files": [
+        "src/werkzeug/serving.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/werkzeug/serving.py",
+          "symbol": "run_wsgi"
+        }
+      ]
+    },
+    {
+      "id": "paramiko-aes-ctr-pycrypto-iv",
+      "tier": "generalization",
+      "repository": "paramiko/paramiko",
+      "issue_number": 713,
+      "issue_updated_at": "2016-04-25T03:08:51Z",
+      "issue_snapshot": {
+        "number": 713,
+        "title": "Paramiko passes IV to pycrypto when using MODE_CTR",
+        "body": "In later versions of pycrypto, this throws an exception, because of this commit:\nhttps://github.com/dlitz/pycrypto/commit/8dbe0dc3eea5c689d4f76b37b93fe216cf1f00d4\n",
+        "labels": [],
+        "comments_count": 1,
+        "created_at": "2016-03-31T14:18:11Z",
+        "updated_at": "2016-04-25T03:08:51Z",
+        "html_url": "https://github.com/paramiko/paramiko/issues/713",
+        "author": "jmh045000"
+      },
+      "fix_pr_number": 889,
+      "pre_fix_sha": "7a9d633486991b11e4c212e6937ceea42c1e539f",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/transport.py",
+          "symbol": "Transport._get_cipher"
+        }
+      ]
+    },
+    {
+      "id": "requests-chardet-upper-bound",
+      "tier": "generalization",
+      "repository": "psf/requests",
+      "issue_number": 7219,
+      "issue_updated_at": "2026-03-26T09:50:44Z",
+      "issue_snapshot": {
+        "number": 7219,
+        "title": "chardet 6 triggers RequestsDependencyWarning on stderr",
+        "body": "<!-- Summary. -->\n\nchardet 6.0.0 was just released, but requests only supports < 6.\n\nThis just broke our CI with:\n\n```\n/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/requests/__init__.py:113:\n\nRequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0dev0)/charset_normalizer (3.4.4) doesn't match a supported version!\\n\"\n```\n\nI also reported that strange \"dev0\" to the chardet project, that shouldn't be there when just doing \"pip install chardet\".\n\nCI log: https://github.com/borgbackup/borg/actions/runs/22275930673/job/64439274108?pr=9397\n\n## Reproduction Steps\n\nNot sure, we do not directly use requests, it is just pulled in by some stuff we use.\n\nAnd something installs the latest chardet and requests stumbles over it, spilling out unexpected output on stderr.\n",
+        "labels": [],
+        "comments_count": 6,
+        "created_at": "2026-02-22T13:29:04Z",
+        "updated_at": "2026-03-26T09:50:44Z",
+        "html_url": "https://github.com/psf/requests/issues/7219",
+        "author": "ThomasWaldmann"
+      },
+      "fix_pr_number": 7220,
+      "pre_fix_sha": "da9113c0466850a425e554630a732ec1f7d045fc",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/__init__.py",
+          "symbol": "check_compatibility"
+        }
+      ]
+    }
+  ]
+}

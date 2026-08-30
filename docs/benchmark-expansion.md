@@ -89,7 +89,9 @@ rerun; index v21 is map-identical to v20. The current hybrid runtime uses Codex 
 `gpt-5.6-luna`; its first 200-case run completed 200/200 valid first-attempt ranks with no fallback,
 File Recall@1/5/10/20 `0.6147/0.8192/0.8501/0.9007`, and MRR `0.7860`. This is a single run, so
 stability remains unmeasured. The compact taxonomy is
-`benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`.
+`benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`. The reproducible index-v23 successor,
+`benchmarks/results/candidate-pool-miss-audit-index-v23.json`, confirms 236/267 Top-40 coverage and
+records the current 31 misses with language, repository, wide-rank, and evidence metadata.
 
 ## v0.23 tenth 200-case expansion batch
 

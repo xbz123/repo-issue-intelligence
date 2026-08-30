@@ -19,9 +19,19 @@ from .benchmark import (
     prepare_repository,
     tracked_repository_files,
 )
-from .evidence import DEFAULT_MAX_LINES_PER_SNIPPET, DEFAULT_MAX_TOTAL_CHARS
+from .evidence import (
+    DEFAULT_MAX_LINES_PER_SNIPPET,
+    DEFAULT_MAX_TOTAL_CHARS,
+    collect_evidence,
+)
 from .llm_client import IssueAnalyzer, LLMProviderError
-from .models import AgentRun, AgentRunStatus, LLMAnalysis, LLMAnalysisResult
+from .models import (
+    AgentRun,
+    AgentRunStatus,
+    InvestigationReport,
+    LLMAnalysis,
+    LLMAnalysisResult,
+)
 
 
 class AgentAnalysisCaseResult(BaseModel):
@@ -30,6 +40,14 @@ class AgentAnalysisCaseResult(BaseModel):
     repository: str
     issue_number: int
     pre_fix_sha: str
+    expected_files: list[str] = Field(default_factory=list)
+    evidence_files: list[str] = Field(default_factory=list)
+    expected_files_in_evidence: list[str] = Field(default_factory=list)
+    hypothesis_cited_files: list[str] = Field(default_factory=list)
+    expected_files_cited_by_hypothesis: list[str] = Field(default_factory=list)
+    expected_file_evidence_recall: float | None = None
+    hypothesis_expected_file_recall: float | None = None
+    hypothesis_expected_file_hit: bool | None = None
     agent_status: AgentRunStatus | None = None
     analysis_succeeded: bool = False
     skipped_no_evidence: bool = False
@@ -59,6 +77,16 @@ class AgentAnalysisAggregate(BaseModel):
     output_tokens: int
     average_llm_elapsed_ms: float | None = None
     error_categories: dict[str, int] = Field(default_factory=dict)
+    evidence_quality_cases: int = 0
+    expected_file_evidence_hits: int = 0
+    expected_file_evidence_hit_rate: float | None = None
+    mean_expected_file_evidence_recall: float | None = None
+    hypothesis_quality_cases: int = 0
+    hypothesis_expected_file_hits: int = 0
+    overall_hypothesis_expected_file_hit_rate: float = 0
+    hypothesis_expected_file_hit_rate: float | None = None
+    mean_hypothesis_expected_file_recall: float | None = None
+    hypothesis_hit_rate_when_expected_evidence_available: float | None = None
 
 
 class AgentAnalysisRun(BaseModel):
@@ -133,6 +161,29 @@ class _CapturingAgentStore(AgentStore):
 
 def _aggregate(results: Sequence[AgentAnalysisCaseResult]) -> AgentAnalysisAggregate:
     successful = [result for result in results if result.analysis_succeeded]
+    evidence_quality = [
+        result
+        for result in results
+        if result.expected_file_evidence_recall is not None
+    ]
+    hypothesis_quality = [
+        result
+        for result in results
+        if result.hypothesis_expected_file_recall is not None
+    ]
+    hypothesis_with_expected_evidence = [
+        result for result in hypothesis_quality if result.expected_files_in_evidence
+    ]
+    evidence_hits = sum(
+        bool(result.expected_files_in_evidence) for result in evidence_quality
+    )
+    hypothesis_hits = sum(
+        result.hypothesis_expected_file_hit is True for result in hypothesis_quality
+    )
+    available_hypothesis_hits = sum(
+        result.hypothesis_expected_file_hit is True
+        for result in hypothesis_with_expected_evidence
+    )
     categories = {
         category: sum(result.error_category == category for result in results)
         for category in sorted(
@@ -166,7 +217,111 @@ def _aggregate(results: Sequence[AgentAnalysisCaseResult]) -> AgentAnalysisAggre
         if successful
         else None,
         error_categories=categories,
+        evidence_quality_cases=len(evidence_quality),
+        expected_file_evidence_hits=evidence_hits,
+        expected_file_evidence_hit_rate=(
+            round(evidence_hits / len(evidence_quality), 4)
+            if evidence_quality
+            else None
+        ),
+        mean_expected_file_evidence_recall=(
+            round(
+                fmean(
+                    result.expected_file_evidence_recall
+                    for result in evidence_quality
+                    if result.expected_file_evidence_recall is not None
+                ),
+                4,
+            )
+            if evidence_quality
+            else None
+        ),
+        hypothesis_quality_cases=len(hypothesis_quality),
+        hypothesis_expected_file_hits=hypothesis_hits,
+        overall_hypothesis_expected_file_hit_rate=(
+            round(hypothesis_hits / len(results), 4) if results else 0
+        ),
+        hypothesis_expected_file_hit_rate=(
+            round(hypothesis_hits / len(hypothesis_quality), 4)
+            if hypothesis_quality
+            else None
+        ),
+        mean_hypothesis_expected_file_recall=(
+            round(
+                fmean(
+                    result.hypothesis_expected_file_recall
+                    for result in hypothesis_quality
+                    if result.hypothesis_expected_file_recall is not None
+                ),
+                4,
+            )
+            if hypothesis_quality
+            else None
+        ),
+        hypothesis_hit_rate_when_expected_evidence_available=(
+            round(
+                available_hypothesis_hits / len(hypothesis_with_expected_evidence),
+                4,
+            )
+            if hypothesis_with_expected_evidence
+            else None
+        ),
     )
+
+
+def _quality_metrics(
+    case: BenchmarkCase,
+    report: InvestigationReport,
+    analysis: LLMAnalysis | None,
+    max_evidence_chars: int | None,
+    max_lines_per_evidence: int | None,
+) -> dict[str, object]:
+    evidence = collect_evidence(
+        report,
+        max_total_chars=max_evidence_chars,
+        max_lines_per_snippet=max_lines_per_evidence,
+    )
+    evidence_files = list(dict.fromkeys(snippet.file for snippet in evidence))
+    expected_files = set(case.expected_files)
+    expected_files_in_evidence = [
+        path for path in case.expected_files if path in evidence_files
+    ]
+    cited_evidence_ids = (
+        {
+            evidence_id
+            for hypothesis in analysis.hypotheses
+            for evidence_id in hypothesis.evidence_ids
+        }
+        if analysis is not None
+        else set()
+    )
+    hypothesis_cited_files = list(
+        dict.fromkeys(
+            snippet.file for snippet in evidence if snippet.id in cited_evidence_ids
+        )
+    )
+    expected_files_cited = [
+        path for path in case.expected_files if path in hypothesis_cited_files
+    ]
+    return {
+        "expected_files": case.expected_files,
+        "evidence_files": evidence_files,
+        "expected_files_in_evidence": expected_files_in_evidence,
+        "hypothesis_cited_files": hypothesis_cited_files,
+        "expected_files_cited_by_hypothesis": expected_files_cited,
+        "expected_file_evidence_recall": round(
+            len(expected_files_in_evidence) / len(expected_files),
+            4,
+        ),
+        "hypothesis_expected_file_recall": (
+            round(len(expected_files_cited) / len(expected_files), 4)
+            if analysis is not None
+            else None
+        ),
+        "hypothesis_expected_file_hit": (
+            bool(expected_files_cited) if analysis is not None else None
+        ),
+    }
 
 
 def _evaluate_case(
@@ -210,6 +365,7 @@ def _evaluate_case(
                 repository=case.repository,
                 issue_number=case.issue_number,
                 pre_fix_sha=case.pre_fix_sha,
+                expected_files=case.expected_files,
                 agent_status=restored.status if restored is not None else None,
                 persistence_verified=(
                     restored is not None
@@ -237,12 +393,20 @@ def _evaluate_case(
             "skipped_no_evidence_issue_numbers",
             [],
         )
+        quality_metrics = _quality_metrics(
+            case,
+            report,
+            analysis_result.analysis if analysis_result is not None else None,
+            max_evidence_chars,
+            max_lines_per_evidence,
+        )
         return AgentAnalysisCaseResult(
             case_id=case.id,
             tier=case.tier,
             repository=case.repository,
             issue_number=case.issue_number,
             pre_fix_sha=case.pre_fix_sha,
+            **quality_metrics,
             agent_status=run.status,
             analysis_succeeded=(
                 analysis_result is not None
@@ -319,6 +483,7 @@ def run_agent_analysis_evaluation(
                 repository=case.repository,
                 issue_number=case.issue_number,
                 pre_fix_sha=case.pre_fix_sha,
+                expected_files=case.expected_files,
                 error_category=category,
                 error=f"{type(error).__name__}: {error}",
             )
