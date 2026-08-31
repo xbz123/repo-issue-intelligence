@@ -18,6 +18,7 @@ from .benchmark import (
     run_benchmark,
     save_benchmark_run,
 )
+from .benchmark_analysis import audit_candidate_pool, save_candidate_pool_audit
 from .benchmark_discovery import (
     CandidateStatus,
     build_candidate_review_queue,
@@ -317,6 +318,21 @@ def agent_evaluate_command(
         f"first-attempt success={run.overall.first_attempt_success_rate:.4f}; "
         f"persisted={run.overall.persistence_verified}/{run.overall.cases}"
     )
+    if run.overall.hypothesis_quality_cases:
+        conditional_rate = (
+            run.overall.hypothesis_hit_rate_when_expected_evidence_available
+        )
+        conditional_text = (
+            f"{conditional_rate:.4f}" if conditional_rate is not None else "n/a"
+        )
+        console.print(
+            "File grounding: "
+            f"evidence-hit={run.overall.expected_file_evidence_hit_rate:.4f}; "
+            "overall-hypothesis-hit="
+            f"{run.overall.overall_hypothesis_expected_file_hit_rate:.4f}; "
+            f"valid-hypothesis-hit={run.overall.hypothesis_expected_file_hit_rate:.4f}; "
+            f"conditional-hypothesis-hit={conditional_text}"
+        )
     console.print(f"Saved Agent analysis results to {output}")
     if run.overall.failures or run.overall.skipped_no_evidence:
         raise typer.Exit(code=1)
@@ -398,6 +414,27 @@ def benchmark(
     console.print(f"Saved benchmark results to {output}")
     if run.overall.failed:
         raise typer.Exit(code=1)
+
+
+@app.command("benchmark-miss-audit")
+def benchmark_miss_audit(
+    manifest: Path,
+    workspace: Path = Path("benchmarks/workspaces"),
+    output: Path = Path("benchmarks/results/candidate-pool-miss-audit-latest.json"),
+) -> None:
+    """Audit reviewed targets missing from the deterministic Top-40 pool."""
+    audit = audit_candidate_pool(load_manifest(manifest), workspace)
+    save_candidate_pool_audit(audit, output)
+    console.print(
+        f"Candidate pool: {audit.candidate_pool_matched_targets}/"
+        f"{audit.production_targets} target(s) matched; "
+        f"{audit.candidate_pool_missing_targets} missing"
+    )
+    console.print(
+        f"Repository-map cache: {audit.repository_map_cache_hits} hit(s), "
+        f"{audit.repository_map_cache_misses} miss(es)"
+    )
+    console.print(f"Saved candidate-pool miss audit to {output}")
 
 
 def _parse_tier_assignments(values: list[str] | None) -> dict[str, BenchmarkTier]:

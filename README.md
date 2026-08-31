@@ -143,6 +143,17 @@ evidence reference, restores the final Agent payload from a temporary SQLite sto
 failures in the denominator. The command exits non-zero for provider/schema failures or skipped
 evidence so it can be used as a reliability gate.
 
+Agent evaluation also reports whether reviewed fix files were present in the supplied evidence and
+whether the persisted hypothesis cited them. The fixed 24-case, 24-repository quality slice and its
+manual rubric are documented in
+[`docs/hypothesis-quality-evaluation.md`](docs/hypothesis-quality-evaluation.md). These file-level
+metrics do not claim that the hypothesis text identifies the correct causal mechanism.
+The first authorized slice run completed 24/24 strict analyses and SQLite restorations. Reviewed
+fix evidence was available for 20 cases; 18 hypotheses cited at least one reviewed fix file, for an
+overall hit rate of `0.7500` and an evidence-available conditional rate of `0.9000`. One reviewer
+scored 16 hypotheses fully correct, seven plausible but incomplete, and one contradicted; this
+single-reviewer result is not a production accuracy estimate.
+
 The pre-guard 20,000-token Go-endpoint reliability check ran all 50 frozen public cases three times
 with no inter-case delay. It produced 150/150 valid first-attempt analyses and restored all 150
 terminal payloads from SQLite. This followed a diagnostic that traced the preceding recurring
@@ -180,6 +191,17 @@ uv run rii benchmark benchmarks/cases.json \
   --llm-delay-seconds 0 \
   --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
 ```
+
+Audit reviewed production targets that remain outside the deterministic Top-40 candidate pool:
+
+```bash
+uv run rii benchmark-miss-audit benchmarks/cases.json \
+  --output benchmarks/results/candidate-pool-miss-audit-index-v23.json
+```
+
+The audit reuses the frozen Issue snapshots, pre-fix repositories, and repository-map cache. It
+records each missing target's language, repository, diagnostic wide rank, and available evidence;
+the wide rank is diagnostic and does not change production candidate selection.
 
 The Hybrid benchmark is intentionally fixed to Codex CLI `gpt-5.6-luna`; it does not accept
 provider, model, temperature, or seed overrides. Install and authenticate Codex CLI before running

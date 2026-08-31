@@ -1,0 +1,594 @@
+{
+  "protocol": "hypothesis-quality-selection-v1",
+  "source_manifest": "benchmarks/cases.json",
+  "source_manifest_version": 20,
+  "ground_truth_review_status": "inherited_reviewed_from_manifest_v20",
+  "independent_retrieval_held_out": false,
+  "selection_policy": {
+    "tier": "generalization only",
+    "cases": 24,
+    "repositories": 24,
+    "strata": {
+      "non_python": 8,
+      "python_multi": 8,
+      "python_single": 8
+    },
+    "ordering": "repository then case ID within each stratum; one repository per case",
+    "result_blind": true
+  },
+  "automated_metrics": [
+    "expected_file_evidence_recall",
+    "hypothesis_expected_file_recall",
+    "hypothesis_expected_file_hit",
+    "hypothesis_hit_rate_when_expected_evidence_available"
+  ],
+  "manual_rubric": {
+    "hypothesis_correctness": "0=contradicted, 1=plausible but incomplete, 2=matches reviewed fix mechanism",
+    "evidence_sufficiency": "0=unsupported, 1=partially supported, 2=directly supported",
+    "missing_evidence_quality": "0=irrelevant, 1=useful, 2=actionable and discriminating"
+  },
+  "limitations": [
+    "This slice was selected from manifest v20 and is not independent retrieval held-out data.",
+    "Expected files and symbols are reviewed ground truth; free-text hypothesis correctness still requires manual scoring."
+  ],
+  "cases": [
+    {
+      "order": 1,
+      "case_id": "multidict-setdefault-segfault",
+      "stratum": "non_python",
+      "repository": "aio-libs/multidict",
+      "expected_files": [
+        "multidict/_multidict.c"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/aio-libs/multidict/pull/1160",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Matches the single-argument setdefault crash mechanism, but cites only fallback/tests and correctly asks for the C implementation."
+      }
+    },
+    {
+      "order": 2,
+      "case_id": "airflow-display-current-user",
+      "stratum": "non_python",
+      "repository": "apache/airflow",
+      "expected_files": [
+        "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/apache/airflow/pull/58981",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 0,
+        "missing_evidence_quality": 2,
+        "note": "Recognizes the missing UI feature but has no relevant UI evidence or implementation mechanism; requests the needed UI sources."
+      }
+    },
+    {
+      "order": 3,
+      "case_id": "ruff-delete-full-slice-dict",
+      "stratum": "non_python",
+      "repository": "astral-sh/ruff",
+      "expected_files": [
+        "crates/ruff_linter/src/rules/refurb/rules/delete_full_slice.rs"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/astral-sh/ruff/pull/27711",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 1,
+        "note": "Correctly identifies the missing list-type restriction from the reviewed rule and fixture evidence."
+      }
+    },
+    {
+      "order": 4,
+      "case_id": "uv-check-no-install-project",
+      "stratum": "non_python",
+      "repository": "astral-sh/uv",
+      "expected_files": [
+        "crates/uv-cli/src/lib.rs",
+        "crates/uv/src/commands/project/check.rs",
+        "crates/uv/src/lib.rs",
+        "crates/uv/src/settings.rs"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/astral-sh/uv/pull/21085",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Correct feature mechanism and one implementation file, but not the complete CLI/settings plumbing; missing items are actionable."
+      }
+    },
+    {
+      "order": 5,
+      "case_id": "numpy-scalar-dlpack",
+      "stratum": "non_python",
+      "repository": "numpy/numpy",
+      "expected_files": [
+        "numpy/_core/src/multiarray/dlpack.c"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/numpy/numpy/pull/32029",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Identifies missing scalar DLPack support but incorrectly centers reductions/array API rather than direct scalar export; asks for the target implementation."
+      }
+    },
+    {
+      "order": 6,
+      "case_id": "markupsafe-free-threaded-gil",
+      "stratum": "non_python",
+      "repository": "pallets/markupsafe",
+      "expected_files": [
+        "src/markupsafe/_speedups.c"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/pallets/markupsafe/pull/461",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 1,
+        "note": "Correctly identifies the missing Py_mod_gil declaration in the reviewed C extension."
+      }
+    },
+    {
+      "order": 7,
+      "case_id": "prefect-anyof-copy-new-run",
+      "stratum": "non_python",
+      "repository": "PrefectHQ/prefect",
+      "expected_files": [
+        "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/PrefectHQ/prefect/pull/22806",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 0,
+        "evidence_sufficiency": 0,
+        "missing_evidence_quality": 1,
+        "note": "Attributes the crash to form submission wiring; the reviewed fix is anyOf branch selection in a different utility."
+      }
+    },
+    {
+      "order": 8,
+      "case_id": "pyo3-reference-pool-dirty-fastpath",
+      "stratum": "non_python",
+      "repository": "PyO3/pyo3",
+      "expected_files": [
+        "src/internal/state.rs"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/PyO3/pyo3/pull/6200",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 1,
+        "note": "Matches the dirty-flag fast path and mutex contention mechanism in the reviewed state implementation."
+      }
+    },
+    {
+      "order": 9,
+      "case_id": "anyio-freethreading-runvar",
+      "stratum": "python_multi",
+      "repository": "agronholm/anyio",
+      "expected_files": [
+        "src/anyio/_backends/_asyncio.py",
+        "src/anyio/from_thread.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/anyio/from_thread.py",
+          "symbol": "start_blocking_portal"
+        }
+      ],
+      "fix_pr_url": "https://github.com/agronholm/anyio/pull/1224",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 1,
+        "note": "Finds a free-threaded context leak area but misattributes it broadly to thread-local/event-loop detection."
+      }
+    },
+    {
+      "order": 10,
+      "case_id": "ansible-callback-deprecation-metadata",
+      "stratum": "python_multi",
+      "repository": "ansible/ansible",
+      "expected_files": [
+        "lib/ansible/plugins/callback/oneline.py",
+        "lib/ansible/plugins/callback/tree.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/ansible/plugins/callback/oneline.py",
+          "symbol": "CallbackModule.__init__"
+        },
+        {
+          "file": "lib/ansible/plugins/callback/tree.py",
+          "symbol": "CallbackModule.__init__"
+        }
+      ],
+      "fix_pr_url": "https://github.com/ansible/ansible/pull/87072",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Finds missing deprecation guidance, but the reviewed fix moves both callbacks to runtime metadata rather than merely adding help_text."
+      }
+    },
+    {
+      "order": 11,
+      "case_id": "boto3-download-fileobj-append-mode",
+      "stratum": "python_multi",
+      "repository": "boto/boto3",
+      "expected_files": [
+        "boto3/compat.py",
+        "boto3/s3/inject.py"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/boto/boto3/pull/4503",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Correctly connects append mode to unsafe threaded writes; reviewed fix forces a single thread, while cited evidence is incomplete."
+      }
+    },
+    {
+      "order": 12,
+      "case_id": "drf-html-dictfield-missing-input",
+      "stratum": "python_multi",
+      "repository": "encode/django-rest-framework",
+      "expected_files": [
+        "rest_framework/fields.py",
+        "rest_framework/serializers.py",
+        "rest_framework/utils/html.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "rest_framework/fields.py",
+          "symbol": "DictField.get_value"
+        },
+        {
+          "file": "rest_framework/serializers.py",
+          "symbol": "Serializer.get_value"
+        },
+        {
+          "file": "rest_framework/utils/html.py",
+          "symbol": "parse_html_dict"
+        }
+      ],
+      "fix_pr_url": "https://github.com/encode/django-rest-framework/pull/9891",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Matches parse_html_dict default handling and the reviewed fields/serializers propagation."
+      }
+    },
+    {
+      "order": 13,
+      "case_id": "uvicorn-nonascii-websocket-headers",
+      "stratum": "python_multi",
+      "repository": "Kludex/uvicorn",
+      "expected_files": [
+        "uvicorn/protocols/websockets/websockets_impl.py",
+        "uvicorn/protocols/websockets/websockets_sansio_impl.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "uvicorn/protocols/websockets/websockets_impl.py",
+          "symbol": "WebSocketProtocol.process_request"
+        },
+        {
+          "file": "uvicorn/protocols/websockets/websockets_sansio_impl.py",
+          "symbol": "WebSocketsSansIOProtocol.handle_connect"
+        }
+      ],
+      "fix_pr_url": "https://github.com/Kludex/uvicorn/pull/3036",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 1,
+        "note": "Matches the header byte round-trip compatibility fix, but cites only one of the two reviewed implementations."
+      }
+    },
+    {
+      "order": 14,
+      "case_id": "matplotlib-tk-close-root-window",
+      "stratum": "python_multi",
+      "repository": "matplotlib/matplotlib",
+      "expected_files": [
+        "lib/matplotlib/backends/_backend_tk.py",
+        "lib/matplotlib/cbook/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "lib/matplotlib/backends/_backend_tk.py",
+          "symbol": "FigureManagerTk.destroy"
+        },
+        {
+          "file": "lib/matplotlib/cbook/__init__.py",
+          "symbol": "_get_running_interactive_framework"
+        }
+      ],
+      "fix_pr_url": "https://github.com/matplotlib/matplotlib/pull/17802",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Correctly narrows the failure to FigureManagerTk destroy/quit behavior but lacks the reviewed mainloop ownership mechanism."
+      }
+    },
+    {
+      "order": 15,
+      "case_id": "jinja-namespace-multi-assignment",
+      "stratum": "python_multi",
+      "repository": "pallets/jinja",
+      "expected_files": [
+        "src/jinja2/compiler.py",
+        "src/jinja2/parser.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/jinja2/compiler.py",
+          "symbol": "CodeGenerator.visit_Assign"
+        },
+        {
+          "file": "src/jinja2/parser.py",
+          "symbol": "Parser.parse_assign_target"
+        }
+      ],
+      "fix_pr_url": "https://github.com/pallets/jinja/pull/1664",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 1,
+        "note": "Matches namespace-aware tuple target parsing in the reviewed parser/compiler change."
+      }
+    },
+    {
+      "order": 16,
+      "case_id": "pandas-string-match-ascii",
+      "stratum": "python_multi",
+      "repository": "pandas-dev/pandas",
+      "expected_files": [
+        "pandas/core/arrays/_arrow_string_mixins.py",
+        "pandas/core/arrays/arrow/array.py",
+        "pandas/core/arrays/string_arrow.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "pandas/core/arrays/_arrow_string_mixins.py",
+          "symbol": "ArrowStringArrayMixin._str_match"
+        },
+        {
+          "file": "pandas/core/arrays/arrow/array.py",
+          "symbol": "ArrowExtensionArray._str_extract"
+        },
+        {
+          "file": "pandas/core/arrays/string_arrow.py",
+          "symbol": "ArrowStringArray._preprocess_re_pattern"
+        }
+      ],
+      "fix_pr_url": "https://github.com/pandas-dev/pandas/pull/66792",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 0,
+        "missing_evidence_quality": 2,
+        "note": "Recognizes regex flag handling but points to generic string accessors; the reviewed fix is ArrowDtype fallback logic absent from evidence."
+      }
+    },
+    {
+      "order": 17,
+      "case_id": "aiohttp-last-modified-rounding",
+      "stratum": "python_single",
+      "repository": "aio-libs/aiohttp",
+      "expected_files": [
+        "aiohttp/web_response.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "aiohttp/web_response.py",
+          "symbol": "last_modified"
+        }
+      ],
+      "fix_pr_url": "https://github.com/aio-libs/aiohttp/pull/13170",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 1,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Correctly identifies datetime/timestamp rounding inconsistency, but suggests the opposite rounding direction from the reviewed fix."
+      }
+    },
+    {
+      "order": 18,
+      "case_id": "yarl-malformed-bracket-host",
+      "stratum": "python_single",
+      "repository": "aio-libs/yarl",
+      "expected_files": [
+        "yarl/_parse.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "yarl/_parse.py",
+          "symbol": "split_url"
+        }
+      ],
+      "fix_pr_url": "https://github.com/aio-libs/yarl/pull/1512",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Matches the empty bracketed_host indexing failure and guarded string check."
+      }
+    },
+    {
+      "order": 19,
+      "case_id": "botocore-100-continue-reason",
+      "stratum": "python_single",
+      "repository": "boto/botocore",
+      "expected_files": [
+        "botocore/awsrequest.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "botocore/awsrequest.py",
+          "symbol": "AWSConnection._is_100_continue_status"
+        }
+      ],
+      "fix_pr_url": "https://github.com/boto/botocore/pull/3543",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Matches the optional reason-phrase parsing fix exactly."
+      }
+    },
+    {
+      "order": 20,
+      "case_id": "celery-dst-gap-make-aware",
+      "stratum": "python_single",
+      "repository": "celery/celery",
+      "expected_files": [
+        "celery/utils/time.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "celery/utils/time.py",
+          "symbol": "make_aware"
+        }
+      ],
+      "fix_pr_url": "https://github.com/celery/celery/pull/10324",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Matches nonexistent spring-forward time detection and imaginary-time resolution."
+      }
+    },
+    {
+      "order": 21,
+      "case_id": "hypothesis-target-optimizer-scheduling",
+      "stratum": "python_single",
+      "repository": "HypothesisWorks/hypothesis",
+      "expected_files": [
+        "hypothesis/src/hypothesis/internal/conjecture/engine.py"
+      ],
+      "expected_symbols": [],
+      "fix_pr_url": "https://github.com/HypothesisWorks/hypothesis/pull/4835",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Matches the delayed single-pass scheduling limitation and interleaved large-budget optimization change."
+      }
+    },
+    {
+      "order": 22,
+      "case_id": "werkzeug-duplicate-100-continue",
+      "stratum": "python_single",
+      "repository": "pallets/werkzeug",
+      "expected_files": [
+        "src/werkzeug/serving.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/werkzeug/serving.py",
+          "symbol": "run_wsgi"
+        }
+      ],
+      "fix_pr_url": "https://github.com/pallets/werkzeug/pull/3140",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 2,
+        "missing_evidence_quality": 2,
+        "note": "Matches the duplicate interim response caused by the extra Werkzeug write."
+      }
+    },
+    {
+      "order": 23,
+      "case_id": "paramiko-aes-ctr-pycrypto-iv",
+      "stratum": "python_single",
+      "repository": "paramiko/paramiko",
+      "expected_files": [
+        "paramiko/transport.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "paramiko/transport.py",
+          "symbol": "Transport._get_cipher"
+        }
+      ],
+      "fix_pr_url": "https://github.com/paramiko/paramiko/pull/889",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 0,
+        "missing_evidence_quality": 2,
+        "note": "Matches the reviewed MODE_CTR IV fix from issue context but cites no cipher initialization evidence."
+      }
+    },
+    {
+      "order": 24,
+      "case_id": "requests-chardet-upper-bound",
+      "stratum": "python_single",
+      "repository": "psf/requests",
+      "expected_files": [
+        "src/requests/__init__.py"
+      ],
+      "expected_symbols": [
+        {
+          "file": "src/requests/__init__.py",
+          "symbol": "check_compatibility"
+        }
+      ],
+      "fix_pr_url": "https://github.com/psf/requests/pull/7220",
+      "manual_review": {
+        "status": "scored",
+        "hypothesis_correctness": 2,
+        "evidence_sufficiency": 1,
+        "missing_evidence_quality": 2,
+        "note": "Matches the reviewed chardet upper-bound change, with only partial version-check evidence."
+      }
+    }
+  ],
+  "manual_review_status": "scored",
+  "manual_review_basis": "Frozen Issue snapshot, validated DeepSeek run, and public fix PR title, body, commit messages, and changed-file list.",
+  "manual_score_summary": {
+    "cases": 24,
+    "maximum_per_dimension": 2,
+    "mean_hypothesis_correctness": 1.625,
+    "mean_evidence_sufficiency": 1.2917,
+    "mean_missing_evidence_quality": 1.7083,
+    "fully_correct_hypotheses": 16,
+    "contradicted_hypotheses": 1
+  }
+}

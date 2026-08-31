@@ -315,6 +315,8 @@ Machine-readable artifacts:
 - `benchmarks/results/deterministic-json-schema-manifest-v20-summary.json`
 - `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`
 - `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`
+- `benchmarks/results/candidate-pool-miss-audit-index-v23.json`
+- `benchmarks/results/hypothesis-quality-v1-deepseek-run1-summary.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run2.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run3.json`
@@ -409,6 +411,17 @@ deterministic fallbacks. File Recall@1/5/10/20 was `0.7135/0.8958/0.9375/0.9844`
 `0.8547`. This older JSON-analysis protocol is retained only as historical evidence; the current
 rank-only protocol is smaller and was reliable in both 50-case runs.
 
+The current index-v23 audit reproduces 236/267 reviewed production targets inside the deterministic
+Top-40 pool and records all 31 misses: 13 Python, 12 Rust, five TypeScript, and one C++ target. Six
+misses rank 41-60 in the diagnostic wide run, four rank 61-100, nine rank 101-200, and 12 rank
+beyond 200. The wide rank is diagnostic and does not alter production selection.
+
+The first 24-case hypothesis-quality slice completed 24/24 strict analyses and persistence checks.
+Reviewed fix evidence was available in 20 cases, while 18 hypotheses cited a reviewed fix file.
+Overall file-grounding hit rate was `0.7500`, and conditional hit rate was `0.9000`. A single
+reviewer scored 16 hypotheses fully correct, seven plausible but incomplete, and one contradicted
+by the reviewed fix mechanism. This is a small, non-independent slice without inter-rater scoring.
+
 ## Current limitations
 
 - The 200-case suite is reviewed but not a balanced population sample; 90 cases were created in
@@ -421,16 +434,18 @@ rank-only protocol is smaller and was reliable in both 50-case runs.
 - Symbol Recall@20 is `0.4645`, so within-file localization remains a major bottleneck.
 - Rust has conservative declaration symbols but no parsed call graph; TypeScript, TSX, C, and C++
   remain file-only, and no cross-language graph is inferred.
-- Manifest v20 has a three-run rank-only evaluation, but no full hypothesis-quality evaluation.
+- Hypothesis quality has only one 24-case evaluation slice selected from manifest v20, with one
+  reviewer and no independent retrieval-held-out or inter-rater result.
 - Historical v0.25 full hypothesis generation reached 140/150 valid final contracts in its
   three-run real-project evaluation, but run-level success ranged from 86% to 100%.
 
 ## Next experiment
 
-1. Add receiver/type and runtime/backend-dispatch evidence for indirect cross-file calls.
-2. Add semantic test-to-source mapping and import-alias resolution.
-3. Investigate the 31 targets outside the Top-40 pool, prioritizing non-Python and multi-file paths.
-4. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
+1. Recover the six targets at diagnostic ranks 41-60 without losing an existing Top-20 target.
+2. Add conservative receiver/type and module-alias evidence for indirect Python calls.
+3. Add semantic test-to-source mapping and multi-symbol reporting.
+4. Investigate parser-backed Rust and TypeScript relations for the 17 non-Python pool misses.
+5. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
-5. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases
+6. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases
    whose expected-file reciprocal rank varied across repeats.
