@@ -196,7 +196,7 @@ Audit reviewed production targets that remain outside the deterministic Top-40 c
 
 ```bash
 uv run rii benchmark-miss-audit benchmarks/cases.json \
-  --output benchmarks/results/candidate-pool-miss-audit-index-v23.json
+  --output benchmarks/results/candidate-pool-miss-audit-index-v25.json
 ```
 
 The audit reuses the frozen Issue snapshots, pre-fix repositories, and repository-map cache. It
@@ -419,6 +419,11 @@ One index-v23 review-validation run completed 200/200 with zero failures after r
 separator-based test directories such as `test-data/` and serializing the Python 3.11/3.12
 process-global warning-filter context. Its candidate-file orders, candidate-symbol lists, and every
 per-case and aggregate metric exactly matched index v22, so no additional run was required.
+The final index-v25 run completed 200/200 with zero failures after adding unique local-module alias
+calls, separately recorded same-class receiver calls, unique exact-stem test-to-source expansion,
+and directly supported alternate symbols. An intermediate index-v24 run exposed a Jinja symbol
+regression; a four-case targeted check verified the receiver-call isolation fix before the final
+full run. No prior Top-20 production target or reviewed symbol target is lost.
 The repository map adds conservative Rust declarations without inferred Rust call edges, normalizes
 raw identifiers and `::` paths, consumes an optional UTF-8 BOM, masks Rust script shebangs, accepts
 Rust 2024 safe foreign functions, distinguishes control-flow negation from delimiter-backed macro
@@ -428,11 +433,10 @@ preserves exact identifier spelling including `$`; embedded dollar identifiers r
 JavaScript/TypeScript fence, while untyped shell variables are ignored. TypeScript, TSX, C, and C++
 remain file-only.
 File Recall@1/5/10/20 is
-`0.3577/0.6567/0.7493/0.8690`, with MRR `0.5468`. Compared with v0.30, Recall@1, Recall@5,
-Recall@20, and MRR improve while Recall@10 decreases from `0.7505` to `0.7493`; one new target
-enters Top-20 and none leave it. Symbol Recall@1/5/10/20 remains
-`0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`, because all 177 reviewed symbol labels are
-Python-only. Forty-five of 267 production targets remain outside deterministic Top-20 and stay in
+`0.3577/0.6617/0.7493/0.8732`, with MRR `0.5471`. Relative to index v23, two new targets enter
+Top-20 and none leave it. Symbol Recall@1/5/10/20 is
+`0.2448/0.4260/0.4505/0.4994`, with MRR `0.3537`; five reviewed symbol targets become retrievable
+and none are lost. Forty-three of 267 production targets remain outside deterministic Top-20 and stay in
 the denominator.
 
 Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed all 600 case-runs.
@@ -498,6 +502,15 @@ file. Installed package paths may map through a confirmed `src` or `lib` layout 
 stripped suffix is unique; real top-level `src` and `lib` packages remain intact. This recovered
 `Executor._create_directory_url_reference` for `poetry-relative-directory-url`.
 
+The retained v0.34/index-v25 policy resolves qualified calls through unique local module aliases,
+records unrebound same-class `self`/`cls` calls without feeding them into the older direct-caller
+vote, and adds an expansion-only test-to-source relation for unique exact filename stems. Candidate
+locations can report up to two additional directly supported symbols at the same file rank. Its
+single final 200-case run completed 200/200 with no failures, recovered two Top-20 production
+targets without losing an earlier Top-20 target, and raised deterministic File Recall@20 from
+`0.8690` to `0.8732` and Symbol Recall@20 from `0.4645` to `0.4994`. The compact audit is retained;
+the raw run remains outside Git.
+
 The retained v0.20 policy follows a single safe package re-export hop from an Issue-referenced
 source path. Both files must be production files in the same package subsystem, the facade must be
 `__init__.py`, and the source must actually read the imported name while the module-level binding
@@ -540,9 +553,10 @@ lists to displace production candidates.
 Qualified AST identities distinguish repeated local names while the public unqualified `symbol`
 field remains compatible. Bare identifiers require identifier boundaries and only receive direct
 priority when sufficiently specific and candidate-unique, or when constrained by an owner or
-uniquely resolved repository path. Inference
-consumes only lexically scope-resolved direct calls; unresolved receiver calls, shadowed names,
-ambiguous definitions, and legacy broad call maps cannot fabricate strong graph evidence. Real
+uniquely resolved repository path. Inference consumes lexically scope-resolved direct calls and
+unique local-module aliases. Only unrebound conventional `self`/`cls` calls to a unique same-class
+method are recorded; arbitrary receivers, shadowed names, ambiguous definitions, and legacy broad
+call maps cannot fabricate strong graph evidence. Real
 top-level `src` and `lib` modules/packages retain their importable names, while layout directories
 are stripped only when they are actual source roots.
 

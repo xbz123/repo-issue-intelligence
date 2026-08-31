@@ -43,12 +43,18 @@ separator-based test-directory conventions and serializing the process-global wa
 context used by Python 3.11/3.12 parsing. All 200 candidate-file orders, all 200 candidate-symbol
 lists, and every per-case and aggregate metric exactly matched index v22. Mean analysis time was
 8,850 ms per case with seven cache hits and 193 misses, so no anomaly-triggered repeat was required.
+The final index-v25 run completed 200/200 with zero failures after adding unique local-module alias
+calls, separately recorded same-class receiver calls, unique exact-stem test-to-source expansion,
+and directly supported alternate symbols. An intermediate index-v24 run exposed a Jinja symbol
+regression and was rejected; a four-case targeted check verified the receiver-call isolation fix
+before the final full run. Two production targets enter Top-20, none leave, five reviewed symbol
+targets become retrievable, and no earlier symbol target is lost.
 The final dollar-identifier scope guard changes only the frozen signal set for
 `poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
 matches the index-v21 full-run candidate files, candidate symbols, and metrics.
 
 The table below preserves the audited three-run index-v19 baseline. The one-run index-v20 through
-index-v23 validation results are reported above and are not averaged into these historical tier
+index-v25 validation results are reported above and are not averaged into these historical tier
 values.
 
 | Scope | Cases | Recall@1 | Recall@5 | Recall@10 | Recall@20 | MRR | Three-run mean analysis per case |
@@ -69,25 +75,13 @@ All 193 index-v18 and index-v19 maps were identical. Relative to index v18,
 `pyo3-reference-pool-dirty-fastpath` selects the explicitly referenced `ReferencePool` type instead
 of `get_pool`; aggregate metrics do not change.
 
-Across the 143 labeled cases, Symbol Recall@1/5/10/20 is
-`0.2378/0.3840/0.4155/0.4645`, with MRR `0.3349`; all 177 labels are Python-only. Forty-five
-production targets are absent from deterministic Top-20. Six are retained-suite misses:
-`paramiko/common.py`, `boto3/compat.py`,
-`lib/matplotlib/cbook/__init__.py`, `src/tox/tox_env/python/runner.py`,
-`pylint/config/callback_actions.py`, and `tornado/locks.py`. The second batch adds 13 misses across
-NumPy's C DLPack implementation, Ruff's shared Rust helper, Ansible's oneline callback, three
-Virtualenv seed paths, three pandas Arrow string paths, and all four uv Rust paths. The third batch
-adds both Prefect null-form TSX files and Jinja's `idtracking.py`; the fourth adds two more Prefect
-TSX files and tox's cross-section resolver. The fifth adds Pylint's class checker, Pandas `isin`,
-and Paramiko's dependency declaration. The sixth adds Setuptools
-`setuptools/config/_apply_pyprojecttoml.py` and Flake8 `src/flake8/options/config.py`. They remain in
-the denominator; the seventh batch adds no miss. The eighth adds Prefect's AnyOf utility, uv
-`uv-python/src/interpreter.rs`, and three uv check plumbing files; the declaration index recovers
-the other stale-interpreter target, `uv/src/commands/project/mod.rs`. The ninth adds Ruff's printer,
-diagnostic export, and stylesheet helper files. The tenth adds both Airflow provider files. The
-final direct batch adds uv's PEP 508 formatter, Airflow's Snowflake hook and user-settings UI,
-SciPy's Remez C++ guard, and SciPy `signm`. These failures define concrete
-retrieval work for the next stage.
+Across the 143 labeled cases, current Symbol Recall@1/5/10/20 is
+`0.2448/0.4260/0.4505/0.4994`, with MRR `0.3537`; all 177 labels are Python-only. Forty-three
+production targets are absent from deterministic Top-20. The five retained-suite misses are
+`paramiko/common.py`, `boto3/compat.py`, `src/tox/tox_env/python/runner.py`,
+`pylint/config/callback_actions.py`, and `tornado/locks.py`; index v25 recovers the earlier
+Matplotlib `cbook/__init__.py` miss. The complete current Top-40 miss taxonomy is recorded in the
+index-v25 audit and remains the concrete retrieval backlog.
 
 The correction adds `src/tox/tox.schema.json` to both tox schema cases and indexes only the
 controlled `*.schema.json` form as file-only `JSON Schema`. Both published artifacts are retrieved
@@ -316,6 +310,7 @@ Machine-readable artifacts:
 - `benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json`
 - `benchmarks/results/pool40-miss-taxonomy-manifest-v20.json`
 - `benchmarks/results/candidate-pool-miss-audit-index-v23.json`
+- `benchmarks/results/candidate-pool-miss-audit-index-v25.json`
 - `benchmarks/results/hypothesis-quality-v1-deepseek-run1-summary.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run1.json`
 - `benchmarks/results/deterministic-v0.27-final-200-cases-run2.json`
@@ -391,8 +386,8 @@ Machine-readable artifacts:
 
 ## Candidate-generation coverage
 
-Two hundred twenty-two of the 267 reviewed production-file targets appear in the deterministic Top-20.
-The reported macro-average File Recall@20 is `0.8690`; the 45 missing targets are grouped in the current
+Two hundred twenty-four of the 267 reviewed production-file targets appear in the deterministic Top-20.
+The reported macro-average File Recall@20 is `0.8732`; the 43 missing targets are grouped in the current
 result section. This is benchmark coverage, not a population-level recall estimate.
 
 ## Previous 32-case deterministic result
@@ -411,9 +406,20 @@ deterministic fallbacks. File Recall@1/5/10/20 was `0.7135/0.8958/0.9375/0.9844`
 `0.8547`. This older JSON-analysis protocol is retained only as historical evidence; the current
 rank-only protocol is smaller and was reliable in both 50-case runs.
 
-The current index-v23 audit reproduces 236/267 reviewed production targets inside the deterministic
-Top-40 pool and records all 31 misses: 13 Python, 12 Rust, five TypeScript, and one C++ target. Six
-misses rank 41-60 in the diagnostic wide run, four rank 61-100, nine rank 101-200, and 12 rank
+## Index-v25 conservative relations and multi-symbol result
+
+The final v0.34/index-v25 deterministic run completed 200/200 with no failures. File
+Recall@1/5/10/20 is `0.3577/0.6617/0.7493/0.8732`, with MRR `0.5471`; Symbol
+Recall@1/5/10/20 is `0.2448/0.4260/0.4505/0.4994`, with MRR `0.3537`. Relative to index v23,
+two reviewed production targets enter Top-20, no earlier Top-20 target leaves, five reviewed symbol
+targets become retrievable, and no earlier symbol target is lost. The run had 11 repository-map
+cache hits and 189 misses. A prior index-v24 run was rejected after exposing a Jinja symbol
+regression; separating same-class receiver calls from the legacy direct-caller vote restored the
+target in a four-case check before this final full run. No third run was required.
+
+The current index-v25 audit reproduces 237/267 reviewed production targets inside the deterministic
+Top-40 pool and records all 30 misses: 12 Python, 12 Rust, five TypeScript, and one C++ target. Six
+misses rank 41-60 in the diagnostic wide run, three rank 61-100, nine rank 101-200, and 12 rank
 beyond 200. The wide rank is diagnostic and does not alter production selection.
 
 The first 24-case hypothesis-quality slice completed 24/24 strict analyses and persistence checks.
@@ -428,10 +434,11 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
   2026 and repository representation remains uneven.
 - Forty-seven of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
-- Deterministic File Recall@20 is `0.8690`; 45 reviewed targets remain outside its Top-20. The
-  hybrid Top-40 pool misses 31 targets and its final Top-20 misses 38, 39, and 38 across the three
-  runs.
-- Symbol Recall@20 is `0.4645`, so within-file localization remains a major bottleneck.
+- Deterministic File Recall@20 is `0.8732`; 43 reviewed targets remain outside its Top-20. The
+  current Top-40 pool misses 30 targets. The retained historical DeepSeek final Top-20 misses 38,
+  39, and 38 targets across its three index-v14 runs and has not been rerun on index v25.
+- Symbol Recall@20 is `0.4994`, so within-file localization remains a major bottleneck. The frozen
+  manifest has no same-file multi-symbol ground-truth pair even though the schema now supports it.
 - Rust has conservative declaration symbols but no parsed call graph; TypeScript, TSX, C, and C++
   remain file-only, and no cross-language graph is inferred.
 - Hypothesis quality has only one 24-case evaluation slice selected from manifest v20, with one
@@ -441,10 +448,12 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
 
 ## Next experiment
 
-1. Recover the six targets at diagnostic ranks 41-60 without losing an existing Top-20 target.
-2. Add conservative receiver/type and module-alias evidence for indirect Python calls.
-3. Add semantic test-to-source mapping and multi-symbol reporting.
-4. Investigate parser-backed Rust and TypeScript relations for the 17 non-Python pool misses.
+1. Diagnose the six remaining targets at diagnostic ranks 41-60 without losing an existing Top-20
+   target.
+2. Add bounded runtime/backend dispatch or type-aware receiver evidence beyond the current
+   same-class `self`/`cls` rule.
+3. Curate held-out same-file multi-symbol ground truth and quantify primary-versus-alternate quality.
+4. Investigate parser-backed Rust and TypeScript relations for the 18 non-Python pool misses.
 5. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
 6. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases

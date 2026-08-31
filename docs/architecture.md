@@ -59,8 +59,13 @@ TypeScript, TSX, C, and C++ remain file-only until a parser-backed implementatio
 Broad called-name and local-name caller maps remain serialized for compatibility. The authoritative
 `resolved_calls` field stores caller identity, local spelling, target repository file, and target
 symbol. It is built with Python `symtable` scope information and accepts a direct `ast.Name` call
-only when the name resolves to one unconditional module function or one explicit module-level
-`from ... import ...` binding. Parameters, assignments, loop/context/exception/match targets,
+when the name resolves to one unconditional module function or one explicit module-level
+`from ... import ...` binding. It also accepts an attribute call rooted at a uniquely resolved
+local module import, and records a same-class `self.method()` or `cls.method()` call only when the
+conventional receiver is the first positional parameter, is never rebound, and the target method
+identity is unique. Same-class calls are retained in the `receiver_calls` subset and excluded from
+the older multi-caller symbol vote, which was designed for receiver-free calls. Parameters,
+assignments, loop/context/exception/match targets,
 local imports, nested bindings, closures, ambiguous definitions, statically visible `global`
 assignments, or definition-time rebinding make a call unresolved. Dynamic mutation through
 reflection is not resolved. `name_calls` and qualified-caller maps are compatibility views derived
@@ -100,13 +105,16 @@ case-preserving qualified identity matches; source-content retrieval applies ful
 boundaries to bare names and the same full-token boundary to dotted values, without reusing dotted
 component terms. Syntactic object calls separately expose their local callee for Issue-text
 matching. Repeated unscoped names and unmatched dotted terminals cannot
-independently select a symbol. Owner names can disambiguate equivalent method names but do not
+independently select a symbol. A candidate may report up to two additional symbols, but only when
+each has its own direct path, traceback, source-line, source-snippet, constructor, or scoped
+identifier evidence. Alternate symbols share the file rank and do not change file ordering. Owner
+names can disambiguate equivalent method names but do not
 contribute semantic title terms or override a different explicitly referenced function. A callee
 receives additional evidence only when at least two distinct issue-matching functions in the same
 file have exact resolved edges to it. The caller and callee identities are preserved in relation
-scoring and evidence. Calls through
-`self.method()`, `receiver.method()`, or `module.function()` do not become local edges until a
-receiver-aware resolver can prove their target. Older repository maps remain readable, but maps
+scoring and evidence. Calls through an arbitrary `receiver.method()` remain unresolved. Qualified
+module calls become local edges only through a unique repository module and function, while the
+bounded `self`/`cls` rule above never performs general type inference. Older repository maps remain readable, but maps
 without `resolved_calls` skip call-relation inference instead of falling back to broad legacy
 names. Leading function-local `from` imports are resolved only when they occur after an optional
 docstring in the function's initial import block and the imported name is not a parameter, global,
@@ -127,7 +135,11 @@ a non-generic package subsystem. Unused, conditional, shadowed, ambiguous, auxil
 cross-subsystem routes are skipped. Re-export evidence is
 expansion-only and tail-protected, so it cannot rerank an existing shortlist. Other bounded two-hop propagation
 follows the exact target function and only that function's resolved external calls. The
-investigator also preserves ordered Python traceback frames. A frame can influence within-file
+investigator also maps a lexical test seed to a production file when `test_`/`_test` removal leaves
+an exact stem of at least four characters, language matches, and that production stem is unique
+across the repository. This relation is expansion-only and contributes no reranking bonus; short,
+ambiguous, auxiliary, or cross-language matches are ignored. The investigator also preserves
+ordered Python traceback frames. A frame can influence within-file
 symbol selection only when its path resolves to one repository file and its function resolves to
 one symbol in that file; the deepest such frame wins. Installed paths can omit a confirmed
 `src`/`lib` layout prefix, but real top-level packages and ambiguous suffixes are not stripped. The
@@ -344,17 +356,17 @@ version 20 is the completed 200-case reviewed suite.
 LLM hypotheses are
 not confirmed root causes. Retrieval has bounded Python static/history relations, function-level
 resolved calls, shared qualified external-call evidence, title-scoped expansion-only reverse-import
-evidence, qualified class/function ownership, and a single-best-symbol selector, but not
-general cross-file control-flow beyond bounded resolved-name/shared-call relations, receiver/type resolution, runtime/backend
-dispatch, a cross-language graph, semantic test-to-source mapping, multi-symbol ranking, or a
+evidence, qualified class/function ownership, bounded unique test-to-source mapping, and directly
+supported alternate-symbol reporting, but not general cross-file control-flow beyond bounded
+resolved-name/shared-call relations, arbitrary receiver/type resolution, runtime/backend dispatch,
+a cross-language graph, or a
 vector index.
 
 ## Next workflow extensions
 
 ```text
 current human_review
-  -> add runtime/backend dispatch and multi-symbol ranking
-  -> add semantic test-to-source mapping
+  -> add runtime/backend dispatch
   -> add cross-language graph evidence
   -> improve temporal and multi-file balance before adding more cases
 ```

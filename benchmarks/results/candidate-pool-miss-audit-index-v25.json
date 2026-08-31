@@ -1,0 +1,438 @@
+{
+  "protocol": "candidate-pool-miss-audit-v1",
+  "manifest_name": "python-real-issue-file-localization",
+  "manifest_version": 20,
+  "repository_map_index_version": 25,
+  "candidate_pool_limit": 40,
+  "wide_candidate_limit": 2000,
+  "created_at": "2026-08-31T02:50:53.068694Z",
+  "cases": 200,
+  "repositories": 58,
+  "production_targets": 267,
+  "candidate_pool_matched_targets": 237,
+  "candidate_pool_missing_targets": 30,
+  "repository_map_cache_hits": 200,
+  "repository_map_cache_misses": 0,
+  "language_counts": {
+    "C++": 1,
+    "Python": 12,
+    "Rust": 12,
+    "TypeScript": 5
+  },
+  "repository_counts": {
+    "PrefectHQ/prefect": 4,
+    "ansible/ansible": 1,
+    "apache/airflow": 4,
+    "astral-sh/ruff": 4,
+    "astral-sh/uv": 8,
+    "boto/boto3": 1,
+    "pandas-dev/pandas": 1,
+    "paramiko/paramiko": 2,
+    "pylint-dev/pylint": 1,
+    "pypa/virtualenv": 1,
+    "scipy/scipy": 1,
+    "tox-dev/tox": 2
+  },
+  "wide_candidate_rank_buckets": {
+    "1-40-displaced": 0,
+    "41-60": 6,
+    "61-100": 3,
+    "101-200": 9,
+    "201+": 12,
+    "not_retrieved": 0
+  },
+  "targets": [
+    {
+      "case_id": "paramiko-channel-window-performance",
+      "repository": "paramiko/paramiko",
+      "file": "paramiko/common.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence": [
+        "Path matches issue terms: paramiko",
+        "Imports match component terms: am, bytes, chr, paramiko, string",
+        "Source content matches issue terms: able, bytes, channel, data, even, file, init, isinstance",
+        "Related source calls imported symbols defined here: asbytes",
+        "Changed with lexical seed files in 1 prior commits (latest 6f21111)"
+      ]
+    },
+    {
+      "case_id": "boto3-download-fileobj-append-mode",
+      "repository": "boto/boto3",
+      "file": "boto3/compat.py",
+      "language": "Python",
+      "wide_candidate_rank": 46,
+      "evidence": [
+        "Path matches issue terms: boto3",
+        "Imports match component terms: ab, boto3",
+        "Source contains issue identifiers: format",
+        "Source content matches issue terms: boto3, create, created, file, format, mess, related",
+        "Symbol rename_file matches: file"
+      ]
+    },
+    {
+      "case_id": "tox-skip-missing-interpreters",
+      "repository": "tox-dev/tox",
+      "file": "src/tox/tox_env/python/runner.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence": [
+        "Path matches issue terms: env, tox",
+        "Imports match component terms: api, create, deps, env, file, io, li, package, packaging, pip, run, skip, tools, tox",
+        "Source contains issue identifiers: ROOT, SKIP, tox, tox_env",
+        "Source content matches issue terms: build, config, create, default, deps, editable, environment, false",
+        "Changed with lexical seed files in 1 prior commits (latest dbeec44)",
+        "Symbol PythonRun.default_pkg_type matches: default, pkg, run"
+      ]
+    },
+    {
+      "case_id": "pylint-output-format-files",
+      "repository": "pylint-dev/pylint",
+      "file": "pylint/config/callback_actions.py",
+      "language": "Python",
+      "wide_candidate_rank": 52,
+      "evidence": [
+        "Path matches issue terms: pylint",
+        "Imports match component terms: all, format, no, pylint",
+        "Source content matches issue terms: argument, arguments, certain, command, configuration, description, file, format",
+        "Related source imports this file: pylint/config/argument.py",
+        "Symbol _GenerateConfigFileAction matches: configuration, file, format"
+      ]
+    },
+    {
+      "case_id": "ruff-os-exit-private-member",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_linter/src/rules/pylint/helpers.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 153,
+      "evidence": [
+        "Path matches issue terms: ruff, rules",
+        "Source contains issue identifiers: docs.python.org",
+        "Source content matches issue terms: access, check, exit, format, library, module, name, ruff",
+        "Symbol type_param_name matches: name"
+      ]
+    },
+    {
+      "case_id": "ansible-callback-deprecation-metadata",
+      "repository": "ansible/ansible",
+      "file": "lib/ansible/plugins/callback/oneline.py",
+      "language": "Python",
+      "wide_candidate_rank": 169,
+      "evidence": [
+        "Path matches issue terms: ansible, callback, lib, plugins",
+        "Imports match component terms: all, ansible, callback, module, nsible, plugin, plugins, pr",
+        "Source content matches issue terms: actual, ansible, callback, change, changed, collection, core, deprecated",
+        "Symbol CallbackModule matches: callback, module, new"
+      ]
+    },
+    {
+      "case_id": "virtualenv-unsupported-seed-python",
+      "repository": "pypa/virtualenv",
+      "file": "src/virtualenv/run/plugin/seeders.py",
+      "language": "Python",
+      "wide_candidate_rank": 71,
+      "evidence": [
+        "Path matches issue terms: run, virtualenv",
+        "Imports match component terms: base, build, cli, config, discover, discovery, env, info, io, no, parser, re, seed, seeder, type, virtual, virtualenv",
+        "Source contains issue identifiers: PythonInfo, __init__, python_discovery, virtualenv",
+        "Source content matches issue terms: argument, base, class, config, create, data, default, dest",
+        "Related source calls imported symbols defined here: SeederSelector",
+        "Symbol SeederSelector.create matches: create, seeder"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-settings/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 131,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nVersion",
+        "Source content matches issue terms: both, containing, current, dependencies, directory, dist, else, expected",
+        "Symbol from_directory matches: directory",
+        "Issue references symbol from_directory"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/commands/project/add.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 312,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nTag, nVersion",
+        "Source content matches issue terms: actual, current, dependencies, directory, dist, else, expected, fail"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/commands/project/mod.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 142,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nVersion, print",
+        "Source content matches issue terms: actual, against, both, current, declared, dependencies, directory, dist"
+      ]
+    },
+    {
+      "case_id": "uv-pep723-relative-indexes",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 259,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source contains issue identifiers: METADATA, PEP, WHEEL, directory, nName, nRoot, nTag, nVersion",
+        "Source content matches issue terms: behavior, containing, current, dependencies, directory, dist, else, expected",
+        "Symbol run matches: run"
+      ]
+    },
+    {
+      "case_id": "prefect-schema-null-value-persistence",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/schema-form-input.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 361,
+      "evidence": [
+        "Path matches issue terms: components, form, input, schema, schemas, src, tsx, ui, v2",
+        "Source contains issue identifiers: data, if, null, onValueChange, undefined, values",
+        "Source content matches issue terms: able, block, cause, change, changes, check, const, data"
+      ]
+    },
+    {
+      "case_id": "prefect-required-array-empty",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/schema-form-property.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 752,
+      "evidence": [
+        "Path matches issue terms: form, property, schema, ui, v2",
+        "Source contains issue identifiers: required",
+        "Source content matches issue terms: class, click, context, default, dropdown, field, fields, form"
+      ]
+    },
+    {
+      "case_id": "prefect-nested-parameter-rendering",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/deployments/deployment-parameters-table/deployment-parameters-table.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 523,
+      "evidence": [
+        "Path matches issue terms: deployment, parameters, ui, v2",
+        "Source contains issue identifiers: parameter_openapi_schema",
+        "Source content matches issue terms: class, data, default, deploy, deployment, model, object, open"
+      ]
+    },
+    {
+      "case_id": "tox-cross-section-reference-context",
+      "repository": "tox-dev/tox",
+      "file": "src/tox/config/loader/ini/replace.py",
+      "language": "Python",
+      "wide_candidate_rank": 111,
+      "evidence": [
+        "Path matches issue terms: config, ini, tox",
+        "Imports match component terms: api, check, config, ini, no, tox, typing",
+        "Source content matches issue terms: check, config, environment, fail, failed, full, inst, trying",
+        "Symbol ReplaceReferenceIni matches: ini"
+      ]
+    },
+    {
+      "case_id": "pandas-isin-mixed-numeric-precision",
+      "repository": "pandas-dev/pandas",
+      "file": "pandas/core/algorithms.py",
+      "language": "Python",
+      "wide_candidate_rank": 123,
+      "evidence": [
+        "Path matches issue terms: pandas",
+        "Imports match component terms: array, arrays, check, checking, compat, dtype, en, generic, index, isin, masked, na, np, numpy, os, pandas, series, version",
+        "Source contains issue identifiers: False, Series, True, UInt64, VERSIONS, array, isin",
+        "Source content matches issue terms: against, already, array, arrays, both, branch, check, checked",
+        "Related source imports this file: pandas/core/tools/datetimes.py",
+        "Symbol _ensure_data matches: array, dtype, int64, np, returns, values",
+        "Issue-matching symbols call _ensure_data: _get_hashtable_algo, duplicated, is_monotonic, mode, nunique_ints, rank, value_counts_arraylike"
+      ]
+    },
+    {
+      "case_id": "paramiko-cryptography-25-ecdh",
+      "repository": "paramiko/paramiko",
+      "file": "setup.py",
+      "language": "Python",
+      "wide_candidate_rank": 59,
+      "evidence": [
+        "Source contains issue identifiers: github.com",
+        "Source content matches issue terms: bcrypt, both, cryptography, graph, package, packages, paramiko, point"
+      ]
+    },
+    {
+      "case_id": "prefect-anyof-copy-new-run",
+      "repository": "PrefectHQ/prefect",
+      "file": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts",
+      "language": "TypeScript",
+      "wide_candidate_rank": 1262,
+      "evidence": [
+        "Path matches issue terms: src, ui, v2",
+        "Source content matches issue terms: switch"
+      ]
+    },
+    {
+      "case_id": "uv-venv-stale-interpreter-cache",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-python/src/interpreter.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 42,
+      "evidence": [
+        "Path matches issue terms: interpreter, uv",
+        "Source contains issue identifiers: CPython, DEBUG, VIRTUAL_ENV, version, with, x86_64",
+        "Source content matches issue terms: adding, also, base, broken, checking, config, configuration, cpython",
+        "Symbol python_version matches: version",
+        "Issue references symbol python_version"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv-cli/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 143,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source content matches issue terms: accept, astral, build, cannot, check, commit, console, control",
+        "Symbol install_mirrors matches: install",
+        "Blame-selected seed line changed with this file in prior commit f69c1b2"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/lib.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 108,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source content matches issue terms: build, cannot, check, control, dependencies, external, extras, figure",
+        "Symbol run_project matches: project, run",
+        "Blame-selected seed line changed with this file in prior commit f69c1b2"
+      ]
+    },
+    {
+      "case_id": "uv-check-no-install-project",
+      "repository": "astral-sh/uv",
+      "file": "crates/uv/src/settings.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 239,
+      "evidence": [
+        "Path matches issue terms: uv",
+        "Source content matches issue terms: build, cannot, check, control, dependencies, external, extras, figure",
+        "Symbol check_refresh_conflict matches: check",
+        "Blame-selected seed line changed with this file in prior commit f69c1b2"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff/src/printer.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 803,
+      "evidence": [
+        "Path matches issue terms: ruff",
+        "Source content matches issue terms: check, codes, pretty, read, ruff, rule, statistics, summary",
+        "Symbol write_statistics matches: statistics"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_db/src/diagnostic/mod.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 315,
+      "evidence": [
+        "Path matches issue terms: ruff",
+        "Source content matches issue terms: about, also, check, codes, convenient, doesn, even, find",
+        "Symbol prefer_rule_codes matches: codes, rule"
+      ]
+    },
+    {
+      "case_id": "ruff-statistics-rule-hyperlinks",
+      "repository": "astral-sh/ruff",
+      "file": "crates/ruff_db/src/diagnostic/stylesheet.rs",
+      "language": "Rust",
+      "wide_candidate_rank": 1050,
+      "evidence": [
+        "Path matches issue terms: ruff",
+        "Source content matches issue terms: help, hyperlink, hyperlinks, link, plain, terminal",
+        "Symbol plain matches: plain"
+      ]
+    },
+    {
+      "case_id": "airflow-msgraph-scope-normalization",
+      "repository": "apache/airflow",
+      "file": "providers/microsoft/azure/src/airflow/providers/microsoft/azure/fs/msgraph.py",
+      "language": "Python",
+      "wide_candidate_rank": 90,
+      "evidence": [
+        "Path matches issue terms: airflow, azure, fs, microsoft, providers",
+        "Imports match component terms: airflow, azure, file, filesystem, fs, get, graph, microsoft, msgraphfs, no, pr, provider, providers, system",
+        "Source contains issue identifiers: get_fs, scope, scopes, token_endpoint",
+        "Source content matches issue terms: agree, airflow, apache, applicable, auth, azure, connection, default",
+        "Symbol _get_scopes matches: get, scopes",
+        "Issue-matching symbols call _get_scopes: _get_certificate_token, get_fs"
+      ]
+    },
+    {
+      "case_id": "airflow-keycloak-team-dag-resource",
+      "repository": "apache/airflow",
+      "file": "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py",
+      "language": "Python",
+      "wide_candidate_rank": 67,
+      "evidence": [
+        "Path matches issue terms: airflow, auth, keycloak, manager, providers",
+        "Imports match component terms: airflow, am, auth, configuration, keycloak, manager, no, pr, provider, providers, resource, resources, response, review",
+        "Source contains issue identifiers: AFFIRMATIVE, DAG, UNANIMOUS",
+        "Source content matches issue terms: affirmative, agree, airflow, apache, applicable, auth, based, configuration",
+        "Issue-matching symbols call _get_client: add_user_to_team_command, create_all_command, create_permissions_command, create_resources_command, create_scopes_command, create_team_command"
+      ]
+    },
+    {
+      "case_id": "airflow-snowflake-workload-identity",
+      "repository": "apache/airflow",
+      "file": "providers/snowflake/src/airflow/providers/snowflake/hooks/snowflake.py",
+      "language": "Python",
+      "wide_candidate_rank": 173,
+      "evidence": [
+        "Path matches issue terms: airflow, providers, snowflake",
+        "Imports match component terms: airflow, azure, en, feature, key, manage, no, now, password, pr, private, provider, providers, snowflake",
+        "Source contains issue identifiers: github.com, response_",
+        "Source content matches issue terms: agree, airflow, apache, authentication, azure, case, credentials, current",
+        "Symbol SnowflakeHook.get_azure_oauth_token matches: airflow, apache, azure, providers, snowflake"
+      ]
+    },
+    {
+      "case_id": "scipy-remez-dense-grid-guard",
+      "repository": "scipy/scipy",
+      "file": "scipy/signal/_sigtoolsmodule.cc",
+      "language": "C++",
+      "wide_candidate_rank": 247,
+      "evidence": [
+        "Path matches issue identifiers: scipy.signal",
+        "Path matches issue terms: cc, scipy, signal",
+        "Source contains issue identifiers: NumPy, SciPy, remez",
+        "Source content matches issue terms: arch, finished, fortran, function, hilbert, include, info, information"
+      ]
+    },
+    {
+      "case_id": "airflow-display-current-user",
+      "repository": "apache/airflow",
+      "file": "airflow-core/src/airflow/ui/src/layouts/Nav/UserSettingsButton.tsx",
+      "language": "TypeScript",
+      "wide_candidate_rank": 917,
+      "evidence": [
+        "Path matches issue terms: airflow, src, ui, user",
+        "Source content matches issue terms: able, agree, apache, kind, miss, response, right, user"
+      ]
+    }
+  ]
+}
