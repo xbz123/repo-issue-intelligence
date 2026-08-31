@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .models import (
     CandidateLocation,
+    CandidateSymbolLocation,
     FileRecord,
     Hypothesis,
     InvestigationReport,
@@ -154,6 +155,9 @@ FUNCTION_LOCAL_TWO_HOP_PREFIX = (
 )
 SHARED_QUALIFIED_CALL_PREFIX = "Shares issue-referenced qualified call "
 SHARED_QUALIFIED_CALL_MAX_FILES = 3
+SEMANTIC_TEST_SOURCE_RELATION_PREFIX = (
+    "Matching test filename maps uniquely to this source file: "
+)
 REVERSE_IMPORT_RELATION_PREFIX = "Imports title-matching source module "
 REEXPORTED_IMPORT_RELATION_PREFIX = (
     "Issue-referenced source imports re-exported symbols defined here: "
@@ -1243,15 +1247,32 @@ def _related_symbol_callers(
     matches: list[SymbolMatch],
     resolved_calls: list[ResolvedCall],
     file_path: str,
+    receiver_calls: list[ResolvedCall] | None = None,
 ) -> dict[str, tuple[str, ...]]:
     functions_by_identity = {
         _symbol_identity(match.symbol): match
         for match in matches
         if match.symbol.kind == "function"
     }
+    receiver_call_keys = {
+        (
+            call.caller,
+            call.local_name,
+            call.target_file,
+            call.target_symbol,
+        )
+        for call in receiver_calls or []
+    }
 
     callers_by_target: dict[str, set[str]] = {}
     for call in resolved_calls:
+        if (
+            call.caller,
+            call.local_name,
+            call.target_file,
+            call.target_symbol,
+        ) in receiver_call_keys:
+            continue
         if call.caller is None or call.target_file != file_path:
             continue
         caller = functions_by_identity.get(call.caller)
@@ -1345,6 +1366,69 @@ def _symbol_evidence(
             f"{symbol.name}: {', '.join(callers)}"
         )
     return evidence
+
+
+def _alternate_symbol_locations(
+    matches: list[SymbolMatch],
+    selected_match: SymbolMatch | None,
+    signals: IssueSignals,
+    related_callers: dict[str, tuple[str, ...]],
+    limit: int = 2,
+) -> list[CandidateSymbolLocation]:
+    if selected_match is None:
+        return []
+    selected_identity = _symbol_identity(selected_match.symbol)
+    remaining = [
+        match
+        for match in matches
+        if _symbol_identity(match.symbol) != selected_identity
+    ]
+    alternatives: list[CandidateSymbolLocation] = []
+    while remaining and len(alternatives) < limit:
+        remaining_identities = {
+            _symbol_identity(candidate.symbol) for candidate in remaining
+        }
+        remaining_callers = {
+            target: tuple(
+                caller for caller in callers if caller in remaining_identities
+            )
+            for target, callers in related_callers.items()
+            if target in remaining_identities
+        }
+        match = _select_symbol(remaining, signals, remaining_callers)
+        if match is None:
+            break
+        identity = _symbol_identity(match.symbol)
+        remaining = [
+            candidate
+            for candidate in remaining
+            if _symbol_identity(candidate.symbol) != identity
+        ]
+        directly_reportable = (
+            match.scoped_identifier_match
+            or match.explicit_identifier_match
+            or match.qualified_identifier_match
+            or match.traceback_frame_index is not None
+            or match.source_line_reference_index is not None
+            or match.source_snippet_index is not None
+            or match.constructor_call_index is not None
+        )
+        if not directly_reportable:
+            continue
+        symbol = match.symbol
+        alternatives.append(
+            CandidateSymbolLocation(
+                symbol=symbol.name,
+                qualified_symbol=(
+                    symbol.qualified_name
+                    if symbol.qualified_name != symbol.name
+                    else None
+                ),
+                lines=f"{symbol.line}-{symbol.end_line or symbol.line}",
+                evidence=_symbol_evidence(match, related_callers),
+            )
+        )
+    return alternatives
 
 
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
@@ -2012,6 +2096,60 @@ def _graph_seed_paths(
     )[:GRAPH_SEED_LIMIT]
 
 
+def _normalized_filename_stem(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
+
+
+def _normalized_test_stem(path: str) -> str | None:
+    stem = Path(path).stem.casefold()
+    for prefix in ("test_", "test-"):
+        if stem.startswith(prefix):
+            stem = stem[len(prefix) :]
+            break
+    for suffix in ("_test", "-test"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+    normalized = _normalized_filename_stem(stem)
+    return normalized if len(normalized) >= 4 else None
+
+
+def _semantic_test_source_matches(
+    repository_map: RepositoryMap,
+    seed_paths: list[str],
+) -> dict[str, str]:
+    files_by_path = {file.path: file for file in repository_map.files}
+    production_by_stem: dict[tuple[str, str], set[str]] = {}
+    for file in repository_map.files:
+        if (
+            file.test_file
+            or bool(set(Path(file.path).parts) & AUXILIARY_PATH_PARTS)
+        ):
+            continue
+        raw_stem = Path(file.path).stem
+        if raw_stem == "__init__":
+            continue
+        stem = _normalized_filename_stem(raw_stem)
+        if len(stem) < 4:
+            continue
+        production_by_stem.setdefault((file.language, stem), set()).add(
+            file.path
+        )
+
+    matches: dict[str, str] = {}
+    for path in seed_paths:
+        test_file = files_by_path.get(path)
+        if test_file is None or not test_file.test_file:
+            continue
+        stem = _normalized_test_stem(path)
+        if stem is None:
+            continue
+        targets = production_by_stem.get((test_file.language, stem), set())
+        if len(targets) == 1:
+            matches[path] = next(iter(targets))
+    return matches
+
+
 def _history_relations(
     root: Path,
     seed_paths: list[str],
@@ -2174,6 +2312,7 @@ def _rerank_relation_bonus(bonus: float, evidence: str) -> float:
             SHARED_QUALIFIED_CALL_PREFIX,
             REVERSE_IMPORT_RELATION_PREFIX,
             REEXPORTED_IMPORT_RELATION_PREFIX,
+            SEMANTIC_TEST_SOURCE_RELATION_PREFIX,
         )
     ):
         return 0
@@ -2203,6 +2342,7 @@ def _graph_relations(
     base_scores: dict[str, float],
     auxiliary_files: dict[str, bool],
     signals: IssueSignals,
+    semantic_test_sources: dict[str, str],
 ) -> dict[str, list[tuple[float, str]]]:
     files_by_path = {file.path: file for file in repository_map.files}
     seed_paths = _graph_seed_paths(base_scores, auxiliary_files)
@@ -2415,6 +2555,13 @@ def _graph_relations(
             seed.test_file
             or bool(set(Path(seed.path).parts) & AUXILIARY_PATH_PARTS)
         )
+        semantic_source = semantic_test_sources.get(seed_path)
+        if semantic_source is not None:
+            add_relation(
+                semantic_source,
+                GRAPH_EXPANSION_MIN_BONUS,
+                SEMANTIC_TEST_SOURCE_RELATION_PREFIX + seed_path,
+            )
         for call in (
             seed.qualified_external_calls if not seed_is_auxiliary else []
         ):
@@ -2886,6 +3033,7 @@ def locate_candidates(
             symbol_matches,
             file.resolved_calls,
             file.path,
+            file.receiver_calls,
         )
         score_match: SymbolMatch | None = None
         for match in symbol_matches:
@@ -3008,11 +3156,29 @@ def locate_candidates(
             evidence=evidence,
         )
 
+    semantic_test_sources = _semantic_test_source_matches(
+        repository_map,
+        _graph_seed_paths(base_scores, auxiliary_files),
+    )
+    for source_path in sorted(set(semantic_test_sources.values())):
+        if source_path in base_scores:
+            continue
+        base_scores[source_path] = 0
+        auxiliary_files[source_path] = False
+        content_lines[source_path] = None
+        blame_lines[source_path] = None
+        candidates[source_path] = CandidateLocation(
+            file=source_path,
+            confidence=0.2,
+            evidence=[],
+        )
+
     graph_relations = _graph_relations(
         repository_map,
         base_scores,
         auxiliary_files,
         signals,
+        semantic_test_sources,
     )
     protected_base_paths.update(
         path
@@ -3297,6 +3463,7 @@ def locate_candidates(
             symbol_matches,
             file.resolved_calls,
             file.path,
+            file.receiver_calls,
         )
         selected_match = _select_symbol(
             symbol_matches,
@@ -3324,6 +3491,12 @@ def locate_candidates(
             if selected_symbol
             and selected_symbol.qualified_name != selected_symbol.name
             else None
+        )
+        candidate.alternate_symbols = _alternate_symbol_locations(
+            symbol_matches,
+            selected_match,
+            signals,
+            related_symbol_callers,
         )
         content_line = content_lines[path]
         candidate.lines = (

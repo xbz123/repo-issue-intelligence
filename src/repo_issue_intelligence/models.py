@@ -132,6 +132,7 @@ class FileRecord(BaseModel):
     symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     qualified_symbol_calls: dict[str, list[str]] = Field(default_factory=dict)
     resolved_calls: list[ResolvedCall] = Field(default_factory=list)
+    receiver_calls: list[ResolvedCall] = Field(default_factory=list)
     function_local_import_calls: list[ResolvedCall] = Field(default_factory=list)
     qualified_external_calls: list[QualifiedExternalCall] = Field(
         default_factory=list
@@ -151,6 +152,13 @@ class RepositoryMap(BaseModel):
     files: list[FileRecord]
 
 
+class CandidateSymbolLocation(BaseModel):
+    symbol: str
+    qualified_symbol: str | None = None
+    lines: str
+    evidence: list[str] = Field(default_factory=list)
+
+
 class CandidateLocation(BaseModel):
     file: str
     symbol: str | None = None
@@ -158,6 +166,9 @@ class CandidateLocation(BaseModel):
     lines: str | None = None
     confidence: float
     evidence: list[str]
+    alternate_symbols: list[CandidateSymbolLocation] = Field(
+        default_factory=list
+    )
 
 
 class EvidenceSnippet(BaseModel):

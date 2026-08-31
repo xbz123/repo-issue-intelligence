@@ -1,7 +1,7 @@
 {
-  "protocol": "deterministic-test-path-v0.32",
+  "protocol": "deterministic-relations-v0.34",
   "manifest_version": 20,
-  "repository_map_index_version": 23,
+  "repository_map_index_version": 25,
   "three_run_baseline_repository_map_index_version": 19,
   "cases": 200,
   "repositories": 58,
@@ -152,6 +152,45 @@
     "metric_cases_changed_from_index_v22": 0,
     "additional_runs_required": false
   },
+  "index_v25_review_validation": {
+    "runs": 1,
+    "completed": 200,
+    "failed": 0,
+    "file_recall_at_1": 0.3577,
+    "file_recall_at_5": 0.6617,
+    "file_recall_at_10": 0.7493,
+    "file_recall_at_20": 0.8732,
+    "mean_reciprocal_rank": 0.5471,
+    "symbol_recall_at_1": 0.2448,
+    "symbol_recall_at_5": 0.426,
+    "symbol_recall_at_10": 0.4505,
+    "symbol_recall_at_20": 0.4994,
+    "mean_symbol_reciprocal_rank": 0.3537,
+    "average_analysis_elapsed_ms": 8703.618,
+    "repository_map_cache_hits": 11,
+    "repository_map_cache_misses": 189,
+    "candidate_file_orders_changed_from_index_v23": 77,
+    "candidate_symbol_lists_changed_from_index_v23": 122,
+    "metric_cases_changed_from_index_v23": 15,
+    "matched_production_targets_at_20": 224,
+    "missing_production_targets_at_20": 43,
+    "recovered_top20_targets": [
+      {
+        "case_id": "flake8-invalid-ignore-codes",
+        "file": "src/flake8/options/config.py"
+      },
+      {
+        "case_id": "matplotlib-tk-close-root-window",
+        "file": "lib/matplotlib/cbook/__init__.py"
+      }
+    ],
+    "lost_index_v23_top20_targets": [],
+    "newly_retrieved_symbol_targets": 5,
+    "lost_index_v23_symbol_targets": [],
+    "intermediate_index_v24_run_rejected": true,
+    "targeted_regression_cases": 4,
+    "additional_final_runs_required": false
+  },
   "three_run_aggregate": {
     "case_runs": 600,
     "completed": 600,
@@ -203,6 +242,7 @@
     "The single index-v21 review-validation run completed 200/200 with no failures and exactly matched index v20 across all 193 repository maps, candidate files, candidate symbols, and metrics. It adds edition-aware try, dyn, await, async, and gen macro handling plus a mixed definition/invocation linearity regression; the frozen suite did not exercise those legacy forms, so no anomaly-triggered repeat was required.",
     "The single index-v22 review-validation run completed 200/200 with no failures after replacing substring-based test-file detection with exact path and filename conventions. A complete old-map replay checked all 127 changed-map cases: 38 candidate-file orders changed, but only ruff-os-exit-private-member changed any metric, improving its first expected-file rank from 2 to 1. Aggregate Recall@1 rose from 0.3560 to 0.3577 and MRR from 0.5443 to 0.5468; Recall@5/10/20 and all symbol metrics were unchanged, with zero per-case metric regressions or Top-20 ground-truth losses. No anomaly-triggered repeat was required.",
     "The single index-v23 review-validation run completed 200/200 with no failures after recognizing separator-based test directories and serializing the process-global Python warning-filter context. All 200 candidate-file orders, all 200 candidate-symbol lists, and every per-case and aggregate metric exactly matched index v22. No anomaly-triggered repeat was required.",
+    "The final index-v25 review-validation run completed 200/200 with no failures after adding unique local-module aliases, separately recorded same-class receiver calls, unique exact-stem test-to-source expansion, and at most two directly supported alternate symbols. An intermediate index-v24 run exposed a Jinja symbol regression because receiver calls entered the legacy direct-caller vote; receiver calls are now excluded from that vote, and a four-case targeted rerun restored the prior Jinja target before the final full run. Relative to index v23, two production targets enter Top-20, none leave, five symbol targets become retrievable, and no prior symbol target is lost. File Recall@5/20 rises to 0.6617/0.8732 and Symbol Recall@1/5/10/20 rises to 0.2448/0.4260/0.4505/0.4994. The final run required no further repeat.",
     "The final ECMAScript dollar-identifier scope guard changes one frozen Issue signal by removing shell $USER from poetry-empty-conda-prefix. A cache-hit targeted rerun exactly matches the index-v21 full-run candidate files, candidate symbols, and metrics, so the full result remains applicable.",
     "A direct index-v18/index-v19 Top-40 evidence audit found changed rerank inputs for exactly the Prefect and PyO3 cases above. Historical DeepSeek results are therefore retained only as index-v14 provenance; current provider evaluation uses Codex CLI gpt-5.6-luna.",
     "Compared with v0.30, Recall@1, Recall@5, Recall@20, and MRR improve; Recall@10 decreases from 0.7505 to 0.7493. One new production target enters Top-20 and no prior Top-20 target is lost.",

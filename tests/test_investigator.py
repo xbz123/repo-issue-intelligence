@@ -1046,6 +1046,157 @@ def test_repository_map_records_unshadowed_qualified_module_calls(
     ]
 
 
+@pytest.mark.parametrize(
+    "import_statement",
+    [
+        "import package.backend as backend_alias",
+        "from . import backend as backend_alias",
+    ],
+    ids=["plain-module-alias", "relative-module-alias"],
+)
+def test_repository_map_resolves_qualified_local_module_alias_calls(
+    tmp_path: Path,
+    import_statement: str,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/api.py",
+        f"{import_statement}\n\n"
+        "def handle_request():\n"
+        "    return backend_alias.parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/backend.py",
+        "def parse_request():\n    return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(file for file in repository_map.files if file.path.endswith("api.py"))
+
+    assert [call.model_dump() for call in api.resolved_calls] == [
+        {
+            "caller": "handle_request",
+            "local_name": "parse_request",
+            "target_file": "src/package/backend.py",
+            "target_symbol": "parse_request",
+        }
+    ]
+
+
+def test_repository_map_does_not_treat_imported_class_as_module_alias(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(repository, "src/package/__init__.py", "")
+    write_source(
+        repository,
+        "src/package/api.py",
+        "from .backend import Backend as backend_alias\n\n"
+        "def handle_request():\n"
+        "    return backend_alias.parse_request()\n",
+    )
+    write_source(
+        repository,
+        "src/package/backend.py",
+        "class Backend:\n"
+        "    @staticmethod\n"
+        "    def parse_request():\n"
+        "        return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    api = next(file for file in repository_map.files if file.path.endswith("api.py"))
+
+    assert api.resolved_calls == []
+
+
+def test_repository_map_resolves_unrebound_same_class_receiver_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Worker:\n"
+        "    def handle_request(self):\n"
+        "        return self.rebuild()\n\n"
+        "    def rebuild(self):\n"
+        "        return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+    worker = repository_map.files[0]
+
+    assert [call.model_dump() for call in worker.resolved_calls] == [
+        {
+            "caller": "Worker.handle_request",
+            "local_name": "rebuild",
+            "target_file": "src/package/worker.py",
+            "target_symbol": "Worker.rebuild",
+        }
+    ]
+    assert worker.receiver_calls == worker.resolved_calls
+    assert worker.qualified_symbol_calls == {
+        "Worker.handle_request": ["Worker.rebuild"]
+    }
+
+
+def test_repository_map_skips_rebound_same_class_receiver_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Worker:\n"
+        "    def handle_request(self, other):\n"
+        "        self = other\n"
+        "        return self.rebuild()\n\n"
+        "    def rebuild(self):\n"
+        "        return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert repository_map.files[0].resolved_calls == []
+    assert repository_map.files[0].receiver_calls == []
+
+
+def test_repository_map_resolves_unrebound_class_receiver_call(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/worker.py",
+        "class Worker:\n"
+        "    @classmethod\n"
+        "    def handle_request(cls):\n"
+        "        return cls.rebuild()\n\n"
+        "    @classmethod\n"
+        "    def rebuild(cls):\n"
+        "        return None\n",
+    )
+
+    repository_map = build_repository_map(repository)
+
+    assert [call.model_dump() for call in repository_map.files[0].resolved_calls] == [
+        {
+            "caller": "Worker.handle_request",
+            "local_name": "rebuild",
+            "target_file": "src/package/worker.py",
+            "target_symbol": "Worker.rebuild",
+        }
+    ]
+    assert (
+        repository_map.files[0].receiver_calls
+        == repository_map.files[0].resolved_calls
+    )
+
+
 def test_repository_map_skips_shadowed_qualified_module_calls(
     tmp_path: Path,
 ) -> None:
@@ -1978,6 +2129,37 @@ def test_method_call_relation_evidence_uses_qualified_callers(
         "Issue-matching symbols call rebuild: "
         "Cache.retry_failed_request, Worker.refresh_failed_request"
         in candidates[0].evidence
+    )
+
+
+def test_same_class_receiver_calls_do_not_create_direct_caller_votes(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/compiler.py",
+        "class CodeGenerator:\n"
+        "    def visit_assign(self):\n"
+        "        return self.writeline()\n\n"
+        "    def visit_namespace(self):\n"
+        "        return self.writeline()\n\n"
+        "    def writeline(self):\n"
+        "        return None\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Namespace assignment fails",
+            "The namespace assignment visitor emits invalid code.",
+        ),
+        build_repository_map(repository),
+    )
+
+    assert candidates[0].symbol != "writeline"
+    assert not any(
+        "Issue-matching symbols call writeline" in evidence
+        for evidence in candidates[0].evidence
     )
 
 
@@ -3939,6 +4121,106 @@ def test_locate_candidates_maps_matching_test_to_source(tmp_path: Path) -> None:
     )
 
     assert "Matching test imports this source file: tests/test_widget.py" in widget.evidence
+
+
+def test_locate_candidates_maps_unique_test_filename_to_source(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "tests/test_widget.py",
+        "def test_reflow():\n    assert True\n",
+    )
+    write_source(
+        repository,
+        "src/package/widget.py",
+        "def remove_children():\n    return None\n",
+    )
+    record = issue(
+        "Widget reflow fails",
+        "The failure occurs in tests/test_widget.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+    widget = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/widget.py"
+    )
+
+    assert (
+        "Matching test filename maps uniquely to this source file: "
+        "tests/test_widget.py"
+        in widget.evidence
+    )
+
+
+def test_locate_candidates_skips_ambiguous_test_filename_mapping(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "tests/test_widget.py",
+        "def test_reflow():\n    assert True\n",
+    )
+    write_source(repository, "src/first/widget.py", "def first():\n    pass\n")
+    write_source(repository, "src/second/widget.py", "def second():\n    pass\n")
+    record = issue(
+        "Widget reflow fails",
+        "The failure occurs in tests/test_widget.py.",
+    )
+
+    candidates = locate_candidates(record, build_repository_map(repository))
+
+    assert all(
+        not any(
+            evidence.startswith(
+                "Matching test filename maps uniquely to this source file: "
+            )
+            for evidence in candidate.evidence
+        )
+        for candidate in candidates
+    )
+
+
+def test_locate_candidates_reports_direct_alternate_symbols(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "src/package/parser.py",
+        "def parse_request():\n"
+        "    return None\n\n"
+        "def validate_request():\n"
+        "    return None\n",
+    )
+
+    candidates = locate_candidates(
+        issue(
+            "Parser request failure",
+            "Both `parse_request` and `validate_request` fail in "
+            "src/package/parser.py.",
+        ),
+        build_repository_map(repository),
+    )
+    parser = next(
+        candidate
+        for candidate in candidates
+        if candidate.file == "src/package/parser.py"
+    )
+
+    reported = {
+        parser.qualified_symbol or parser.symbol,
+        *(
+            alternate.qualified_symbol or alternate.symbol
+            for alternate in parser.alternate_symbols
+        ),
+    }
+    assert reported == {"parse_request", "validate_request"}
+    assert all(alternate.lines for alternate in parser.alternate_symbols)
 
 
 def test_locate_candidates_skips_unresolved_attribute_call_evidence(

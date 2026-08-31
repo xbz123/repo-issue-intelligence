@@ -113,11 +113,6 @@ class BenchmarkCase(BaseModel):
         }
         if len(symbol_keys) != len(self.expected_symbols):
             raise ValueError("expected_symbols must not contain duplicates")
-        symbol_files = [target.file for target in self.expected_symbols]
-        if len(symbol_files) != len(set(symbol_files)):
-            raise ValueError(
-                "expected_symbols currently supports one target per file"
-            )
         unknown_symbol_files = {
             target.file for target in self.expected_symbols
         } - set(self.expected_files)
@@ -647,16 +642,29 @@ def evaluate_case(
         (index for index, path in enumerate(candidate_files, start=1) if path in expected),
         None,
     )
-    candidate_symbols = [
-        BenchmarkSymbolCandidate(
-            file=file,
-            symbol=candidate_locations[file].symbol,
-            qualified_symbol=candidate_locations[file].qualified_symbol,
-            rank=rank,
+    candidate_symbols: list[BenchmarkSymbolCandidate] = []
+    for rank, file in enumerate(candidate_files, start=1):
+        location = candidate_locations.get(file)
+        if location is None:
+            continue
+        if location.symbol is not None:
+            candidate_symbols.append(
+                BenchmarkSymbolCandidate(
+                    file=file,
+                    symbol=location.symbol,
+                    qualified_symbol=location.qualified_symbol,
+                    rank=rank,
+                )
+            )
+        candidate_symbols.extend(
+            BenchmarkSymbolCandidate(
+                file=file,
+                symbol=alternate.symbol,
+                qualified_symbol=alternate.qualified_symbol,
+                rank=rank,
+            )
+            for alternate in location.alternate_symbols
         )
-        for rank, file in enumerate(candidate_files, start=1)
-        if file in candidate_locations and candidate_locations[file].symbol
-    ]
     expected_symbol_keys = {
         (target.file, target.symbol) for target in case.expected_symbols
     }

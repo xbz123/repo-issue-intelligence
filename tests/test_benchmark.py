@@ -302,7 +302,7 @@ def test_benchmark_case_rejects_symbol_outside_expected_files() -> None:
         raise AssertionError("Expected symbol ground truth outside expected_files to fail")
 
 
-def test_benchmark_case_rejects_multiple_symbols_for_one_file() -> None:
+def test_benchmark_case_accepts_multiple_symbols_for_one_file() -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
     payload = benchmark_case(updated_at).model_dump()
     payload["expected_symbols"] = [
@@ -310,12 +310,75 @@ def test_benchmark_case_rejects_multiple_symbols_for_one_file() -> None:
         {"file": "src/token_service.py", "symbol": "refresh_token"},
     ]
 
-    try:
-        BenchmarkCase(**payload)
-    except ValueError as error:
-        assert "one target per file" in str(error)
-    else:
-        raise AssertionError("Expected multiple symbol targets for one file to fail")
+    case = BenchmarkCase(**payload)
+
+    assert [target.symbol for target in case.expected_symbols] == [
+        "validate_token",
+        "refresh_token",
+    ]
+
+
+def test_evaluate_case_scores_alternate_symbols_at_the_file_rank(
+    tmp_path: Path,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    record = IssueRecord(
+        number=42,
+        title="Parser parse and validate failure",
+        body=(
+            "Both `parse_request` and `validate_request` fail in "
+            "src/parser.py."
+        ),
+        labels=["bug"],
+        created_at=updated_at,
+        updated_at=updated_at,
+    )
+    case = BenchmarkCase(
+        id="multi-symbol-parser",
+        tier=BenchmarkTier.GENERALIZATION,
+        repository="example/project",
+        issue_number=42,
+        issue_updated_at=updated_at,
+        issue_snapshot=record,
+        fix_pr_number=43,
+        pre_fix_sha="a" * 40,
+        expected_files=["src/parser.py"],
+        expected_symbols=[
+            BenchmarkSymbolTarget(
+                file="src/parser.py",
+                symbol="parse_request",
+            ),
+            BenchmarkSymbolTarget(
+                file="src/parser.py",
+                symbol="validate_request",
+            ),
+        ],
+    )
+    repository = tmp_path / "repository"
+    source = repository / "src"
+    source.mkdir(parents=True)
+    (source / "parser.py").write_text(
+        "def parse_request():\n"
+        "    return None\n\n"
+        "def validate_request():\n"
+        "    return None\n",
+        encoding="utf-8",
+    )
+
+    result = evaluate_case(
+        case,
+        record,
+        repository,
+        BenchmarkVariant.DETERMINISTIC,
+    )
+
+    parser_symbols = {
+        candidate.symbol
+        for candidate in result.candidate_symbols
+        if candidate.file == "src/parser.py" and candidate.rank == 1
+    }
+    assert parser_symbols == {"parse_request", "validate_request"}
+    assert result.symbol_recall_at_1 == 1
 
 
 def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None:

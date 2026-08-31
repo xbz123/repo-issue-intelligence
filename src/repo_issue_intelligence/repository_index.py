@@ -70,7 +70,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 23
+REPOSITORY_MAP_INDEX_VERSION = 25
 
 # warnings.catch_warnings() mutates process-global state on Python 3.11/3.12.
 # Serialize the narrow filter-changing parse section used by concurrent API calls.
@@ -601,6 +601,7 @@ class _PendingImportUse:
     target: str
     target_symbol: str
     function_local: bool = False
+    qualified_module_target: str | None = None
 
 
 @dataclass
@@ -611,6 +612,7 @@ class _PythonMetadata:
     symbol_calls: dict[str, list[str]] = field(default_factory=dict)
     references: list[str] = field(default_factory=list)
     resolved_calls: list[ResolvedCall] = field(default_factory=list)
+    receiver_calls: list[ResolvedCall] = field(default_factory=list)
     qualified_external_calls: list[QualifiedExternalCall] = field(
         default_factory=list
     )
@@ -937,13 +939,19 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
         module_bindings: dict[str, _ModuleBinding],
         caller: str | None,
         function_bindings: dict[str, _ModuleBinding] | None = None,
+        class_receiver_names: frozenset[str] = frozenset(),
     ) -> None:
         self.table = table
         self.module_bindings = module_bindings
         self.function_bindings = function_bindings
+        self.class_receiver_names = class_receiver_names
         self.caller = caller
         self.calls: set[tuple[str, _ModuleBinding]] = set()
+        self.qualified_import_calls: set[
+            tuple[str, str, str, bool]
+        ] = set()
         self.qualified_external_calls: set[str] = set()
+        self.receiver_calls: set[str] = set()
         self.import_references: set[tuple[str, _ModuleBinding]] = set()
 
     def visit_Call(self, node: ast.Call) -> None:
@@ -963,17 +971,33 @@ class _ResolvedNameUseCollector(ast.NodeVisitor):
                 attributes.append(current.attr)
                 current = current.value
             if isinstance(current, ast.Name):
+                if (
+                    current.id in self.class_receiver_names
+                    and len(attributes) == 1
+                ):
+                    self.receiver_calls.add(attributes[0])
+                    self.generic_visit(node)
+                    return
                 binding = _resolved_module_binding(
                     self.table,
                     current.id,
                     self.module_bindings,
                     self.function_bindings,
                 )
-                if binding is not None and binding.kind == "module":
+                if binding is not None and binding.kind in {"import", "module"}:
                     target = ".".join(
                         [binding.target, *reversed(attributes)]
                     )
-                    self.qualified_external_calls.add(target)
+                    self.qualified_import_calls.add(
+                        (
+                            node.func.attr,
+                            binding.target,
+                            target,
+                            binding.function_local,
+                        )
+                    )
+                    if binding.kind == "module":
+                        self.qualified_external_calls.add(target)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> None:
@@ -1047,6 +1071,21 @@ def _qualified_symbol_name(
     return ".".join(reversed(names))
 
 
+def _safe_class_receiver_names(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> frozenset[str]:
+    positional = [*node.args.posonlyargs, *node.args.args]
+    if not positional or positional[0].arg not in {"cls", "self"}:
+        return frozenset()
+    receiver = positional[0].arg
+    collector = _UnsafeModuleBindingCollector()
+    for statement in node.body:
+        collector.visit(statement)
+    if receiver in collector.names:
+        return frozenset()
+    return frozenset({receiver})
+
+
 def _is_overload_definition(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     module_bindings: dict[str, _ModuleBinding],
@@ -1090,6 +1129,7 @@ def _python_metadata(
     metadata = _PythonMetadata()
     legacy_symbol_calls: dict[str, set[str]] = {}
     resolved_calls: set[tuple[str | None, str, str, str]] = set()
+    receiver_calls: set[tuple[str | None, str, str, str]] = set()
     qualified_external_calls: set[tuple[str | None, str]] = set()
     pending_import_calls: set[_PendingImportUse] = set()
     pending_import_references: set[_PendingImportUse] = set()
@@ -1153,6 +1193,36 @@ def _python_metadata(
                         function_local=binding.function_local,
                     )
                 )
+        for (
+            local_name,
+            module_target,
+            target,
+            function_local,
+        ) in collector.qualified_import_calls:
+            pending_import_calls.add(
+                _PendingImportUse(
+                    caller=collector.caller,
+                    local_name=local_name,
+                    target=target,
+                    target_symbol=local_name,
+                    function_local=function_local,
+                    qualified_module_target=module_target,
+                )
+            )
+        if collector.caller is not None:
+            owner, separator, _ = collector.caller.rpartition(".")
+            if separator:
+                for local_name in collector.receiver_calls:
+                    target_symbol = f"{owner}.{local_name}"
+                    if target_symbol in safe_qualified_callers:
+                        call = (
+                            collector.caller,
+                            local_name,
+                            relative_path,
+                            target_symbol,
+                        )
+                        resolved_calls.add(call)
+                        receiver_calls.add(call)
         for local_name, binding in collector.import_references:
             if binding.function_local:
                 continue
@@ -1199,6 +1269,11 @@ def _python_metadata(
                     module_bindings,
                     caller=qualified_name,
                     function_bindings=_leading_function_import_bindings(node),
+                    class_receiver_names=(
+                        _safe_class_receiver_names(node)
+                        if isinstance(parents.get(node), ast.ClassDef)
+                        else frozenset()
+                    ),
                 )
                 for statement in node.body:
                     resolved_collector.visit(statement)
@@ -1269,6 +1344,19 @@ def _python_metadata(
         )
         if caller is None or caller in unambiguous_callers
     ]
+    metadata.receiver_calls = [
+        ResolvedCall(
+            caller=caller,
+            local_name=local_name,
+            target_file=target_file,
+            target_symbol=target_symbol,
+        )
+        for caller, local_name, target_file, target_symbol in sorted(
+            receiver_calls,
+            key=lambda item: (item[0] or "", *item[1:]),
+        )
+        if caller is None or caller in unambiguous_callers
+    ]
     metadata.qualified_external_calls = [
         QualifiedExternalCall(caller=caller, target=target)
         for caller, target in sorted(
@@ -1289,6 +1377,7 @@ def _python_metadata(
             item.target,
             item.target_symbol,
             item.function_local,
+            item.qualified_module_target or "",
         ),
     )
     metadata.pending_import_references = sorted(
@@ -1303,6 +1392,7 @@ def _python_metadata(
             item.target,
             item.target_symbol,
             item.function_local,
+            item.qualified_module_target or "",
         ),
     )
     return metadata
@@ -1425,6 +1515,14 @@ def _resolve_pending_import(
     module_paths: dict[str, set[str]],
     files_by_path: dict[str, FileRecord],
 ) -> tuple[str, str] | None:
+    if use.qualified_module_target is not None:
+        module_targets, module_symbol = _resolve_python_import(
+            use.qualified_module_target,
+            package,
+            module_paths,
+        )
+        if len(module_targets) != 1 or module_symbol is not None:
+            return None
     target_paths, target_symbol = _resolve_python_import(
         use.target,
         package,
@@ -1673,6 +1771,7 @@ def build_repository_map(
                 calls=metadata.calls,
                 symbol_calls=metadata.symbol_calls,
                 resolved_calls=metadata.resolved_calls,
+                receiver_calls=metadata.receiver_calls,
                 qualified_external_calls=metadata.qualified_external_calls,
                 references=metadata.references,
                 test_file=is_test_source_path(relative),
