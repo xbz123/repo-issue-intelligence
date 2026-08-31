@@ -333,7 +333,16 @@ def test_agent_analysis_evaluation_records_non_retryable_failure(
     assert result.llm_elapsed_ms == 11
     assert result.error_category == "invalid_response"
     assert result.error == "LLMProviderError: OpenCode returned invalid JSON"
+    assert result.evidence_files == ["data_store.py"]
+    assert result.expected_files_in_evidence == ["data_store.py"]
+    assert result.expected_file_evidence_recall == 1
+    assert result.hypothesis_expected_file_recall is None
+    assert result.hypothesis_expected_file_hit is None
     assert run.overall.failures == 1
+    assert run.overall.evidence_quality_cases == 1
+    assert run.overall.expected_file_evidence_hit_rate == 1
+    assert run.overall.mean_expected_file_evidence_recall == 1
+    assert run.overall.hypothesis_quality_cases == 0
     assert run.overall.overall_hypothesis_expected_file_hit_rate == 0
     assert run.overall.persistence_verified == 1
     assert run.overall.error_categories == {"invalid_response": 1}

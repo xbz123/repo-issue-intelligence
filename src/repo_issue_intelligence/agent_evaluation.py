@@ -28,6 +28,7 @@ from .llm_client import IssueAnalyzer, LLMProviderError
 from .models import (
     AgentRun,
     AgentRunStatus,
+    EvidenceSnippet,
     InvestigationReport,
     LLMAnalysis,
     LLMAnalysisResult,
@@ -114,9 +115,11 @@ class _TrackingAnalyzer:
         self.model = analyzer.model
         self.calls = 0
         self.outcomes: list[LLMAnalysisResult | Exception] = []
+        self.evidence_by_issue: dict[int, tuple[EvidenceSnippet, ...]] = {}
 
     def analyze(self, issue, report, evidence) -> LLMAnalysisResult:
         self.calls += 1
+        self.evidence_by_issue[issue.number] = tuple(evidence)
         try:
             result = self._analyzer.analyze(issue, report, evidence)
         except Exception as error:
@@ -282,6 +285,14 @@ def _quality_metrics(
         max_total_chars=max_evidence_chars,
         max_lines_per_snippet=max_lines_per_evidence,
     )
+    return _quality_metrics_from_evidence(case, evidence, analysis)
+
+
+def _quality_metrics_from_evidence(
+    case: BenchmarkCase,
+    evidence: Sequence[EvidenceSnippet],
+    analysis: LLMAnalysis | None,
+) -> dict[str, object]:
     evidence_files = list(dict.fromkeys(snippet.file for snippet in evidence))
     expected_files = set(case.expected_files)
     expected_files_in_evidence = [
@@ -360,13 +371,21 @@ def _evaluate_case(
                 else None
             )
             telemetry = tracking_analyzer.telemetry()
+            supplied_evidence = tracking_analyzer.evidence_by_issue.get(
+                case.issue_number
+            )
+            quality_metrics = (
+                _quality_metrics_from_evidence(case, supplied_evidence, None)
+                if supplied_evidence is not None
+                else {"expected_files": case.expected_files}
+            )
             return AgentAnalysisCaseResult(
                 case_id=case.id,
                 tier=case.tier,
                 repository=case.repository,
                 issue_number=case.issue_number,
                 pre_fix_sha=case.pre_fix_sha,
-                expected_files=case.expected_files,
+                **quality_metrics,
                 agent_status=restored.status if restored is not None else None,
                 persistence_verified=(
                     restored is not None

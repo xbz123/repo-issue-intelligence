@@ -105,6 +105,7 @@ def test_candidate_pool_audit_records_only_targets_outside_top40(
     assert audit.language_counts == {"Python": 1}
     assert audit.repository_counts == {"example/project": 1}
     assert audit.wide_candidate_rank_buckets == {
+        "1-40-displaced": 0,
         "41-60": 1,
         "61-100": 0,
         "101-200": 0,
@@ -120,3 +121,62 @@ def test_candidate_pool_audit_records_only_targets_outside_top40(
     assert CandidatePoolMissAudit.model_validate_json(
         output.read_text(encoding="utf-8")
     ) == audit
+
+
+def test_candidate_pool_audit_separates_displaced_top40_target(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository_map = RepositoryMap(
+        root=str(tmp_path),
+        languages={"Python": 2},
+        frameworks=[],
+        entrypoints=[],
+        test_directories=[],
+        runtime_files=[],
+        files=[
+            FileRecord(path="hit.py", language="Python"),
+            FileRecord(path="miss.py", language="Python"),
+        ],
+    )
+    base = [
+        _candidate("hit.py"),
+        *[_candidate(f"base-decoy-{index}.py") for index in range(19)],
+    ]
+    expanded = [_candidate(f"wide-decoy-{index}.py") for index in range(40)]
+    wide = [
+        *[_candidate(f"wide-decoy-{index}.py") for index in range(20)],
+        _candidate("miss.py", ["displaced target evidence"]),
+        *[_candidate(f"wide-decoy-{index}.py") for index in range(20, 40)],
+    ]
+
+    def fake_investigate(issue, repository_map, candidate_limit=20):
+        if candidate_limit == 20:
+            return SimpleNamespace(candidates=base)
+        if candidate_limit == 40:
+            return SimpleNamespace(candidates=expanded)
+        return SimpleNamespace(candidates=wide)
+
+    monkeypatch.setattr(analysis_module, "investigate", fake_investigate)
+    monkeypatch.setattr(
+        analysis_module,
+        "prepare_repository",
+        lambda case, workspace: tmp_path,
+    )
+    monkeypatch.setattr(
+        analysis_module,
+        "tracked_repository_files",
+        lambda root: ["hit.py", "miss.py"],
+    )
+    monkeypatch.setattr(
+        analysis_module,
+        "_load_or_build_repository_map",
+        lambda case, root, files, cache: (repository_map, True),
+    )
+
+    audit = audit_candidate_pool(_manifest(), tmp_path / "workspace")
+
+    assert audit.candidate_pool_missing_targets == 1
+    assert audit.targets[0].wide_candidate_rank == 21
+    assert audit.wide_candidate_rank_buckets["1-40-displaced"] == 1
+    assert audit.wide_candidate_rank_buckets["41-60"] == 0

@@ -56,6 +56,8 @@ class CandidatePoolMissAudit(BaseModel):
 def _wide_rank_bucket(rank: int | None) -> str:
     if rank is None:
         return "not_retrieved"
+    if rank <= HYBRID_CANDIDATE_POOL_LIMIT:
+        return "1-40-displaced"
     if rank <= 60:
         return "41-60"
     if rank <= 100:
@@ -155,7 +157,14 @@ def audit_candidate_pool(
         repository_counts=dict(sorted(repositories.items())),
         wide_candidate_rank_buckets={
             bucket: buckets.get(bucket, 0)
-            for bucket in ("41-60", "61-100", "101-200", "201+", "not_retrieved")
+            for bucket in (
+                "1-40-displaced",
+                "41-60",
+                "61-100",
+                "101-200",
+                "201+",
+                "not_retrieved",
+            )
         },
         targets=misses,
     )

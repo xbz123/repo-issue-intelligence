@@ -5,7 +5,7 @@
   "repository_map_index_version": 23,
   "candidate_pool_limit": 40,
   "wide_candidate_limit": 2000,
-  "created_at": "2026-08-31T00:16:14.167007Z",
+  "created_at": "2026-08-31T00:58:12.390970Z",
   "cases": 200,
   "repositories": 58,
   "production_targets": 267,
@@ -35,6 +35,7 @@
     "tox-dev/tox": 2
   },
   "wide_candidate_rank_buckets": {
+    "1-40-displaced": 0,
     "41-60": 6,
     "61-100": 4,
     "101-200": 9,
