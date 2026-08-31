@@ -206,13 +206,29 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
     assert aggregate.mean_hypothesis_expected_file_recall == 0.5
     assert aggregate.hypothesis_hit_rate_when_expected_evidence_available == 0.5
 
+    unpersisted = result.model_copy(
+        update={"analysis_succeeded": False, "persistence_verified": False}
+    )
+    failed_aggregate = _aggregate([unpersisted])
+    assert failed_aggregate.hypothesis_quality_cases == 0
+    assert failed_aggregate.hypothesis_expected_file_hits == 0
+    assert failed_aggregate.overall_hypothesis_expected_file_hit_rate == 0
+
     output = tmp_path / "result.json"
     save_agent_analysis_run(run, output)
     assert AgentAnalysisRun.model_validate_json(output.read_text(encoding="utf-8")) == run
 
     historical_payload = run.model_dump(mode="json")
     historical_payload.pop("max_output_tokens")
-    assert AgentAnalysisRun.model_validate(historical_payload).max_output_tokens is None
+    historical_payload["overall"].pop(
+        "overall_hypothesis_expected_file_hit_rate"
+    )
+    historical_payload["by_tier"]["main"].pop(
+        "overall_hypothesis_expected_file_hit_rate"
+    )
+    historical = AgentAnalysisRun.model_validate(historical_payload)
+    assert historical.max_output_tokens is None
+    assert historical.overall.overall_hypothesis_expected_file_hit_rate is None
 
 
 def test_quality_metrics_separates_retrieval_from_hypothesis_citation(

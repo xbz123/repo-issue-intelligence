@@ -29,6 +29,7 @@ from .investigator import (
 )
 from .llm_client import LLMProviderError
 from .models import (
+    CandidateLocation,
     EvidenceRerankResult,
     EvidenceSnippet,
     IssueRecord,
@@ -430,6 +431,21 @@ def _unique_files(values: Sequence[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
+def _merged_hybrid_candidate_pool(
+    base_candidates: Sequence[CandidateLocation],
+    expanded_candidates: Sequence[CandidateLocation],
+) -> list[CandidateLocation]:
+    base_paths = {candidate.file for candidate in base_candidates}
+    return [
+        *base_candidates,
+        *[
+            candidate
+            for candidate in expanded_candidates
+            if candidate.file not in base_paths
+        ][: max(0, HYBRID_CANDIDATE_POOL_LIMIT - len(base_candidates))],
+    ]
+
+
 def _hybrid_candidate_files(
     issue: IssueRecord,
     report,
@@ -578,21 +594,12 @@ def evaluate_case(
             repository_map,
             candidate_limit=HYBRID_CANDIDATE_POOL_LIMIT,
         )
-        base_paths = {candidate.file for candidate in base_report.candidates}
         report = base_report.model_copy(
             update={
-                "candidates": [
-                    *base_report.candidates,
-                    *[
-                        candidate
-                        for candidate in expanded_report.candidates
-                        if candidate.file not in base_paths
-                    ][: max(
-                        0,
-                        HYBRID_CANDIDATE_POOL_LIMIT
-                        - len(base_report.candidates),
-                    )],
-                ]
+                "candidates": _merged_hybrid_candidate_pool(
+                    base_report.candidates,
+                    expanded_report.candidates,
+                )
             }
         )
     else:

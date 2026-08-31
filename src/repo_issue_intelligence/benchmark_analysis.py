@@ -13,6 +13,7 @@ from .benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
     _load_or_build_repository_map,
+    _merged_hybrid_candidate_pool,
     prepare_repository,
     tracked_repository_files,
 )
@@ -68,11 +69,16 @@ def _case_pool_misses(
     case: BenchmarkCase,
     repository_map,
 ) -> list[CandidatePoolMiss]:
-    pool = investigate(
+    base = investigate(
+        case.issue_snapshot,
+        repository_map,
+    ).candidates
+    expanded = investigate(
         case.issue_snapshot,
         repository_map,
         candidate_limit=HYBRID_CANDIDATE_POOL_LIMIT,
     ).candidates
+    pool = _merged_hybrid_candidate_pool(base, expanded)
     pool_paths = {candidate.file for candidate in pool}
     missing_paths = [path for path in case.expected_files if path not in pool_paths]
     if not missing_paths:

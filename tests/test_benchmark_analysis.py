@@ -64,11 +64,19 @@ def test_candidate_pool_audit_records_only_targets_outside_top40(
             FileRecord(path="miss.py", language="Python"),
         ],
     )
-    pool = [_candidate("hit.py"), *[_candidate(f"decoy-{index}.py") for index in range(39)]]
-    wide = [*pool, _candidate("miss.py", ["resolved call evidence"])]
+    base = [
+        _candidate("hit.py"),
+        *[_candidate(f"base-decoy-{index}.py") for index in range(19)],
+    ]
+    expanded = [_candidate(f"wide-decoy-{index}.py") for index in range(40)]
+    wide = [*expanded, _candidate("miss.py", ["resolved call evidence"])]
 
-    def fake_investigate(issue, repository_map, candidate_limit):
-        return SimpleNamespace(candidates=pool if candidate_limit == 40 else wide)
+    def fake_investigate(issue, repository_map, candidate_limit=20):
+        if candidate_limit == 20:
+            return SimpleNamespace(candidates=base)
+        if candidate_limit == 40:
+            return SimpleNamespace(candidates=expanded)
+        return SimpleNamespace(candidates=wide)
 
     monkeypatch.setattr(analysis_module, "investigate", fake_investigate)
     monkeypatch.setattr(

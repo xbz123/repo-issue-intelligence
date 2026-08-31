@@ -83,7 +83,7 @@ class AgentAnalysisAggregate(BaseModel):
     mean_expected_file_evidence_recall: float | None = None
     hypothesis_quality_cases: int = 0
     hypothesis_expected_file_hits: int = 0
-    overall_hypothesis_expected_file_hit_rate: float = 0
+    overall_hypothesis_expected_file_hit_rate: float | None = None
     hypothesis_expected_file_hit_rate: float | None = None
     mean_hypothesis_expected_file_recall: float | None = None
     hypothesis_hit_rate_when_expected_evidence_available: float | None = None
@@ -169,7 +169,8 @@ def _aggregate(results: Sequence[AgentAnalysisCaseResult]) -> AgentAnalysisAggre
     hypothesis_quality = [
         result
         for result in results
-        if result.hypothesis_expected_file_recall is not None
+        if result.analysis_succeeded
+        and result.hypothesis_expected_file_recall is not None
     ]
     hypothesis_with_expected_evidence = [
         result for result in hypothesis_quality if result.expected_files_in_evidence
@@ -239,7 +240,7 @@ def _aggregate(results: Sequence[AgentAnalysisCaseResult]) -> AgentAnalysisAggre
         hypothesis_quality_cases=len(hypothesis_quality),
         hypothesis_expected_file_hits=hypothesis_hits,
         overall_hypothesis_expected_file_hit_rate=(
-            round(hypothesis_hits / len(results), 4) if results else 0
+            round(hypothesis_hits / len(results), 4) if results else None
         ),
         hypothesis_expected_file_hit_rate=(
             round(hypothesis_hits / len(hypothesis_quality), 4)
@@ -393,10 +394,15 @@ def _evaluate_case(
             "skipped_no_evidence_issue_numbers",
             [],
         )
+        analysis_succeeded = (
+            analysis_result is not None
+            and run.status is AgentRunStatus.AWAITING_REVIEW
+            and persistence_verified
+        )
         quality_metrics = _quality_metrics(
             case,
             report,
-            analysis_result.analysis if analysis_result is not None else None,
+            analysis_result.analysis if analysis_succeeded else None,
             max_evidence_chars,
             max_lines_per_evidence,
         )
@@ -408,11 +414,7 @@ def _evaluate_case(
             pre_fix_sha=case.pre_fix_sha,
             **quality_metrics,
             agent_status=run.status,
-            analysis_succeeded=(
-                analysis_result is not None
-                and run.status is AgentRunStatus.AWAITING_REVIEW
-                and persistence_verified
-            ),
+            analysis_succeeded=analysis_succeeded,
             skipped_no_evidence=skipped,
             persistence_verified=persistence_verified,
             llm_attempts=tracking_analyzer.calls,
