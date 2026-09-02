@@ -85,32 +85,52 @@ uv run rii agent-review <run-id> \
 
 The workflow is synchronous in this version. Approval records a decision but does not execute the generated reproduction plan.
 
-Enable optional OpenCode DeepSeek V4 Flash analysis for the selected Top-K issues:
+Enable optional OpenAI-compatible API analysis for the selected Top-K issues. OpenCode DeepSeek V4
+Flash remains the default and legacy `OPENCODE_*` environment names remain supported:
 
 ```bash
-export OPENCODE_API_KEY="..."
+export LLM_API_KEY="..."
 
 uv run rii agent-run examples/issues.json \
   --repo examples/demo_repository \
   --top-k 1 \
   --llm \
+  --llm-backend api \
   --database data/agent-runs.sqlite3 \
   --output reports/agent-run-opencode.json
 ```
 
-`--llm` is explicit: without it the workflow remains offline and makes no model requests. The
-runtime does not accept provider or model overrides: all external analysis uses OpenCode
-`deepseek-v4-flash`. The API key is read from the environment and is never added to run state
-or traces. Evidence collection rejects paths outside the repository, skips sensitive filenames,
+Custom OpenAI-compatible endpoints can set `LLM_API_BASE_URL`, `LLM_MODEL`, and
+`LLM_API_PROVIDER`, or use the matching `--llm-base-url`, `--llm-model`, and `--llm-provider`
+options. API keys are accepted only through `LLM_API_KEY` or legacy `OPENCODE_API_KEY`; they are
+never accepted as command-line values or added to run state and traces.
+
+Run the same complete structured analysis through an isolated local Codex CLI process:
+
+```bash
+uv run rii agent-run examples/issues.json \
+  --repo examples/demo_repository \
+  --top-k 1 \
+  --llm \
+  --llm-backend codex-cli \
+  --llm-model gpt-5.6-luna \
+  --llm-fast \
+  --database data/agent-runs.sqlite3 \
+  --output reports/agent-run-luna.json
+```
+
+`--llm-fast` is explicit and only valid with `codex-cli`. It passes Codex `service_tier="fast"`,
+which the official catalog describes as the Fast/priority tier with higher usage. Without `--llm`,
+the workflow remains offline and makes no model requests. Evidence collection rejects paths outside
+the repository, skips sensitive filenames,
 numbers source lines, and sends only evidence selected from deterministic Top-K candidates. The
 default external-model path limits each snippet to 200 numbered source lines and the combined
 repository evidence to 100,000 characters. These values can be changed with
-`OPENCODE_MAX_LINES_PER_EVIDENCE` and `OPENCODE_MAX_EVIDENCE_CHARS`; direct library callers may
+`LLM_MAX_LINES_PER_EVIDENCE` and `LLM_MAX_EVIDENCE_CHARS`; direct library callers may
 explicitly pass `None` for public-repository diagnostics that intentionally need full files. Issue
 bodies are not locally truncated, and the provider context window remains an additional hard
 boundary.
-Requests use the OpenCode Go endpoint
-`https://opencode.ai/zen/go/v1/chat/completions`.
+The default API request uses `https://opencode.ai/zen/go/v1/chat/completions`.
 
 The OpenCode path disables reasoning and defaults to temperature `0.1`, a 20,000-token completion
 budget, and a 180-second timeout for both normal Agent runs and evaluation. It uses `json_object`
@@ -135,6 +155,13 @@ uv run rii agent-evaluate benchmarks/cases.json \
   --case-id textual-remove-children-reflow \
   --llm-delay-seconds 0 \
   --output benchmarks/results/agent-analysis-latest.json
+
+uv run rii agent-evaluate benchmarks/cases.json \
+  --case-id starlette-streaming-denial-response \
+  --llm-backend codex-cli \
+  --llm-model gpt-5.6-luna \
+  --llm-fast \
+  --output benchmarks/results/agent-analysis-luna-latest.json
 ```
 
 This is separate from the rank-only localization benchmark. Each case runs through LangGraph,
@@ -188,6 +215,9 @@ uv run rii benchmark benchmarks/cases.json \
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
+  --llm-backend codex-cli \
+  --llm-model gpt-5.6-luna \
+  --llm-fast \
   --llm-delay-seconds 0 \
   --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
 ```
@@ -205,13 +235,14 @@ the wide rank is diagnostic and does not change production candidate selection.
 The current v0.35/index-v25 audit retrieves 246/267 reviewed production targets inside Top-40 and
 records the remaining 21 misses.
 
-The Hybrid benchmark is intentionally fixed to Codex CLI `gpt-5.6-luna`; it does not accept
-provider, model, temperature, or seed overrides. Install and authenticate Codex CLI before running
-it. Each rerank launches an ephemeral non-interactive `codex exec` process in an empty temporary
+The Hybrid benchmark defaults to Codex CLI `gpt-5.6-luna`; `--llm-backend api` selects the configured
+OpenAI-compatible API instead. Install and authenticate Codex CLI before using the local backend.
+Each Codex rerank launches an ephemeral non-interactive `codex exec` process in an empty temporary
 directory and a separate temporary `CODEX_HOME` that links only file-based authentication state,
 never user configuration or global `AGENTS.md`. It disables tool-oriented features, uses a
 zero-byte project-instruction budget and read-only sandbox, and sends UTF-8 prompt/output streams
-through pipes. Reasoning effort is fixed to `medium`. A strict JSON Schema allows only one
+through pipes. Reasoning effort defaults to `medium`; `--llm-fast` separately selects the Fast
+service tier. A strict JSON Schema allows only one
 `reranked_evidence_ids` array containing one to three strings; local
 validation removes duplicate IDs and rejects unknown IDs, extra fields, empty output, and malformed
 JSON. Provider errors are classified without persisting raw CLI diagnostics. Authentication,

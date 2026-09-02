@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -33,69 +34,168 @@ from .benchmark_discovery import (
     save_candidate_review_queue,
     save_curated_expansion,
 )
-from .codex_cli import CodexCLIReranker
+from .codex_cli import CodexCLIIssueAnalyzer, CodexCLIReranker
 from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
 from .investigator import investigate
-from .llm_client import (
-    OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
-    IssueAnalyzer,
-    OpenCodeIssueAnalyzer,
-)
+from .llm_client import IssueAnalyzer, OpenAICompatibleIssueAnalyzer
 from .models import IssueRecord, ReviewDecision
 from .repository_index import build_repository_map, save_repository_map
 from .service import rank_issues
 
 app = typer.Typer(no_args_is_help=True)
 console = Console()
+ANALYSIS_EVALUATION_TIMEOUT_SECONDS = 180.0
+
+
+class LLMBackend(StrEnum):
+    API = "api"
+    CODEX_CLI = "codex-cli"
+
+
+def _llm_backend(settings: Settings, backend: LLMBackend | None) -> LLMBackend:
+    try:
+        return backend or LLMBackend(settings.llm_backend)
+    except ValueError as error:
+        raise typer.BadParameter("LLM_BACKEND must be api or codex-cli") from error
+
+
+def _build_api_analyzer(
+    settings: Settings,
+    *,
+    model: str | None = None,
+    base_url: str | None = None,
+    provider: str | None = None,
+    temperature: float | None = None,
+    seed: int | None = None,
+    omit_max_tokens: bool = False,
+    timeout_seconds: float | None = None,
+) -> OpenAICompatibleIssueAnalyzer:
+    if settings.llm_api_key is None:
+        raise typer.BadParameter(
+            "LLM_API_KEY (or legacy OPENCODE_API_KEY) is required for the API backend"
+        )
+    return OpenAICompatibleIssueAnalyzer(
+        api_key=settings.llm_api_key.get_secret_value(),
+        base_url=settings.llm_api_base_url if base_url is None else base_url,
+        model=settings.llm_model if model is None else model,
+        provider=settings.llm_api_provider if provider is None else provider,
+        max_output_tokens=(
+            None if omit_max_tokens else settings.llm_max_output_tokens
+        ),
+        timeout_seconds=timeout_seconds or settings.llm_timeout_seconds,
+        temperature=(settings.llm_temperature if temperature is None else temperature),
+        seed=seed,
+        reasoning_effort=settings.llm_reasoning_effort,
+        response_format_json=settings.llm_response_format_json,
+    )
+
+
+def _validate_codex_options(
+    base_url: str | None,
+    provider: str | None,
+) -> None:
+    if base_url is not None:
+        raise typer.BadParameter("--llm-base-url is only valid for the API backend")
+    if provider is not None:
+        raise typer.BadParameter("--llm-provider is only valid for the API backend")
 
 
 def _build_issue_analyzer(
     settings: Settings,
+    backend: LLMBackend | None = None,
+    model: str | None = None,
+    base_url: str | None = None,
+    provider: str | None = None,
+    fast: bool = False,
     temperature: float | None = None,
     seed: int | None = None,
+    omit_max_tokens: bool = False,
+    timeout_seconds: float | None = None,
 ) -> IssueAnalyzer:
-    if settings.opencode_api_key is None:
-        raise typer.BadParameter("OPENCODE_API_KEY is required when --llm is enabled")
-    options = {
-        "max_output_tokens": settings.opencode_max_output_tokens,
-        "timeout_seconds": settings.opencode_timeout_seconds,
-        "temperature": (
-            settings.opencode_temperature if temperature is None else temperature
-        ),
-    }
-    if seed is not None:
-        options["seed"] = seed
-    return OpenCodeIssueAnalyzer(
-        api_key=settings.opencode_api_key.get_secret_value(),
-        **options,
+    selected_backend = _llm_backend(settings, backend)
+    if selected_backend is LLMBackend.API:
+        if fast:
+            raise typer.BadParameter("--llm-fast is only valid for codex-cli")
+        return _build_api_analyzer(
+            settings,
+            model=model,
+            base_url=base_url,
+            provider=provider,
+            temperature=temperature,
+            seed=seed,
+            omit_max_tokens=omit_max_tokens,
+            timeout_seconds=timeout_seconds,
+        )
+    _validate_codex_options(base_url, provider)
+    if omit_max_tokens:
+        raise typer.BadParameter("--omit-max-tokens is only valid for the API backend")
+    return CodexCLIIssueAnalyzer(
+        executable=settings.codex_cli_executable,
+        model=settings.codex_cli_model if model is None else model,
+        timeout_seconds=timeout_seconds or settings.codex_cli_timeout_seconds,
+        reasoning_effort=settings.codex_cli_reasoning_effort,
+        service_tier="fast" if fast else None,
     )
 
 
-def _build_benchmark_reranker() -> CodexCLIReranker:
-    return CodexCLIReranker()
+def _build_benchmark_reranker(
+    settings: Settings | None = None,
+    backend: LLMBackend | None = None,
+    model: str | None = None,
+    base_url: str | None = None,
+    provider: str | None = None,
+    fast: bool = False,
+) -> CodexCLIReranker | OpenAICompatibleIssueAnalyzer:
+    settings = settings or Settings()
+    selected_backend = backend or LLMBackend.CODEX_CLI
+    if selected_backend is LLMBackend.API:
+        if fast:
+            raise typer.BadParameter("--llm-fast is only valid for codex-cli")
+        return _build_api_analyzer(
+            settings,
+            model=model,
+            base_url=base_url,
+            provider=provider,
+        )
+    _validate_codex_options(base_url, provider)
+    return CodexCLIReranker(
+        executable=settings.codex_cli_executable,
+        model=settings.codex_cli_model if model is None else model,
+        timeout_seconds=settings.codex_cli_timeout_seconds,
+        reasoning_effort=settings.codex_cli_reasoning_effort,
+        service_tier="fast" if fast else None,
+    )
 
 
 def _build_analysis_evaluator(
     settings: Settings,
     temperature: float,
     seed: int,
+    backend: LLMBackend | None = None,
+    model: str | None = None,
+    base_url: str | None = None,
+    provider: str | None = None,
+    fast: bool = False,
     omit_max_tokens: bool = False,
-) -> OpenCodeIssueAnalyzer:
-    if settings.opencode_api_key is None:
-        raise typer.BadParameter("OPENCODE_API_KEY is required for Agent evaluation")
-    return OpenCodeIssueAnalyzer(
-        api_key=settings.opencode_api_key.get_secret_value(),
-        max_output_tokens=(
-            None if omit_max_tokens else settings.opencode_max_output_tokens
-        ),
-        timeout_seconds=max(
-            settings.opencode_timeout_seconds,
-            OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
-        ),
+) -> IssueAnalyzer:
+    return _build_issue_analyzer(
+        settings,
+        backend=backend,
+        model=model,
+        base_url=base_url,
+        provider=provider,
+        fast=fast,
         temperature=temperature,
         seed=seed,
+        omit_max_tokens=omit_max_tokens,
+        timeout_seconds=max(
+            settings.llm_timeout_seconds
+            if _llm_backend(settings, backend) is LLMBackend.API
+            else settings.codex_cli_timeout_seconds,
+            ANALYSIS_EVALUATION_TIMEOUT_SECONDS,
+        ),
     )
 
 
@@ -191,6 +291,26 @@ def agent_run_command(
         bool,
         typer.Option("--llm", help="Enable evidence-grounded model analysis."),
     ] = False,
+    llm_backend: Annotated[
+        LLMBackend | None,
+        typer.Option("--llm-backend", help="Use an API or isolated Codex CLI."),
+    ] = None,
+    llm_model: Annotated[
+        str | None,
+        typer.Option("--llm-model", help="Override the selected backend model."),
+    ] = None,
+    llm_base_url: Annotated[
+        str | None,
+        typer.Option("--llm-base-url", help="OpenAI-compatible API base URL."),
+    ] = None,
+    llm_provider: Annotated[
+        str | None,
+        typer.Option("--llm-provider", help="Provider name recorded for API runs."),
+    ] = None,
+    llm_fast: Annotated[
+        bool,
+        typer.Option("--llm-fast", help="Use the Codex CLI Fast service tier."),
+    ] = False,
     output: Path = Path("reports/agent-run.json"),
 ) -> None:
     """Run the synchronous LangGraph workflow up to human review."""
@@ -198,7 +318,14 @@ def agent_run_command(
     database = database or settings.agent_db_path
     analyzer = None
     if llm:
-        analyzer = _build_issue_analyzer(settings)
+        analyzer = _build_issue_analyzer(
+            settings,
+            backend=llm_backend,
+            model=llm_model,
+            base_url=llm_base_url,
+            provider=llm_provider,
+            fast=llm_fast,
+        )
     try:
         run = run_agent(
             _load(issues_file),
@@ -206,8 +333,8 @@ def agent_run_command(
             top_k,
             AgentStore(database),
             llm_analyzer=analyzer,
-            max_evidence_chars=settings.opencode_max_evidence_chars,
-            max_evidence_lines=settings.opencode_max_lines_per_evidence,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_evidence_lines=settings.llm_max_lines_per_evidence,
         )
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
@@ -289,13 +416,38 @@ def agent_evaluate_command(
             help="Diagnostic: omit max_tokens and use the provider's server default.",
         ),
     ] = False,
+    llm_backend: Annotated[
+        LLMBackend | None,
+        typer.Option("--llm-backend", help="Use an API or isolated Codex CLI."),
+    ] = None,
+    llm_model: Annotated[
+        str | None,
+        typer.Option("--llm-model", help="Override the selected backend model."),
+    ] = None,
+    llm_base_url: Annotated[
+        str | None,
+        typer.Option("--llm-base-url", help="OpenAI-compatible API base URL."),
+    ] = None,
+    llm_provider: Annotated[
+        str | None,
+        typer.Option("--llm-provider", help="Provider name recorded for API runs."),
+    ] = None,
+    llm_fast: Annotated[
+        bool,
+        typer.Option("--llm-fast", help="Use the Codex CLI Fast service tier."),
+    ] = False,
 ) -> None:
-    """Evaluate full DeepSeek analysis through the persisted Agent graph."""
+    """Evaluate full model analysis through the persisted Agent graph."""
     settings = Settings()
     analyzer = _build_analysis_evaluator(
         settings,
         temperature,
         seed,
+        backend=llm_backend,
+        model=llm_model,
+        base_url=llm_base_url,
+        provider=llm_provider,
+        fast=llm_fast,
         omit_max_tokens=omit_max_tokens,
     )
     try:
@@ -304,8 +456,8 @@ def agent_evaluate_command(
             workspace,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.opencode_max_evidence_chars,
-            max_lines_per_evidence=settings.opencode_max_lines_per_evidence,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_lines_per_evidence=settings.llm_max_lines_per_evidence,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:
@@ -345,7 +497,7 @@ def benchmark(
         BenchmarkVariant,
         typer.Option(
             "--variant",
-            help="Deterministic or GPT-5.6-Luna hybrid variant.",
+            help="Deterministic or model-reranked hybrid variant.",
         ),
     ] = BenchmarkVariant.DETERMINISTIC,
     case_id: Annotated[
@@ -362,12 +514,42 @@ def benchmark(
             help="Delay between hybrid cases and failed LLM retries.",
         ),
     ] = 0,
+    llm_backend: Annotated[
+        LLMBackend | None,
+        typer.Option(
+            "--llm-backend",
+            help="Hybrid backend; defaults to isolated Codex CLI.",
+        ),
+    ] = None,
+    llm_model: Annotated[
+        str | None,
+        typer.Option("--llm-model", help="Override the selected backend model."),
+    ] = None,
+    llm_base_url: Annotated[
+        str | None,
+        typer.Option("--llm-base-url", help="OpenAI-compatible API base URL."),
+    ] = None,
+    llm_provider: Annotated[
+        str | None,
+        typer.Option("--llm-provider", help="Provider name recorded for API runs."),
+    ] = None,
+    llm_fast: Annotated[
+        bool,
+        typer.Option("--llm-fast", help="Use the Codex CLI Fast service tier."),
+    ] = False,
 ) -> None:
     """Evaluate file localization against historical Issue/Fix-PR pairs."""
     settings = Settings()
     analyzer = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
-        analyzer = _build_benchmark_reranker()
+        analyzer = _build_benchmark_reranker(
+            settings,
+            backend=llm_backend,
+            model=llm_model,
+            base_url=llm_base_url,
+            provider=llm_provider,
+            fast=llm_fast,
+        )
     try:
         run = run_benchmark(
             load_manifest(manifest),
@@ -375,8 +557,8 @@ def benchmark(
             variant,
             analyzer,
             case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.opencode_max_evidence_chars,
-            max_lines_per_evidence=settings.opencode_max_lines_per_evidence,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_lines_per_evidence=settings.llm_max_lines_per_evidence,
             llm_delay_seconds=llm_delay_seconds,
         )
     except ValueError as error:

@@ -224,6 +224,7 @@ class BenchmarkRun(BaseModel):
     llm_delay_seconds: float | None = None
     timeout_seconds: float | None = None
     reasoning_effort: str | None = None
+    service_tier: str | None = None
     temperature: float | None = None
     seed: int | None = None
     repository_map_cache_schema_version: int | None = None
@@ -1015,6 +1016,7 @@ def run_benchmark(
             "rerank_reasoning_effort",
             getattr(analyzer, "reasoning_effort", None),
         ),
+        service_tier=getattr(analyzer, "service_tier", None),
         temperature=getattr(analyzer, "temperature", None),
         seed=getattr(analyzer, "seed", None),
         repository_map_cache_schema_version=REPOSITORY_MAP_CACHE_SCHEMA_VERSION,

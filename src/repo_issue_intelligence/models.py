@@ -227,6 +227,8 @@ class LLMAnalysisResponse(StrictOutputModel):
 class LLMAnalysisResult(BaseModel):
     provider: str
     model: str
+    reasoning_effort: str | None = None
+    service_tier: str | None = None
     request_id: str | None = None
     system_fingerprint: str | None = None
     input_tokens: int = 0

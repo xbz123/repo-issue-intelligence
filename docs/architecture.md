@@ -226,13 +226,18 @@ readable.
 An Issue with no readable deterministic evidence skips the provider request, retains its
 deterministic investigation with `llm_analysis=null`, records the Issue number in
 `skipped_no_evidence_issue_numbers`, and continues to the human-review gate without retrying.
-OpenCode disables reasoning and uses temperature `0.1`, a 20,000-token budget, and a 180-second
-timeout in both the normal runtime and reliability evaluator. An analysis completion that reports
+The default OpenCode API configuration disables reasoning and uses temperature `0.1`, a
+20,000-token budget, and a 180-second timeout in both the normal runtime and reliability evaluator.
+The API backend accepts a custom OpenAI-compatible base URL, model, and auditable provider name;
+the credential remains environment-only. An analysis completion that reports
 `finish_reason=length` fails as non-retryable `output_truncated`; the workflow does not repeat the
 same request with an already exhausted 20,000-token budget.
 The trace records model, request ID, token usage, and latency, but never stores the API key.
-Settings loads the OpenCode credential as a `SecretStr`. The CLI does not expose provider or model
-selection; `--llm` always uses `deepseek-v4-flash`. Issue bodies are not locally truncated, while
+Settings loads the API credential as a `SecretStr`. `--llm-backend api` uses the configured API;
+`--llm-backend codex-cli` runs the same compact analysis contract through an isolated Codex CLI.
+The CLI backend accepts an explicit model override and optional Fast service tier but never loads
+user configuration, global `AGENTS.md`, tools, or writable sandbox access. Issue bodies are not
+locally truncated, while
 the evidence budgets, Top-K selection, tracked-file scope, and sensitive-file exclusion bound what
 repository content can enter a request. The provider context window remains a hard external limit.
 
@@ -263,14 +268,16 @@ benchmark success semantics. Per-case results retain the cache hit/miss state so
 latency remain auditable. It runs deterministic retrieval and preserves that Top-20 as the exact
 hybrid fallback. A separate retrieval pass appends unique files to form a model-only Top-40 pool;
 Codex CLI `gpt-5.6-luna` may promote at most three selected evidence IDs before the unchanged base
-order fills the final Top-20. The benchmark does not expose provider, model, temperature, or seed
-overrides, and it no longer has a full-analysis variant. Each request runs ephemeral non-interactive
+order fills the final Top-20. The hybrid benchmark defaults to that local CLI backend but can select
+the configured OpenAI-compatible API, override the backend model, or explicitly enable the Codex
+Fast service tier. It no longer has a full-analysis variant. Each Codex request runs ephemeral non-interactive
 `codex exec` in an empty temporary directory and a separate temporary `CODEX_HOME` that links only
 file-based authentication state, excluding user config and global `AGENTS.md`. Tool features are
 disabled, the project-instruction budget is zero, the sandbox is read-only, and prompt/output pipes
 use UTF-8. The final response must satisfy a strict JSON Schema containing only one to
-three evidence IDs, then pass local duplicate and known-ID checks. Reasoning effort is fixed to
-medium; Codex CLI controls its own response budget. Issue bodies remain complete. The default
+three evidence IDs, then pass local duplicate and known-ID checks. Reasoning effort defaults to
+medium; the Fast service tier is an independent explicit option and Codex CLI controls its own
+response budget. Issue bodies remain complete. The default
 100,000-character evidence budget is divided across the 40-candidate pool, limiting each snippet
 to 2,500 characters and 200 source lines. Root-cause hypotheses are
 intentionally excluded so schema reliability does not contaminate localization metrics. Retrieval
