@@ -7,8 +7,8 @@ quality improvement is claimed.
 
 1. `deterministic`: rules, duplicate similarity, AST index, lexical candidate generation, and
    bounded static-graph reranking inside fixed Top-10 bands.
-2. `hybrid`: deterministic retrieval followed only by Codex CLI
-   `gpt-5.6-luna` evidence-ID reranking.
+2. `hybrid`: deterministic retrieval followed by evidence-ID reranking. It defaults to isolated
+   Codex CLI `gpt-5.6-luna`; `--llm-backend api` selects the configured OpenAI-compatible API.
 
 An `llm-only` variant remains future work. Hybrid preserves the deterministic Top-20 as its exact
 fallback and appends unique files from a separate Top-40 retrieval pass to a model-only candidate
@@ -21,19 +21,22 @@ global `AGENTS.md` are therefore absent. The process disables tool features, set
 instruction discovery to a zero-byte budget, uses a read-only sandbox, and supplies UTF-8 streams
 through pipes. A strict JSON Schema
 accepts only one to three evidence IDs; local validation removes duplicates and rejects unknown
-IDs, extra fields, empty output, and malformed JSON. The project CLI does not accept a different
-provider, model, temperature, or seed. The rank request uses medium reasoning effort, while Codex
-CLI controls its own response budget. The complete frozen Issue is sent. Under the default
+IDs, extra fields, empty output, and malformed JSON. The CLI accepts a backend and model override;
+API base URLs and provider names apply only to the API backend, while `--llm-fast` applies only to
+Codex CLI. The default CLI rank request uses medium reasoning effort, while Codex CLI controls its
+own response budget. The complete frozen Issue is sent. Under the default
 100,000-character total evidence budget, each of the 40 candidate snippets is limited to 2,500
 characters and at most 200 source lines. The provider context window remains an additional
 request-size limit.
 
-The full Agent analysis path also disables model reasoning before requesting its strict JSON
+The default API full-analysis path disables model reasoning before requesting its strict JSON
 object. This preserves the 20,000-token completion ceiling for the auditable analysis fields rather
-than allowing hidden reasoning to exhaust the response budget before valid JSON is produced.
-Normal Agent runs and evaluation both use temperature `0.1` and a 180-second timeout. A structured
-analysis response ending with `finish_reason=length` is classified as non-retryable
-`output_truncated` instead of being retried with the same exhausted ceiling.
+than allowing hidden reasoning to exhaust the response budget before valid JSON is produced. The
+same compact response schema can instead run through the isolated Codex CLI backend; its reasoning
+effort and optional Fast service tier are recorded separately. Normal API Agent runs use the
+configured timeout and evaluation enforces at least 180 seconds. A structured API analysis response
+ending with `finish_reason=length` is classified as non-retryable `output_truncated` instead of
+being retried with the same exhausted ceiling.
 `agent-evaluate --omit-max-tokens` is a diagnostic-only mode that omits the request field and
 records `max_output_tokens=null`; it delegates the ceiling to the provider rather than creating a
 truly unlimited response.

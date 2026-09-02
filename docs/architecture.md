@@ -240,6 +240,8 @@ user configuration, global `AGENTS.md`, tools, or writable sandbox access. Issue
 locally truncated, while
 the evidence budgets, Top-K selection, tracked-file scope, and sensitive-file exclusion bound what
 repository content can enter a request. The provider context window remains a hard external limit.
+The subprocess is local, but inference is hosted; its selected prompt content still leaves the
+machine through the authenticated Codex service.
 
 `agent-evaluate` exercises this complete path against selected frozen benchmark cases. Repository
 maps are restricted to `git ls-files` so ignored artifacts in a reused checkout cannot enter the

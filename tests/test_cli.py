@@ -2,6 +2,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+import typer
 from click import unstyle
 from typer.testing import CliRunner
 
@@ -168,7 +170,7 @@ def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
     assert "hybrid-full" in result.output
 
 
-def test_benchmark_reranker_uses_fixed_codex_cli_contract() -> None:
+def test_benchmark_reranker_uses_default_codex_cli_contract() -> None:
     analyzer = _build_benchmark_reranker()
 
     assert analyzer.provider == CODEX_CLI_PROVIDER
@@ -224,6 +226,28 @@ def test_analysis_evaluator_supports_codex_cli_without_api_key() -> None:
     assert analyzer.model == CODEX_CLI_DEFAULT_MODEL
     assert analyzer.service_tier == "fast"
     analyzer.close()
+
+
+def test_llm_backend_rejects_incompatible_options() -> None:
+    with pytest.raises(typer.BadParameter, match="--llm-fast is only valid for codex-cli"):
+        _build_benchmark_reranker(
+            Settings(llm_api_key="test-key", _env_file=None),
+            backend=LLMBackend.API,
+            fast=True,
+        )
+    with pytest.raises(typer.BadParameter, match="--llm-base-url is only valid"):
+        _build_benchmark_reranker(
+            Settings(_env_file=None),
+            backend=LLMBackend.CODEX_CLI,
+            base_url="https://gateway.example/v1",
+        )
+    with pytest.raises(typer.BadParameter, match="--temperature is not supported"):
+        _build_analysis_evaluator(
+            Settings(_env_file=None),
+            temperature=0.5,
+            seed=1337,
+            backend=LLMBackend.CODEX_CLI,
+        )
 
 
 def test_agent_evaluator_uses_long_read_timeout() -> None:

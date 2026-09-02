@@ -175,18 +175,18 @@ class OpenAICompatibleIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
+        max_output_tokens: int | None = 20_000,
+        timeout_seconds: float = OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
+        temperature: float = OPENCODE_ANALYSIS_TEMPERATURE,
+        seed: int | None = None,
+        client: httpx.Client | None = None,
         *,
         base_url: str = OPENCODE_API_BASE_URL,
         model: str = OPENCODE_DEFAULT_MODEL,
         provider: str = "opencode",
         provider_label: str | None = None,
-        max_output_tokens: int | None = 20_000,
-        timeout_seconds: float = OPENCODE_ANALYSIS_TIMEOUT_SECONDS,
-        temperature: float = OPENCODE_ANALYSIS_TEMPERATURE,
-        seed: int | None = None,
         reasoning_effort: str | None = OPENCODE_ANALYSIS_REASONING_EFFORT,
         response_format_json: bool = True,
-        client: httpx.Client | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("API key is required")

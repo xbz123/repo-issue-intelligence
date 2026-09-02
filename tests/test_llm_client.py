@@ -939,6 +939,21 @@ def test_opencode_analyzer_uses_default_deepseek_model() -> None:
     analyzer.close()
 
 
+def test_opencode_analyzer_keeps_legacy_positional_constructor() -> None:
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/go/v1/",
+        trust_env=False,
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", 512, 12, 0.2, 7, client)
+
+    assert analyzer.max_output_tokens == 512
+    assert analyzer.timeout_seconds == 12
+    assert analyzer.temperature == 0.2
+    assert analyzer.seed == 7
+    analyzer.close()
+    client.close()
+
+
 def test_openai_compatible_analyzer_uses_custom_base_url_model_and_provider() -> None:
     captured: dict[str, object] = {}
 

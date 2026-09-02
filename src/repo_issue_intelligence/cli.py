@@ -95,11 +95,17 @@ def _build_api_analyzer(
 def _validate_codex_options(
     base_url: str | None,
     provider: str | None,
+    temperature: float | None = None,
+    seed: int | None = None,
 ) -> None:
     if base_url is not None:
         raise typer.BadParameter("--llm-base-url is only valid for the API backend")
     if provider is not None:
         raise typer.BadParameter("--llm-provider is only valid for the API backend")
+    if temperature not in {None, 0.1}:
+        raise typer.BadParameter("--temperature is not supported by codex-cli")
+    if seed not in {None, 1337}:
+        raise typer.BadParameter("--seed is not supported by codex-cli")
 
 
 def _build_issue_analyzer(
@@ -128,7 +134,7 @@ def _build_issue_analyzer(
             omit_max_tokens=omit_max_tokens,
             timeout_seconds=timeout_seconds,
         )
-    _validate_codex_options(base_url, provider)
+    _validate_codex_options(base_url, provider, temperature, seed)
     if omit_max_tokens:
         raise typer.BadParameter("--omit-max-tokens is only valid for the API backend")
     return CodexCLIIssueAnalyzer(
@@ -406,9 +412,9 @@ def agent_evaluate_command(
     ] = 0,
     temperature: Annotated[
         float,
-        typer.Option("--temperature", min=0, max=2),
+        typer.Option("--temperature", min=0, max=2, help="API backend temperature."),
     ] = 0.1,
-    seed: Annotated[int, typer.Option("--seed")] = 1337,
+    seed: Annotated[int, typer.Option("--seed", help="API backend sampling seed.")] = 1337,
     omit_max_tokens: Annotated[
         bool,
         typer.Option(

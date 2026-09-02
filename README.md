@@ -119,6 +119,9 @@ uv run rii agent-run examples/issues.json \
   --output reports/agent-run-luna.json
 ```
 
+Set `LLM_BACKEND=codex-cli` and `CODEX_CLI_MODEL=gpt-5.6-luna` to make that backend the
+environment default for `agent-run` and `agent-evaluate`.
+
 `--llm-fast` is explicit and only valid with `codex-cli`. It passes Codex `service_tier="fast"`,
 which the official catalog describes as the Fast/priority tier with higher usage. Without `--llm`,
 the workflow remains offline and makes no model requests. Evidence collection rejects paths outside
@@ -131,6 +134,8 @@ explicitly pass `None` for public-repository diagnostics that intentionally need
 bodies are not locally truncated, and the provider context window remains an additional hard
 boundary.
 The default API request uses `https://opencode.ai/zen/go/v1/chat/completions`.
+The Codex CLI backend is a local isolated process, not local inference: selected Issue and evidence
+content is still sent to the Codex service under the authenticated CLI account.
 
 The OpenCode path disables reasoning and defaults to temperature `0.1`, a 20,000-token completion
 budget, and a 180-second timeout for both normal Agent runs and evaluation. It uses `json_object`
@@ -498,6 +503,17 @@ See the compact Luna
 [`manifest-v20 summary`](benchmarks/results/deepseek-v4-flash-pool40-manifest-v20-summary.json);
 the duplicate raw run files remain outside Git. The compact pre-change miss audit is
 [`pool40-miss-taxonomy-manifest-v20.json`](benchmarks/results/pool40-miss-taxonomy-manifest-v20.json).
+
+The current index-v25 follow-up used Codex CLI `gpt-5.6-luna` with medium reasoning and explicit
+Fast service tier. It completed 200/200 with 200 first-attempt successes, zero retry, zero fallback,
+and 200/200 repository-map cache hits. File Recall@1/5/10/20 was
+`0.6047/0.8017/0.8476/0.9023`, with MRR `0.7746`; Symbol Recall@20 was `0.5017`, with MRR
+`0.5346`. Because the error-triggered repeat gate did not fire, no additional run was performed.
+Mean model latency was `6,735.076 ms`, which is 93.806 ms above the older non-Fast run; differing
+index, prompt, CLI version, service load, and timing mean this is not evidence that Fast is slower
+or faster. See the compact
+[`Fast run summary`](benchmarks/results/gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json);
+the raw 1.2 MB artifact remains outside Git.
 
 v0.25 adds conservative title phrase evidence for qualified methods. It requires adjacent
 owner-to-method semantic terms in the title, a non-generic compound owner, one uniquely strongest
