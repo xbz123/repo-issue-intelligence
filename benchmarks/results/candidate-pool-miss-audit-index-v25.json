@@ -5,18 +5,18 @@
   "repository_map_index_version": 25,
   "candidate_pool_limit": 40,
   "wide_candidate_limit": 2000,
-  "created_at": "2026-08-31T02:50:53.068694Z",
+  "created_at": "2026-09-02T01:11:25.578501Z",
   "cases": 200,
   "repositories": 58,
   "production_targets": 267,
-  "candidate_pool_matched_targets": 237,
-  "candidate_pool_missing_targets": 30,
+  "candidate_pool_matched_targets": 246,
+  "candidate_pool_missing_targets": 21,
   "repository_map_cache_hits": 200,
   "repository_map_cache_misses": 0,
   "language_counts": {
     "C++": 1,
-    "Python": 12,
-    "Rust": 12,
+    "Python": 9,
+    "Rust": 6,
     "TypeScript": 5
   },
   "repository_counts": {
@@ -24,21 +24,20 @@
     "ansible/ansible": 1,
     "apache/airflow": 4,
     "astral-sh/ruff": 4,
-    "astral-sh/uv": 8,
+    "astral-sh/uv": 2,
     "boto/boto3": 1,
     "pandas-dev/pandas": 1,
-    "paramiko/paramiko": 2,
-    "pylint-dev/pylint": 1,
+    "paramiko/paramiko": 1,
     "pypa/virtualenv": 1,
     "scipy/scipy": 1,
-    "tox-dev/tox": 2
+    "tox-dev/tox": 1
   },
   "wide_candidate_rank_buckets": {
     "1-40-displaced": 0,
-    "41-60": 6,
-    "61-100": 3,
-    "101-200": 9,
-    "201+": 12,
+    "41-60": 2,
+    "61-100": 5,
+    "101-200": 4,
+    "201+": 10,
     "not_retrieved": 0
   },
   "targets": [
@@ -71,40 +70,11 @@
       ]
     },
     {
-      "case_id": "tox-skip-missing-interpreters",
-      "repository": "tox-dev/tox",
-      "file": "src/tox/tox_env/python/runner.py",
-      "language": "Python",
-      "wide_candidate_rank": 52,
-      "evidence": [
-        "Path matches issue terms: env, tox",
-        "Imports match component terms: api, create, deps, env, file, io, li, package, packaging, pip, run, skip, tools, tox",
-        "Source contains issue identifiers: ROOT, SKIP, tox, tox_env",
-        "Source content matches issue terms: build, config, create, default, deps, editable, environment, false",
-        "Changed with lexical seed files in 1 prior commits (latest dbeec44)",
-        "Symbol PythonRun.default_pkg_type matches: default, pkg, run"
-      ]
-    },
-    {
-      "case_id": "pylint-output-format-files",
-      "repository": "pylint-dev/pylint",
-      "file": "pylint/config/callback_actions.py",
-      "language": "Python",
-      "wide_candidate_rank": 52,
-      "evidence": [
-        "Path matches issue terms: pylint",
-        "Imports match component terms: all, format, no, pylint",
-        "Source content matches issue terms: argument, arguments, certain, command, configuration, description, file, format",
-        "Related source imports this file: pylint/config/argument.py",
-        "Symbol _GenerateConfigFileAction matches: configuration, file, format"
-      ]
-    },
-    {
       "case_id": "ruff-os-exit-private-member",
       "repository": "astral-sh/ruff",
       "file": "crates/ruff_linter/src/rules/pylint/helpers.rs",
       "language": "Rust",
-      "wide_candidate_rank": 153,
+      "wide_candidate_rank": 170,
       "evidence": [
         "Path matches issue terms: ruff, rules",
         "Source contains issue identifiers: docs.python.org",
@@ -117,10 +87,12 @@
       "repository": "ansible/ansible",
       "file": "lib/ansible/plugins/callback/oneline.py",
       "language": "Python",
-      "wide_candidate_rank": 169,
+      "wide_candidate_rank": 88,
       "evidence": [
         "Path matches issue terms: ansible, callback, lib, plugins",
         "Imports match component terms: all, ansible, callback, module, nsible, plugin, plugins, pr",
+        "Source contains issue identifiers: only_changed",
+        "Source structurally matches issue identifier: only_changed",
         "Source content matches issue terms: actual, ansible, callback, change, changed, collection, core, deprecated",
         "Symbol CallbackModule matches: callback, module, new"
       ]
@@ -143,23 +115,9 @@
     {
       "case_id": "uv-pep723-relative-indexes",
       "repository": "astral-sh/uv",
-      "file": "crates/uv-settings/src/lib.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 131,
-      "evidence": [
-        "Path matches issue terms: uv",
-        "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nVersion",
-        "Source content matches issue terms: both, containing, current, dependencies, directory, dist, else, expected",
-        "Symbol from_directory matches: directory",
-        "Issue references symbol from_directory"
-      ]
-    },
-    {
-      "case_id": "uv-pep723-relative-indexes",
-      "repository": "astral-sh/uv",
       "file": "crates/uv/src/commands/project/add.rs",
       "language": "Rust",
-      "wide_candidate_rank": 312,
+      "wide_candidate_rank": 319,
       "evidence": [
         "Path matches issue terms: uv",
         "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nTag, nVersion",
@@ -169,24 +127,13 @@
     {
       "case_id": "uv-pep723-relative-indexes",
       "repository": "astral-sh/uv",
-      "file": "crates/uv/src/commands/project/mod.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 142,
-      "evidence": [
-        "Path matches issue terms: uv",
-        "Source contains issue identifiers: METADATA, PEP, directory, nName, nRoot, nVersion, print",
-        "Source content matches issue terms: actual, against, both, current, declared, dependencies, directory, dist"
-      ]
-    },
-    {
-      "case_id": "uv-pep723-relative-indexes",
-      "repository": "astral-sh/uv",
       "file": "crates/uv/src/lib.rs",
       "language": "Rust",
-      "wide_candidate_rank": 259,
+      "wide_candidate_rank": 83,
       "evidence": [
         "Path matches issue terms: uv",
-        "Source contains issue identifiers: METADATA, PEP, WHEEL, directory, nName, nRoot, nTag, nVersion",
+        "Source contains issue identifiers: METADATA, PEP, WHEEL, directory, find_links, nName, nRoot, nTag, nVersion",
+        "Source structurally matches issue identifier: find_links",
         "Source content matches issue terms: behavior, containing, current, dependencies, directory, dist, else, expected",
         "Symbol run matches: run"
       ]
@@ -257,17 +204,6 @@
       ]
     },
     {
-      "case_id": "paramiko-cryptography-25-ecdh",
-      "repository": "paramiko/paramiko",
-      "file": "setup.py",
-      "language": "Python",
-      "wide_candidate_rank": 59,
-      "evidence": [
-        "Source contains issue identifiers: github.com",
-        "Source content matches issue terms: bcrypt, both, cryptography, graph, package, packages, paramiko, point"
-      ]
-    },
-    {
       "case_id": "prefect-anyof-copy-new-run",
       "repository": "PrefectHQ/prefect",
       "file": "ui-v2/src/components/schemas/utilities/getIndexForAnyOfPropertyValue.ts",
@@ -279,64 +215,11 @@
       ]
     },
     {
-      "case_id": "uv-venv-stale-interpreter-cache",
-      "repository": "astral-sh/uv",
-      "file": "crates/uv-python/src/interpreter.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 42,
-      "evidence": [
-        "Path matches issue terms: interpreter, uv",
-        "Source contains issue identifiers: CPython, DEBUG, VIRTUAL_ENV, version, with, x86_64",
-        "Source content matches issue terms: adding, also, base, broken, checking, config, configuration, cpython",
-        "Symbol python_version matches: version",
-        "Issue references symbol python_version"
-      ]
-    },
-    {
-      "case_id": "uv-check-no-install-project",
-      "repository": "astral-sh/uv",
-      "file": "crates/uv-cli/src/lib.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 143,
-      "evidence": [
-        "Path matches issue terms: uv",
-        "Source content matches issue terms: accept, astral, build, cannot, check, commit, console, control",
-        "Symbol install_mirrors matches: install",
-        "Blame-selected seed line changed with this file in prior commit f69c1b2"
-      ]
-    },
-    {
-      "case_id": "uv-check-no-install-project",
-      "repository": "astral-sh/uv",
-      "file": "crates/uv/src/lib.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 108,
-      "evidence": [
-        "Path matches issue terms: uv",
-        "Source content matches issue terms: build, cannot, check, control, dependencies, external, extras, figure",
-        "Symbol run_project matches: project, run",
-        "Blame-selected seed line changed with this file in prior commit f69c1b2"
-      ]
-    },
-    {
-      "case_id": "uv-check-no-install-project",
-      "repository": "astral-sh/uv",
-      "file": "crates/uv/src/settings.rs",
-      "language": "Rust",
-      "wide_candidate_rank": 239,
-      "evidence": [
-        "Path matches issue terms: uv",
-        "Source content matches issue terms: build, cannot, check, control, dependencies, external, extras, figure",
-        "Symbol check_refresh_conflict matches: check",
-        "Blame-selected seed line changed with this file in prior commit f69c1b2"
-      ]
-    },
-    {
       "case_id": "ruff-statistics-rule-hyperlinks",
       "repository": "astral-sh/ruff",
       "file": "crates/ruff/src/printer.rs",
       "language": "Rust",
-      "wide_candidate_rank": 803,
+      "wide_candidate_rank": 805,
       "evidence": [
         "Path matches issue terms: ruff",
         "Source content matches issue terms: check, codes, pretty, read, ruff, rule, statistics, summary",
@@ -348,7 +231,7 @@
       "repository": "astral-sh/ruff",
       "file": "crates/ruff_db/src/diagnostic/mod.rs",
       "language": "Rust",
-      "wide_candidate_rank": 315,
+      "wide_candidate_rank": 317,
       "evidence": [
         "Path matches issue terms: ruff",
         "Source content matches issue terms: about, also, check, codes, convenient, doesn, even, find",
@@ -360,7 +243,7 @@
       "repository": "astral-sh/ruff",
       "file": "crates/ruff_db/src/diagnostic/stylesheet.rs",
       "language": "Rust",
-      "wide_candidate_rank": 1050,
+      "wide_candidate_rank": 1052,
       "evidence": [
         "Path matches issue terms: ruff",
         "Source content matches issue terms: help, hyperlink, hyperlinks, link, plain, terminal",

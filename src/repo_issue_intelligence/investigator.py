@@ -95,6 +95,11 @@ PATH_REFERENCE_PATTERN = re.compile(
 )
 CODE_SPAN_PATTERN = re.compile(r"(?<!`)`([^`\n]{1,120})`(?!`)")
 FENCED_CODE_PATTERN = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
+COMMAND_LINE_OPTION_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_-])--(?P<option>[A-Za-z][A-Za-z0-9]*"
+    r"(?:-[A-Za-z0-9]+)+)(?![A-Za-z0-9_-])"
+)
+COMMAND_LINE_IDENTIFIER_LIMIT = 16
 ECMASCRIPT_FENCE_PREFIX_PATTERN = re.compile(
     r"^```[ \t]*(?:javascript|js|typescript|ts|jsx|tsx)\b",
     re.IGNORECASE,
@@ -162,6 +167,18 @@ REVERSE_IMPORT_RELATION_PREFIX = "Imports title-matching source module "
 REEXPORTED_IMPORT_RELATION_PREFIX = (
     "Issue-referenced source imports re-exported symbols defined here: "
 )
+PYTHON_DEPENDENCY_METADATA_FILES = {"setup.py"}
+DEPENDENCY_METADATA_CONTEXT_TERMS = {
+    "dependency",
+    "dependencies",
+    "deprecated",
+    "deprecation",
+    "release",
+    "requirement",
+    "requirements",
+    "upgrade",
+    "version",
+}
 GENERIC_SUBSYSTEM_TERMS = {"common", "core", "shared", "util", "utils"}
 AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
@@ -248,6 +265,7 @@ class IssueSignals:
     title_identifiers: frozenset[str]
     primary_identifiers: frozenset[str]
     explicit_identifiers: frozenset[str]
+    command_line_identifiers: frozenset[str]
     called_identifiers: tuple[str, ...]
     identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
@@ -607,6 +625,17 @@ def _extract_explicit_identifiers(text: str) -> set[str]:
     return identifiers
 
 
+def _extract_command_line_identifiers(text: str) -> set[str]:
+    identifiers: list[str] = []
+    for match in COMMAND_LINE_OPTION_PATTERN.finditer(text):
+        identifier = match.group("option").replace("-", "_")
+        if identifier not in identifiers:
+            identifiers.append(identifier)
+        if len(identifiers) == COMMAND_LINE_IDENTIFIER_LIMIT:
+            break
+    return set(identifiers)
+
+
 def _extract_called_identifiers(text: str) -> tuple[str, ...]:
     positioned_regions = [
         (match.start(1), match.group(1))
@@ -785,6 +814,7 @@ def _extract_source_snippets(text: str) -> tuple[tuple[str, ...], ...]:
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
+    command_line_identifiers = _extract_command_line_identifiers(text)
     explicit_identifiers = _extract_explicit_identifiers(text)
     text_without_dotted_identifiers = _without_dotted_identifiers(text)
     content_terms = _terms(text_without_dotted_identifiers)
@@ -810,6 +840,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         title_identifiers=frozenset(_extract_identifiers(issue.title)),
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         explicit_identifiers=frozenset(explicit_identifiers),
+        command_line_identifiers=frozenset(command_line_identifiers),
         called_identifiers=_extract_called_identifiers(text),
         identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
@@ -1941,16 +1972,18 @@ def _source_content(
     relative_path: str,
     signals: IssueSignals,
     language: str,
-) -> tuple[set[str], set[str], int | None]:
+    *,
+    include_structured_identifiers: bool,
+) -> tuple[set[str], set[str], set[str], int | None]:
     path = (root / relative_path).resolve()
     if not path.is_relative_to(root) or not path.is_file():
-        return set(), set(), None
+        return set(), set(), set(), None
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
-        return set(), set(), None
+        return set(), set(), set(), None
     if "\x00" in text or len(text) > 1_000_000:
-        return set(), set(), None
+        return set(), set(), set(), None
 
     all_identifiers = signals.identifiers | signals.explicit_identifiers
     if language in ECMASCRIPT_LANGUAGES:
@@ -1973,6 +2006,22 @@ def _source_content(
         for identifier in content_identifiers
         if _content_matches_identifier(text, identifier, language=language)
     }
+    structured_candidates = (
+        set(signals.command_line_identifiers)
+        if include_structured_identifiers
+        else set()
+    )
+    structured_identifier_hits = {
+        identifier
+        for identifier in structured_candidates
+        if _content_matches_identifier(text, identifier, language=language)
+        or _content_structurally_matches_identifier(
+            text,
+            identifier,
+            language=language,
+        )
+    }
+    identifier_hits.update(structured_identifier_hits)
     lowered = text.lower()
     content_overlap = {
         term
@@ -1986,17 +2035,52 @@ def _source_content(
                 line_number
                 for line_number, line in enumerate(text.splitlines(), start=1)
                 if any(
-                    _content_matches_identifier(
-                        line,
-                        identifier,
-                        language=language,
+                    _content_matches_identifier(line, identifier, language=language)
+                    or (
+                        identifier in structured_identifier_hits
+                        and _content_structurally_matches_identifier(
+                            line,
+                            identifier,
+                            language=language,
+                        )
                     )
                     for identifier in identifier_hits
                 )
             ),
             None,
         )
-    return identifier_hits, content_overlap, first_line
+    return (
+        identifier_hits,
+        structured_identifier_hits,
+        content_overlap,
+        first_line,
+    )
+
+
+def _content_structurally_matches_identifier(
+    text: str,
+    identifier: str,
+    *,
+    language: str | None = None,
+) -> bool:
+    if language in ECMASCRIPT_LANGUAGES:
+        return False
+    candidate = identifier.strip("`'\"()[]{}:,").rsplit(".", maxsplit=1)[-1]
+    candidate_terms = tuple(_ordered_terms(candidate))
+    if len(candidate_terms) < 2:
+        return False
+    for match in IDENTIFIER_PATTERN.finditer(text):
+        source = match.group(0).rsplit(".", maxsplit=1)[-1]
+        source_terms = tuple(_ordered_terms(source))
+        if len(source_terms) <= len(candidate_terms):
+            continue
+        width = len(candidate_terms)
+        if any(
+            source_terms[index : index + width] == candidate_terms
+            for index in range(len(source_terms) - width + 1)
+        ):
+            return True
+    return False
 
 
 def _is_identifier_continuation(
@@ -2921,6 +3005,9 @@ def locate_candidates(
     issue: IssueRecord, repository_map: RepositoryMap, limit: int = 20
 ) -> list[CandidateLocation]:
     signals = extract_issue_signals(issue)
+    expanded_retrieval = (
+        limit >= EXPANDED_PROTECTED_BASE_RESERVATION_MIN_LIMIT
+    )
     keywords = set(signals.terms)
     root = Path(repository_map.root).resolve()
     base_scores: dict[str, float] = {}
@@ -2941,6 +3028,24 @@ def locate_candidates(
         term
         for file in repository_map.files
         for term in _terms(file.path)
+    )
+    stem_term_counts = (
+        Counter(
+            term
+            for file in repository_map.files
+            for term in _terms(Path(file.path).stem)
+        )
+        if expanded_retrieval
+        else Counter()
+    )
+    referenced_path_stem_terms = (
+        {
+            term
+            for path in signals.paths
+            for term in _terms(Path(path).stem)
+        }
+        if expanded_retrieval
+        else set()
     )
     protected_base_paths: set[str] = set()
     repository_file_paths = [file.path for file in repository_map.files]
@@ -2972,6 +3077,20 @@ def locate_candidates(
         auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
         path_terms = _terms(file.path)
         path_overlap = keywords & path_terms
+        specific_stem_overlap = (
+            {
+                term
+                for term in signals.content_terms
+                & _terms(Path(file.path).stem)
+                if len(term) >= 5
+                and term not in GENERIC_SUBSYSTEM_TERMS
+                and term not in referenced_path_stem_terms
+                and stem_term_counts[term]
+                <= SPECIFIC_PATH_TERM_MAX_FILES
+            }
+            if expanded_retrieval and file.language == "Rust"
+            else set()
+        )
         primary_path_overlap = {
             term
             for term in signals.primary_terms & path_terms
@@ -3076,12 +3195,40 @@ def locate_candidates(
         best_overlap = set(score_match.local_overlap) if score_match else set()
         blame_symbol = blame_match.symbol if blame_match else None
         selected_symbol = selected_match.symbol if selected_match else None
-        content_identifiers, content_overlap, content_line = _source_content(
+        (
+            content_identifiers,
+            structured_content_identifiers,
+            content_overlap,
+            content_line,
+        ) = _source_content(
             root,
             file.path,
             signals,
             file.language,
+            include_structured_identifiers=expanded_retrieval,
         )
+        dependency_metadata_overlap = (
+            {
+                term
+                for term in signals.title_terms & content_overlap
+                if len(term) >= 5
+                and term not in DEPENDENCY_METADATA_CONTEXT_TERMS
+            }
+            if expanded_retrieval
+            and file.path in PYTHON_DEPENDENCY_METADATA_FILES
+            and file.language == "Python"
+            and not auxiliary_file
+            and bool(
+                signals.title_terms & DEPENDENCY_METADATA_CONTEXT_TERMS
+            )
+            else set()
+        )
+        if (
+            structured_content_identifiers
+            or specific_stem_overlap
+            or dependency_metadata_overlap
+        ) and not auxiliary_file:
+            protected_base_paths.add(file.path)
         raw_score = (
             30.0 * exact_path
             + 18.0 * primary_symbol_match
@@ -3089,10 +3236,13 @@ def locate_candidates(
             + 5.0 * min(len(path_identifier_hits), 2)
             + 2.5 * len(best_overlap)
             + 4.0 * len(path_overlap)
+            + 6.0 * min(len(specific_stem_overlap), 1)
             + 6.0 * len(primary_path_overlap)
             + 0.7 * len(import_overlap)
             + 3.0 * min(len(content_identifiers), 4)
+            + 6.0 * min(len(structured_content_identifiers), 1)
             + 0.4 * min(len(content_overlap), 8)
+            + 8.0 * min(len(dependency_metadata_overlap), 1)
             + (0.5 if not auxiliary_file else -2.0)
         )
         if raw_score <= 0:
@@ -3107,6 +3257,11 @@ def locate_candidates(
             )
         if path_overlap:
             evidence.append(f"Path matches issue terms: {', '.join(sorted(path_overlap))}")
+        if specific_stem_overlap:
+            evidence.append(
+                "Specific Rust filename stem matches issue terms: "
+                + ", ".join(sorted(specific_stem_overlap))
+            )
         if primary_path_overlap:
             evidence.append(
                 "Path matches issue title terms: "
@@ -3120,10 +3275,20 @@ def locate_candidates(
                 "Source contains issue identifiers: "
                 + ", ".join(sorted(content_identifiers))
             )
+        if structured_content_identifiers:
+            evidence.append(
+                "Source structurally matches issue identifier: "
+                + ", ".join(sorted(structured_content_identifiers))
+            )
         if content_overlap:
             evidence.append(
                 "Source content matches issue terms: "
                 + ", ".join(sorted(content_overlap)[:8])
+            )
+        if dependency_metadata_overlap:
+            evidence.append(
+                "Python dependency metadata matches issue title terms: "
+                + ", ".join(sorted(dependency_metadata_overlap))
             )
         base_scores[file.path] = raw_score
         auxiliary_files[file.path] = auxiliary_file

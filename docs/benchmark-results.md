@@ -53,6 +53,16 @@ The final dollar-identifier scope guard changes only the frozen signal set for
 `poetry-empty-conda-prefix`, where it removes shell `$USER`; a cache-hit targeted rerun exactly
 matches the index-v21 full-run candidate files, candidate symbols, and metrics.
 
+The v0.35 retrieval-only follow-up keeps the deterministic Top-20 path unchanged and adds three
+bounded Top-40 signal families: normalized long CLI options with compound source-identifier
+matching, low-frequency Rust filename stems, and root Python `setup.py` dependency metadata under
+release or deprecation context. One 200-case deterministic replay completed 200/200 with all
+aggregate file and symbol metrics exactly matching index v25. The accepted full pool audit retrieves
+246/267 production
+targets and leaves 21 misses, recovering nine prior misses without adding a new miss. An initial
+broader audit was rejected after high-cardinality dotted identifiers and cross-language filename
+stems displaced three targets; those paths were removed or restricted before the accepted rerun.
+
 The table below preserves the audited three-run index-v19 baseline. The one-run index-v20 through
 index-v25 validation results are reported above and are not averaged into these historical tier
 values.
@@ -417,10 +427,10 @@ cache hits and 189 misses. A prior index-v24 run was rejected after exposing a J
 regression; separating same-class receiver calls from the legacy direct-caller vote restored the
 target in a four-case check before this final full run. No third run was required.
 
-The current index-v25 audit reproduces 237/267 reviewed production targets inside the deterministic
-Top-40 pool and records all 30 misses: 12 Python, 12 Rust, five TypeScript, and one C++ target. Six
-misses rank 41-60 in the diagnostic wide run, three rank 61-100, nine rank 101-200, and 12 rank
-beyond 200. The wide rank is diagnostic and does not alter production selection.
+The current v0.35/index-v25 audit reproduces 246/267 reviewed production targets inside the
+deterministic Top-40 pool and records all 21 misses: nine Python, six Rust, five TypeScript, and one
+C++ target. Two misses rank 41-60 in the diagnostic wide run, five rank 61-100, four rank 101-200,
+and ten rank beyond 200. The wide rank is diagnostic and does not alter production selection.
 
 The first 24-case hypothesis-quality slice completed 24/24 strict analyses and persistence checks.
 Reviewed fix evidence was available in 20 cases, while 18 hypotheses cited a reviewed fix file.
@@ -435,7 +445,7 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
 - Forty-seven of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
 - Deterministic File Recall@20 is `0.8732`; 43 reviewed targets remain outside its Top-20. The
-  current Top-40 pool misses 30 targets. The retained historical DeepSeek final Top-20 misses 38,
+  current Top-40 pool misses 21 targets. The retained historical DeepSeek final Top-20 misses 38,
   39, and 38 targets across its three index-v14 runs and has not been rerun on index v25.
 - Symbol Recall@20 is `0.4994`, so within-file localization remains a major bottleneck. The frozen
   manifest has no same-file multi-symbol ground-truth pair even though the schema now supports it.
@@ -448,12 +458,13 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
 
 ## Next experiment
 
-1. Diagnose the six remaining targets at diagnostic ranks 41-60 without losing an existing Top-20
-   target.
+1. Decide whether the two remaining rank-41-60 files (`boto3/compat.py` and
+   `paramiko/common.py`) warrant a general patch-design prior; both helpers/constants were introduced
+   by the fix and have no corresponding pre-fix static relation.
 2. Add bounded runtime/backend dispatch or type-aware receiver evidence beyond the current
    same-class `self`/`cls` rule.
 3. Curate held-out same-file multi-symbol ground truth and quantify primary-versus-alternate quality.
-4. Investigate parser-backed Rust and TypeScript relations for the 18 non-Python pool misses.
+4. Investigate parser-backed Rust and TypeScript relations for the 12 non-Python pool misses.
 5. Treat `benchmarks/expansion-v200-review-queue-v19.json` as archived provenance; future expansion
    should start from a new discovery pool and target rather than reopening the completed suite.
 6. Diagnose the seven or eight pool-visible targets that DeepSeek did not promote and the 22 cases
