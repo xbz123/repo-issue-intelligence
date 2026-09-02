@@ -10,11 +10,17 @@ import pytest
 from repo_issue_intelligence.codex_cli import (
     CODEX_CLI_DEFAULT_MODEL,
     CODEX_CLI_PROVIDER,
+    CodexCLIIssueAnalyzer,
     CodexCLIReranker,
     _event_metadata,
 )
 from repo_issue_intelligence.llm_client import LLMProviderError
-from repo_issue_intelligence.models import EvidenceSnippet, IssueRecord
+from repo_issue_intelligence.models import (
+    EvidenceSnippet,
+    InvestigationReport,
+    IssueRecord,
+    ReproductionPlan,
+)
 
 
 def _issue() -> IssueRecord:
@@ -49,6 +55,23 @@ def _evidence() -> list[EvidenceSnippet]:
 
 def _output_path(command: list[str]) -> Path:
     return Path(command[command.index("--output-last-message") + 1])
+
+
+def _report() -> InvestigationReport:
+    return InvestigationReport(
+        issue=_issue(),
+        confirmed_facts=[],
+        candidates=[],
+        hypotheses=[],
+        reproduction_plan=ReproductionPlan(
+            runtime="python",
+            setup_commands=[],
+            reproduction_steps=[],
+            safety_constraints=[],
+            open_questions=[],
+        ),
+        repository_root=Path("."),
+    )
 
 
 def test_event_metadata_rejects_boolean_and_object_token_counts() -> None:
@@ -164,6 +187,107 @@ def test_codex_cli_reranker_uses_isolated_strict_contract(tmp_path: Path) -> Non
     assert result.output_tokens == 7
     assert result.attempts == 1
     assert result.analysis.reranked_evidence_ids == ["E2", "E1"]
+
+
+def test_codex_cli_fast_tier_is_explicit() -> None:
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        observed["command"] = command
+        _output_path(command).write_text(
+            json.dumps({"reranked_evidence_ids": ["E1"]}),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    result = CodexCLIReranker(
+        service_tier="fast",
+        run_command=fake_run,
+    ).rerank(_issue(), _evidence())
+
+    command = observed["command"]
+    assert isinstance(command, list)
+    config_values = {
+        command[index + 1]
+        for index, argument in enumerate(command)
+        if argument == "--config"
+    }
+    assert 'service_tier="fast"' in config_values
+    assert result.analysis.reranked_evidence_ids == ["E1"]
+
+
+def test_codex_cli_issue_analyzer_uses_full_strict_contract() -> None:
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        observed["command"] = command
+        observed["prompt"] = options["input"]
+        schema_path = Path(command[command.index("--output-schema") + 1])
+        observed["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
+        _output_path(command).write_text(
+            json.dumps(
+                {
+                    "summary": "The refresh path can surface a token error.",
+                    "issue_type": "bug",
+                    "reproduction_completeness": "partial",
+                    "evidence_observations": [
+                        {
+                            "evidence_id": "E1",
+                            "alignment": "supports_issue",
+                            "observation": "The refresh function calls validation.",
+                        },
+                        {
+                            "evidence_id": "E2",
+                            "alignment": "supports_issue",
+                            "observation": "Validation raises TokenError.",
+                        },
+                    ],
+                    "hypothesis": {
+                        "description": "TokenError may escape the refresh path.",
+                        "confidence": 0.8,
+                        "evidence_ids": ["E1", "E2"],
+                        "missing_evidence": ["Runtime traceback"],
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        stdout = "\n".join(
+            (
+                json.dumps({"type": "thread.started", "thread_id": "analysis-1"}),
+                json.dumps(
+                    {
+                        "type": "turn.completed",
+                        "usage": {"input_tokens": 90, "output_tokens": 40},
+                    }
+                ),
+            )
+        )
+        return subprocess.CompletedProcess(command, 0, stdout, "")
+
+    result = CodexCLIIssueAnalyzer(
+        service_tier="fast",
+        run_command=fake_run,
+    ).analyze(_issue(), _report(), _evidence())
+
+    command = observed["command"]
+    schema = observed["schema"]
+    assert isinstance(command, list)
+    assert isinstance(schema, dict)
+    assert schema["additionalProperties"] is False
+    assert "evidence_observations" in schema["properties"]
+    assert 'service_tier="fast"' in command
+    assert "UNTRUSTED_DATA_BEGIN" in str(observed["prompt"])
+    assert result.provider == CODEX_CLI_PROVIDER
+    assert result.model == CODEX_CLI_DEFAULT_MODEL
+    assert result.reasoning_effort == "medium"
+    assert result.service_tier == "fast"
+    assert result.request_id == "analysis-1"
+    assert result.input_tokens == 90
+    assert result.output_tokens == 40
+    assert result.analysis.affected_component == "src/auth.py::refresh"
+    assert result.analysis.hypotheses[0].evidence_ids == ["E1", "E2"]
+    assert "without modifying files" in result.analysis.hypotheses[0].validation_step
 
 
 @pytest.mark.parametrize(

@@ -2,12 +2,15 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+import typer
 from click import unstyle
 from typer.testing import CliRunner
 
 from repo_issue_intelligence.benchmark import BenchmarkTier
 from repo_issue_intelligence.benchmark_discovery import CandidateCatalog
 from repo_issue_intelligence.cli import (
+    LLMBackend,
     _build_analysis_evaluator,
     _build_benchmark_reranker,
     app,
@@ -106,7 +109,7 @@ def test_agent_run_llm_requires_api_key(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 2
-    assert "OPENCODE_API_KEY is required" in result.output
+    assert "LLM_API_KEY" in result.output
 
 
 def test_agent_evaluate_requires_opencode_key(tmp_path: Path, monkeypatch) -> None:
@@ -125,53 +128,31 @@ def test_agent_evaluate_requires_opencode_key(tmp_path: Path, monkeypatch) -> No
     )
 
     assert result.exit_code == 2
-    assert "OPENCODE_API_KEY is required" in result.output
+    assert "LLM_API_KEY" in result.output
 
 
-def test_benchmark_does_not_accept_provider_model_or_sampling_overrides() -> None:
-    for option, value in (
-        ("--provider", "other"),
-        ("--model", "other-model"),
-        ("--temperature", "0.1"),
-        ("--seed", "1337"),
-    ):
-        result = runner.invoke(
-            app,
-            [
-                "benchmark",
-                "benchmarks/cases.json",
-                "--variant",
-                "hybrid",
-                option,
-                value,
-            ],
-        )
+def test_benchmark_exposes_configurable_llm_backend_options() -> None:
+    result = runner.invoke(app, ["benchmark", "--help"])
 
-        output = unstyle(result.output)
-        assert result.exit_code == 2
-        assert "No such option" in output
-        assert option in output
+    output = unstyle(result.output)
+    assert result.exit_code == 0
+    assert "--llm-backend" in output
+    assert "--llm-model" in output
+    assert "--llm-base-url" in output
+    assert "--llm-provider" in output
+    assert "--llm-fast" in output
 
 
-def test_agent_run_does_not_accept_provider_or_model_overrides() -> None:
-    for option, value in (("--provider", "other"), ("--model", "other-model")):
-        result = runner.invoke(
-            app,
-            [
-                "agent-run",
-                "examples/issues.json",
-                "--repo",
-                "examples/demo_repository",
-                "--llm",
-                option,
-                value,
-            ],
-        )
+def test_agent_run_exposes_configurable_llm_backend_options() -> None:
+    result = runner.invoke(app, ["agent-run", "--help"])
 
-        output = unstyle(result.output)
-        assert result.exit_code == 2
-        assert "No such option" in output
-        assert option in output
+    output = unstyle(result.output)
+    assert result.exit_code == 0
+    assert "--llm-backend" in output
+    assert "--llm-model" in output
+    assert "--llm-base-url" in output
+    assert "--llm-provider" in output
+    assert "--llm-fast" in output
 
 
 def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
@@ -189,16 +170,84 @@ def test_benchmark_does_not_accept_historical_full_analysis_variant() -> None:
     assert "hybrid-full" in result.output
 
 
-def test_benchmark_reranker_uses_fixed_codex_cli_contract() -> None:
+def test_benchmark_reranker_uses_default_codex_cli_contract() -> None:
     analyzer = _build_benchmark_reranker()
 
     assert analyzer.provider == CODEX_CLI_PROVIDER
     assert analyzer.model == CODEX_CLI_DEFAULT_MODEL
     assert analyzer.timeout_seconds == 180
     assert analyzer.rerank_reasoning_effort == "medium"
+    assert analyzer.service_tier is None
     assert analyzer.temperature is None
     assert analyzer.seed is None
     analyzer.close()
+
+
+def test_benchmark_reranker_enables_luna_fast_tier() -> None:
+    analyzer = _build_benchmark_reranker(
+        Settings(_env_file=None),
+        backend=LLMBackend.CODEX_CLI,
+        fast=True,
+    )
+
+    assert analyzer.provider == CODEX_CLI_PROVIDER
+    assert analyzer.model == CODEX_CLI_DEFAULT_MODEL
+    assert analyzer.service_tier == "fast"
+    analyzer.close()
+
+
+def test_benchmark_reranker_supports_custom_api_configuration() -> None:
+    settings = Settings(
+        llm_api_key="test-key",
+        llm_api_base_url="https://gateway.example/v1",
+        llm_api_provider="custom-gateway",
+        llm_model="custom-model",
+        _env_file=None,
+    )
+
+    analyzer = _build_benchmark_reranker(settings, backend=LLMBackend.API)
+
+    assert analyzer.provider == "custom-gateway"
+    assert analyzer.model == "custom-model"
+    assert str(analyzer._client.base_url) == "https://gateway.example/v1/"
+    analyzer.close()
+
+
+def test_analysis_evaluator_supports_codex_cli_without_api_key() -> None:
+    analyzer = _build_analysis_evaluator(
+        Settings(_env_file=None),
+        temperature=0.1,
+        seed=1337,
+        backend=LLMBackend.CODEX_CLI,
+        fast=True,
+    )
+
+    assert analyzer.provider == CODEX_CLI_PROVIDER
+    assert analyzer.model == CODEX_CLI_DEFAULT_MODEL
+    assert analyzer.service_tier == "fast"
+    analyzer.close()
+
+
+def test_llm_backend_rejects_incompatible_options() -> None:
+    with pytest.raises(typer.BadParameter, match="--llm-fast is only valid for codex-cli"):
+        _build_benchmark_reranker(
+            Settings(llm_api_key="test-key", _env_file=None),
+            backend=LLMBackend.API,
+            fast=True,
+        )
+    with pytest.raises(typer.BadParameter, match="--llm-base-url is only valid"):
+        _build_benchmark_reranker(
+            Settings(_env_file=None),
+            backend=LLMBackend.CODEX_CLI,
+            base_url="https://gateway.example/v1",
+        )
+    with pytest.raises(typer.BadParameter, match="--temperature is not supported"):
+        _build_analysis_evaluator(
+            Settings(_env_file=None),
+            temperature=0.5,
+            seed=1337,
+            backend=LLMBackend.CODEX_CLI,
+        )
 
 
 def test_agent_evaluator_uses_long_read_timeout() -> None:
@@ -239,14 +288,15 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
         def __init__(
             self,
             api_key,
-            max_output_tokens,
-            timeout_seconds,
-            temperature,
+            **options,
         ):
             assert api_key == "test-key"
-            assert max_output_tokens == 20_000
-            assert timeout_seconds == 180
-            assert temperature == 0.1
+            assert options["base_url"] == "https://opencode.ai/zen/go/v1"
+            assert options["model"] == "deepseek-v4-flash"
+            assert options["provider"] == "opencode"
+            assert options["max_output_tokens"] == 20_000
+            assert options["timeout_seconds"] == 180
+            assert options["temperature"] == 0.1
             self.model = "deepseek-v4-flash"
 
         def analyze(self, issue, report, evidence):
@@ -291,7 +341,7 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
 
     monkeypatch.setenv("OPENCODE_API_KEY", "test-key")
     monkeypatch.setattr(
-        "repo_issue_intelligence.cli.OpenCodeIssueAnalyzer",
+        "repo_issue_intelligence.cli.OpenAICompatibleIssueAnalyzer",
         FakeAnalyzer,
     )
     output = tmp_path / "agent-run-llm.json"

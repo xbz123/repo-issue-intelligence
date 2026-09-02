@@ -102,6 +102,8 @@ class AgentAnalysisRun(BaseModel):
     llm_delay_seconds: float
     temperature: float | None = None
     seed: int | None = None
+    reasoning_effort: str | None = None
+    service_tier: str | None = None
     created_at: datetime
     results: list[AgentAnalysisCaseResult]
     overall: AgentAnalysisAggregate
@@ -524,6 +526,8 @@ def run_agent_analysis_evaluation(
         llm_delay_seconds=llm_delay_seconds,
         temperature=getattr(analyzer, "temperature", None),
         seed=getattr(analyzer, "seed", None),
+        reasoning_effort=getattr(analyzer, "reasoning_effort", None),
+        service_tier=getattr(analyzer, "service_tier", None),
         created_at=datetime.now(UTC),
         results=results,
         overall=_aggregate(results),

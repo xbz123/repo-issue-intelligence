@@ -63,6 +63,22 @@ STRUCTURED_RESPONSE_FIELDS = frozenset(
 )
 
 
+def _normalized_api_base_url(value: str) -> str:
+    normalized = value.strip().rstrip("/")
+    completion_suffix = "/chat/completions"
+    if normalized.endswith(completion_suffix):
+        normalized = normalized[: -len(completion_suffix)]
+    try:
+        parsed = httpx.URL(normalized)
+    except (TypeError, ValueError) as error:
+        raise ValueError("API base URL must be a valid HTTP(S) URL") from error
+    if parsed.scheme not in {"http", "https"} or not parsed.host:
+        raise ValueError("API base URL must be a valid HTTP(S) URL")
+    if parsed.query or parsed.fragment:
+        raise ValueError("API base URL must not include a query or fragment")
+    return f"{normalized}/"
+
+
 def _nonnegative_int(value: object) -> int:
     if isinstance(value, bool) or not isinstance(
         value,
@@ -155,7 +171,7 @@ class LLMProviderError(RuntimeError):
         self.system_fingerprint = system_fingerprint
 
 
-class OpenCodeIssueAnalyzer:
+class OpenAICompatibleIssueAnalyzer:
     def __init__(
         self,
         api_key: str,
@@ -164,24 +180,41 @@ class OpenCodeIssueAnalyzer:
         temperature: float = OPENCODE_ANALYSIS_TEMPERATURE,
         seed: int | None = None,
         client: httpx.Client | None = None,
+        *,
+        base_url: str = OPENCODE_API_BASE_URL,
+        model: str = OPENCODE_DEFAULT_MODEL,
+        provider: str = "opencode",
+        provider_label: str | None = None,
+        reasoning_effort: str | None = OPENCODE_ANALYSIS_REASONING_EFFORT,
+        response_format_json: bool = True,
     ) -> None:
         if not api_key:
-            raise ValueError("OpenCode API key is required")
+            raise ValueError("API key is required")
+        if not base_url:
+            raise ValueError("API base URL is required")
+        if not model:
+            raise ValueError("API model is required")
+        if not provider:
+            raise ValueError("API provider name is required")
         if max_output_tokens is not None and max_output_tokens < 1:
             raise ValueError("max_output_tokens must be positive when provided")
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         if not 0 <= temperature <= 2:
             raise ValueError("temperature must be between 0 and 2")
-        self.provider = "opencode"
-        self.provider_label = "OpenCode"
-        self.model = OPENCODE_DEFAULT_MODEL
+        self.provider = provider
+        self.provider_label = provider_label or (
+            "OpenCode" if provider == "opencode" else provider
+        )
+        self.model = model
         self.max_output_tokens = max_output_tokens
         self.temperature = temperature
         self.seed = seed
         self.timeout_seconds = timeout_seconds
+        self.reasoning_effort = reasoning_effort
+        self.response_format_json = response_format_json
         self._client = client or httpx.Client(
-            base_url=OPENCODE_API_BASE_URL,
+            base_url=_normalized_api_base_url(base_url),
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=timeout_seconds,
             trust_env=False,
@@ -189,7 +222,7 @@ class OpenCodeIssueAnalyzer:
         self._owns_client = client is None
         self.rerank_initial_output_tokens = OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS
         self.rerank_max_output_tokens = OPENCODE_RERANK_MAX_OUTPUT_TOKENS
-        self.rerank_reasoning_effort = OPENCODE_RERANK_REASONING_EFFORT
+        self.rerank_reasoning_effort = reasoning_effort
 
     def close(self) -> None:
         if self._owns_client:
@@ -216,9 +249,11 @@ class OpenCodeIssueAnalyzer:
                 },
             ],
             "temperature": self.temperature,
-            "reasoning_effort": OPENCODE_ANALYSIS_REASONING_EFFORT,
-            "response_format": {"type": "json_object"},
         }
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        if self.response_format_json:
+            payload["response_format"] = {"type": "json_object"}
         if self.max_output_tokens is not None:
             payload["max_tokens"] = self.max_output_tokens
         if self.seed is not None:
@@ -229,7 +264,7 @@ class OpenCodeIssueAnalyzer:
     def _request_completion(self, payload: dict) -> tuple[str, dict, float]:
         started = perf_counter()
         try:
-            response = self._client.post("/chat/completions", json=payload)
+            response = self._client.post("chat/completions", json=payload)
         except httpx.HTTPError as error:
             elapsed_ms = round((perf_counter() - started) * 1000, 3)
             raise LLMProviderError(
@@ -351,7 +386,11 @@ class OpenCodeIssueAnalyzer:
 
         normalized_analysis = self._normalize_analysis(analysis, report, evidence)
         try:
-            self._validate_evidence_references(normalized_analysis, evidence)
+            self._validate_evidence_references(
+                normalized_analysis,
+                evidence,
+                self.provider_label,
+            )
         except LLMProviderError as error:
             error.input_tokens = input_tokens
             error.output_tokens = output_tokens
@@ -362,6 +401,7 @@ class OpenCodeIssueAnalyzer:
         return LLMAnalysisResult(
             provider=self.provider,
             model=self.model,
+            reasoning_effort=self.reasoning_effort,
             request_id=request_id,
             system_fingerprint=system_fingerprint,
             input_tokens=input_tokens,
@@ -397,7 +437,7 @@ class OpenCodeIssueAnalyzer:
         )
         hypothesis = LLMHypothesis(
             **response.hypothesis.model_dump(),
-            validation_step=OpenCodeIssueAnalyzer._validation_step(
+            validation_step=OpenAICompatibleIssueAnalyzer._validation_step(
                 report,
                 evidence,
                 response.hypothesis.evidence_ids,
@@ -445,10 +485,11 @@ class OpenCodeIssueAnalyzer:
             "relevant test and compare the result with the Issue without modifying files."
         )
 
+    @staticmethod
     def _validate_evidence_references(
-        self,
         analysis: LLMAnalysis,
         evidence: Sequence[EvidenceSnippet],
+        provider_label: str,
     ) -> None:
         valid_ids = {snippet.id for snippet in evidence}
         referenced_ids = set(analysis.reranked_evidence_ids)
@@ -457,7 +498,7 @@ class OpenCodeIssueAnalyzer:
         }
         if observed_ids != valid_ids or len(analysis.evidence_observations) != len(evidence):
             raise LLMProviderError(
-                f"{self.provider_label} did not provide exactly one observation "
+                f"{provider_label} did not provide exactly one observation "
                 "for every evidence ID",
                 retryable=True,
                 category="evidence_observation_coverage",
@@ -469,7 +510,7 @@ class OpenCodeIssueAnalyzer:
         if unknown_ids:
             unknown = ", ".join(sorted(unknown_ids))
             raise LLMProviderError(
-                f"{self.provider_label} cited unknown evidence IDs: {unknown}",
+                f"{provider_label} cited unknown evidence IDs: {unknown}",
                 retryable=True,
                 category="unknown_evidence_id",
             )
@@ -500,8 +541,9 @@ class OpenCodeIssueAnalyzer:
                 },
             ],
             "temperature": self.temperature,
-            "reasoning_effort": self.rerank_reasoning_effort,
         }
+        if self.rerank_reasoning_effort:
+            payload["reasoning_effort"] = self.rerank_reasoning_effort
         if self.seed is not None:
             payload["seed"] = self.seed
         total_input_tokens = 0
@@ -544,11 +586,12 @@ class OpenCodeIssueAnalyzer:
             category = "output_truncated" if finish_reason == "length" else "invalid_rank"
             if category == "output_truncated":
                 message = (
-                    "OpenCode exhausted both rank output budgets before returning a RANK line"
+                    f"{self.provider_label} exhausted both rank output budgets before "
+                    "returning a RANK line"
                 )
             else:
                 message = (
-                    "OpenCode returned an invalid rank response "
+                    f"{self.provider_label} returned an invalid rank response "
                     f"(expected one RANK line, found {len(rank_lines)})"
                 )
             error = LLMProviderError(
@@ -567,7 +610,7 @@ class OpenCodeIssueAnalyzer:
         )
         if len(reranked_ids) > OPENCODE_RERANK_MAX_IDS:
             error = LLMProviderError(
-                "OpenCode returned more than three ranked evidence IDs",
+                f"{self.provider_label} returned more than three ranked evidence IDs",
                 category="invalid_rank",
                 input_tokens=total_input_tokens,
                 output_tokens=total_output_tokens,
@@ -581,7 +624,7 @@ class OpenCodeIssueAnalyzer:
         unknown_ids = set(reranked_ids) - valid_ids
         if unknown_ids:
             error = LLMProviderError(
-                "OpenCode referenced unknown evidence IDs: "
+                f"{self.provider_label} referenced unknown evidence IDs: "
                 + ", ".join(sorted(unknown_ids)),
                 category="unknown_evidence_id",
                 input_tokens=total_input_tokens,
@@ -604,3 +647,7 @@ class OpenCodeIssueAnalyzer:
             attempts=attempts,
             analysis=analysis,
         )
+
+
+# Backward-compatible import for callers that still use the provider-specific name.
+OpenCodeIssueAnalyzer = OpenAICompatibleIssueAnalyzer

@@ -488,11 +488,13 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
         lambda root: ["src/token_router.py", "src/token_service.py"],
     )
 
+    analyzer = ReverseEvidenceAnalyzer()
+    analyzer.service_tier = "fast"
     run = run_benchmark(
         manifest,
         tmp_path,
         BenchmarkVariant.HYBRID,
-        analyzer=ReverseEvidenceAnalyzer(),
+        analyzer=analyzer,
     )
 
     assert run.provider == "opencode"
@@ -504,6 +506,7 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     assert run.initial_output_tokens == 8_192
     assert run.max_output_tokens == 20_000
     assert run.reasoning_effort == "none"
+    assert run.service_tier == "fast"
     assert run.model == "deepseek-v4-flash"
     assert (
         run.repository_map_cache_schema_version

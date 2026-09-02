@@ -931,9 +931,85 @@ def test_opencode_analyzer_wraps_transport_error_without_request_details() -> No
     assert "secret upstream detail" not in str(error.value)
 
 
-def test_opencode_analyzer_uses_fixed_deepseek_model() -> None:
+def test_opencode_analyzer_uses_default_deepseek_model() -> None:
     analyzer = OpenCodeIssueAnalyzer("test-key")
 
     assert OPENCODE_API_BASE_URL == "https://opencode.ai/zen/go/v1"
     assert analyzer.model == "deepseek-v4-flash"
     analyzer.close()
+
+
+def test_opencode_analyzer_keeps_legacy_positional_constructor() -> None:
+    client = httpx.Client(
+        base_url="https://opencode.ai/zen/go/v1/",
+        trust_env=False,
+    )
+    analyzer = OpenCodeIssueAnalyzer("test-key", 512, 12, 0.2, 7, client)
+
+    assert analyzer.max_output_tokens == 512
+    assert analyzer.timeout_seconds == 12
+    assert analyzer.temperature == 0.2
+    assert analyzer.seed == 7
+    analyzer.close()
+    client.close()
+
+
+def test_openai_compatible_analyzer_uses_custom_base_url_model_and_provider() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["payload"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "id": "custom-request",
+                "choices": [
+                    {"message": {"content": json.dumps(structured_payload())}}
+                ],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 8},
+            },
+        )
+
+    analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        base_url="https://gateway.example/v1/chat/completions",
+        model="custom-model",
+        provider="custom-gateway",
+        reasoning_effort=None,
+        response_format_json=False,
+        client=httpx.Client(
+            base_url="https://gateway.example/v1/",
+            transport=httpx.MockTransport(handler),
+        ),
+    )
+
+    result = analyzer.analyze(issue(), report(issue()), evidence())
+
+    payload = captured["payload"]
+    assert isinstance(payload, dict)
+    assert captured["url"] == "https://gateway.example/v1/chat/completions"
+    assert payload["model"] == "custom-model"
+    assert "reasoning_effort" not in payload
+    assert "response_format" not in payload
+    assert result.provider == "custom-gateway"
+    assert result.model == "custom-model"
+    assert result.reasoning_effort is None
+    assert result.service_tier is None
+    analyzer.close()
+
+    owned_analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        base_url="https://gateway.example/v1/chat/completions",
+    )
+    assert str(owned_analyzer._client.base_url) == "https://gateway.example/v1/"
+    owned_analyzer.close()
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    ("", "gateway.example/v1", "ftp://gateway.example/v1", "https://gateway/x?q=1"),
+)
+def test_openai_compatible_analyzer_rejects_invalid_base_url(base_url: str) -> None:
+    with pytest.raises(ValueError, match="API base URL"):
+        OpenCodeIssueAnalyzer("test-key", base_url=base_url)

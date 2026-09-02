@@ -156,10 +156,13 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
 ) -> None:
     _patch_repository(monkeypatch, _repository(tmp_path))
 
+    analyzer = ValidAnalyzer()
+    analyzer.reasoning_effort = "medium"
+    analyzer.service_tier = "fast"
     run = run_agent_analysis_evaluation(
         _manifest(),
         tmp_path / "workspace",
-        ValidAnalyzer(),
+        analyzer,
     )
     result = run.results[0]
 
@@ -184,6 +187,8 @@ def test_agent_analysis_evaluation_records_contract_and_persistence(
     assert run.max_output_tokens == 20_000
     assert run.max_evidence_chars == 100_000
     assert run.max_lines_per_evidence == 200
+    assert run.reasoning_effort == "medium"
+    assert run.service_tier == "fast"
     assert run.overall.evidence_quality_cases == 1
     assert run.overall.expected_file_evidence_hit_rate == 1
     assert run.overall.mean_expected_file_evidence_recall == 1

@@ -432,6 +432,25 @@ deterministic Top-40 pool and records all 21 misses: nine Python, six Rust, five
 C++ target. Two misses rank 41-60 in the diagnostic wide run, five rank 61-100, four rank 101-200,
 and ten rank beyond 200. The wide rank is diagnostic and does not alter production selection.
 
+## Index-v25 Luna Fast hybrid result
+
+The first current-index Codex CLI run used `gpt-5.6-luna`, medium reasoning, and the explicit Fast
+service tier. It completed 200/200 cases with 200 valid first-attempt ranks, 200 unique request IDs,
+zero retries, zero fallback, and zero execution failures. Repository-map cache coverage was 200/200.
+File Recall@1/5/10/20 was `0.6047/0.8017/0.8476/0.9023`, with MRR `0.7746`; 231 of 267 reviewed
+production targets appeared in final Top-20. Symbol Recall@1/5/10/20 was
+`0.4645/0.4913/0.4983/0.5017`, with MRR `0.5346`.
+
+Relative to index-v25 deterministic retrieval, File Recall@20 improved by `0.0291` and MRR by
+`0.2275`; Symbol Recall@20 improved by `0.0023` and symbol MRR by `0.1809`. The run consumed
+4,945,880 input tokens and 30,912 output tokens. Mean/median/p95 model latency was
+`6,735.076/6,512.896/9,187.713 ms`. Mean model latency was 93.806 ms higher than the older
+non-Fast index-v21 Luna run, so this observation does not establish a speed improvement: index,
+prompt, CLI version, service load, and run timing differ. No repeat was triggered because every
+case succeeded on its first attempt. The compact result is
+[`gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json`](../benchmarks/results/gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json);
+the 1.2 MB raw run remains outside Git.
+
 The first 24-case hypothesis-quality slice completed 24/24 strict analyses and persistence checks.
 Reviewed fix evidence was available in 20 cases, while 18 hypotheses cited a reviewed fix file.
 Overall file-grounding hit rate was `0.7500`, and conditional hit rate was `0.9000`. A single
@@ -455,6 +474,8 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
   reviewer and no independent retrieval-held-out or inter-rater result.
 - Historical v0.25 full hypothesis generation reached 140/150 valid final contracts in its
   three-run real-project evaluation, but run-level success ranged from 86% to 100%.
+- The current index-v25 Luna Fast result is one complete run. Its error-triggered repeat gate did
+  not fire, so repeat-to-repeat ranking stability remains unmeasured.
 
 ## Next experiment
 
