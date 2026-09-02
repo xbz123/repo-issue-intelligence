@@ -339,7 +339,10 @@ deterministic and offline; the CLI can optionally add a bounded OpenCode DeepSee
 not include background workers, automatic snapshot resume, or generated-command execution.
 The deterministic Top-20 reserves one slot for a directly supported path. The separate hybrid
 Top-40 pool reserves three such slots so strong path or symbol evidence is less likely to be buried
-by weak lexical matches; the broader policy cannot change the deterministic fallback.
+by weak lexical matches; the broader policy cannot change the deterministic fallback. Only this
+expanded pass normalizes hyphenated long CLI options for compound source-identifier matching,
+uses low-frequency Rust filename-stem evidence, and recognizes root `setup.py` dependency metadata
+when a release or deprecation title also names the dependency.
 The current benchmark contains 200 cases across 58 repositories, 267 production-file targets, and
 177 manually reviewed symbol targets across 143 cases. This is materially stronger for error analysis but still not a balanced
 population sample or a production-quality guarantee.

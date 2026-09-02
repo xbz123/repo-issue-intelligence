@@ -217,6 +217,41 @@ def test_extract_issue_signals_records_called_identifiers_from_code_blocks() -> 
     assert "accept" not in signals.content_terms
 
 
+def test_extract_issue_signals_normalizes_command_line_options() -> None:
+    record = issue(
+        "Repeated `--output-format=text` arguments fail",
+        "The default changes unless `--skip-missing-interpreters` is present.",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert signals.command_line_identifiers == frozenset(
+        {"output_format", "skip_missing_interpreters"}
+    )
+    bounded = extract_issue_signals(
+        issue(
+            "Many options",
+            " ".join(f"--feature-{index:02d}" for index in range(20)),
+        )
+    ).command_line_identifiers
+    assert len(bounded) == 16
+    assert "feature_00" in bounded
+    assert "feature_16" not in bounded
+
+
+def test_structured_content_matching_requires_compound_identifiers() -> None:
+    matches = investigator_module._content_structurally_matches_identifier
+
+    assert matches("class _OutputFormatAction: ...", "output_format")
+    assert not matches("DEFAULT_WINDOW_SIZE = 1", "size")
+    assert not matches("output_formatter = value", "output_format")
+    assert not matches(
+        "const defaultWindowSize = 1",
+        "window_size",
+        language="TypeScript",
+    )
+
+
 def test_extract_issue_signals_records_non_call_qualified_identifiers() -> None:
     record = issue(
         "Worker callback loses context",
@@ -819,6 +854,158 @@ def test_locate_candidates_uses_source_content_identifiers(tmp_path: Path) -> No
     assert any(
         "Source contains issue identifiers" in evidence
         for evidence in candidates[0].evidence
+    )
+
+
+def test_structured_issue_identifier_enters_expanded_pool(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    target = "src/config/callback_actions.py"
+    write_source(repository, target, "class _OutputFormatAction:\n    pass\n")
+    for index in range(45):
+        write_source(
+            repository,
+            f"src/output_format_{index:02d}.py",
+            "def render_report():\n    return None\n",
+        )
+
+    record = issue(
+        "Output format handling fails",
+        "Run with `--output-format=text` twice.",
+    )
+    repository_map = build_repository_map(repository)
+    assert target not in {
+        candidate.file for candidate in locate_candidates(record, repository_map)
+    }
+    candidates = locate_candidates(record, repository_map, limit=40)
+
+    selected = next(candidate for candidate in candidates if candidate.file == target)
+    assert any(
+        evidence
+        == "Source structurally matches issue identifier: output_format"
+        for evidence in selected.evidence
+    )
+
+
+def test_command_line_option_literal_enters_expanded_pool(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    target = "src/tox/tox_env/python/runner.py"
+    write_source(
+        repository,
+        target,
+        "SKIP_MISSING_INTERPRETERS = 'skip_missing_interpreters'\n",
+    )
+    for index in range(45):
+        write_source(
+            repository,
+            f"src/tox/missing_interpreters_{index:02d}.py",
+            "def handle_environment():\n    return None\n",
+        )
+
+    record = issue(
+        "Missing interpreters are skipped",
+        "This happens without `--skip-missing-interpreters`.",
+    )
+    repository_map = build_repository_map(repository)
+    assert target not in {
+        candidate.file for candidate in locate_candidates(record, repository_map)
+    }
+    candidates = locate_candidates(record, repository_map, limit=40)
+
+    selected = next(candidate for candidate in candidates if candidate.file == target)
+    assert any(
+        evidence
+        == "Source structurally matches issue identifier: skip_missing_interpreters"
+        for evidence in selected.evidence
+    )
+
+
+def test_specific_filename_stem_from_issue_body_enters_expanded_pool(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    target = "crates/uv-python/src/interpreter.rs"
+    write_source(repository, target, "pub struct Interpreter {}\n")
+    for index in range(45):
+        write_source(
+            repository,
+            f"crates/uv/src/venv_run_{index:02d}.rs",
+            "pub fn run_venv() {}\n",
+        )
+
+    record = issue(
+        "The venv is recreated on every run",
+        "The cached interpreter reports the stale version.",
+    )
+    repository_map = build_repository_map(repository)
+    assert target not in {
+        candidate.file for candidate in locate_candidates(record, repository_map)
+    }
+    candidates = locate_candidates(record, repository_map, limit=40)
+
+    selected = next(candidate for candidate in candidates if candidate.file == target)
+    assert (
+        "Specific Rust filename stem matches issue terms: interpreter"
+        in selected.evidence
+    )
+
+
+def test_python_dependency_metadata_enters_expanded_pool(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "setup.py",
+        "from setuptools import setup\n"
+        "setup(install_requires=['cryptography>=1.5'])\n",
+    )
+    write_source(
+        repository,
+        "packages/demo/setup.py",
+        "from setuptools import setup\n"
+        "setup(install_requires=['cryptography>=1.5'])\n",
+    )
+    write_source(
+        repository,
+        "tests/fixtures/setup.py",
+        "from setuptools import setup\n"
+        "setup(install_requires=['cryptography>=1.5'])\n",
+    )
+    for index in range(45):
+        write_source(
+            repository,
+            f"src/cryptography_warning_{index:02d}.py",
+            "def cryptography_warning():\n    return None\n",
+        )
+
+    record = issue(
+        "Cryptography deprecation warnings after a dependency release",
+        "The installed cryptography package is version 2.5.",
+    )
+    repository_map = build_repository_map(repository)
+    assert "setup.py" not in {
+        candidate.file for candidate in locate_candidates(record, repository_map)
+    }
+    candidates = locate_candidates(record, repository_map, limit=40)
+
+    selected = next(candidate for candidate in candidates if candidate.file == "setup.py")
+    assert (
+        "Python dependency metadata matches issue title terms: cryptography"
+        in selected.evidence
+    )
+    candidates_by_path = {
+        candidate.file: candidate
+        for candidate in locate_candidates(record, repository_map, limit=100)
+    }
+    nested = candidates_by_path["packages/demo/setup.py"]
+    assert not any(
+        evidence.startswith("Python dependency metadata matches")
+        for evidence in nested.evidence
+    )
+    fixture = candidates_by_path.get("tests/fixtures/setup.py")
+    assert fixture is None or not any(
+        evidence.startswith("Python dependency metadata matches")
+        for evidence in fixture.evidence
     )
 
 

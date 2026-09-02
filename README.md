@@ -202,6 +202,8 @@ uv run rii benchmark-miss-audit benchmarks/cases.json \
 The audit reuses the frozen Issue snapshots, pre-fix repositories, and repository-map cache. It
 records each missing target's language, repository, diagnostic wide rank, and available evidence;
 the wide rank is diagnostic and does not change production candidate selection.
+The current v0.35/index-v25 audit retrieves 246/267 reviewed production targets inside Top-40 and
+records the remaining 21 misses.
 
 The Hybrid benchmark is intentionally fixed to Codex CLI `gpt-5.6-luna`; it does not accept
 provider, model, temperature, or seed overrides. Install and authenticate Codex CLI before running
@@ -510,6 +512,12 @@ single final 200-case run completed 200/200 with no failures, recovered two Top-
 targets without losing an earlier Top-20 target, and raised deterministic File Recall@20 from
 `0.8690` to `0.8732` and Symbol Recall@20 from `0.4645` to `0.4994`. The compact audit is retained;
 the raw run remains outside Git.
+
+The v0.35 follow-up changes only the separate Top-40 retrieval pass. It recognizes at most 16
+hyphenated long CLI options, matches their compound source identifiers, adds low-frequency Rust
+filename-stem evidence, and recognizes dependency names in root `setup.py` for release/deprecation
+Issues. The accepted 200-case audit recovers nine prior pool misses without adding one, raising
+Top-40 coverage from 237/267 to 246/267; the deterministic Top-20 metrics remain unchanged.
 
 The retained v0.20 policy follows a single safe package re-export hop from an Issue-referenced
 source path. Both files must be production files in the same package subsystem, the facade must be

@@ -191,6 +191,75 @@
     "targeted_regression_cases": 4,
     "additional_final_runs_required": false
   },
+  "candidate_pool_v035_review_validation": {
+    "candidate_pool_limit": 40,
+    "accepted_audit_runs": 1,
+    "completed": 200,
+    "failed": 0,
+    "repository_map_cache_hits": 200,
+    "repository_map_cache_misses": 0,
+    "matched_production_targets": 246,
+    "missing_production_targets": 21,
+    "previous_matched_production_targets": 237,
+    "previous_missing_production_targets": 30,
+    "recovered_targets": [
+      {
+        "case_id": "tox-skip-missing-interpreters",
+        "file": "src/tox/tox_env/python/runner.py"
+      },
+      {
+        "case_id": "pylint-output-format-files",
+        "file": "pylint/config/callback_actions.py"
+      },
+      {
+        "case_id": "uv-pep723-relative-indexes",
+        "file": "crates/uv-settings/src/lib.rs"
+      },
+      {
+        "case_id": "uv-pep723-relative-indexes",
+        "file": "crates/uv/src/commands/project/mod.rs"
+      },
+      {
+        "case_id": "paramiko-cryptography-25-ecdh",
+        "file": "setup.py"
+      },
+      {
+        "case_id": "uv-venv-stale-interpreter-cache",
+        "file": "crates/uv-python/src/interpreter.rs"
+      },
+      {
+        "case_id": "uv-check-no-install-project",
+        "file": "crates/uv-cli/src/lib.rs"
+      },
+      {
+        "case_id": "uv-check-no-install-project",
+        "file": "crates/uv/src/lib.rs"
+      },
+      {
+        "case_id": "uv-check-no-install-project",
+        "file": "crates/uv/src/settings.rs"
+      }
+    ],
+    "newly_missing_targets": [],
+    "missing_targets_by_language": {
+      "C++": 1,
+      "Python": 9,
+      "Rust": 6,
+      "TypeScript": 5
+    },
+    "wide_rank_buckets": {
+      "1-40-displaced": 0,
+      "41-60": 2,
+      "61-100": 5,
+      "101-200": 4,
+      "201+": 10,
+      "not_retrieved": 0
+    },
+    "deterministic_top20_changed": false,
+    "intermediate_broad_signal_audit_rejected": true,
+    "intermediate_new_missing_targets": 3,
+    "additional_final_runs_required": false
+  },
   "three_run_aggregate": {
     "case_runs": 600,
     "completed": 600,
@@ -247,6 +316,7 @@
     "A direct index-v18/index-v19 Top-40 evidence audit found changed rerank inputs for exactly the Prefect and PyO3 cases above. Historical DeepSeek results are therefore retained only as index-v14 provenance; current provider evaluation uses Codex CLI gpt-5.6-luna.",
     "Compared with v0.30, Recall@1, Recall@5, Recall@20, and MRR improve; Recall@10 decreases from 0.7505 to 0.7493. One new production target enters Top-20 and no prior Top-20 target is lost.",
     "The 177 reviewed symbol targets are Python-only, so aggregate symbol metrics remain unchanged despite the new Rust symbol records.",
+    "The accepted v0.35 candidate-pool audit completed 200/200 with 200 repository-map cache hits, improving Top-40 production-target coverage from 237/267 to 246/267. Nine prior misses are recovered and no prior pool target is lost. The deterministic Top-20 path is unchanged. An intermediate broad-signal audit was rejected after three pool regressions; dotted identifiers were removed from the new expansion signal and filename-stem evidence was restricted to Rust before the accepted rerun.",
     "The three raw runs were validated locally but are not committed to avoid another copy of large candidate lists."
   ],
   "protected_base_reservation_slots": {
