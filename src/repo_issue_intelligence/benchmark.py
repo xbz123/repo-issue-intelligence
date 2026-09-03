@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -46,6 +46,8 @@ REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 2
 REPOSITORY_MAP_CACHE_DIRECTORY = ".repository-map-cache"
 HYBRID_CANDIDATE_POOL_LIMIT = 40
 MAX_RERANKED_EVIDENCE_IDS = 3
+BENCHMARK_EXECUTION_PROTOCOL_VERSION = 1
+SYMBOL_METRIC_PROTOCOL = "file-cutoff-and-within-file-v1"
 
 
 def _max_chars_per_evidence(
@@ -228,7 +230,10 @@ class BenchmarkRun(BaseModel):
     manifest_name: str
     manifest_version: int
     variant: BenchmarkVariant | Literal["hybrid-full"]
+    execution_protocol_version: int | None = None
     symbol_metric_protocol: Literal["file-cutoff-and-within-file-v1"] | None = None
+    checkpoint_run_id: str | None = None
+    checkpoint_reused_cases: int = 0
     provider: str | None = None
     model: str | None = None
     max_evidence_chars: int | None = None
@@ -1031,17 +1036,10 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
     )
 
 
-def run_benchmark(
+def _selected_cases(
     manifest: BenchmarkManifest,
-    workspace: Path,
-    variant: BenchmarkVariant,
-    analyzer: EvidenceReranker | None = None,
-    case_ids: set[str] | None = None,
-    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
-    max_lines_per_evidence: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
-    max_llm_attempts: int = 2,
-    llm_delay_seconds: float = 0,
-) -> BenchmarkRun:
+    case_ids: set[str] | None,
+) -> list[BenchmarkCase]:
     available_case_ids = {case.id for case in manifest.cases}
     unknown_case_ids = (case_ids or set()) - available_case_ids
     if unknown_case_ids:
@@ -1053,46 +1051,175 @@ def run_benchmark(
     ]
     if not selected:
         raise ValueError("No benchmark cases matched the requested case IDs")
+    return selected
+
+
+def benchmark_execution_configuration(
+    manifest: BenchmarkManifest,
+    workspace: Path,
+    variant: BenchmarkVariant,
+    analyzer: EvidenceReranker | None = None,
+    case_ids: set[str] | None = None,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_lines_per_evidence: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
+    max_llm_attempts: int = 2,
+    llm_delay_seconds: float = 0,
+    source_revision: str | None = None,
+    analyzer_runtime_version: str | None = None,
+) -> dict[str, object]:
+    selected = _selected_cases(manifest, case_ids)
+    analyzer_configuration = (
+        {
+            "class": f"{type(analyzer).__module__}.{type(analyzer).__qualname__}",
+            "provider": analyzer.provider,
+            "model": analyzer.model,
+            "base_url": getattr(analyzer, "base_url", None),
+            "executable": getattr(analyzer, "executable", None),
+            "runtime_version": analyzer_runtime_version,
+            "reasoning_effort": getattr(
+                analyzer,
+                "rerank_reasoning_effort",
+                getattr(analyzer, "reasoning_effort", None),
+            ),
+            "service_tier": getattr(analyzer, "service_tier", None),
+            "temperature": getattr(analyzer, "temperature", None),
+            "seed": getattr(analyzer, "seed", None),
+            "timeout_seconds": getattr(analyzer, "timeout_seconds", None),
+            "initial_output_tokens": getattr(
+                analyzer,
+                "rerank_initial_output_tokens",
+                None,
+            ),
+            "max_output_tokens": getattr(
+                analyzer,
+                "rerank_max_output_tokens",
+                getattr(analyzer, "max_output_tokens", None),
+            ),
+        }
+        if analyzer is not None
+        else None
+    )
+    return {
+        "execution_protocol_version": BENCHMARK_EXECUTION_PROTOCOL_VERSION,
+        "symbol_metric_protocol": SYMBOL_METRIC_PROTOCOL,
+        "source_revision": source_revision,
+        "python_identity": (
+            f"{sys.implementation.name}-"
+            f"{sys.version_info.major}.{sys.version_info.minor}."
+            f"{sys.version_info.micro}.{sys.version_info.releaselevel}."
+            f"{sys.version_info.serial}-"
+            f"{sys.implementation.cache_tag or 'no-cache-tag'}"
+        ),
+        "manifest_name": manifest.name,
+        "manifest_version": manifest.version,
+        "cases": [case.model_dump(mode="json") for case in selected],
+        "workspace": str(workspace.expanduser().resolve()),
+        "variant": variant.value,
+        "repository_map_index_version": REPOSITORY_MAP_INDEX_VERSION,
+        "repository_map_cache_schema_version": REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
+        "candidate_pool_limit": (
+            HYBRID_CANDIDATE_POOL_LIMIT if analyzer is not None else None
+        ),
+        "max_evidence_chars": max_evidence_chars if analyzer is not None else None,
+        "max_lines_per_evidence": (
+            max_lines_per_evidence if analyzer is not None else None
+        ),
+        "max_chars_per_evidence": (
+            _max_chars_per_evidence(
+                max_evidence_chars,
+                HYBRID_CANDIDATE_POOL_LIMIT,
+            )
+            if analyzer is not None
+            else None
+        ),
+        "max_llm_attempts": max_llm_attempts if analyzer is not None else None,
+        "llm_delay_seconds": llm_delay_seconds if analyzer is not None else None,
+        "analyzer": analyzer_configuration,
+    }
+
+
+def run_benchmark(
+    manifest: BenchmarkManifest,
+    workspace: Path,
+    variant: BenchmarkVariant,
+    analyzer: EvidenceReranker | None = None,
+    case_ids: set[str] | None = None,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_lines_per_evidence: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
+    max_llm_attempts: int = 2,
+    llm_delay_seconds: float = 0,
+    existing_results: Mapping[str, BenchmarkCaseResult] | None = None,
+    progress_callback: (
+        Callable[[int, int, BenchmarkCaseResult, bool], None] | None
+    ) = None,
+    created_at: datetime | None = None,
+    checkpoint_run_id: str | None = None,
+) -> BenchmarkRun:
+    selected = _selected_cases(manifest, case_ids)
+    existing_results = existing_results or {}
+    unknown_existing_results = set(existing_results) - {
+        case.id for case in selected
+    }
+    if unknown_existing_results:
+        raise ValueError(
+            "Existing benchmark results contain unknown case IDs: "
+            + ", ".join(sorted(unknown_existing_results))
+        )
 
     workspace = workspace.expanduser().resolve()
     repository_map_cache = workspace / REPOSITORY_MAP_CACHE_DIRECTORY
     results: list[BenchmarkCaseResult] = []
-    for case in selected:
-        try:
-            repository_root = prepare_repository(case, workspace)
-            result = evaluate_case(
-                case,
-                case.issue_snapshot.model_copy(deep=True),
-                repository_root,
-                variant,
-                analyzer,
-                max_evidence_chars=max_evidence_chars,
-                max_lines_per_evidence=max_lines_per_evidence,
-                max_llm_attempts=max_llm_attempts,
-                llm_retry_delay_seconds=llm_delay_seconds,
-                included_files=tracked_repository_files(repository_root),
-                repository_map_cache=repository_map_cache,
-            )
-        except Exception as error:
-            result = BenchmarkCaseResult(
-                case_id=case.id,
-                tier=case.tier,
-                repository=case.repository,
-                issue_number=case.issue_number,
-                issue_url=f"https://github.com/{case.repository}/issues/{case.issue_number}",
-                fix_pr_url=f"https://github.com/{case.repository}/pull/{case.fix_pr_number}",
-                pre_fix_sha=case.pre_fix_sha,
-                issue_updated_at=case.issue_updated_at,
-                expected_files=case.expected_files,
-                expected_symbols=case.expected_symbols,
-                error=f"{type(error).__name__}: {error}",
-                execution_succeeded=False,
-            )
+    for ordinal, case in enumerate(selected, start=1):
+        reused = case.id in existing_results
+        if reused:
+            result = existing_results[case.id]
+        else:
+            try:
+                repository_root = prepare_repository(case, workspace)
+                result = evaluate_case(
+                    case,
+                    case.issue_snapshot.model_copy(deep=True),
+                    repository_root,
+                    variant,
+                    analyzer,
+                    max_evidence_chars=max_evidence_chars,
+                    max_lines_per_evidence=max_lines_per_evidence,
+                    max_llm_attempts=max_llm_attempts,
+                    llm_retry_delay_seconds=llm_delay_seconds,
+                    included_files=tracked_repository_files(repository_root),
+                    repository_map_cache=repository_map_cache,
+                )
+            except Exception as error:
+                result = BenchmarkCaseResult(
+                    case_id=case.id,
+                    tier=case.tier,
+                    repository=case.repository,
+                    issue_number=case.issue_number,
+                    issue_url=(
+                        f"https://github.com/{case.repository}/issues/"
+                        f"{case.issue_number}"
+                    ),
+                    fix_pr_url=(
+                        f"https://github.com/{case.repository}/pull/"
+                        f"{case.fix_pr_number}"
+                    ),
+                    pre_fix_sha=case.pre_fix_sha,
+                    issue_updated_at=case.issue_updated_at,
+                    expected_files=case.expected_files,
+                    expected_symbols=case.expected_symbols,
+                    error=f"{type(error).__name__}: {error}",
+                    execution_succeeded=False,
+                )
         results.append(result)
+        if progress_callback is not None:
+            progress_callback(ordinal, len(selected), result, reused)
         if (
-            variant is not BenchmarkVariant.DETERMINISTIC
+            not reused
+            and variant is not BenchmarkVariant.DETERMINISTIC
             and llm_delay_seconds > 0
-            and case is not selected[-1]
+            and any(
+                later.id not in existing_results for later in selected[ordinal:]
+            )
         ):
             sleep(llm_delay_seconds)
 
@@ -1105,7 +1232,12 @@ def run_benchmark(
         manifest_name=manifest.name,
         manifest_version=manifest.version,
         variant=variant,
-        symbol_metric_protocol="file-cutoff-and-within-file-v1",
+        execution_protocol_version=BENCHMARK_EXECUTION_PROTOCOL_VERSION,
+        symbol_metric_protocol=SYMBOL_METRIC_PROTOCOL,
+        checkpoint_run_id=checkpoint_run_id,
+        checkpoint_reused_cases=sum(
+            case.id in existing_results for case in selected
+        ),
         provider=getattr(analyzer, "provider", None),
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,
@@ -1141,7 +1273,7 @@ def run_benchmark(
         temperature=getattr(analyzer, "temperature", None),
         seed=getattr(analyzer, "seed", None),
         repository_map_cache_schema_version=REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
-        created_at=datetime.now(UTC),
+        created_at=created_at or datetime.now(UTC),
         results=results,
         overall=_aggregate(results),
         by_tier=by_tier,
@@ -1150,7 +1282,27 @@ def run_benchmark(
 
 def save_benchmark_run(run: BenchmarkRun, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(run.model_dump(mode="json"), indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=output.parent,
+            prefix=f".{output.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            json.dump(
+                run.model_dump(mode="json"),
+                temporary,
+                indent=2,
+                ensure_ascii=False,
+            )
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_path, output)
+    finally:
+        if temporary_path is not None:
+            with suppress(OSError):
+                temporary_path.unlink(missing_ok=True)

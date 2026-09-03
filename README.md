@@ -227,6 +227,36 @@ uv run rii benchmark benchmarks/cases.json \
   --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
 ```
 
+Long runs can checkpoint each completed case to an ignored SQLite database. The command prints the
+run ID before evaluation and one progress line per case:
+
+```bash
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --llm-backend codex-cli \
+  --llm-model gpt-5.6-luna \
+  --state-db benchmarks/state/localization.sqlite3 \
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
+
+uv run rii benchmark benchmarks/cases.json \
+  --variant hybrid \
+  --llm-backend codex-cli \
+  --llm-model gpt-5.6-luna \
+  --state-db benchmarks/state/localization.sqlite3 \
+  --resume-run <run-id> \
+  --retry-failed \
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
+```
+
+Resume requires the exact stored configuration, including selected Issue snapshots, frozen SHAs,
+workspace, source commit, interpreter, retrieval/cache protocols, evidence budgets, and model
+settings; Codex CLI runs also record the executable and reported CLI version. Runtime source files
+must be committed before creating or resuming a checkpoint. The
+state database stores validated case results and provider telemetry but never credentials. Without
+`--retry-failed`, all stored results are reused; with it, only failed cases run again. The final JSON
+records the checkpoint run ID and reused-case count, and is written through an atomic replacement
+after every selected case has a result.
+
 Audit reviewed production targets that remain outside the deterministic Top-40 candidate pool:
 
 ```bash

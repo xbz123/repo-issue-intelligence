@@ -206,6 +206,7 @@ class OpenAICompatibleIssueAnalyzer:
         self.provider_label = provider_label or (
             "OpenCode" if provider == "opencode" else provider
         )
+        self.base_url = _normalized_api_base_url(base_url)
         self.model = model
         self.max_output_tokens = max_output_tokens
         self.temperature = temperature
@@ -214,7 +215,7 @@ class OpenAICompatibleIssueAnalyzer:
         self.reasoning_effort = reasoning_effort
         self.response_format_json = response_format_json
         self._client = client or httpx.Client(
-            base_url=_normalized_api_base_url(base_url),
+            base_url=self.base_url,
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=timeout_seconds,
             trust_env=False,

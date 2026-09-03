@@ -4,6 +4,8 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from repo_issue_intelligence.benchmark import (
     REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
     BenchmarkCase,
@@ -16,10 +18,12 @@ from repo_issue_intelligence.benchmark import (
     _aggregate,
     _load_or_build_repository_map,
     _repository_map_cache_path,
+    benchmark_execution_configuration,
     evaluate_case,
     load_manifest,
     prepare_repository,
     run_benchmark,
+    save_benchmark_run,
     tracked_repository_files,
 )
 from repo_issue_intelligence.investigator import investigate
@@ -580,6 +584,7 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
         == REPOSITORY_MAP_CACHE_SCHEMA_VERSION
     )
     assert run.results[0].repository_map_cache_hit is False
+    assert run.execution_protocol_version == 1
 
     warm_run = run_benchmark(
         manifest,
@@ -610,10 +615,140 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     historical_payload = run.model_dump(mode="json")
     historical_payload["variant"] = "hybrid-full"
     historical_payload.pop("symbol_metric_protocol")
+    historical_payload.pop("execution_protocol_version")
     restored = BenchmarkRun.model_validate(historical_payload)
     assert restored.variant == "hybrid-full"
     assert restored.symbol_metric_protocol is None
+    assert restored.execution_protocol_version is None
     assert run.symbol_metric_protocol == "file-cutoff-and-within-file-v1"
+
+
+def test_benchmark_configuration_records_exact_non_secret_inputs(
+    tmp_path: Path,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    manifest = BenchmarkManifest(
+        name="test",
+        version=1,
+        cases=[benchmark_case(updated_at)],
+    )
+    analyzer = ReverseEvidenceAnalyzer()
+
+    configuration = benchmark_execution_configuration(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.HYBRID,
+        analyzer,
+        source_revision="a" * 40,
+    )
+
+    assert configuration["source_revision"] == "a" * 40
+    assert configuration["variant"] == "hybrid"
+    assert configuration["candidate_pool_limit"] == 40
+    assert configuration["cases"] == [
+        benchmark_case(updated_at).model_dump(mode="json")
+    ]
+    assert configuration["analyzer"] == {
+        "class": f"{type(analyzer).__module__}.{type(analyzer).__qualname__}",
+        "provider": "opencode",
+        "model": "deepseek-v4-flash",
+        "base_url": None,
+        "executable": None,
+        "runtime_version": None,
+        "reasoning_effort": "none",
+        "service_tier": None,
+        "temperature": 0.1,
+        "seed": 1337,
+        "timeout_seconds": 180.0,
+        "initial_output_tokens": 8_192,
+        "max_output_tokens": 20_000,
+    }
+    assert "key" not in json.dumps(configuration).lower()
+
+
+def test_run_benchmark_reuses_checkpoint_results_without_evaluation(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    manifest = BenchmarkManifest(
+        name="test",
+        version=1,
+        cases=[benchmark_case(updated_at)],
+    )
+    repository = create_repository(tmp_path)
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda selected, workspace: repository,
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.tracked_repository_files",
+        lambda root: ["src/token_router.py", "src/token_service.py"],
+    )
+    original = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.DETERMINISTIC,
+    ).results[0]
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda selected, workspace: (_ for _ in ()).throw(
+            AssertionError("reused cases must not prepare repositories")
+        ),
+    )
+    progress: list[tuple[int, int, str, bool]] = []
+    created_at = datetime(2026, 9, 4, tzinfo=UTC)
+
+    resumed = run_benchmark(
+        manifest,
+        tmp_path,
+        BenchmarkVariant.DETERMINISTIC,
+        existing_results={original.case_id: original},
+        progress_callback=lambda ordinal, total, result, reused: progress.append(
+            (ordinal, total, result.case_id, reused)
+        ),
+        created_at=created_at,
+    )
+
+    assert resumed.created_at == created_at
+    assert resumed.results == [original]
+    assert progress == [(1, 1, original.case_id, True)]
+
+
+def test_save_benchmark_run_replaces_output_atomically(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    repository = create_repository(tmp_path)
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        repository,
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    run = BenchmarkRun(
+        manifest_name="test",
+        manifest_version=1,
+        variant=BenchmarkVariant.DETERMINISTIC,
+        created_at=updated_at,
+        results=[result],
+        overall=_aggregate([result]),
+        by_tier={"main": _aggregate([result])},
+    )
+    output = tmp_path / "result.json"
+    output.write_text("old", encoding="utf-8")
+
+    def fail_replace(source: Path, destination: Path) -> None:
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.os.replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        save_benchmark_run(run, output)
+
+    assert output.read_text(encoding="utf-8") == "old"
+    assert list(tmp_path.glob(".result.json.*.tmp")) == []
 
 
 def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:

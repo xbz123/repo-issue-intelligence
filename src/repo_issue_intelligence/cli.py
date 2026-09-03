@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -13,8 +14,10 @@ from .agent_evaluation import run_agent_analysis_evaluation, save_agent_analysis
 from .agent_store import AgentStore
 from .agent_workflow import run_agent
 from .benchmark import (
+    BenchmarkCaseResult,
     BenchmarkTier,
     BenchmarkVariant,
+    benchmark_execution_configuration,
     load_manifest,
     run_benchmark,
     save_benchmark_run,
@@ -34,6 +37,7 @@ from .benchmark_discovery import (
     save_candidate_review_queue,
     save_curated_expansion,
 )
+from .benchmark_store import BenchmarkStore
 from .codex_cli import CodexCLIIssueAnalyzer, CodexCLIReranker
 from .config import Settings
 from .duplicates import detect_duplicates
@@ -52,6 +56,84 @@ ANALYSIS_EVALUATION_TIMEOUT_SECONDS = 180.0
 class LLMBackend(StrEnum):
     API = "api"
     CODEX_CLI = "codex-cli"
+
+
+def _benchmark_source_revision() -> str:
+    source_directory = Path(__file__).resolve().parent
+    try:
+        root = subprocess.run(
+            ["git", "-C", str(source_directory), "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if root.returncode != 0 or not root.stdout.strip():
+            raise ValueError(
+                "Checkpointed benchmarks require a Git source checkout"
+            )
+        source_root = Path(root.stdout.strip()).resolve()
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        raise ValueError(
+            "Checkpointed benchmarks require a Git source checkout"
+        ) from None
+    if revision.returncode != 0:
+        raise ValueError("Checkpointed benchmarks require a Git source checkout")
+    try:
+        runtime_status = subprocess.run(
+            [
+                "git",
+                "status",
+                "--porcelain",
+                "--untracked-files=normal",
+                "--",
+                "src/repo_issue_intelligence",
+                "pyproject.toml",
+                "uv.lock",
+            ],
+            cwd=source_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        raise ValueError("Could not inspect benchmark runtime source status") from None
+    if runtime_status.returncode != 0:
+        raise ValueError("Could not inspect benchmark runtime source status")
+    if runtime_status.stdout.strip():
+        raise ValueError(
+            "Checkpointed benchmarks require committed runtime source files"
+        )
+    source_revision = revision.stdout.strip()
+    if not source_revision:
+        raise ValueError("Checkpointed benchmarks require a Git source checkout")
+    return source_revision
+
+
+def _benchmark_analyzer_runtime_version(analyzer: object | None) -> str | None:
+    executable = getattr(analyzer, "executable", None)
+    if not isinstance(executable, str):
+        return None
+    try:
+        result = subprocess.run(
+            [executable, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ValueError("Could not read the Codex CLI version") from error
+    version = (result.stdout or result.stderr).strip()
+    if result.returncode != 0 or not version:
+        raise ValueError("Could not read the Codex CLI version")
+    return version
 
 
 def _llm_backend(settings: Settings, backend: LLMBackend | None) -> LLMBackend:
@@ -512,6 +594,27 @@ def benchmark(
     ] = None,
     workspace: Path = Path("benchmarks/workspaces"),
     output: Path = Path("benchmarks/results/latest.json"),
+    state_db: Annotated[
+        Path | None,
+        typer.Option(
+            "--state-db",
+            help="SQLite checkpoint database for resumable per-case results.",
+        ),
+    ] = None,
+    resume_run: Annotated[
+        str | None,
+        typer.Option(
+            "--resume-run",
+            help="Resume an existing run ID from --state-db.",
+        ),
+    ] = None,
+    retry_failed: Annotated[
+        bool,
+        typer.Option(
+            "--retry-failed",
+            help="Re-evaluate failed cases while resuming a checkpointed run.",
+        ),
+    ] = False,
     llm_delay_seconds: Annotated[
         float,
         typer.Option(
@@ -545,6 +648,10 @@ def benchmark(
     ] = False,
 ) -> None:
     """Evaluate file localization against historical Issue/Fix-PR pairs."""
+    if resume_run is not None and state_db is None:
+        raise typer.BadParameter("--resume-run requires --state-db")
+    if retry_failed and resume_run is None:
+        raise typer.BadParameter("--retry-failed requires --resume-run")
     settings = Settings()
     analyzer = None
     if variant is not BenchmarkVariant.DETERMINISTIC:
@@ -556,9 +663,91 @@ def benchmark(
             provider=llm_provider,
             fast=llm_fast,
         )
+    checkpoint_store: BenchmarkStore | None = None
+    checkpoint_run_id: str | None = None
+    existing_results: dict[str, BenchmarkCaseResult] = {}
+    run_created_at = None
     try:
+        loaded_manifest = load_manifest(manifest)
+        if state_db is not None:
+            source_revision = _benchmark_source_revision()
+            checkpoint_store = BenchmarkStore(state_db)
+            configuration = benchmark_execution_configuration(
+                loaded_manifest,
+                workspace,
+                variant,
+                analyzer,
+                case_ids=set(case_id) if case_id else None,
+                max_evidence_chars=settings.llm_max_evidence_chars,
+                max_lines_per_evidence=settings.llm_max_lines_per_evidence,
+                llm_delay_seconds=llm_delay_seconds,
+                source_revision=source_revision,
+                analyzer_runtime_version=_benchmark_analyzer_runtime_version(
+                    analyzer
+                ),
+            )
+            if resume_run is None:
+                checkpoint_run_id, run_created_at = checkpoint_store.create_run(
+                    configuration
+                )
+                console.print(f"Benchmark checkpoint run: {checkpoint_run_id}")
+            else:
+                checkpoint_run_id = resume_run
+                run_created_at = checkpoint_store.resume_run(
+                    checkpoint_run_id,
+                    configuration,
+                )
+                stored_results = checkpoint_store.load_results(checkpoint_run_id)
+                existing_results = {
+                    case_id: result
+                    for case_id, result in stored_results.items()
+                    if not retry_failed or result.execution_succeeded
+                }
+                console.print(
+                    f"Resuming benchmark checkpoint {checkpoint_run_id}: "
+                    f"{len(existing_results)} result(s) reusable"
+                )
+
+        def report_progress(
+            ordinal: int,
+            total: int,
+            result: BenchmarkCaseResult,
+            reused: bool,
+        ) -> None:
+            if (
+                checkpoint_store is not None
+                and checkpoint_run_id is not None
+                and not reused
+            ):
+                checkpoint_store.save_result(
+                    checkpoint_run_id,
+                    ordinal,
+                    result,
+                )
+            status = (
+                "reused"
+                if reused
+                else "success"
+                if result.execution_succeeded
+                else "failed"
+            )
+            cache = (
+                "hit"
+                if result.repository_map_cache_hit is True
+                else "miss"
+                if result.repository_map_cache_hit is False
+                else "unknown"
+            )
+            console.print(
+                f"[{ordinal}/{total}] {result.case_id} status={status} "
+                f"cache={cache} elapsed_ms={result.analysis_elapsed_ms:.3f} "
+                f"pool_recall={result.candidate_pool_recall:.4f} "
+                f"top20_recall={result.file_recall_at_20:.4f}",
+                markup=False,
+            )
+
         run = run_benchmark(
-            load_manifest(manifest),
+            loaded_manifest,
             workspace,
             variant,
             analyzer,
@@ -566,13 +755,26 @@ def benchmark(
             max_evidence_chars=settings.llm_max_evidence_chars,
             max_lines_per_evidence=settings.llm_max_lines_per_evidence,
             llm_delay_seconds=llm_delay_seconds,
+            existing_results=existing_results,
+            progress_callback=report_progress,
+            created_at=run_created_at,
+            checkpoint_run_id=checkpoint_run_id,
         )
+        save_benchmark_run(run, output)
+        if checkpoint_store is not None and checkpoint_run_id is not None:
+            checkpoint_store.mark_complete(
+                checkpoint_run_id,
+                failed=bool(run.overall.failed),
+            )
+    except KeyError as error:
+        raise typer.BadParameter(
+            f"Unknown benchmark checkpoint run: {error.args[0]}"
+        ) from error
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     finally:
         if analyzer is not None:
             analyzer.close()
-    save_benchmark_run(run, output)
     console.print(
         f"{run.variant} benchmark: {run.overall.completed}/{run.overall.cases} completed; "
         f"Recall@1={run.overall.file_recall_at_1:.4f}, "
