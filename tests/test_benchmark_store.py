@@ -70,6 +70,8 @@ def test_benchmark_store_rejects_unknown_or_mismatched_runs(tmp_path: Path) -> N
     with pytest.raises(KeyError):
         store.load_results("missing")
     with pytest.raises(KeyError):
+        store.save_result("missing", 1, benchmark_result("case-a"))
+    with pytest.raises(KeyError):
         store.mark_complete("missing", failed=False)
 
 

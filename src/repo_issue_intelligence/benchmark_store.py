@@ -117,6 +117,12 @@ class BenchmarkStore:
     ) -> None:
         timestamp = datetime.now(UTC).isoformat()
         with self._connect() as connection:
+            run = connection.execute(
+                "SELECT 1 FROM benchmark_runs WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if run is None:
+                raise KeyError(run_id)
             connection.execute(
                 """
                 INSERT INTO benchmark_case_results
