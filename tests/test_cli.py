@@ -1,4 +1,5 @@
 import json
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -7,10 +8,17 @@ import typer
 from click import unstyle
 from typer.testing import CliRunner
 
-from repo_issue_intelligence.benchmark import BenchmarkTier
+from repo_issue_intelligence.benchmark import (
+    BenchmarkCase,
+    BenchmarkManifest,
+    BenchmarkTier,
+)
 from repo_issue_intelligence.benchmark_discovery import CandidateCatalog
+from repo_issue_intelligence.benchmark_store import BenchmarkStore
 from repo_issue_intelligence.cli import (
     LLMBackend,
+    _benchmark_analyzer_runtime_version,
+    _benchmark_source_revision,
     _build_analysis_evaluator,
     _build_benchmark_reranker,
     app,
@@ -20,7 +28,7 @@ from repo_issue_intelligence.codex_cli import (
     CODEX_CLI_PROVIDER,
 )
 from repo_issue_intelligence.config import Settings
-from repo_issue_intelligence.models import LLMAnalysis, LLMAnalysisResult
+from repo_issue_intelligence.models import IssueRecord, LLMAnalysis, LLMAnalysisResult
 
 runner = CliRunner()
 
@@ -141,6 +149,242 @@ def test_benchmark_exposes_configurable_llm_backend_options() -> None:
     assert "--llm-base-url" in output
     assert "--llm-provider" in output
     assert "--llm-fast" in output
+    assert "--state-db" in output
+    assert "--resume-run" in output
+    assert "--retry-failed" in output
+
+
+def test_benchmark_resume_options_require_checkpoint_context() -> None:
+    missing_database = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "benchmarks/cases.json",
+            "--resume-run",
+            "missing",
+        ],
+    )
+    missing_run = runner.invoke(
+        app,
+        [
+            "benchmark",
+            "benchmarks/cases.json",
+            "--retry-failed",
+        ],
+    )
+
+    assert missing_database.exit_code == 2
+    assert "--resume-run requires --state-db" in " ".join(
+        unstyle(missing_database.output).split()
+    )
+    assert missing_run.exit_code == 2
+    assert "--retry-failed requires --resume-run" in " ".join(
+        unstyle(missing_run.output).split()
+    )
+
+
+def test_benchmark_source_revision_rejects_dirty_runtime_files(
+    monkeypatch,
+) -> None:
+    responses = iter(
+        [
+            subprocess.CompletedProcess([], 0, stdout="/repo\n", stderr=""),
+            subprocess.CompletedProcess([], 0, stdout=f"{'a' * 40}\n", stderr=""),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                stdout=" M src/repo_issue_intelligence/benchmark.py\n",
+                stderr="",
+            ),
+        ]
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.subprocess.run",
+        lambda *args, **kwargs: next(responses),
+    )
+
+    with pytest.raises(ValueError, match="committed runtime source"):
+        _benchmark_source_revision()
+
+
+def test_benchmark_source_revision_returns_clean_commit(monkeypatch) -> None:
+    responses = iter(
+        [
+            subprocess.CompletedProcess([], 0, stdout="/repo\n", stderr=""),
+            subprocess.CompletedProcess([], 0, stdout=f"{'a' * 40}\n", stderr=""),
+            subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+        ]
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.subprocess.run",
+        lambda *args, **kwargs: next(responses),
+    )
+
+    assert _benchmark_source_revision() == "a" * 40
+
+
+def test_benchmark_source_revision_requires_git_checkout(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.subprocess.run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            [],
+            128,
+            stdout="",
+            stderr="not a git repository",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="Git source checkout"):
+        _benchmark_source_revision()
+
+
+def test_benchmark_analyzer_runtime_version_records_codex_cli(monkeypatch) -> None:
+    analyzer = _build_benchmark_reranker()
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli.subprocess.run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            [],
+            0,
+            stdout="codex-cli 1.2.3\n",
+            stderr="",
+        ),
+    )
+
+    assert _benchmark_analyzer_runtime_version(analyzer) == "codex-cli 1.2.3"
+    assert _benchmark_analyzer_runtime_version(None) is None
+    analyzer.close()
+
+
+def test_benchmark_checkpoint_retries_failures_and_reuses_successes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    updated_at = datetime(2026, 9, 4, tzinfo=UTC)
+    issue = IssueRecord(
+        number=42,
+        title="Token service failure",
+        body="validate_token fails",
+        labels=["bug"],
+        created_at=updated_at,
+        updated_at=updated_at,
+    )
+    manifest = BenchmarkManifest(
+        name="checkpoint-test",
+        version=1,
+        cases=[
+            BenchmarkCase(
+                id="checkpoint-case",
+                tier=BenchmarkTier.GENERALIZATION,
+                repository="example/project",
+                issue_number=42,
+                issue_updated_at=updated_at,
+                issue_snapshot=issue,
+                fix_pr_number=43,
+                pre_fix_sha="a" * 40,
+                expected_files=["src/token_service.py"],
+            )
+        ],
+    )
+    manifest_path = tmp_path / "cases.json"
+    manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    repository = tmp_path / "repository"
+    source = repository / "src"
+    source.mkdir(parents=True)
+    (source / "token_service.py").write_text(
+        "def validate_token():\n    return None\n",
+        encoding="utf-8",
+    )
+    state_db = tmp_path / "state.sqlite3"
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        "repo_issue_intelligence.cli._benchmark_source_revision",
+        lambda: "b" * 40,
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.tracked_repository_files",
+        lambda root: ["src/token_service.py"],
+    )
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda case, workspace: (_ for _ in ()).throw(RuntimeError("interrupted")),
+    )
+
+    first = runner.invoke(
+        app,
+        [
+            "benchmark",
+            str(manifest_path),
+            "--workspace",
+            str(tmp_path / "workspace"),
+            "--state-db",
+            str(state_db),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert first.exit_code == 1
+    assert "status=failed" in first.output
+    run_id = first.output.split("Benchmark checkpoint run: ", maxsplit=1)[1].splitlines()[0]
+    assert BenchmarkStore(state_db).status(run_id) == "completed_with_failures"
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda case, workspace: repository,
+    )
+    retried = runner.invoke(
+        app,
+        [
+            "benchmark",
+            str(manifest_path),
+            "--workspace",
+            str(tmp_path / "workspace"),
+            "--state-db",
+            str(state_db),
+            "--resume-run",
+            run_id,
+            "--retry-failed",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert retried.exit_code == 0, retried.output
+    assert "0 result(s) reusable" in " ".join(retried.output.split())
+    assert "status=success" in retried.output
+    assert BenchmarkStore(state_db).status(run_id) == "completed"
+    retried_payload = json.loads(output.read_text(encoding="utf-8"))
+    assert retried_payload["checkpoint_run_id"] == run_id
+    assert retried_payload["checkpoint_reused_cases"] == 0
+
+    monkeypatch.setattr(
+        "repo_issue_intelligence.benchmark.prepare_repository",
+        lambda case, workspace: (_ for _ in ()).throw(
+            AssertionError("successful checkpoint should be reused")
+        ),
+    )
+    reused = runner.invoke(
+        app,
+        [
+            "benchmark",
+            str(manifest_path),
+            "--workspace",
+            str(tmp_path / "workspace"),
+            "--state-db",
+            str(state_db),
+            "--resume-run",
+            run_id,
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert reused.exit_code == 0, reused.output
+    assert "1 result(s) reusable" in " ".join(reused.output.split())
+    assert "status=reused" in reused.output
+    reused_payload = json.loads(output.read_text(encoding="utf-8"))
+    assert reused_payload["checkpoint_run_id"] == run_id
+    assert reused_payload["checkpoint_reused_cases"] == 1
 
 
 def test_agent_run_exposes_configurable_llm_backend_options() -> None:
@@ -180,6 +424,7 @@ def test_benchmark_reranker_uses_default_codex_cli_contract() -> None:
     assert analyzer.service_tier is None
     assert analyzer.temperature is None
     assert analyzer.seed is None
+    assert analyzer.executable == "codex"
     analyzer.close()
 
 
@@ -209,6 +454,7 @@ def test_benchmark_reranker_supports_custom_api_configuration() -> None:
 
     assert analyzer.provider == "custom-gateway"
     assert analyzer.model == "custom-model"
+    assert analyzer.base_url == "https://gateway.example/v1/"
     assert str(analyzer._client.base_url) == "https://gateway.example/v1/"
     analyzer.close()
 

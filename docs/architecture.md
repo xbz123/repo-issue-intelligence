@@ -293,6 +293,17 @@ Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.
 
+Optional benchmark checkpointing uses a separate SQLite store. A run records its complete selected
+case payloads and execution configuration without credentials, then commits each validated case
+result before continuing. Resume is fail-closed unless the configuration, committed runtime source
+revision, interpreter identity, repository-map/cache versions, backend, model, evidence budgets,
+and workspace match. Codex-backed configurations additionally record the executable and CLI
+version. Stored successes are reused in manifest order; `--retry-failed` replaces only
+failed rows. Progress remains sequential, and no concurrent repository checkout is introduced.
+The final aggregate JSON records the execution/checkpoint protocol, run ID, and reused-case count;
+it uses `fsync` plus atomic replacement, so an interrupted export cannot overwrite an earlier
+complete artifact.
+
 The runner retries only timeouts, rate limits, transport failures, and provider 5xx errors.
 Authentication, quota, unavailable-model, launch, missing-output, invalid-structure, and unknown-ID
 errors immediately use the deterministic fallback. Aggregate output keeps fallback cases in the

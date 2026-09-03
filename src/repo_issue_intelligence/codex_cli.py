@@ -187,6 +187,7 @@ class _CodexCLIClient:
         self.temperature = None
         self.seed = None
         self.max_output_tokens = None
+        self.executable = executable
         self._executable = executable
         self._auth_file = (
             auth_file.expanduser().resolve()
