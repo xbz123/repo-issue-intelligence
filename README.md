@@ -484,6 +484,14 @@ record each candidate's `within_file_rank`, file-conditioned symbol Recall@1/3, 
 MRR, and the reviewed symbols whose file was found but whose symbol was not proposed. These
 additional diagnostics do not change file or symbol selection.
 
+The first metric-only replay completed 200/200 cases with 200 repository-map cache hits. All legacy
+file and symbol metrics stayed unchanged. Among 133 cases whose reviewed symbol file reached the
+final candidate list, 160 symbol targets entered the file-conditioned denominator; case-macro
+Recall@1/3 was `0.5050/0.5426`, within-file MRR was `0.5739`, and 79 file-visible targets had no
+primary or alternate symbol candidate. The compact
+[`symbol metric summary`](benchmarks/results/deterministic-symbol-metrics-index-v25-manifest-v20-summary.json)
+is committed; the raw run remains outside Git.
+
 Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed all 600 case-runs.
 The provider returned 595 valid ranks (580 on the first attempt and 15 after one retry); five cases
 used deterministic fallback after two OpenCode HTTP 500 responses. Invalid structure and unknown
