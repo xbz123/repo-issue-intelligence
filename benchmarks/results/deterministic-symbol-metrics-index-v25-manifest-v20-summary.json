@@ -1,0 +1,77 @@
+{
+  "name": "deterministic-symbol-metrics-index-v25-manifest-v20-summary",
+  "version": 1,
+  "created_at": "2026-09-03T23:02:13.512397Z",
+  "validated_implementation_commit": "a5c8a9474206794540caa0ab622a5560dc5882c6",
+  "manifest_version": 20,
+  "repository_map_index_version": 25,
+  "repository_map_cache_schema_version": 2,
+  "symbol_metric_protocol": "file-cutoff-and-within-file-v1",
+  "raw_run_artifact_committed": false,
+  "run": {
+    "cases": 200,
+    "completed": 200,
+    "failed": 0,
+    "repository_map_cache_hits": 200,
+    "repository_map_cache_misses": 0,
+    "average_analysis_elapsed_ms": 4415.696,
+    "legacy_file_cutoff": {
+      "symbol_cases": 143,
+      "symbol_recall_at_1": 0.2448,
+      "symbol_recall_at_5": 0.4260,
+      "symbol_recall_at_10": 0.4505,
+      "symbol_recall_at_20": 0.4994,
+      "mean_symbol_reciprocal_rank": 0.3537
+    },
+    "file_conditioned_within_file": {
+      "cases": 133,
+      "targets": 160,
+      "case_macro_recall_at_1": 0.5050,
+      "case_macro_recall_at_3": 0.5426,
+      "mean_reciprocal_rank": 0.5739,
+      "expected_file_found_but_symbol_missing_cases": 67,
+      "expected_file_found_but_symbol_missing_targets": 79
+    }
+  },
+  "by_tier": {
+    "main": {
+      "cases": 9,
+      "targets": 10,
+      "case_macro_recall_at_1": 0.6111,
+      "case_macro_recall_at_3": 0.6111,
+      "mean_reciprocal_rank": 0.6667,
+      "expected_file_found_but_symbol_missing_cases": 4,
+      "expected_file_found_but_symbol_missing_targets": 4
+    },
+    "calibration": {
+      "cases": 9,
+      "targets": 11,
+      "case_macro_recall_at_1": 0.6667,
+      "case_macro_recall_at_3": 0.6667,
+      "mean_reciprocal_rank": 0.6667,
+      "expected_file_found_but_symbol_missing_cases": 3,
+      "expected_file_found_but_symbol_missing_targets": 5
+    },
+    "generalization": {
+      "cases": 115,
+      "targets": 139,
+      "case_macro_recall_at_1": 0.4841,
+      "case_macro_recall_at_3": 0.5275,
+      "mean_reciprocal_rank": 0.5594,
+      "expected_file_found_but_symbol_missing_cases": 60,
+      "expected_file_found_but_symbol_missing_targets": 70
+    }
+  },
+  "validation": {
+    "legacy_metrics_match_index_v25": true,
+    "retrieval_behavior_changed": false,
+    "additional_full_run_required": false
+  },
+  "notes": [
+    "Legacy symbol metrics assign the containing file rank to the primary symbol and up to two alternates.",
+    "File-conditioned metrics include a reviewed symbol only when its expected file appears in the final candidate list.",
+    "Recall values are macro-averaged across eligible cases; missing target counts are target-level diagnostics.",
+    "Historical artifacts without within-file ranks or a protocol identifier restore those fields as null.",
+    "The raw 200-case run remains outside Git because it duplicates per-case candidate lists."
+  ]
+}

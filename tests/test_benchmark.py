@@ -9,6 +9,7 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
     BenchmarkRun,
+    BenchmarkSymbolCandidate,
     BenchmarkSymbolTarget,
     BenchmarkTier,
     BenchmarkVariant,
@@ -215,14 +216,34 @@ def test_evaluate_case_measures_optional_symbol_recall(tmp_path: Path) -> None:
     assert any(
         candidate.file == "src/token_service.py"
         and candidate.symbol == "validate_token"
+        and candidate.within_file_rank == 1
         for candidate in result.candidate_symbols
     )
     assert result.symbol_recall_at_5 == 1
     assert result.symbol_recall_at_20 == 1
     assert result.symbol_reciprocal_rank is not None
+    assert result.file_conditioned_symbol_targets == 1
+    assert result.file_conditioned_symbol_recall_at_1 == 1
+    assert result.file_conditioned_symbol_recall_at_3 == 1
+    assert result.within_file_symbol_reciprocal_rank == 1
+    assert result.expected_file_found_but_symbol_missing == []
+    historical_candidate = result.candidate_symbols[0].model_dump(
+        exclude={"within_file_rank"}
+    )
+    assert (
+        BenchmarkSymbolCandidate.model_validate(
+            historical_candidate
+        ).within_file_rank
+        is None
+    )
     assert aggregate.symbol_cases == 1
     assert aggregate.symbol_recall_at_5 == 1
     assert aggregate.symbol_recall_at_20 == 1
+    assert aggregate.file_conditioned_symbol_cases == 1
+    assert aggregate.file_conditioned_symbol_targets == 1
+    assert aggregate.file_conditioned_symbol_recall_at_1 == 1
+    assert aggregate.file_conditioned_symbol_recall_at_3 == 1
+    assert aggregate.mean_within_file_symbol_reciprocal_rank == 1
 
 
 def test_evaluate_case_matches_qualified_symbol_ground_truth(
@@ -318,7 +339,7 @@ def test_benchmark_case_accepts_multiple_symbols_for_one_file() -> None:
     ]
 
 
-def test_evaluate_case_scores_alternate_symbols_at_the_file_rank(
+def test_evaluate_case_separates_file_and_within_file_symbol_ranks(
     tmp_path: Path,
 ) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
@@ -373,12 +394,58 @@ def test_evaluate_case_scores_alternate_symbols_at_the_file_rank(
     )
 
     parser_symbols = {
-        candidate.symbol
+        candidate.symbol: candidate
         for candidate in result.candidate_symbols
         if candidate.file == "src/parser.py" and candidate.rank == 1
     }
-    assert parser_symbols == {"parse_request", "validate_request"}
+    assert set(parser_symbols) == {"parse_request", "validate_request"}
+    assert sorted(
+        candidate.within_file_rank for candidate in parser_symbols.values()
+    ) == [1, 2]
     assert result.symbol_recall_at_1 == 1
+    assert result.file_conditioned_symbol_targets == 2
+    assert result.file_conditioned_symbol_recall_at_1 == 0.5
+    assert result.file_conditioned_symbol_recall_at_3 == 1
+    assert result.within_file_symbol_reciprocal_rank == 1
+    assert result.expected_file_found_but_symbol_missing == []
+
+
+def test_evaluate_case_reports_file_visible_symbol_miss(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    case = benchmark_case(updated_at).model_copy(
+        update={
+            "expected_symbols": [
+                BenchmarkSymbolTarget(
+                    file="src/token_service.py",
+                    symbol="missing_symbol",
+                )
+            ]
+        }
+    )
+
+    result = evaluate_case(
+        case,
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.DETERMINISTIC,
+    )
+    aggregate = _aggregate([result])
+
+    assert result.symbol_recall_at_20 == 0
+    assert result.symbol_reciprocal_rank == 0
+    assert result.file_conditioned_symbol_targets == 1
+    assert result.file_conditioned_symbol_recall_at_1 == 0
+    assert result.file_conditioned_symbol_recall_at_3 == 0
+    assert result.within_file_symbol_reciprocal_rank == 0
+    assert result.expected_file_found_but_symbol_missing == [
+        BenchmarkSymbolTarget(
+            file="src/token_service.py",
+            symbol="missing_symbol",
+        )
+    ]
+    assert aggregate.file_conditioned_symbol_cases == 1
+    assert aggregate.expected_file_found_but_symbol_missing_cases == 1
+    assert aggregate.expected_file_found_but_symbol_missing_targets == 1
 
 
 def test_evaluate_case_applies_hybrid_evidence_reranking(tmp_path: Path) -> None:
@@ -542,7 +609,11 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
 
     historical_payload = run.model_dump(mode="json")
     historical_payload["variant"] = "hybrid-full"
-    assert BenchmarkRun.model_validate(historical_payload).variant == "hybrid-full"
+    historical_payload.pop("symbol_metric_protocol")
+    restored = BenchmarkRun.model_validate(historical_payload)
+    assert restored.variant == "hybrid-full"
+    assert restored.symbol_metric_protocol is None
+    assert run.symbol_metric_protocol == "file-cutoff-and-within-file-v1"
 
 
 def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:

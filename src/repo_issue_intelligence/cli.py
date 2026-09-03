@@ -592,12 +592,24 @@ def benchmark(
     )
     if run.overall.symbol_cases:
         console.print(
-            f"Symbol benchmark: {run.overall.symbol_cases} labeled cases; "
+            "Legacy symbol file-cutoff benchmark: "
+            f"{run.overall.symbol_cases} labeled cases; "
             f"Recall@1={run.overall.symbol_recall_at_1:.4f}, "
             f"Recall@5={run.overall.symbol_recall_at_5:.4f}, "
             f"Recall@10={run.overall.symbol_recall_at_10:.4f}, "
             f"Recall@20={run.overall.symbol_recall_at_20:.4f}, "
             f"MRR={run.overall.mean_symbol_reciprocal_rank:.4f}"
+        )
+    if run.overall.file_conditioned_symbol_cases:
+        console.print(
+            "Within-file symbol benchmark: "
+            f"{run.overall.file_conditioned_symbol_cases} file-visible cases, "
+            f"{run.overall.file_conditioned_symbol_targets} target(s); "
+            f"Recall@1={run.overall.file_conditioned_symbol_recall_at_1:.4f}, "
+            f"Recall@3={run.overall.file_conditioned_symbol_recall_at_3:.4f}, "
+            f"MRR={run.overall.mean_within_file_symbol_reciprocal_rank:.4f}; "
+            f"{run.overall.expected_file_found_but_symbol_missing_targets} "
+            "file-visible target(s) missing a symbol candidate"
         )
     console.print(f"Saved benchmark results to {output}")
     if run.overall.failed:
