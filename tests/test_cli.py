@@ -174,9 +174,13 @@ def test_benchmark_resume_options_require_checkpoint_context() -> None:
     )
 
     assert missing_database.exit_code == 2
-    assert "--resume-run requires --state-db" in missing_database.output
+    assert "--resume-run requires --state-db" in " ".join(
+        unstyle(missing_database.output).split()
+    )
     assert missing_run.exit_code == 2
-    assert "--retry-failed requires --resume-run" in missing_run.output
+    assert "--retry-failed requires --resume-run" in " ".join(
+        unstyle(missing_run.output).split()
+    )
 
 
 def test_benchmark_source_revision_rejects_dirty_runtime_files(
