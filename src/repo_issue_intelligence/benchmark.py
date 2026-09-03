@@ -88,7 +88,7 @@ class BenchmarkSymbolCandidate(BenchmarkSymbolTarget):
     qualified_symbol: str | None = None
     # ``rank`` remains the containing file rank for historical artifacts.
     rank: int = Field(ge=1)
-    within_file_rank: int = Field(default=1, ge=1)
+    within_file_rank: int | None = Field(default=None, ge=1)
 
 
 class BenchmarkCase(BaseModel):
@@ -228,9 +228,7 @@ class BenchmarkRun(BaseModel):
     manifest_name: str
     manifest_version: int
     variant: BenchmarkVariant | Literal["hybrid-full"]
-    symbol_metric_protocol: Literal["file-cutoff-and-within-file-v1"] = (
-        "file-cutoff-and-within-file-v1"
-    )
+    symbol_metric_protocol: Literal["file-cutoff-and-within-file-v1"] | None = None
     provider: str | None = None
     model: str | None = None
     max_evidence_chars: int | None = None
@@ -707,9 +705,13 @@ def evaluate_case(
             symbol_ranks[key] = min(
                 candidate.rank for candidate in matching_candidates
             )
-            within_file_symbol_ranks[key] = min(
-                candidate.within_file_rank for candidate in matching_candidates
-            )
+            matching_within_file_ranks = [
+                candidate.within_file_rank
+                for candidate in matching_candidates
+                if candidate.within_file_rank is not None
+            ]
+            if matching_within_file_ranks:
+                within_file_symbol_ranks[key] = min(matching_within_file_ranks)
     first_symbol_rank = min(
         (
             symbol_ranks[key]
@@ -1103,6 +1105,7 @@ def run_benchmark(
         manifest_name=manifest.name,
         manifest_version=manifest.version,
         variant=variant,
+        symbol_metric_protocol="file-cutoff-and-within-file-v1",
         provider=getattr(analyzer, "provider", None),
         model=analyzer.model if analyzer else None,
         max_evidence_chars=max_evidence_chars if analyzer else None,

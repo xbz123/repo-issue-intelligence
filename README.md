@@ -482,7 +482,9 @@ metrics: a primary symbol and its directly supported alternates inherit the cont
 They do not represent a flattened global ranking of individual symbols. New benchmark results also
 record each candidate's `within_file_rank`, file-conditioned symbol Recall@1/3, within-file symbol
 MRR, and the reviewed symbols whose file was found but whose symbol was not proposed. These
-additional diagnostics do not change file or symbol selection.
+additional diagnostics do not change file or symbol selection. Historical artifacts that predate
+the protocol restore a missing `within_file_rank` and protocol identifier as `null`; they are not
+silently classified as rank 1.
 
 The first metric-only replay completed 200/200 cases with 200 repository-map cache hits. All legacy
 file and symbol metrics stayed unchanged. Among 133 cases whose reviewed symbol file reached the

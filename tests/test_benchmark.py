@@ -9,6 +9,7 @@ from repo_issue_intelligence.benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
     BenchmarkRun,
+    BenchmarkSymbolCandidate,
     BenchmarkSymbolTarget,
     BenchmarkTier,
     BenchmarkVariant,
@@ -226,6 +227,15 @@ def test_evaluate_case_measures_optional_symbol_recall(tmp_path: Path) -> None:
     assert result.file_conditioned_symbol_recall_at_3 == 1
     assert result.within_file_symbol_reciprocal_rank == 1
     assert result.expected_file_found_but_symbol_missing == []
+    historical_candidate = result.candidate_symbols[0].model_dump(
+        exclude={"within_file_rank"}
+    )
+    assert (
+        BenchmarkSymbolCandidate.model_validate(
+            historical_candidate
+        ).within_file_rank
+        is None
+    )
     assert aggregate.symbol_cases == 1
     assert aggregate.symbol_recall_at_5 == 1
     assert aggregate.symbol_recall_at_20 == 1
@@ -602,7 +612,8 @@ def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     historical_payload.pop("symbol_metric_protocol")
     restored = BenchmarkRun.model_validate(historical_payload)
     assert restored.variant == "hybrid-full"
-    assert restored.symbol_metric_protocol == "file-cutoff-and-within-file-v1"
+    assert restored.symbol_metric_protocol is None
+    assert run.symbol_metric_protocol == "file-cutoff-and-within-file-v1"
 
 
 def test_empty_candidate_case_counts_as_completed_zero_recall(tmp_path: Path) -> None:

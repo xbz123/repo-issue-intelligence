@@ -71,6 +71,7 @@
     "Legacy symbol metrics assign the containing file rank to the primary symbol and up to two alternates.",
     "File-conditioned metrics include a reviewed symbol only when its expected file appears in the final candidate list.",
     "Recall values are macro-averaged across eligible cases; missing target counts are target-level diagnostics.",
+    "Historical artifacts without within-file ranks or a protocol identifier restore those fields as null.",
     "The raw 200-case run remains outside Git because it duplicates per-case candidate lists."
   ]
 }

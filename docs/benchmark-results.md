@@ -100,6 +100,8 @@ metric protocol, each emitted symbol records a `within_file_rank`; result aggreg
 report file-conditioned symbol Recall@1/3, within-file symbol MRR, and file-visible reviewed symbols
 that were not proposed. The expected file must appear in the final candidate list to enter the
 file-conditioned denominator. This is an evaluation-only change and does not alter retrieval.
+Historical artifacts that omit `within_file_rank` or the protocol identifier restore those values
+as `null`, so an unknown historical within-file order is never reported as rank 1.
 
 One metric-only replay completed 200/200 cases with 200 repository-map cache hits and preserved all
 legacy file and symbol metrics. The final candidate list contained the expected file for 160 of the
