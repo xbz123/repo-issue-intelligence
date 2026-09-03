@@ -93,6 +93,14 @@ production targets are absent from deterministic Top-20. The five retained-suite
 Matplotlib `cbook/__init__.py` miss. The complete current Top-40 miss taxonomy is recorded in the
 index-v25 audit and remains the concrete retrieval backlog.
 
+Those historical `symbol_recall_at_*` values use the candidate file rank for both the primary
+symbol and up to two directly supported alternates. They are retained as legacy file-cutoff metrics
+for artifact compatibility and are not a flattened global symbol ranking. Starting with the v0.36
+metric protocol, each emitted symbol records a `within_file_rank`; result aggregates separately
+report file-conditioned symbol Recall@1/3, within-file symbol MRR, and file-visible reviewed symbols
+that were not proposed. The expected file must appear in the final candidate list to enter the
+file-conditioned denominator. This is an evaluation-only change and does not alter retrieval.
+
 The correction adds `src/tox/tox.schema.json` to both tox schema cases and indexes only the
 controlled `*.schema.json` form as file-only `JSON Schema`. Both published artifacts are retrieved
 inside Top-20. Four candidate lists change relative to v0.27: the two tox cases and two Black cases

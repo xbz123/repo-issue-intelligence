@@ -86,7 +86,9 @@ class BenchmarkSymbolTarget(BaseModel):
 
 class BenchmarkSymbolCandidate(BenchmarkSymbolTarget):
     qualified_symbol: str | None = None
+    # ``rank`` remains the containing file rank for historical artifacts.
     rank: int = Field(ge=1)
+    within_file_rank: int = Field(default=1, ge=1)
 
 
 class BenchmarkCase(BaseModel):
@@ -165,6 +167,13 @@ class BenchmarkCaseResult(BaseModel):
     symbol_recall_at_10: float | None = None
     symbol_recall_at_20: float | None = None
     symbol_reciprocal_rank: float | None = None
+    file_conditioned_symbol_targets: int = 0
+    file_conditioned_symbol_recall_at_1: float | None = None
+    file_conditioned_symbol_recall_at_3: float | None = None
+    within_file_symbol_reciprocal_rank: float | None = None
+    expected_file_found_but_symbol_missing: list[BenchmarkSymbolTarget] = Field(
+        default_factory=list
+    )
     analysis_elapsed_ms: float = 0
     repository_map_cache_hit: bool | None = None
     llm_attempts: int = 0
@@ -206,12 +215,22 @@ class BenchmarkAggregate(BaseModel):
     symbol_recall_at_10: float | None = None
     symbol_recall_at_20: float | None = None
     mean_symbol_reciprocal_rank: float | None = None
+    file_conditioned_symbol_cases: int = 0
+    file_conditioned_symbol_targets: int = 0
+    file_conditioned_symbol_recall_at_1: float | None = None
+    file_conditioned_symbol_recall_at_3: float | None = None
+    mean_within_file_symbol_reciprocal_rank: float | None = None
+    expected_file_found_but_symbol_missing_cases: int = 0
+    expected_file_found_but_symbol_missing_targets: int = 0
 
 
 class BenchmarkRun(BaseModel):
     manifest_name: str
     manifest_version: int
     variant: BenchmarkVariant | Literal["hybrid-full"]
+    symbol_metric_protocol: Literal["file-cutoff-and-within-file-v1"] = (
+        "file-cutoff-and-within-file-v1"
+    )
     provider: str | None = None
     model: str | None = None
     max_evidence_chars: int | None = None
@@ -644,42 +663,53 @@ def evaluate_case(
         None,
     )
     candidate_symbols: list[BenchmarkSymbolCandidate] = []
-    for rank, file in enumerate(candidate_files, start=1):
+    for file_rank, file in enumerate(candidate_files, start=1):
         location = candidate_locations.get(file)
         if location is None:
             continue
+        ranked_locations: list[tuple[str, str | None]] = []
         if location.symbol is not None:
-            candidate_symbols.append(
-                BenchmarkSymbolCandidate(
-                    file=file,
-                    symbol=location.symbol,
-                    qualified_symbol=location.qualified_symbol,
-                    rank=rank,
-                )
+            ranked_locations.append(
+                (location.symbol, location.qualified_symbol)
             )
+        ranked_locations.extend(
+            (alternate.symbol, alternate.qualified_symbol)
+            for alternate in location.alternate_symbols
+        )
         candidate_symbols.extend(
             BenchmarkSymbolCandidate(
                 file=file,
-                symbol=alternate.symbol,
-                qualified_symbol=alternate.qualified_symbol,
-                rank=rank,
+                symbol=symbol,
+                qualified_symbol=qualified_symbol,
+                rank=file_rank,
+                within_file_rank=within_file_rank,
             )
-            for alternate in location.alternate_symbols
+            for within_file_rank, (symbol, qualified_symbol) in enumerate(
+                ranked_locations,
+                start=1,
+            )
         )
     expected_symbol_keys = {
         (target.file, target.symbol) for target in case.expected_symbols
     }
     symbol_ranks: dict[tuple[str, str], int] = {}
+    within_file_symbol_ranks: dict[tuple[str, str], int] = {}
     for target in case.expected_symbols:
-        matching_ranks = [
-            candidate.rank
+        matching_candidates = [
+            candidate
             for candidate in candidate_symbols
             if candidate.file == target.file
             and target.symbol
             in {candidate.symbol, candidate.qualified_symbol}
         ]
-        if matching_ranks:
-            symbol_ranks[(target.file, target.symbol)] = min(matching_ranks)
+        if matching_candidates:
+            key = (target.file, target.symbol)
+            symbol_ranks[key] = min(
+                candidate.rank for candidate in matching_candidates
+            )
+            within_file_symbol_ranks[key] = min(
+                candidate.within_file_rank for candidate in matching_candidates
+            )
     first_symbol_rank = min(
         (
             symbol_ranks[key]
@@ -697,6 +727,35 @@ def evaluate_case(
             for key in expected_symbol_keys
         )
         return round(matched / len(expected_symbol_keys), 4)
+
+    candidate_file_set = set(candidate_files)
+    file_conditioned_symbol_keys = {
+        key for key in expected_symbol_keys if key[0] in candidate_file_set
+    }
+
+    def file_conditioned_symbol_recall_at(limit: int) -> float | None:
+        if not file_conditioned_symbol_keys:
+            return None
+        matched = sum(
+            within_file_symbol_ranks.get(key, limit + 1) <= limit
+            for key in file_conditioned_symbol_keys
+        )
+        return round(matched / len(file_conditioned_symbol_keys), 4)
+
+    first_within_file_symbol_rank = min(
+        (
+            within_file_symbol_ranks[key]
+            for key in file_conditioned_symbol_keys
+            if key in within_file_symbol_ranks
+        ),
+        default=None,
+    )
+    missing_file_conditioned_symbols = [
+        target
+        for target in case.expected_symbols
+        if target.file in candidate_file_set
+        and (target.file, target.symbol) not in within_file_symbol_ranks
+    ]
 
     return BenchmarkCaseResult(
         case_id=case.id,
@@ -734,6 +793,17 @@ def evaluate_case(
             if expected_symbol_keys
             else None
         ),
+        file_conditioned_symbol_targets=len(file_conditioned_symbol_keys),
+        file_conditioned_symbol_recall_at_1=file_conditioned_symbol_recall_at(1),
+        file_conditioned_symbol_recall_at_3=file_conditioned_symbol_recall_at(3),
+        within_file_symbol_reciprocal_rank=(
+            round(1 / first_within_file_symbol_rank, 4)
+            if first_within_file_symbol_rank is not None
+            else 0
+            if file_conditioned_symbol_keys
+            else None
+        ),
+        expected_file_found_but_symbol_missing=missing_file_conditioned_symbols,
         analysis_elapsed_ms=round((perf_counter() - started) * 1000, 3),
         repository_map_cache_hit=repository_map_cache_hit,
         llm_attempts=llm_attempts,
@@ -781,6 +851,11 @@ def evaluate_case(
 def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
     completed = [result for result in results if result.execution_succeeded]
     symbol_results = [result for result in completed if result.expected_symbols]
+    file_conditioned_symbol_results = [
+        result
+        for result in symbol_results
+        if result.file_conditioned_symbol_targets > 0
+    ]
     llm_results = [
         result
         for result in completed
@@ -908,6 +983,49 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         )
         if symbol_results
         else None,
+        file_conditioned_symbol_cases=len(file_conditioned_symbol_results),
+        file_conditioned_symbol_targets=sum(
+            result.file_conditioned_symbol_targets
+            for result in file_conditioned_symbol_results
+        ),
+        file_conditioned_symbol_recall_at_1=round(
+            fmean(
+                result.file_conditioned_symbol_recall_at_1
+                for result in file_conditioned_symbol_results
+                if result.file_conditioned_symbol_recall_at_1 is not None
+            ),
+            4,
+        )
+        if file_conditioned_symbol_results
+        else None,
+        file_conditioned_symbol_recall_at_3=round(
+            fmean(
+                result.file_conditioned_symbol_recall_at_3
+                for result in file_conditioned_symbol_results
+                if result.file_conditioned_symbol_recall_at_3 is not None
+            ),
+            4,
+        )
+        if file_conditioned_symbol_results
+        else None,
+        mean_within_file_symbol_reciprocal_rank=round(
+            fmean(
+                result.within_file_symbol_reciprocal_rank
+                for result in file_conditioned_symbol_results
+                if result.within_file_symbol_reciprocal_rank is not None
+            ),
+            4,
+        )
+        if file_conditioned_symbol_results
+        else None,
+        expected_file_found_but_symbol_missing_cases=sum(
+            bool(result.expected_file_found_but_symbol_missing)
+            for result in file_conditioned_symbol_results
+        ),
+        expected_file_found_but_symbol_missing_targets=sum(
+            len(result.expected_file_found_but_symbol_missing)
+            for result in file_conditioned_symbol_results
+        ),
     )
 
 

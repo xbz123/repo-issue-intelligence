@@ -477,6 +477,13 @@ Top-20 and none leave it. Symbol Recall@1/5/10/20 is
 and none are lost. Forty-three of 267 production targets remain outside deterministic Top-20 and stay in
 the denominator.
 
+The retained `symbol_recall_at_*` and `symbol_reciprocal_rank` fields are legacy file-cutoff
+metrics: a primary symbol and its directly supported alternates inherit the containing file's rank.
+They do not represent a flattened global ranking of individual symbols. New benchmark results also
+record each candidate's `within_file_rank`, file-conditioned symbol Recall@1/3, within-file symbol
+MRR, and the reviewed symbols whose file was found but whose symbol was not proposed. These
+additional diagnostics do not change file or symbol selection.
+
 Three authorized manifest-v20 OpenCode `deepseek-v4-flash` pool-40 runs completed all 600 case-runs.
 The provider returned 595 valid ranks (580 on the first attempt and 15 after one retry); five cases
 used deterministic fallback after two OpenCode HTTP 500 responses. Invalid structure and unknown
