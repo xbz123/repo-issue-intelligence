@@ -100,6 +100,28 @@ COMMAND_LINE_OPTION_PATTERN = re.compile(
     r"(?:-[A-Za-z0-9]+)+)(?![A-Za-z0-9_-])"
 )
 COMMAND_LINE_IDENTIFIER_LIMIT = 16
+ISSUE_FORM_HEADING_PATTERN = re.compile(r"^### (?P<heading>\S.*)\s*$")
+ISSUE_FORM_FENCE_PATTERN = re.compile(r"^[ \t]*(?P<fence>`{3,}|~{3,})")
+ISSUE_FORM_COMPONENT_HEADINGS = {
+    "apache airflow provider s",
+    "component",
+    "component name",
+    "integration",
+    "module",
+    "package",
+    "package name",
+    "provider",
+    "providers",
+    "subsystem",
+}
+ISSUE_FORM_EMPTY_VALUES = {
+    "n a",
+    "no response",
+    "none",
+    "not applicable",
+}
+ISSUE_FORM_COMPONENT_MAX_CHARACTERS = 120
+ISSUE_FORM_COMPONENT_MAX_TERMS = 4
 ECMASCRIPT_FENCE_PREFIX_PATTERN = re.compile(
     r"^```[ \t]*(?:javascript|js|typescript|ts|jsx|tsx)\b",
     re.IGNORECASE,
@@ -182,6 +204,8 @@ DEPENDENCY_METADATA_CONTEXT_TERMS = {
 GENERIC_SUBSYSTEM_TERMS = {"common", "core", "shared", "util", "utils"}
 AUXILIARY_PATH_PARTS = {"docs", "docs_src", "examples", "scripts"}
 SPECIFIC_PATH_TERM_MAX_FILES = 3
+STRUCTURED_COMPONENT_PATH_MAX_FILES = 100
+STRUCTURED_COMPONENT_PATH_BONUS = 6.0
 DIRECT_LOCAL_IDENTIFIER_MIN_LENGTH = 5
 GENERIC_QUALIFIED_TITLE_METHOD_TERMS = {
     "build",
@@ -266,6 +290,7 @@ class IssueSignals:
     primary_identifiers: frozenset[str]
     explicit_identifiers: frozenset[str]
     command_line_identifiers: frozenset[str]
+    structured_components: tuple[tuple[str, ...], ...]
     called_identifiers: tuple[str, ...]
     identifier_mentions: tuple[str, ...]
     paths: frozenset[str]
@@ -811,6 +836,90 @@ def _extract_source_snippets(text: str) -> tuple[tuple[str, ...], ...]:
     return tuple(snippets)
 
 
+def _issue_form_heading(value: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
+
+
+def _issue_form_component_candidates(lines: list[str]) -> list[str]:
+    values = [line.strip() for line in lines if line.strip()]
+    checkbox_values = [
+        re.sub(r"^- \[[xX]\]\s*", "", value).strip()
+        for value in values
+        if re.match(r"^- \[[xX]\]\s*", value)
+    ]
+    if any(re.match(r"^- \[[ xX]\]\s*", value) for value in values):
+        return checkbox_values
+    cleaned = [re.sub(r"^[-*+]\s+", "", value) for value in values]
+    return [
+        candidate.strip()
+        for candidate in re.split(r"[,;]", " ".join(cleaned))
+        if candidate.strip()
+    ]
+
+
+def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
+    components: list[tuple[str, ...]] = []
+    active_heading: str | None = None
+    active_lines: list[str] = []
+    fence: str | None = None
+
+    def flush() -> None:
+        if active_heading not in ISSUE_FORM_COMPONENT_HEADINGS:
+            return
+        for candidate in _issue_form_component_candidates(active_lines):
+            candidate = re.sub(r"\[([^]]+)]\([^)]+\)", r"\1", candidate)
+            candidate = candidate.strip("`_*'\" ")
+            if not candidate or len(candidate) > ISSUE_FORM_COMPONENT_MAX_CHARACTERS:
+                continue
+            if _issue_form_heading(candidate) in ISSUE_FORM_EMPTY_VALUES:
+                continue
+            terms = tuple(_ordered_terms(candidate))
+            if (
+                not terms
+                or len(terms) > ISSUE_FORM_COMPONENT_MAX_TERMS
+                or all(term in GENERIC_SUBSYSTEM_TERMS for term in terms)
+            ):
+                continue
+            components.append(terms)
+
+    for line in body.splitlines():
+        stripped = line.lstrip()
+        if fence is not None:
+            if stripped.startswith(fence):
+                fence = None
+            continue
+        fence_match = ISSUE_FORM_FENCE_PATTERN.match(line)
+        if fence_match is not None:
+            fence = fence_match.group("fence")
+            continue
+        heading_match = ISSUE_FORM_HEADING_PATTERN.match(line)
+        if heading_match is not None:
+            flush()
+            active_heading = _issue_form_heading(heading_match.group("heading"))
+            active_lines = []
+            continue
+        if active_heading is not None:
+            active_lines.append(line)
+    flush()
+    return tuple(dict.fromkeys(components))
+
+
+def _path_matches_structured_component(
+    path: str,
+    component: tuple[str, ...],
+) -> bool:
+    path_terms = [
+        term
+        for part in Path(path).parts
+        for term in _ordered_terms(part)
+    ]
+    width = len(component)
+    return any(
+        tuple(path_terms[index : index + width]) == component
+        for index in range(len(path_terms) - width + 1)
+    )
+
+
 def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
     text = " ".join([issue.title, issue.body, *issue.labels])
     primary_text = " ".join([issue.title, *issue.labels])
@@ -841,6 +950,7 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         primary_identifiers=frozenset(_extract_identifiers(primary_text)),
         explicit_identifiers=frozenset(explicit_identifiers),
         command_line_identifiers=frozenset(command_line_identifiers),
+        structured_components=_extract_issue_form_components(issue.body),
         called_identifiers=_extract_called_identifiers(text),
         identifier_mentions=_extract_identifier_mentions(text),
         paths=frozenset(paths),
@@ -3029,6 +3139,16 @@ def locate_candidates(
         for file in repository_map.files
         for term in _terms(file.path)
     )
+    structured_component_path_counts = (
+        Counter(
+            component
+            for file in repository_map.files
+            for component in signals.structured_components
+            if _path_matches_structured_component(file.path, component)
+        )
+        if expanded_retrieval
+        else Counter()
+    )
     stem_term_counts = (
         Counter(
             term
@@ -3077,6 +3197,14 @@ def locate_candidates(
         auxiliary_file = file.test_file or bool(path_parts & AUXILIARY_PATH_PARTS)
         path_terms = _terms(file.path)
         path_overlap = keywords & path_terms
+        structured_component_matches = {
+            component
+            for component in signals.structured_components
+            if expanded_retrieval
+            and structured_component_path_counts[component]
+            <= STRUCTURED_COMPONENT_PATH_MAX_FILES
+            and _path_matches_structured_component(file.path, component)
+        }
         specific_stem_overlap = (
             {
                 term
@@ -3236,6 +3364,8 @@ def locate_candidates(
             + 5.0 * min(len(path_identifier_hits), 2)
             + 2.5 * len(best_overlap)
             + 4.0 * len(path_overlap)
+            + STRUCTURED_COMPONENT_PATH_BONUS
+            * min(len(structured_component_matches), 1)
             + 6.0 * min(len(specific_stem_overlap), 1)
             + 6.0 * len(primary_path_overlap)
             + 0.7 * len(import_overlap)
@@ -3257,6 +3387,14 @@ def locate_candidates(
             )
         if path_overlap:
             evidence.append(f"Path matches issue terms: {', '.join(sorted(path_overlap))}")
+        if structured_component_matches:
+            evidence.append(
+                "Path matches structured Issue component: "
+                + ", ".join(
+                    "-".join(component)
+                    for component in sorted(structured_component_matches)
+                )
+            )
         if specific_stem_overlap:
             evidence.append(
                 "Specific Rust filename stem matches issue terms: "

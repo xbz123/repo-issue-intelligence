@@ -239,6 +239,106 @@ def test_extract_issue_signals_normalizes_command_line_options() -> None:
     assert "feature_16" not in bounded
 
 
+def test_extract_issue_signals_reads_bounded_issue_form_components() -> None:
+    record = issue(
+        "Provider failure",
+        "### Apache Airflow Provider(s)\n\n"
+        "microsoft-azure\n\n"
+        "### Component Name\n\n"
+        "- [x] Tree Renderer\n"
+        "- [ ] Ignored Backend\n\n"
+        "### Module\n\n"
+        "_No response_\n\n"
+        "```markdown\n"
+        "### Provider\n"
+        "fake-provider\n"
+        "```\n\n"
+        "### Package\n\n"
+        "Not Applicable\n\n"
+        "### Code of Conduct\n\n"
+        "- [x] I agree\n",
+    )
+
+    signals = extract_issue_signals(record)
+
+    assert signals.structured_components == (
+        ("microsoft", "azure"),
+        ("tree", "renderer"),
+    )
+
+
+def test_structured_issue_component_affects_only_expanded_retrieval(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    write_source(
+        repository,
+        "providers/keycloak/commands.py",
+        "def create_team_command():\n    return None\n",
+    )
+    write_source(
+        repository,
+        "src/unrelated.py",
+        "def create_team_command():\n    return None\n",
+    )
+    record = issue(
+        "Team permission misses DAG resource",
+        "### Apache Airflow Provider(s)\n\nkeycloak\n",
+    )
+    repository_map = build_repository_map(repository)
+
+    base = locate_candidates(record, repository_map, limit=20)
+    expanded = locate_candidates(record, repository_map, limit=40)
+    base_target = next(
+        candidate
+        for candidate in base
+        if candidate.file == "providers/keycloak/commands.py"
+    )
+    expanded_target = next(
+        candidate
+        for candidate in expanded
+        if candidate.file == "providers/keycloak/commands.py"
+    )
+
+    assert not any(
+        evidence.startswith("Path matches structured Issue component:")
+        for evidence in base_target.evidence
+    )
+    assert (
+        "Path matches structured Issue component: keycloak"
+        in expanded_target.evidence
+    )
+    assert expanded_target.confidence > base_target.confidence
+
+
+def test_structured_issue_component_rejects_broad_path_scopes(
+    tmp_path: Path,
+) -> None:
+    repository = tmp_path / "repository"
+    for index in range(101):
+        write_source(
+            repository,
+            f"providers/keycloak/module_{index}.py",
+            f"def handler_{index}():\n    return None\n",
+        )
+    record = issue(
+        "Provider behavior",
+        "### Provider\n\nkeycloak\n",
+    )
+
+    candidates = locate_candidates(
+        record,
+        build_repository_map(repository),
+        limit=40,
+    )
+
+    assert not any(
+        evidence.startswith("Path matches structured Issue component:")
+        for candidate in candidates
+        for evidence in candidate.evidence
+    )
+
+
 def test_structured_content_matching_requires_compound_identifiers() -> None:
     matches = investigator_module._content_structurally_matches_identifier
 
