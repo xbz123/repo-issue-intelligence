@@ -293,6 +293,11 @@ Optional symbol labels are aggregated only across labeled cases; exact
 file-plus-symbol matches accept either the backward-compatible local name or the qualified identity
 and retain the candidate file rank.
 
+The separate Top-40 retrieval pass may also use short GitHub Issue Form values from explicit
+component, provider, package, module, integration, or subsystem sections. Only line-start H3
+sections outside fenced code are parsed; empty placeholders, broad values, and path scopes matching
+more than 100 files are rejected. This evidence cannot change deterministic Top-20 ordering.
+
 Optional benchmark checkpointing uses a separate SQLite store. A run records its complete selected
 case payloads and execution configuration without credentials, then commits each validated case
 result before continuing. Resume is fail-closed unless the configuration, committed runtime source

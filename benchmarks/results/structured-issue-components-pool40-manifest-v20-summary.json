@@ -1,0 +1,109 @@
+{
+  "name": "structured-issue-components-pool40-manifest-v20-summary",
+  "version": 1,
+  "created_at": "2026-09-04T00:32:30.111754Z",
+  "source_commit": "a17ffc32f39772b71c4b8710c43e817a00966ee7",
+  "manifest_version": 20,
+  "repository_map_index_version": 25,
+  "raw_run_artifacts_committed": false,
+  "protocol": {
+    "issue_form_heading": "line-start H3 outside fenced code",
+    "recognized_component_headings": [
+      "Apache Airflow Provider(s)",
+      "Component",
+      "Component Name",
+      "Integration",
+      "Module",
+      "Package",
+      "Package Name",
+      "Provider",
+      "Providers",
+      "Subsystem"
+    ],
+    "empty_values": [
+      "N/A",
+      "No response",
+      "None",
+      "Not Applicable"
+    ],
+    "maximum_component_terms": 4,
+    "maximum_matching_files": 100,
+    "path_bonus": 6.0,
+    "minimum_candidate_limit": 40,
+    "changes_deterministic_top20": false
+  },
+  "reviewed_suite_usage": {
+    "cases_with_accepted_components": 5,
+    "case_ids": [
+      "ansible-callback-deprecation-metadata",
+      "ansible-getent-service-unsupported-platform",
+      "ansible-rpm-key-armor-newline",
+      "airflow-msgraph-scope-normalization",
+      "airflow-keycloak-team-dag-resource"
+    ]
+  },
+  "candidate_pool_audit": {
+    "cases": 200,
+    "repositories": 58,
+    "production_targets": 267,
+    "previous_matched_targets": 246,
+    "matched_targets": 247,
+    "previous_missing_targets": 21,
+    "missing_targets": 20,
+    "repository_map_cache_hits": 200,
+    "repository_map_cache_misses": 0,
+    "recovered_targets": [
+      {
+        "case_id": "airflow-keycloak-team-dag-resource",
+        "file": "providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py",
+        "previous_wide_rank": 67,
+        "current_rank": 37
+      }
+    ],
+    "newly_missing_targets": [],
+    "missing_targets_by_language": {
+      "C++": 1,
+      "Python": 8,
+      "Rust": 6,
+      "TypeScript": 5
+    },
+    "wide_rank_buckets": {
+      "1-40-displaced": 0,
+      "41-60": 2,
+      "61-100": 4,
+      "101-200": 4,
+      "201+": 10,
+      "not_retrieved": 0
+    }
+  },
+  "deterministic_validation": {
+    "cases": 200,
+    "completed": 200,
+    "failed": 0,
+    "repository_map_cache_hits": 200,
+    "repository_map_cache_misses": 0,
+    "file_recall_at_1": 0.3577,
+    "file_recall_at_5": 0.6617,
+    "file_recall_at_10": 0.7493,
+    "file_recall_at_20": 0.8732,
+    "mean_reciprocal_rank": 0.5471,
+    "legacy_symbol_recall_at_20": 0.4994,
+    "file_conditioned_symbol_recall_at_3": 0.5426,
+    "average_analysis_elapsed_ms": 4522.873,
+    "metrics_match_index_v25": true
+  },
+  "external_reference": {
+    "repository": "stefanbuck/github-issue-parser",
+    "url": "https://github.com/stefanbuck/github-issue-parser",
+    "used_principles": [
+      "recognize only line-start H3 sections",
+      "do not parse headings inside fenced code",
+      "treat No response placeholders as empty"
+    ]
+  },
+  "notes": [
+    "The microsoft-azure component matched 178 files and was rejected by the 100-file scope guard.",
+    "Snowflake had no recognized Provider or Component section and remained outside the feature scope.",
+    "The complete candidate-pool audit and deterministic run remain outside Git because they duplicate per-case candidate lists."
+  ]
+}

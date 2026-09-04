@@ -267,8 +267,8 @@ uv run rii benchmark-miss-audit benchmarks/cases.json \
 The audit reuses the frozen Issue snapshots, pre-fix repositories, and repository-map cache. It
 records each missing target's language, repository, diagnostic wide rank, and available evidence;
 the wide rank is diagnostic and does not change production candidate selection.
-The current v0.35/index-v25 audit retrieves 246/267 reviewed production targets inside Top-40 and
-records the remaining 21 misses.
+The current v0.37/index-v25 audit retrieves 247/267 reviewed production targets inside Top-40 and
+records the remaining 20 misses.
 
 The Hybrid benchmark defaults to Codex CLI `gpt-5.6-luna`; `--llm-backend api` selects the configured
 OpenAI-compatible API instead. Install and authenticate Codex CLI before using the local backend.
@@ -612,6 +612,14 @@ hyphenated long CLI options, matches their compound source identifiers, adds low
 filename-stem evidence, and recognizes dependency names in root `setup.py` for release/deprecation
 Issues. The accepted 200-case audit recovers nine prior pool misses without adding one, raising
 Top-40 coverage from 237/267 to 246/267; the deterministic Top-20 metrics remain unchanged.
+
+The v0.37 follow-up parses bounded GitHub Issue Form component/provider sections, ignoring fenced
+code and empty placeholders. A normalized component must match contiguous path terms in at most 100
+files, and the evidence is enabled only for the separate Top-40 pass. The full audit recovered the
+Keycloak provider target at rank 37 without adding a miss, raising Top-40 coverage to 247/267 while
+the 200-case deterministic metrics remained unchanged. The compact
+[`structured component summary`](benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json)
+is committed; full per-case artifacts remain outside Git.
 
 The retained v0.20 policy follows a single safe package re-export hop from an Issue-referenced
 source path. Both files must be production files in the same package subsystem, the facade must be
