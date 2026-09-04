@@ -3201,6 +3201,7 @@ def locate_candidates(
             component
             for component in signals.structured_components
             if expanded_retrieval
+            and not auxiliary_file
             and structured_component_path_counts[component]
             <= STRUCTURED_COMPONENT_PATH_MAX_FILES
             and _path_matches_structured_component(file.path, component)

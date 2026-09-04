@@ -281,6 +281,11 @@ def test_structured_issue_component_affects_only_expanded_retrieval(
         "src/unrelated.py",
         "def create_team_command():\n    return None\n",
     )
+    write_source(
+        repository,
+        "tests/providers/keycloak/test_commands.py",
+        "def test_create_team_command():\n    return None\n",
+    )
     record = issue(
         "Team permission misses DAG resource",
         "### Apache Airflow Provider(s)\n\nkeycloak\n",
@@ -299,6 +304,11 @@ def test_structured_issue_component_affects_only_expanded_retrieval(
         for candidate in expanded
         if candidate.file == "providers/keycloak/commands.py"
     )
+    expanded_test = next(
+        candidate
+        for candidate in expanded
+        if candidate.file == "tests/providers/keycloak/test_commands.py"
+    )
 
     assert not any(
         evidence.startswith("Path matches structured Issue component:")
@@ -309,6 +319,10 @@ def test_structured_issue_component_affects_only_expanded_retrieval(
         in expanded_target.evidence
     )
     assert expanded_target.confidence > base_target.confidence
+    assert not any(
+        evidence.startswith("Path matches structured Issue component:")
+        for evidence in expanded_test.evidence
+    )
 
 
 def test_structured_issue_component_rejects_broad_path_scopes(
