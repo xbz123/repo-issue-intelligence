@@ -1,0 +1,32 @@
+{
+  "review_date": "2026-09-05",
+  "source_baseline": "2a7282cd4b1e9118df2864b8e595aa4d09081dcc",
+  "validation_scope": "documentation_only",
+  "task_count": 153,
+  "phase_1_tasks": 122,
+  "phase_2_tasks": 31,
+  "task_ids_unique": true,
+  "preserves_r4_task_ids": true,
+  "all_tasks_planned": true,
+  "work_packages": 21,
+  "dependency_cycles": false,
+  "checklist_local_links_checked": 307,
+  "checklist_local_links_valid": true,
+  "source_paths_at_baseline_checked": 15,
+  "source_paths_valid": true,
+  "files": {
+    "docs/repo_issue_intelligence_protocol_v2_execution_plan_r5.md": {
+      "bytes": 95789,
+      "lines": 1005,
+      "matches_download": true
+    },
+    "docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md": {
+      "bytes": 30345,
+      "lines": 263,
+      "matches_download": true
+    }
+  },
+  "runtime_implemented_or_tested": false,
+  "database_migrations_run": false,
+  "external_model_requests": 0
+}

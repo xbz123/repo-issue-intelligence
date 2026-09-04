@@ -456,6 +456,14 @@ src/repo_issue_intelligence/
 See `docs/architecture.md` for system boundaries and
 `docs/benchmark-expansion.md` for candidate acceptance and expansion protocol.
 
+The current proposed Protocol v2 design is the
+[R5 execution plan](docs/repo_issue_intelligence_protocol_v2_execution_plan_r5.md), with progress
+tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md).
+R5 supersedes earlier planning drafts; its tasks remain planned and do not describe implemented
+features. T0, the opt-in CLI gate G0, and the default-path release gate G1 still require acceptance.
+The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md) records the
+documentation checks and the implementation boundaries to specify in T0.
+
 ## Evaluation
 
 The current frozen benchmark contains 200 closed issues with linked fix PRs across 58 projects:
