@@ -866,12 +866,16 @@ def _issue_form_component_candidates(lines: list[str]) -> list[str]:
 
 def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
     components: list[tuple[str, ...]] = []
+    seen_components: set[tuple[str, ...]] = set()
     active_heading: str | None = None
     active_lines: list[str] = []
     fence: tuple[str, int] | None = None
 
     def flush() -> None:
-        if active_heading not in ISSUE_FORM_COMPONENT_HEADINGS:
+        if (
+            len(components) >= ISSUE_FORM_COMPONENT_LIMIT
+            or active_heading not in ISSUE_FORM_COMPONENT_HEADINGS
+        ):
             return
         for candidate in _issue_form_component_candidates(active_lines):
             candidate = re.sub(r"\[([^]]+)]\([^)]+\)", r"\1", candidate)
@@ -887,7 +891,12 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
                 or all(term in GENERIC_SUBSYSTEM_TERMS for term in terms)
             ):
                 continue
+            if terms in seen_components:
+                continue
+            seen_components.add(terms)
             components.append(terms)
+            if len(components) == ISSUE_FORM_COMPONENT_LIMIT:
+                break
 
     for line in body.splitlines():
         stripped = line.lstrip()
@@ -907,13 +916,15 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
         heading_match = ISSUE_FORM_HEADING_PATTERN.match(line)
         if heading_match is not None:
             flush()
+            if len(components) == ISSUE_FORM_COMPONENT_LIMIT:
+                break
             active_heading = _issue_form_heading(heading_match.group("heading"))
             active_lines = []
             continue
         if active_heading is not None:
             active_lines.append(line)
     flush()
-    return tuple(dict.fromkeys(components))[:ISSUE_FORM_COMPONENT_LIMIT]
+    return tuple(components)
 
 
 def _path_matches_structured_component(
