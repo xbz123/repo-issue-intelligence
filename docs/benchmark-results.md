@@ -68,7 +68,7 @@ outside fenced code and rejects empty placeholders, values longer than four term
 scopes matching more than 100 files. Only five frozen Issues supply an accepted value. The
 200-case pool audit recovered
 `providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py` from rank 67 to
-37 and added no miss, raising coverage to 247/267. A separate deterministic replay completed
+merged-pool rank 38 and added no miss, raising coverage to 247/267. A separate deterministic replay completed
 200/200 with 200 cache hits and exactly preserved all file and symbol metrics. See the compact
 [`structured component summary`](../benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json).
 

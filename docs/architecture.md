@@ -296,7 +296,8 @@ and retain the candidate file rank.
 The separate Top-40 retrieval pass may also use short GitHub Issue Form values from explicit
 component, provider, package, module, integration, or subsystem sections. Only line-start H3
 sections outside fenced code are parsed; empty placeholders, broad values, and path scopes matching
-more than 100 files are rejected. This evidence cannot change deterministic Top-20 ordering.
+more than 100 files are rejected. Auxiliary test, documentation, example, and script paths cannot
+receive the bonus. This evidence cannot change deterministic Top-20 ordering.
 
 Optional benchmark checkpointing uses a separate SQLite store. A run records its complete selected
 case payloads and execution configuration without credentials, then commits each validated case
