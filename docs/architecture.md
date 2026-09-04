@@ -295,9 +295,10 @@ and retain the candidate file rank.
 
 The separate Top-40 retrieval pass may also use at most eight short GitHub Issue Form values from
 explicit component, provider, package, module, integration, or subsystem sections. Only line-start
-H3 sections outside correctly closed fenced code are parsed; ordinary Markdown bullets remain
-separate values, while empty placeholders, broad values, and path scopes matching more than 100
-files are rejected. Auxiliary test, documentation, example, and script paths cannot receive the
+H3 sections outside CommonMark fenced code are parsed; fence delimiters permit at most three leading
+spaces. Ordinary Markdown bullets and checked `-`, `*`, or `+` task-list items remain separate
+values, while unchecked items, empty placeholders, broad values, and path scopes matching more than
+100 files are rejected. Auxiliary test, documentation, example, and script paths cannot receive the
 bonus. This evidence cannot change deterministic Top-20 ordering.
 
 Optional benchmark checkpointing uses a separate SQLite store. A run records its complete selected

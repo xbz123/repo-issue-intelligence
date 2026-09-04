@@ -64,10 +64,10 @@ broader audit was rejected after high-cardinality dotted identifiers and cross-l
 stems displaced three targets; those paths were removed or restricted before the accepted rerun.
 
 The v0.37 retrieval-only follow-up recognizes at most eight bounded GitHub Issue Form
-component/provider values outside correctly closed fenced code, retains ordinary Markdown bullets
-as separate values, and rejects empty placeholders, values longer than four terms, and component
-scopes matching more than 100 files. Only five frozen Issues supply an accepted value. The
-200-case pool audit recovered
+component/provider values outside CommonMark fenced code, retains ordinary Markdown bullets and
+checked task-list items as separate values, and rejects empty placeholders, values longer than four
+terms, and component scopes matching more than 100 files. Only five frozen Issues supply an accepted
+value. The 200-case pool audit recovered
 `providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py` from rank 67 to
 merged-pool rank 38 and added no miss, raising coverage to 247/267. A separate deterministic replay completed
 200/200 with 200 cache hits and exactly preserved all file and symbol metrics. See the compact
