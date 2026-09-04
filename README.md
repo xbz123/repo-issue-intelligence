@@ -613,9 +613,10 @@ filename-stem evidence, and recognizes dependency names in root `setup.py` for r
 Issues. The accepted 200-case audit recovers nine prior pool misses without adding one, raising
 Top-40 coverage from 237/267 to 246/267; the deterministic Top-20 metrics remain unchanged.
 
-The v0.37 follow-up parses bounded GitHub Issue Form component/provider sections, ignoring fenced
-code and empty placeholders. A normalized component must match contiguous path terms in at most 100
-files, and the evidence is enabled only for the separate Top-40 pass. The full audit recovered the
+The v0.37 follow-up parses at most eight bounded GitHub Issue Form component/provider values,
+ignoring fenced code and empty placeholders while retaining ordinary Markdown bullets as separate
+values. A normalized component must match contiguous path terms in at most 100 files, and the
+evidence is enabled only for the separate Top-40 pass. The full audit recovered the
 Keycloak provider target at merged-pool rank 38 without adding a miss, raising Top-40 coverage to
 247/267 while
 the 200-case deterministic metrics remained unchanged. The compact

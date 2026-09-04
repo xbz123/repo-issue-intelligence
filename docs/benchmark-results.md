@@ -63,8 +63,9 @@ targets and leaves 21 misses, recovering nine prior misses without adding a new 
 broader audit was rejected after high-cardinality dotted identifiers and cross-language filename
 stems displaced three targets; those paths were removed or restricted before the accepted rerun.
 
-The v0.37 retrieval-only follow-up recognizes bounded GitHub Issue Form component/provider values
-outside fenced code and rejects empty placeholders, values longer than four terms, and component
+The v0.37 retrieval-only follow-up recognizes at most eight bounded GitHub Issue Form
+component/provider values outside correctly closed fenced code, retains ordinary Markdown bullets
+as separate values, and rejects empty placeholders, values longer than four terms, and component
 scopes matching more than 100 files. Only five frozen Issues supply an accepted value. The
 200-case pool audit recovered
 `providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py` from rank 67 to
