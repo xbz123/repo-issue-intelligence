@@ -2,8 +2,8 @@
   "name": "structured-issue-components-pool40-manifest-v20-summary",
   "version": 1,
   "created_at": "2026-09-04T00:32:30.111754Z",
-  "source_commit": "3abe64249a5ce2c76e67a5982de17097546497c2",
-  "full_audit_source_commit": "a17ffc32f39772b71c4b8710c43e817a00966ee7",
+  "source_commit": "cbb4c12bf6aec46a956ca1d8c515922d515a26bd",
+  "full_audit_source_commit": "cbb4c12bf6aec46a956ca1d8c515922d515a26bd",
   "manifest_version": 20,
   "repository_map_index_version": 25,
   "raw_run_artifacts_committed": false,
@@ -96,8 +96,10 @@
     "metrics_match_index_v25": true
   },
   "final_scope_validation": {
-    "source_commit": "3abe64249a5ce2c76e67a5982de17097546497c2",
+    "source_commit": "cbb4c12bf6aec46a956ca1d8c515922d515a26bd",
     "affected_cases_replayed": 5,
+    "full_candidate_pool_audit_replayed": true,
+    "full_candidate_pool_audit_matches_initial": true,
     "expected_target_coverage_changed_from_full_audit": false,
     "newly_missing_targets": []
   },
@@ -127,7 +129,10 @@
     "Auxiliary files cannot receive the structured component bonus.",
     "Ordinary Markdown bullets remain separate component candidates and the accepted list is capped at eight values.",
     "Fence openers and closers allow at most three leading spaces; a closer also requires the same delimiter character, at least the opening length, and no trailing info string.",
+    "Mixed ordinary and task-list bullets retain ordinary and checked values while excluding unchecked and four-space-indented entries.",
+    "A backtick fence candidate whose info string contains a backtick is not treated as an opener.",
     "Snowflake had no recognized Provider or Component section and remained outside the feature scope.",
+    "The final 200-case audit was identical to the initial accepted audit after excluding created_at.",
     "The complete candidate-pool audit and deterministic run remain outside Git because they duplicate per-case candidate lists."
   ]
 }
