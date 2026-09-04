@@ -122,6 +122,7 @@ ISSUE_FORM_EMPTY_VALUES = {
 }
 ISSUE_FORM_COMPONENT_MAX_CHARACTERS = 120
 ISSUE_FORM_COMPONENT_MAX_TERMS = 4
+ISSUE_FORM_COMPONENT_LIMIT = 8
 ECMASCRIPT_FENCE_PREFIX_PATTERN = re.compile(
     r"^```[ \t]*(?:javascript|js|typescript|ts|jsx|tsx)\b",
     re.IGNORECASE,
@@ -849,10 +850,16 @@ def _issue_form_component_candidates(lines: list[str]) -> list[str]:
     ]
     if any(re.match(r"^- \[[ xX]\]\s*", value) for value in values):
         return checkbox_values
-    cleaned = [re.sub(r"^[-*+]\s+", "", value) for value in values]
+    bullet_values = [
+        re.sub(r"^[-*+]\s+", "", value).strip()
+        for value in values
+        if re.match(r"^[-*+]\s+", value)
+    ]
+    if bullet_values:
+        return bullet_values
     return [
         candidate.strip()
-        for candidate in re.split(r"[,;]", " ".join(cleaned))
+        for candidate in re.split(r"[,;]", " ".join(values))
         if candidate.strip()
     ]
 
@@ -861,7 +868,7 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
     components: list[tuple[str, ...]] = []
     active_heading: str | None = None
     active_lines: list[str] = []
-    fence: str | None = None
+    fence: tuple[str, int] | None = None
 
     def flush() -> None:
         if active_heading not in ISSUE_FORM_COMPONENT_HEADINGS:
@@ -885,12 +892,17 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
     for line in body.splitlines():
         stripped = line.lstrip()
         if fence is not None:
-            if stripped.startswith(fence):
+            fence_character, minimum_length = fence
+            if re.fullmatch(
+                rf"{re.escape(fence_character)}{{{minimum_length},}}[ \t]*",
+                stripped,
+            ):
                 fence = None
             continue
         fence_match = ISSUE_FORM_FENCE_PATTERN.match(line)
         if fence_match is not None:
-            fence = fence_match.group("fence")
+            delimiter = fence_match.group("fence")
+            fence = (delimiter[0], len(delimiter))
             continue
         heading_match = ISSUE_FORM_HEADING_PATTERN.match(line)
         if heading_match is not None:
@@ -901,7 +913,7 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
         if active_heading is not None:
             active_lines.append(line)
     flush()
-    return tuple(dict.fromkeys(components))
+    return tuple(dict.fromkeys(components))[:ISSUE_FORM_COMPONENT_LIMIT]
 
 
 def _path_matches_structured_component(

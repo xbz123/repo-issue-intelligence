@@ -247,9 +247,13 @@ def test_extract_issue_signals_reads_bounded_issue_form_components() -> None:
         "### Component Name\n\n"
         "- [x] Tree Renderer\n"
         "- [ ] Ignored Backend\n\n"
+        "### Integration\n\n"
+        "- postgres\n"
+        "- redis\n\n"
         "### Module\n\n"
         "_No response_\n\n"
         "```markdown\n"
+        "```python\n"
         "### Provider\n"
         "fake-provider\n"
         "```\n\n"
@@ -264,7 +268,24 @@ def test_extract_issue_signals_reads_bounded_issue_form_components() -> None:
     assert signals.structured_components == (
         ("microsoft", "azure"),
         ("tree", "renderer"),
+        ("postgres",),
+        ("redis",),
     )
+
+
+def test_extract_issue_signals_caps_issue_form_components() -> None:
+    body = "\n".join(
+        f"### Provider\n\nprovider-{chr(ord('a') + index)}x\n"
+        for index in range(12)
+    )
+
+    components = extract_issue_signals(
+        issue("Many providers", body)
+    ).structured_components
+
+    assert len(components) == 8
+    assert components[0] == ("provider", "ax")
+    assert components[-1] == ("provider", "hx")
 
 
 def test_structured_issue_component_affects_only_expanded_retrieval(
