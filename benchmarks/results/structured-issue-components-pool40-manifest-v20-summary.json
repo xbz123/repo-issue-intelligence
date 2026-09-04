@@ -2,7 +2,7 @@
   "name": "structured-issue-components-pool40-manifest-v20-summary",
   "version": 1,
   "created_at": "2026-09-04T00:32:30.111754Z",
-  "source_commit": "96b46629d30476a2a486fedb392820d808f6bb11",
+  "source_commit": "8892e649ecbe63e6921835769c3ec314186ad3d7",
   "full_audit_source_commit": "a17ffc32f39772b71c4b8710c43e817a00966ee7",
   "manifest_version": 20,
   "repository_map_index_version": 25,
@@ -96,7 +96,7 @@
     "metrics_match_index_v25": true
   },
   "final_scope_validation": {
-    "source_commit": "96b46629d30476a2a486fedb392820d808f6bb11",
+    "source_commit": "8892e649ecbe63e6921835769c3ec314186ad3d7",
     "affected_cases_replayed": 5,
     "expected_target_coverage_changed_from_full_audit": false,
     "newly_missing_targets": []
