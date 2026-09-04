@@ -63,6 +63,16 @@ targets and leaves 21 misses, recovering nine prior misses without adding a new 
 broader audit was rejected after high-cardinality dotted identifiers and cross-language filename
 stems displaced three targets; those paths were removed or restricted before the accepted rerun.
 
+The v0.37 retrieval-only follow-up recognizes at most eight bounded GitHub Issue Form
+component/provider values outside CommonMark fenced code, retains ordinary Markdown bullets and
+checked task-list items as separate values, and rejects empty placeholders, values longer than four
+terms, and component scopes matching more than 100 files. Only five frozen Issues supply an accepted
+value. The 200-case pool audit recovered
+`providers/keycloak/src/airflow/providers/keycloak/auth_manager/cli/commands.py` from rank 67 to
+merged-pool rank 38 and added no miss, raising coverage to 247/267. A separate deterministic replay completed
+200/200 with 200 cache hits and exactly preserved all file and symbol metrics. See the compact
+[`structured component summary`](../benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json).
+
 The table below preserves the audited three-run index-v19 baseline. The one-run index-v20 through
 index-v25 validation results are reported above and are not averaged into these historical tier
 values.
@@ -445,9 +455,9 @@ cache hits and 189 misses. A prior index-v24 run was rejected after exposing a J
 regression; separating same-class receiver calls from the legacy direct-caller vote restored the
 target in a four-case check before this final full run. No third run was required.
 
-The current v0.35/index-v25 audit reproduces 246/267 reviewed production targets inside the
-deterministic Top-40 pool and records all 21 misses: nine Python, six Rust, five TypeScript, and one
-C++ target. Two misses rank 41-60 in the diagnostic wide run, five rank 61-100, four rank 101-200,
+The current v0.37/index-v25 audit reproduces 247/267 reviewed production targets inside the
+deterministic Top-40 pool and records all 20 misses: eight Python, six Rust, five TypeScript, and one
+C++ target. Two misses rank 41-60 in the diagnostic wide run, four rank 61-100, four rank 101-200,
 and ten rank beyond 200. The wide rank is diagnostic and does not alter production selection.
 
 ## Index-v25 Luna Fast hybrid result
@@ -482,7 +492,7 @@ by the reviewed fix mechanism. This is a small, non-independent slice without in
 - Forty-seven of 200 cases have multi-file production ground truth. The original 30% aspiration was
   infeasible after manual review rejected or narrowed incomplete automatic multi-file records.
 - Deterministic File Recall@20 is `0.8732`; 43 reviewed targets remain outside its Top-20. The
-  current Top-40 pool misses 21 targets. The retained historical DeepSeek final Top-20 misses 38,
+  current Top-40 pool misses 20 targets. The retained historical DeepSeek final Top-20 misses 38,
   39, and 38 targets across its three index-v14 runs and has not been rerun on index v25.
 - Symbol Recall@20 is `0.4994`, so within-file localization remains a major bottleneck. The frozen
   manifest has no same-file multi-symbol ground-truth pair even though the schema now supports it.
