@@ -101,9 +101,12 @@ COMMAND_LINE_OPTION_PATTERN = re.compile(
 )
 COMMAND_LINE_IDENTIFIER_LIMIT = 16
 ISSUE_FORM_HEADING_PATTERN = re.compile(r"^### (?P<heading>\S.*)\s*$")
-ISSUE_FORM_FENCE_PATTERN = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
+ISSUE_FORM_FENCE_PATTERN = re.compile(
+    r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>.*)$"
+)
+ISSUE_FORM_BULLET_PATTERN = re.compile(r"^ {0,3}[-*+][ \t]+")
 ISSUE_FORM_TASK_LIST_PATTERN = re.compile(
-    r"^[-*+][ \t]+\[(?P<state>[ xX])\][ \t]+"
+    r"^ {0,3}[-*+][ \t]+\[(?P<state>[ xX])\][ \t]+"
 )
 ISSUE_FORM_COMPONENT_HEADINGS = {
     "apache airflow provider s",
@@ -844,29 +847,43 @@ def _issue_form_heading(value: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
 
 
+def _issue_form_fence_opener(line: str) -> tuple[str, int] | None:
+    match = ISSUE_FORM_FENCE_PATTERN.match(line)
+    if match is None:
+        return None
+    delimiter = match.group("fence")
+    if delimiter[0] == "`" and "`" in match.group("info"):
+        return None
+    return delimiter[0], len(delimiter)
+
+
 def _issue_form_component_candidates(lines: list[str]) -> list[str]:
-    values = [line.strip() for line in lines if line.strip()]
-    task_list_values: list[str] = []
-    has_task_list = False
-    for value in values:
-        task_list_match = ISSUE_FORM_TASK_LIST_PATTERN.match(value)
-        if task_list_match is None:
+    list_values: list[str] = []
+    plain_values: list[str] = []
+    has_list = False
+    for line in lines:
+        if not line.strip():
             continue
-        has_task_list = True
-        if task_list_match.group("state").casefold() == "x":
-            task_list_values.append(value[task_list_match.end() :].strip())
-    if has_task_list:
-        return task_list_values
-    bullet_values = [
-        re.sub(r"^[-*+]\s+", "", value).strip()
-        for value in values
-        if re.match(r"^[-*+]\s+", value)
-    ]
-    if bullet_values:
-        return bullet_values
+        indentation = line[: len(line) - len(line.lstrip(" \t"))]
+        if "\t" in indentation or len(indentation) > 3:
+            continue
+        task_list_match = ISSUE_FORM_TASK_LIST_PATTERN.match(line)
+        if task_list_match is not None:
+            has_list = True
+            if task_list_match.group("state").casefold() == "x":
+                list_values.append(line[task_list_match.end() :].strip())
+            continue
+        bullet_match = ISSUE_FORM_BULLET_PATTERN.match(line)
+        if bullet_match is not None:
+            has_list = True
+            list_values.append(line[bullet_match.end() :].strip())
+            continue
+        plain_values.append(line.strip())
+    if has_list:
+        return list_values
     return [
         candidate.strip()
-        for candidate in re.split(r"[,;]", " ".join(values))
+        for candidate in re.split(r"[,;]", " ".join(plain_values))
         if candidate.strip()
     ]
 
@@ -915,10 +932,9 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
             ):
                 fence = None
             continue
-        fence_match = ISSUE_FORM_FENCE_PATTERN.match(line)
-        if fence_match is not None:
-            delimiter = fence_match.group("fence")
-            fence = (delimiter[0], len(delimiter))
+        fence_opener = _issue_form_fence_opener(line)
+        if fence_opener is not None:
+            fence = fence_opener
             continue
         heading_match = ISSUE_FORM_HEADING_PATTERN.match(line)
         if heading_match is not None:

@@ -290,6 +290,36 @@ def test_issue_form_fence_closer_allows_at_most_three_spaces() -> None:
     )
 
 
+def test_issue_form_rejects_backticks_in_backtick_fence_info() -> None:
+    record = issue(
+        "Provider failure",
+        "```markdown`invalid\n"
+        "### Provider\n"
+        "real-provider\n"
+        "```\n",
+    )
+
+    assert extract_issue_signals(record).structured_components == (
+        ("real", "provider"),
+    )
+
+
+def test_issue_form_mixes_bullets_tasks_and_indented_code_safely() -> None:
+    record = issue(
+        "Provider failure",
+        "### Provider\n\n"
+        "    - [x] fake-provider\n"
+        "- aws\n"
+        "* [x] google\n"
+        "+ [ ] azure\n",
+    )
+
+    assert extract_issue_signals(record).structured_components == (
+        ("aws",),
+        ("google",),
+    )
+
+
 def test_extract_issue_signals_caps_issue_form_components() -> None:
     body = "\n".join(
         f"### Provider\n\nprovider-{chr(ord('a') + index)}x\n"
