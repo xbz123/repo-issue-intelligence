@@ -101,7 +101,10 @@ COMMAND_LINE_OPTION_PATTERN = re.compile(
 )
 COMMAND_LINE_IDENTIFIER_LIMIT = 16
 ISSUE_FORM_HEADING_PATTERN = re.compile(r"^### (?P<heading>\S.*)\s*$")
-ISSUE_FORM_FENCE_PATTERN = re.compile(r"^[ \t]*(?P<fence>`{3,}|~{3,})")
+ISSUE_FORM_FENCE_PATTERN = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
+ISSUE_FORM_TASK_LIST_PATTERN = re.compile(
+    r"^[-*+][ \t]+\[(?P<state>[ xX])\][ \t]+"
+)
 ISSUE_FORM_COMPONENT_HEADINGS = {
     "apache airflow provider s",
     "component",
@@ -843,13 +846,17 @@ def _issue_form_heading(value: str) -> str:
 
 def _issue_form_component_candidates(lines: list[str]) -> list[str]:
     values = [line.strip() for line in lines if line.strip()]
-    checkbox_values = [
-        re.sub(r"^- \[[xX]\]\s*", "", value).strip()
-        for value in values
-        if re.match(r"^- \[[xX]\]\s*", value)
-    ]
-    if any(re.match(r"^- \[[ xX]\]\s*", value) for value in values):
-        return checkbox_values
+    task_list_values: list[str] = []
+    has_task_list = False
+    for value in values:
+        task_list_match = ISSUE_FORM_TASK_LIST_PATTERN.match(value)
+        if task_list_match is None:
+            continue
+        has_task_list = True
+        if task_list_match.group("state").casefold() == "x":
+            task_list_values.append(value[task_list_match.end() :].strip())
+    if has_task_list:
+        return task_list_values
     bullet_values = [
         re.sub(r"^[-*+]\s+", "", value).strip()
         for value in values
@@ -899,12 +906,12 @@ def _extract_issue_form_components(body: str) -> tuple[tuple[str, ...], ...]:
                 break
 
     for line in body.splitlines():
-        stripped = line.lstrip()
         if fence is not None:
             fence_character, minimum_length = fence
             if re.fullmatch(
-                rf"{re.escape(fence_character)}{{{minimum_length},}}[ \t]*",
-                stripped,
+                rf" {{0,3}}{re.escape(fence_character)}"
+                rf"{{{minimum_length},}}[ \t]*",
+                line,
             ):
                 fence = None
             continue

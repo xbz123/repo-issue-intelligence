@@ -245,8 +245,8 @@ def test_extract_issue_signals_reads_bounded_issue_form_components() -> None:
         "### Apache Airflow Provider(s)\n\n"
         "microsoft-azure\n\n"
         "### Component Name\n\n"
-        "- [x] Tree Renderer\n"
-        "- [ ] Ignored Backend\n\n"
+        "* [x] Tree Renderer\n"
+        "+ [ ] Ignored Backend\n\n"
         "### Integration\n\n"
         "- postgres\n"
         "- redis\n\n"
@@ -270,6 +270,23 @@ def test_extract_issue_signals_reads_bounded_issue_form_components() -> None:
         ("tree", "renderer"),
         ("postgres",),
         ("redis",),
+    )
+
+
+def test_issue_form_fence_closer_allows_at_most_three_spaces() -> None:
+    record = issue(
+        "Provider failure",
+        "```markdown\n"
+        "    ```\n"
+        "### Provider\n"
+        "fake-provider\n"
+        "```\n"
+        "### Provider\n"
+        "real-provider\n",
+    )
+
+    assert extract_issue_signals(record).structured_components == (
+        ("real", "provider"),
     )
 
 
