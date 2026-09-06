@@ -1,8 +1,9 @@
 # Investigation Protocol v2 RFC
 
-状态：T0 契约基线（`verified`；已完成本地验证与独立审查；V2 尚未实现）
+状态：T0 契约基线（`verified`；已完成本地验证与独立审查并于 PR60 合并）
+；PR1A（1A.1–1A.8）本地测试已通过、Luna 独立审查无阻塞；V2 尚未默认启用
 
-日期：2026-09-05
+日期：2026-09-06
 
 适用计划：[Protocol v2 R5 完整计划](../repo_issue_intelligence_protocol_v2_execution_plan_r5.md)
 
@@ -10,9 +11,9 @@
 它是实现 PR 的契约入口，不是对 R5 计划的逐段复制，也不表示源码、数据库迁移或
 V2 命令已经存在。除非另有说明，`MUST`/“必须”表示实现和测试的硬约束。
 
-T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。验证对象为
-`codex/protocol-v2-t0` 分支上的 base `905f90a` 加当前 T0 未提交改动，而不是仅测试
-原始 base commit；PR1A–PR8、G0、G1 仍为 `planned`。
+T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T0 已随 PR60
+于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 的本地验证
+记录同见验收文档，PR1B–PR8、G0、G1 仍为 `planned`。
 
 ## 1. 范围与发布边界
 
@@ -39,6 +40,20 @@ G0 是专用数据库上的前台 opt-in CLI 门，G1 才允许默认切换到 V
 | `LLMAttempt` | 一次模型调用的 request、唯一 state、analysis/error/reported/local | 一次插入、一次终结、终态不可变；不另建 Result 表 |
 | `ReviewRecord` | principal、幂等 key、目标引用、decision/correction 和返回结果 | 只追加；更正追加新记录 |
 | `Trace` | 小型诊断摘要和引用 | 不保存完整 map、源码或第二份 outcome |
+
+PR1A 的 `capture_requested_run_configuration(...)` 只接受安全的 requested/default/omitted
+值：CLI flags 的每个 token 及其独立 value 都经过共享 URL userinfo/query/fragment 检查，
+普通非 URL label 不按字符串内容猜测凭据；`retry_policy` 是封闭行为结构，只支持
+`backoff` 数字序列、受支持的 `categories` 字符串序列和正整数 `max_attempts`。这些约束
+同时适用于 request parameters、client defaults、mapping budgets 和 direct
+`BudgetConfiguration`，不读取或保存凭据值。
+
+Repository capture 同路径同时出现 tracked 与 untracked status 时以 tracked 状态为权威；
+staged deletion 保持为 removed manifest，不读取同路径 untracked 内容。Remote identity
+规范化对 host 与 path 使用 bounded percent-decode，所有 scheme 及 SCP-like SSH 形式的
+多层 query/fragment/userinfo 和 malformed URL 均 fail-closed，不回显原始 remote。
+Rename source 在同 scope 或跨 scope 被重建为 untracked 时仍从 tracked manifest 排除，
+untracked 事实只保留在独立审计字段。
 
 `IssueExecution` 的 `llm_state`、attempt 次数、当前分析和 run 聚合状态均为读取时
 投影，不是独立可写状态。`selected_analysis_attempt_id` 只引用同一 Issue 的成功
@@ -413,8 +428,10 @@ lower-snake-case IDs 作为括号别名保留，不要求重命名 fixture。实
 | `T0-F12` | scope 内 LFS/gitlink/submodule/conflict/filter/symlink 明确拒绝 | A08、A41 |
 | `T0-F13` | source 继续 V1 writable，destination create-only，无双写，默认仅 G1 切换 | A01、A33–A35、A42、A45 |
 
-每个实现 PR 的测试、状态和限制以计划为准；本 RFC 的 T0 状态已在本地验证和独立审查
-完成后标为 `verified`，但不能据此标为 `merged` 或宣称 V2 已实现。
+每个实现 PR 的测试、状态和限制以计划为准；本 RFC 的 T0 已在本地验证和独立审查完成后
+标为 `verified` 并由 PR60 合并；PR1A 最新本地 focused `54 passed`、全量 `473 passed`
+（1 warning），Luna 独立审查已通过且无阻塞，但不能
+据此标为 `merged` 或宣称 V2 已实现。
 
 ## 13. 参考与非目标
 

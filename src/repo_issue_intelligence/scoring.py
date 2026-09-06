@@ -56,10 +56,36 @@ def _urgency(issue: IssueRecord) -> tuple[Urgency, float, list[str]]:
     return Urgency.MEDIUM, 0.5, ["No explicit deadline or workaround was detected"]
 
 
+def _aware_as_of(value: datetime | None, *, name: str) -> datetime:
+    if value is None:
+        return datetime.now(UTC)
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{name} must be timezone-aware")
+    return value.astimezone(UTC)
+
+
+def normalize_as_of(value: datetime | None = None) -> datetime:
+    """Return one timezone-aware UTC timestamp for a ranking operation."""
+
+    return _aware_as_of(value, name="as_of")
+
+
 def score_issue(
-    issue: IssueRecord, duplicate_count: int = 0, now: datetime | None = None
+    issue: IssueRecord,
+    duplicate_count: int = 0,
+    now: datetime | None = None,
+    *,
+    as_of: datetime | None = None,
 ) -> PriorityResult:
-    now = now or datetime.now(UTC)
+    """Score one Issue at a caller-supplied immutable observation time.
+
+    ``now`` remains a backwards-compatible alias for the V1 callers.  V2
+    callers should pass ``as_of`` and use one value for the whole ranking.
+    """
+
+    if now is not None and as_of is not None:
+        raise ValueError("pass either now or as_of, not both")
+    as_of = _aware_as_of(as_of if as_of is not None else now, name="as_of")
     severity, severity_score, reasons = _severity(issue)
     urgency, urgency_score, urgency_reasons = _urgency(issue)
     reasons.extend(urgency_reasons)
@@ -69,7 +95,7 @@ def score_issue(
     reproducibility = 0.8 if _contains_any(issue.text, REPRO_TERMS) else 0.2
     duplicate_factor = min(1.0, math.log2(duplicate_count + 1) / 4) if duplicate_count else 0.0
     release_blocking = 1.0 if _contains_any(issue.text, RELEASE_TERMS) else 0.0
-    age_days = max(0.0, (now - issue.updated_at).total_seconds() / 86400)
+    age_days = max(0.0, (as_of - issue.updated_at.astimezone(UTC)).total_seconds() / 86400)
     recency = math.exp(-age_days / 30)
     factors = ScoreFactors(
         severity=severity_score,
