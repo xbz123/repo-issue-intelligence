@@ -459,10 +459,13 @@ See `docs/architecture.md` for system boundaries and
 The current proposed Protocol v2 design is the
 [R5 execution plan](docs/repo_issue_intelligence_protocol_v2_execution_plan_r5.md), with progress
 tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md).
-R5 supersedes earlier planning drafts; its tasks remain planned and do not describe implemented
-features. T0, the opt-in CLI gate G0, and the default-path release gate G1 still require acceptance.
-The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md) records the
-documentation checks and the implementation boundaries to specify in T0.
+The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-protocol-v2.md),
+and its executable baseline plus future-gate boundary is recorded in
+[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). As of 2026-09-05, T0's
+documentation, fixture, and characterization baseline are `verified` by local validation and
+independent review. PR1A–PR8, G0, and G1 remain `planned`; the default path remains V1 until G1,
+and T0 verification does not claim that V2 is implemented. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
+records the documentation checks and implementation boundaries.
 
 ## Evaluation
 

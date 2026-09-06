@@ -1,6 +1,6 @@
 # Protocol v2 R5 任务索引
 
-功能、实施与验收仅定义在 [完整计划](repo_issue_intelligence_protocol_v2_execution_plan_r5.md)。本文件不复制详细文本；dependency 一列链接所属工作包的前置约定，status 是执行状态记录。所有任务初始为 `planned`，文档修订不代表任务已实现。
+功能、实施与验收仅定义在 [完整计划](repo_issue_intelligence_protocol_v2_execution_plan_r5.md)。本文件不复制详细文本；dependency 一列链接所属工作包的前置约定，status 是执行状态记录。除 T0 行明确标记外，任务初始为 `planned`；文档修订不代表任务已实现。
 
 共 153 个任务：第一阶段 122，第二阶段 31。F1.1 沿用原编号，归属第一阶段 PR8。状态可用 planned / in_progress / blocked / verified / merged。
 
@@ -8,13 +8,17 @@
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| T0.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-1) |
-| T0.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-2) |
-| T0.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-3) |
-| T0.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-4) |
-| T0.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-5) |
-| T0.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-6) |
-| T0.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-7) |
+| T0.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-1) |
+| T0.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-2) |
+| T0.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-3) |
+| T0.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-4) |
+| T0.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-5) |
+| T0.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-6) |
+| T0.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#t0) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-t0-7) |
+
+T0.1–T0.7 已于 2026-09-05 完成本地验证并经独立审查，详见
+[T0 验收记录](protocol-v2-acceptance.md)。该状态只覆盖 T0 契约、fixture 和 V1
+characterization baseline；PR1A–PR8、G0、G1 仍为 `planned`，不表示 V2 已实现或已合并。
 
 ## PR1A
 

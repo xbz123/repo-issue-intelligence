@@ -1,0 +1,123 @@
+{
+  "baseline_commit": "905f90a0d6adc8112a6b5774a1304a2e2bbff52e",
+  "schema_version": 1,
+  "source_environment": {
+    "python": "3.11",
+    "package_metadata_version": "0.5.0",
+    "module_version": "0.2.0",
+    "repository_map_index_version": 25
+  },
+  "fixture": {
+    "database": "legacy_agent.sqlite3",
+    "generator": "generate_legacy_fixture.py",
+    "user_version": 0,
+    "legacy_tables": [
+      "agent_runs",
+      "agent_snapshots",
+      "agent_traces"
+    ],
+    "row_counts": {
+      "agent_runs": 4,
+      "agent_traces": 20,
+      "agent_snapshots": 4
+    },
+    "run_statuses": {
+      "approved": 1,
+      "awaiting_review": 1,
+      "failed": 1,
+      "rejected": 1
+    }
+  },
+  "scenarios": [
+    {
+      "id": "t0_5_legacy_schema0_fixture",
+      "kind": "legacy_database",
+      "v1_observed": {
+        "user_version": 0,
+        "readable_by_legacy_agent_store": true,
+        "repository_root": "synthetic-repository",
+        "no_private_path_or_credential": true
+      },
+      "v2_expected": {
+        "detect_as_legacy_without_implicit_migration": true,
+        "preserve_source_database": true
+      }
+    },
+    {
+      "id": "t0_6_clean_tracked",
+      "kind": "repository_map",
+      "input": "clean tracked examples/demo_repository",
+      "v1_observed": {
+        "source_files": ["auth_service.py"],
+        "runtime_files": ["pyproject.toml"]
+      },
+      "v2_expected": {
+        "tracked_only_source_files": ["auth_service.py"]
+      }
+    },
+    {
+      "id": "t0_6_official_demo",
+      "kind": "repository_scope",
+      "input": "examples/demo_repository",
+      "v1_observed": {
+        "source_files": ["auth_service.py"],
+        "candidate_file": "auth_service.py",
+        "candidate_symbol": "validate_refresh_token"
+      },
+      "v2_expected": {
+        "analysis_scope": "examples/demo_repository",
+        "do_not_expand_to_repository_root": true
+      }
+    },
+    {
+      "id": "t0_6_untracked_decoy",
+      "kind": "repository_map",
+      "input": "synthetic working-tree copy with untracked_noise.py",
+      "v1_observed": {
+        "source_files": ["auth_service.py", "untracked_noise.py"],
+        "untracked_decoy_indexed": true
+      },
+      "v2_expected": {
+        "tracked_only_source_files": ["auth_service.py"],
+        "untracked_decoy_indexed": false
+      }
+    },
+    {
+      "id": "t0_6_e7_primary",
+      "kind": "evidence_contract",
+      "input": {
+        "evidence_ids": ["E1", "E2", "E3", "E4", "E5", "E6", "E7"],
+        "provider_hypothesis_evidence_ids": ["E7"]
+      },
+      "v1_observed": {
+        "reranked_evidence_ids": ["E1", "E2", "E3", "E4", "E5", "E6", "E7"],
+        "affected_component": "candidate-1.py::symbol_1",
+        "validation_step_component": "candidate-7.py::symbol_7"
+      },
+      "v2_expected": {
+        "primary_evidence_id": "E7",
+        "affected_component": "candidate-7.py::symbol_7",
+        "provider_schema_adds_no_primary_field": true
+      }
+    },
+    {
+      "id": "t0_6_multi_issue_provider_failure",
+      "kind": "multi_issue_provider_failure",
+      "input": {
+        "issue_ids": ["A", "B", "C"],
+        "failing_issue": "B"
+      },
+      "v1_observed": {
+        "run_status": "failed",
+        "provider_calls": ["A", "B"],
+        "issue_C_called": false,
+        "issue_results_persisted": false
+      },
+      "v2_expected": {
+        "issue_B_failure_isolated": true,
+        "issue_C_still_processed": true,
+        "deterministic_results_remain_reviewable": true
+      }
+    }
+  ]
+}
