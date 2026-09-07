@@ -76,6 +76,64 @@ review/协调记录中登记。
 包括 A/B/C 场景的部分 `v1_observed` 字段尚未逐项断言；未来实现 PR 仍须补齐对应
 acceptance。
 
+<a id="pr2a-local-validation"></a>
+### PR2A 本地实现验证记录（2026-09-07，`verified`，尚未合并）
+
+PR2A 仅新增独立 migration 模块和 focused tests；没有修改 `AgentStore._initialize`、CLI/API、
+默认 V1 路径或任何用户数据库。`inspect_agent_database` 只读区分 empty/legacy0/knownv2/
+unknown/corrupt；`backup_agent_database` 使用 SQLite backup、只读 source 与原子 create-only
+发布，拒绝已有目标、symlink、缺失 source，并保留 WAL 中已提交数据而不复制 source sidecar。
+V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护；legacy-copy 保留旧三表及原 payload，
+不把旧 JSON 转成 V2 attempt。故障点覆盖 DDL/index/version/commit，均在 commit 前校验并完整回滚。
+独立有界复核已通过且无阻塞项；PR2A 状态为 `verified`，但尚未合并，不切换默认 V2。
+
+| 范围 | 命令 | 结果 |
+|---|---|---|
+| PR2A focused | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_agent_store_migrations.py` | 退出码 0，10 passed；原始日志已保存 |
+| 全量 pytest（最新 guard 后） | `PYTHONPATH=src .venv/bin/python -m pytest -q` | 退出码 0，520 passed，1 warning；原始日志已保存 |
+| Ruff | `.venv/bin/ruff check . --no-cache` | 退出码 0，`All checks passed!`；原始日志已保存 |
+| Ruff format（新增文件） | `.venv/bin/ruff format --check src/repo_issue_intelligence/agent_store_migrations.py tests/test_agent_store_migrations.py` | 退出码 0，2 files already formatted；原始日志已保存 |
+| compileall | `PYTHONPYCACHEPREFIX=<tmp>/pycache .venv/bin/python -m compileall -q src tests` | 退出码 0；原始日志已保存 |
+| diff check | `git diff --check` | 退出码 0 |
+
+该记录不表示迁移已公开为 CLI/API、默认 V2 已切换或用户数据库已迁移；PR2A 尚未合并。
+
+#### PR2A 四项失效路径补充（2026-09-07，基线 `b11a812`）
+
+本轮仅补 migration 内核的既有契约，不改变 R5 范围或提前实现 PR7B 服务：
+
+- 2A.4/A46：INSERT 冲突保护覆盖七表的主键、非主键唯一约束及显式 rowid；
+  在 recursive_triggers 开/关和重新连接后，REPLACE 均不能覆盖已有记录或重新打开终态。
+  UPDATE 的 rowid 也不可变，防止 UPDATE OR REPLACE 隐式删除另一记录。
+- §3.7：初始 review_version 必须为零，只随追加 review 递增；回退、无 review 跳增、
+  旧基线审查均被拒绝，review 和版本更新同事务回滚。完整审查服务验收仍归 PR7B。
+- 2A.1/2A.5：接受 ANALYZE 创建的标准 sqlite_stat1/sqlite_stat4；只允许已知结构，
+  畸形统计表及额外用户对象仍拒绝，不泛化放行 sqlite 前缀。
+- 2A.2：备份连接前后及发布前检查 source 的设备号、inode 和 ctime；路径替换、
+  symlink 替换以及替换后恢复原 inode 均有失败测试，拒绝时不发布目标并清理临时文件。
+  打开 canonical source URI 后先开启只读事务固定 SQLite 快照，再检查词法和解析后
+  路径的全部父目录身份；覆盖父目录替换恢复及 symlink 隐藏祖先的同类竞态。
+  原路径及 canonical 路径均与首次 source 身份比较，覆盖 resolve 期间 symlink 改指后恢复。
+
+本地证据：REPLACE 初始 12 项失败；ANALYZE 初始 3 项失败；源身份替换初始 6 项失败，
+补充的替换后恢复场景初始 2 项失败；review_version 回归测试先失败后通过。
+首轮 focused 为 50 passed，本地全量为 558 passed；随后 `a4f07f6` 的 Python 3.11/3.12
+CI 各为 560 passed、1 条既有 Starlette 弃用警告。独立 Astra Spec 审查又复现了
+UPDATE OR REPLACE 及父目录替换恢复两条同类遗漏，均已补回归测试和最小修复。
+修订后 focused 为 61 passed，涵盖 WAL 缺失 shm 时拒绝后稳定重试；本地全量重验
+571 passed、1 条既有警告，Ruff、format、compileall 和 diff 检查通过。
+`9451eb1` 的双版本 CI 各 571 passed。最终复核另发现 canonical 路径未绑定初始身份的
+竞态；新增测试先失败，修复后 focused 为 62 passed，静态检查仍通过。最终 CI 与独立
+复核以 PR 最新提交为准，不把前一提交的验证结果当作后续修复的完整证据。
+
+边界：这些 guard 改变尚未冻结的 V2 schema；旧 PR2A 临时 V2 库会被严格识别为不匹配，
+不会自动原地修补。正常 WAL-only 提交仍可备份；备份期间主文件写入/checkpoint 或元数据
+变化会保守拒绝，需要在稳定窗口重试。打开快照时祖先目录发生无关变化也会保守拒绝。
+WAL 缺失共享内存索引时，SQLite 首次只读访问可创建 -shm，此时拒绝发布并允许在稳定后
+重试；测试确认源 db/WAL 内容不变，重试保留已提交 WAL 数据。
+身份检查依赖文件系统可靠的 inode/ctime，
+不是对拥有本机文件系统管理权限的攻击者的隔离边界。源库和已有目标均不覆写。
+
 <a id="pr1a-local-validation"></a>
 ### PR1A 本地验证记录（2026-09-06）
 
@@ -109,10 +167,10 @@ untracked 事实只保留在独立审计字段。
 473 passed。Luna 独立审查已通过且无阻塞；是否合并另以 PR 状态为准。这不表示 PR1B 物化、数据库/API、
 默认 V2、真实 provider 或 benchmark 已交付。
 
-### PR1B 本地实现记录（2026-09-07，`verified`，尚未合并）
+### PR1B 本地实现记录（2026-09-07，`merged`，`d83f051`）
 
-PR1B 的源码边界已实现，独立有界复核已通过且无阻塞项，但尚未合并或切换默认入口；R5
-checklist 标记为 `verified`，不将其写成 `merged`。PR1A 已随 `d386dc8` 合并。
+PR1B 的源码边界已实现，独立有界复核已通过且无阻塞项，并已随 `d83f051` 合并；仍未切换
+默认入口。PR1A 已随 `d386dc8` 合并。
 `repository_view.py` 提供显式的
 `prepare_repository_view(snapshot)`：committed 模式用 captured revision 的 raw blob
 物化运行专属临时根，tracked_worktree 模式只复制当前 tracked 常规文件并让删除路径在
@@ -216,8 +274,8 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 ## 6. T0 当前结论
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
-文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 已合并，
-PR1B 已完成本地门禁与独立有界复核，状态为 `verified` 但尚未合并，是否合并另以 PR 状态为准。
-PR2A–PR8、G0、G1 仍为 `planned`，
+文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 和 PR1B 已合并，
+其中 PR1B 合并提交为 `d83f051`。PR2A 已完成本地门禁与独立有界复核，状态为 `verified`
+但尚未合并；PR3–PR8、G0、G1 仍为 `planned`，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。
