@@ -517,8 +517,10 @@ def test_fenced_non_call_qualified_unicode_identifier_is_explicit(
     assert candidates[0].qualified_symbol == "对象.处理"
 
 
-def test_extract_issue_signals_records_exact_source_line_references() -> None:
-    revision = "a" * 40
+@pytest.mark.parametrize("revision", ["a" * 40, "b" * 64])
+def test_extract_issue_signals_records_exact_source_line_references(
+    revision: str,
+) -> None:
     record = issue(
         "Source regression",
         f"See https://github.com/acme/repo/blob/{revision}/"

@@ -109,6 +109,42 @@ untracked 事实只保留在独立审计字段。
 473 passed。Luna 独立审查已通过且无阻塞；是否合并另以 PR 状态为准。这不表示 PR1B 物化、数据库/API、
 默认 V2、真实 provider 或 benchmark 已交付。
 
+### PR1B 本地实现记录（2026-09-07，`verified`，尚未合并）
+
+PR1B 的源码边界已实现，独立有界复核已通过且无阻塞项，但尚未合并或切换默认入口；R5
+checklist 标记为 `verified`，不将其写成 `merged`。PR1A 已随 `d386dc8` 合并。
+`repository_view.py` 提供显式的
+`prepare_repository_view(snapshot)`：committed 模式用 captured revision 的 raw blob
+物化运行专属临时根，tracked_worktree 模式只复制当前 tracked 常规文件并让删除路径在
+视图中缺席。两者均共用 captured manifest；scope 内 LFS pointer、gitlink/submodule、
+冲突、external filter，以及绝对/越界/循环/目录/untracked symlink 目标 fail closed，
+不运行 hooks、filters、smudge/textconv 或网络 fetch。view 关闭时只清理自己创建的临时根。
+
+`build_repository_map(view)` 与 `collect_evidence(..., repository_view=view)` 共用同一
+view/manifest。`run_protocol_v2_investigation(...)` 是纯内存的显式 PR1B 内部入口，只
+执行一次 map 构建和多 Issue deterministic investigation/evidence；不创建 AgentRun、
+不写 legacy Store、不调用 LLM。history/blame/source-line Git 查询显式绑定 map 的
+`git_root`、`captured_revision` 和 `analysis_prefix`；V1 `run_agent`、CLI/API 默认路径
+保持原行为。
+
+首次 `capture_repository_context` 对当前 effective Git attributes（含 info/global）批量
+检查并拒绝 external filter；committed view 另在不读取当前 overlay 的隔离 Git context
+中按 captured tree 检查 `.gitattributes`，deterministic resume 只使用这一固定来源。
+`tracked_worktree` 保留当前 attrs 语义。普通反序列化 snapshot 只有在调用方能证明其来自
+已接受的 capture 时才可作为恢复输入；当前 PR1B 不提供 Store、resume CLI 或恢复服务。
+view 还校验 canonical `git_root`、`analysis_root == git_root/analysis_prefix`、真实 Git
+关联及 manifest 路径绑定。source-line/blame 支持 SHA-1/SHA-256 的 40/64 位 OID。
+
+最终本地证据（工具输出未另存日志文件）：受影响测试 `tests/test_repository_context.py`
+与 `tests/test_repository_view.py` 为 `57 passed in 21.71s`，退出码 0；全量命令（以
+可移植命令名记录；本次在项目 venv 对应环境执行）
+`PYTEST_ADDOPTS='-p no:cacheprovider' PYTHONPATH=src python -m pytest -q` 为
+`510 passed, 1 warning in 44.79s`，退出码 0；Ruff 命令
+`PYTHONPATH=src python -m ruff check --no-cache .` 为 `All checks passed!`，退出码 0；
+compileall 退出码 0；最终 `git diff --check` 退出码 0。
+此前 `500 passed` 是 filter-triple 修复前的中间证据，不作为最终计数。该记录不表示
+G0/G1、V2 Store、resume 或真实 provider 已交付。
+
 ## 3. T0 fixture 场景与 V2 gate 映射
 
 T0 场景 ID 定义在 [RFC §12](rfcs/investigation-protocol-v2.md#12-t0-场景索引与验收入口)。
@@ -180,7 +216,8 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 ## 6. T0 当前结论
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
-文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 的本地
-测试已通过，Luna 独立审查已通过且无阻塞，是否合并另以 PR 状态为准。PR1B–PR8、G0、G1 仍为 `planned`，
+文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 已合并，
+PR1B 已完成本地门禁与独立有界复核，状态为 `verified` 但尚未合并，是否合并另以 PR 状态为准。
+PR2A–PR8、G0、G1 仍为 `planned`，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。

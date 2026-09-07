@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter, sleep
@@ -29,7 +30,9 @@ from .models import (
     PriorityResult,
     RepositoryMap,
 )
+from .protocol_v2_models import RepositorySnapshot
 from .repository_index import build_repository_map
+from .repository_view import RepositoryView, prepare_repository_view
 from .service import rank_issues
 
 
@@ -348,3 +351,69 @@ def run_agent(
     run.traces = result["traces"]
     store.save_run(run)
     return run
+
+
+@dataclass(frozen=True)
+class ProtocolV2InvestigationResult:
+    """Pure in-memory output of the explicit PR1B read/evidence boundary."""
+
+    repository_map: RepositoryMap
+    investigations: tuple[InvestigationReport, ...]
+    evidence_by_issue: dict[int, tuple[EvidenceSnippet, ...]]
+
+
+def run_protocol_v2_investigation(
+    issues: Sequence[IssueRecord],
+    snapshot: RepositorySnapshot | RepositoryView,
+    *,
+    candidate_limit: int = 20,
+    max_evidence_chars: int | None = DEFAULT_MAX_TOTAL_CHARS,
+    max_evidence_lines: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
+    max_chars_per_snippet: int | None = None,
+    deterministic_resume: bool = False,
+) -> ProtocolV2InvestigationResult:
+    """Run the explicit PR1B map/investigate/evidence path in memory.
+
+    This is deliberately not an AgentRun/Store/LLM workflow.  PR1B owns only
+    the source-view I/O boundary; later PRs will add V2 persistence and
+    execution orchestration.  A snapshot-created view is closed after all
+    reports and evidence are collected.  A caller-supplied prepared view
+    remains owned by its caller.
+    """
+
+    if not issues:
+        raise ValueError("At least one issue is required")
+    issue_numbers = [issue.number for issue in issues]
+    if len(issue_numbers) != len(set(issue_numbers)):
+        raise ValueError("Issue numbers must be unique")
+    if candidate_limit < 1:
+        raise ValueError("candidate_limit must be positive")
+
+    owned_view = not isinstance(snapshot, RepositoryView)
+    view = prepare_repository_view(snapshot, deterministic_resume=deterministic_resume)
+    try:
+        repository_map = build_repository_map(view)
+        investigations = tuple(
+            investigate(issue, repository_map, candidate_limit=candidate_limit)
+            for issue in issues
+        )
+        evidence_by_issue = {
+            report.issue.number: tuple(
+                collect_evidence(
+                    report,
+                    max_total_chars=max_evidence_chars,
+                    max_lines_per_snippet=max_evidence_lines,
+                    max_chars_per_snippet=max_chars_per_snippet,
+                    repository_view=view,
+                )
+            )
+            for report in investigations
+        }
+        return ProtocolV2InvestigationResult(
+            repository_map=repository_map,
+            investigations=investigations,
+            evidence_by_issue=evidence_by_issue,
+        )
+    finally:
+        if owned_view:
+            view.close()

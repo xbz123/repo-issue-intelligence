@@ -5,7 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class Severity(StrEnum):
@@ -150,6 +150,29 @@ class RepositoryMap(BaseModel):
     test_directories: list[str]
     runtime_files: list[str]
     files: list[FileRecord]
+    # V2 provenance is process-local metadata used by investigator history/
+    # blame boundaries.  PrivateAttrs keep V1 RepositoryMap JSON exactly
+    # shaped as before and never persist a runtime view handle or full map.
+    _git_root: str | None = PrivateAttr(default=None)
+    _analysis_prefix: str = PrivateAttr(default="")
+    _captured_revision: str | None = PrivateAttr(default=None)
+    _input_representation: str = PrivateAttr(default="worktree")
+
+    @property
+    def git_root(self) -> str | None:
+        return self._git_root
+
+    @property
+    def analysis_prefix(self) -> str:
+        return self._analysis_prefix
+
+    @property
+    def captured_revision(self) -> str | None:
+        return self._captured_revision
+
+    @property
+    def input_representation(self) -> str:
+        return self._input_representation
 
 
 class CandidateSymbolLocation(BaseModel):

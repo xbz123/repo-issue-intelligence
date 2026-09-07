@@ -1719,11 +1719,19 @@ def build_repository_map(
     root: Path,
     included_files: Iterable[str] | None = None,
 ) -> RepositoryMap:
-    root = root.expanduser().resolve()
+    # ``RepositoryView`` is intentionally duck-typed here to keep the V1
+    # indexer independent from the Protocol v2 lifecycle module.  A view
+    # supplies one materialized root plus provenance; a normal Path retains
+    # the established checkout walk and output shape.
+    repository_view = root if hasattr(root, "materialized_root") else None
+    view_root = getattr(repository_view, "materialized_root", None)
+    root = Path(view_root if view_root is not None else root).expanduser().resolve()
     if not root.exists():
         raise ValueError(f"Repository path does not exist: {root}")
     if not root.is_dir():
         raise ValueError(f"Repository path must be a directory: {root}")
+    if repository_view is not None and included_files is None:
+        included_files = getattr(repository_view, "files", ())
     files: list[FileRecord] = []
     languages: Counter[str] = Counter()
     frameworks: set[str] = set()
@@ -1783,7 +1791,7 @@ def build_repository_map(
         pending_references,
         module_import_bindings,
     )
-    return RepositoryMap(
+    repository_map = RepositoryMap(
         root=str(root),
         languages=dict(languages.most_common()),
         frameworks=sorted(frameworks),
@@ -1792,6 +1800,16 @@ def build_repository_map(
         runtime_files=sorted(runtime_files),
         files=sorted(files, key=lambda file: file.path),
     )
+    if repository_view is not None:
+        repository_map._git_root = (
+            str(repository_view.git_root)
+            if repository_view.git_root is not None
+            else None
+        )
+        repository_map._analysis_prefix = str(repository_view.analysis_prefix)
+        repository_map._captured_revision = repository_view.captured_revision
+        repository_map._input_representation = str(repository_view.representation)
+    return repository_map
 
 
 def save_repository_map(repository_map: RepositoryMap, output: Path) -> None:

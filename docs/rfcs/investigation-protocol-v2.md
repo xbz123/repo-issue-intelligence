@@ -1,7 +1,9 @@
 # Investigation Protocol v2 RFC
 
-状态：T0 契约基线（`verified`；已完成本地验证与独立审查并于 PR60 合并）
-；PR1A（1A.1–1A.8）本地测试已通过、Luna 独立审查无阻塞；V2 尚未默认启用
+状态：T0 契约基线（`verified`；已完成本地验证与独立审查并于 PR60 合并）；
+PR1A（1A.1–1A.8）已随 `d386dc8` 合并；PR1B（1B.1–1B.8）本地门禁和独立有界复核已通过，
+状态为 `verified` 但尚未合并；
+V2 尚未默认启用
 
 日期：2026-09-06
 
@@ -12,8 +14,9 @@
 V2 命令已经存在。除非另有说明，`MUST`/“必须”表示实现和测试的硬约束。
 
 T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T0 已随 PR60
-于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 的本地验证
-记录同见验收文档，PR1B–PR8、G0、G1 仍为 `planned`。
+于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 已于
+2026-09-06 随 `d386dc8` 合并。PR1B 的本地实现、门禁和独立有界复核记录同见验收文档；
+PR1B 尚未合并，PR2A–PR8、G0、G1 尚未完成，V2 仍未默认启用。
 
 ## 1. 范围与发布边界
 
@@ -289,11 +292,19 @@ V2 合法 run 状态为：`RUNNING`、`INTERRUPTED`、`AWAITING_REVIEW`、
 ### 8.1 committed 模式
 
 首次 committed capture 必须检查 analysis scope 内 tracked 内容 clean、无冲突且
-输入类型受支持，然后绑定 captured commit 的 tree。`git_root` 的范围外 dirty 和
-untracked 事实单独记录；untracked decoy 不进入 manifest。LFS pointer、gitlink/
-submodule、未解决 index 冲突、需要外部 filter 的 scope 内输入、越界/循环/目录 symlink
-均明确拒绝。视图按 raw blob 物化，不执行 hooks、smudge/textconv、安装脚本或网络
-fetch。
+输入类型受支持，然后绑定 captured commit 的 tree；捕获时还必须批量检查当前 effective
+Git attributes（包括 info/global 来源），遇到 scope 内 external filter 即拒绝。`git_root`
+的范围外 dirty 和 untracked 事实单独记录；untracked decoy 不进入 manifest。LFS pointer、
+gitlink/submodule、未解决 index 冲突、需要外部 filter 的 scope 内输入、越界/循环/目录
+symlink 均明确拒绝。视图按 captured tree 的 raw blob 物化，不执行 hooks、smudge/textconv、
+安装脚本或网络 fetch。
+
+committed view 的 attribute context 固定在 captured tree，并与当前 mutable overlay 隔离；
+因此不会在视图或 deterministic resume 中重新读取当前 checkout 的 `.gitattributes`、info/
+global attributes 或其他后续 overlay。captured filter 即使被后续 `-filter` 覆盖也不能绕过
+首次 capture 的拒绝。普通反序列化得到的 snapshot 只有在上层能证明它来自已接受的 capture
+时才可用于恢复；裸 snapshot 不能自行证明 provenance。当前 PR1B 尚未提供 Store、resume
+CLI 或恢复服务。
 
 首次捕获一旦成功，resume 的身份依据是保存的 commit、analysis prefix、representation
 和 manifest；它从原 commit 重建运行视图和一次 map。resume **不得**用当前 checkout
@@ -429,9 +440,11 @@ lower-snake-case IDs 作为括号别名保留，不要求重命名 fixture。实
 | `T0-F13` | source 继续 V1 writable，destination create-only，无双写，默认仅 G1 切换 | A01、A33–A35、A42、A45 |
 
 每个实现 PR 的测试、状态和限制以计划为准；本 RFC 的 T0 已在本地验证和独立审查完成后
-标为 `verified` 并由 PR60 合并；PR1A 最新本地 focused `54 passed`、全量 `473 passed`
-（1 warning），Luna 独立审查已通过且无阻塞，但不能
-据此标为 `merged` 或宣称 V2 已实现。
+标为 `verified` 并由 PR60 合并；PR1A（1A.1–1A.8）已随 `d386dc8` 合并。PR1B
+（1B.1–1B.8）当前受影响测试 `57 passed`、全量 `510 passed`（1 warning），Ruff、
+compileall 和 `git diff --check` 均通过；独立有界复核已通过，PR1B 状态为 `verified` 但
+尚未合并，因此不能宣称 V2、Store、resume、默认入口或真实 provider 已实现。此前全量
+`500 passed` 是 filter-triple 修复前的中间证据，不作为最终计数。
 
 ## 13. 参考与非目标
 

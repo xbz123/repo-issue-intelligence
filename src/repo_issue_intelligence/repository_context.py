@@ -75,7 +75,11 @@ def _run_git(
             ["git", "-C", str(git_root), *args],
             check=False,
             capture_output=True,
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            env={
+                **os.environ,
+                "GIT_OPTIONAL_LOCKS": "0",
+                "GIT_NO_LAZY_FETCH": "1",
+            },
         )
     except OSError as error:
         raise RepositoryContextError(
@@ -92,6 +96,66 @@ def _run_git(
 
 def _run_git_text(git_root: Path, args: Sequence[str], *, check: bool = True) -> str:
     return _decode_git(_run_git(git_root, args, check=check), context=args[0])
+
+
+def _current_external_filter_paths(
+    git_root: Path,
+    git_paths: Sequence[str],
+) -> tuple[str, ...]:
+    """Read current attributes once, including local/info/global overlays."""
+
+    if not git_paths:
+        return ()
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(git_root),
+                "check-attr",
+                "-z",
+                "--stdin",
+                "--all",
+            ],
+            input=b"".join(path.encode("utf-8") + b"\0" for path in git_paths),
+            check=False,
+            capture_output=True,
+            env={
+                **os.environ,
+                "GIT_OPTIONAL_LOCKS": "0",
+                "GIT_NO_LAZY_FETCH": "1",
+            },
+        )
+    except (OSError, UnicodeEncodeError) as error:
+        raise RepositoryContextError(
+            "Git attributes could not be read; capture refused",
+            code="git_attribute_read_failed",
+        ) from error
+    if completed.returncode != 0:
+        raise RepositoryContextError(
+            "Git attributes could not be read; capture refused",
+            code="git_attribute_read_failed",
+        )
+    fields = completed.stdout.split(b"\0")
+    if fields and fields[-1] == b"":
+        fields.pop()
+    if len(fields) % 3:
+        raise RepositoryContextError(
+            "Unexpected Git attribute output; capture refused",
+            code="git_attribute_format",
+        )
+    external: set[str] = set()
+    for index in range(0, len(fields), 3):
+        path = _decode_git(fields[index], context="attribute path")
+        attribute = _decode_git(fields[index + 1], context="attribute name")
+        _decode_git(fields[index + 2], context="attribute value")
+        # ``--all`` does not provide a safe discriminator for filter values:
+        # values such as ``set``, ``unset``, ``unspecified`` and ``-`` may be
+        # actual driver names.  Any returned filter triple is therefore
+        # fail-closed; ordinary paths with no filter have no filter triple.
+        if attribute == "filter":
+            external.add(path)
+    return tuple(sorted(external))
 
 
 def _resolve_analysis_root(root: Path | str) -> Path:
@@ -653,6 +717,15 @@ def capture_repository_context(
         # the tracked destination's rename record names it as original_path.
         statuses={path: status for path, status in status_by_path.items() if not status.untracked},
     )
+    external_filter_paths = _current_external_filter_paths(
+        git_root,
+        tuple(record.git_path for record in manifest),
+    )
+    if external_filter_paths:
+        raise RepositoryContextError(
+            "External Git filter input is not supported in the captured scope",
+            code="external_filter_unsupported",
+        )
     deleted_paths = tuple(sorted(set(deleted_paths) | set(manifest_deleted)))
     staged_deleted_paths = tuple(sorted(set(staged_deleted_paths) | set(manifest_staged_deleted)))
     unmerged_paths = tuple(sorted(set(unmerged_paths) | set(manifest_unmerged)))

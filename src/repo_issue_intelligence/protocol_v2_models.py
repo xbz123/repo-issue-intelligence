@@ -127,6 +127,12 @@ class RepositoryFileRecord(ProtocolV2Model):
     def is_submodule(self) -> bool:
         return self.submodule
 
+    @property
+    def blob_oid(self) -> str | None:
+        """Git object identity captured for the manifest entry."""
+
+        return self.object_id
+
 
 class RepositoryStatusEntry(ProtocolV2Model):
     """NUL-status observation, including paths absent from the current index."""
@@ -191,6 +197,12 @@ class RepositorySnapshot(ProtocolV2Model):
 
     @property
     def commit(self) -> str | None:
+        return self.commit_oid
+
+    @property
+    def captured_revision(self) -> str | None:
+        """Explicit name used by the fixed-revision source-view boundary."""
+
         return self.commit_oid
 
     @property
