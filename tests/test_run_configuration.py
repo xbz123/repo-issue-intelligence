@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -274,19 +276,73 @@ def test_cli_flags_preserve_non_url_encoded_values() -> None:
     assert configuration.safe_cli_flags == ("--label=abc%3Fdef",)
 
 
-def test_engine_runtime_uses_imported_source_revision_and_package_dirty_state() -> None:
-    runtime = capture_engine_runtime("repo_issue_intelligence")
+def test_engine_runtime_uses_imported_source_revision_and_package_dirty_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    engine_repository = tmp_path / "engine-repository"
+    package = engine_repository / "fixture_engine"
+    package.mkdir(parents=True)
+    init_file = package / "__init__.py"
+    sibling_file = package / "sibling.py"
+    init_file.write_text("from .sibling import VALUE\n", encoding="utf-8")
+    sibling_file.write_text("VALUE = 1\n", encoding="utf-8")
 
-    assert runtime.imported_module == "repo_issue_intelligence"
-    assert runtime.imported_source is not None
-    assert runtime.source_root == Path(__file__).resolve().parents[1]
-    assert len(runtime.source_revision or "") >= 7
-    assert runtime.source_provenance == "git"
-    # This checkout contains the in-progress PR1A package files, so the
-    # imported package directory is intentionally dirty.
-    assert runtime.source_dirty is True
-    assert runtime.python_implementation
-    assert runtime.runtime
+    unrelated_repository = tmp_path / "unrelated-repository"
+    unrelated_repository.mkdir()
+    (unrelated_repository / "README.md").write_text("unrelated\n", encoding="utf-8")
+
+    def run_git(repository: Path, *args: str) -> None:
+        subprocess.run(
+            ["git", "-C", str(repository), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    for repository in (engine_repository, unrelated_repository):
+        run_git(repository, "init", "-q")
+        run_git(repository, "config", "user.name", "Protocol v2 test")
+        run_git(repository, "config", "user.email", "protocol-v2-test@example.invalid")
+
+    run_git(engine_repository, "add", "fixture_engine")
+    run_git(engine_repository, "commit", "-qm", "initial fixture")
+    run_git(unrelated_repository, "add", "README.md")
+    run_git(unrelated_repository, "commit", "-qm", "initial unrelated fixture")
+    (unrelated_repository / "untracked.py").write_text("unrelated change\n", encoding="utf-8")
+
+    module_prefix = "fixture_engine"
+    previous_modules = {
+        name: module
+        for name, module in sys.modules.items()
+        if name == module_prefix or name.startswith(f"{module_prefix}.")
+    }
+    try:
+        monkeypatch.syspath_prepend(str(engine_repository))
+        monkeypatch.chdir(unrelated_repository)
+        monkeypatch.setattr(sys, "dont_write_bytecode", True)
+
+        clean_runtime = capture_engine_runtime(module_prefix)
+
+        assert clean_runtime.imported_module == module_prefix
+        assert clean_runtime.imported_source == init_file.resolve()
+        assert clean_runtime.source_root == engine_repository.resolve()
+        assert len(clean_runtime.source_revision or "") >= 7
+        assert clean_runtime.source_provenance == "git"
+        assert clean_runtime.source_dirty is False
+
+        sibling_file.write_text("VALUE = 2\n", encoding="utf-8")
+        dirty_runtime = capture_engine_runtime(module_prefix)
+
+        assert dirty_runtime.source_root == engine_repository.resolve()
+        assert dirty_runtime.source_revision == clean_runtime.source_revision
+        assert dirty_runtime.source_dirty is True
+        assert dirty_runtime.python_implementation
+        assert dirty_runtime.runtime
+    finally:
+        for name in list(sys.modules):
+            if name == module_prefix or name.startswith(f"{module_prefix}."):
+                sys.modules.pop(name)
+        sys.modules.update(previous_modules)
 
 
 def test_freeze_run_inputs_preserves_full_ranking_and_rejects_mismatched_ordinal() -> None:
