@@ -1,8 +1,8 @@
 # Protocol v2 验收基线
 
-状态：T0 文档基线（`verified`）
+状态：T0 文档基线（`verified`；T0 改动已随 PR60 合并）
 
-日期：2026-09-05
+日期：2026-09-06
 
 RFC：[investigation-protocol-v2.md](rfcs/investigation-protocol-v2.md)
 
@@ -76,6 +76,39 @@ review/协调记录中登记。
 包括 A/B/C 场景的部分 `v1_observed` 字段尚未逐项断言；未来实现 PR 仍须补齐对应
 acceptance。
 
+<a id="pr1a-local-validation"></a>
+### PR1A 本地验证记录（2026-09-06）
+
+验证在 PR1A 源码树上进行，基线为已合并的 T0 PR60
+`0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；验证时工作树/分析范围为 dirty。没有真实
+LLM、benchmark 或外部传输。
+
+| 范围 | 命令 | 结果 |
+|---|---|---|
+| URL/retry-policy/repository-context focused closeout | `.venv/bin/python -m pytest -q tests/test_repository_context.py tests/test_run_configuration.py` | 退出码 0，54 passed |
+| 全量 pytest（最终配置、remote、status 与 rename 复核后） | `.venv/bin/python -m pytest -q` | 退出码 0，473 passed，1 warning |
+| ruff | `.venv/bin/ruff check .` | 退出码 0，`All checks passed!` |
+| compileall | `PYTHONPYCACHEPREFIX=<tmp>/pycache .venv/bin/python -m compileall -q src tests` | 退出码 0 |
+| diff check | `git diff --check` | 退出码 0 |
+
+PR1A 1A.1–1A.8 的本地测试已通过：覆盖 scoped Git identity/manifest、固定 commit
+tree、rename/deleted/unmerged 边界、remote 去敏、实际导入源码 provenance、
+requested/default/omitted 与预算来源（含 direct `BudgetConfiguration` 显式 `None` 回归）、
+深冻结输入、统一 aware `as_of`，以及共享 URL 安全校验。URL 安全校验对所有 scheme
+拒绝 userinfo（含 percent-encoded userinfo、分离的 CLI option/value 及 scheme-less
+authority 形态），对多层 percent-decoded `?/#` 分隔符 fail-closed，同时保留安全
+encoded path 的原始拼写；普通非 URL CLI label 仍按既有语义保留。retry policy 仅接受
+`backoff` 数字序列、受支持的 `categories` 字符串序列和正整数 `max_attempts`，并在
+request/client-default、mapping budget 与 direct `BudgetConfiguration` 入口统一校验。
+Repository capture 对同路径 staged tracked 状态保持权威，不让 untracked 替代内容覆盖
+删除 manifest；remote 的 host/path 均进行 bounded percent-decode，HTTPS/SSH/SCP 的多层
+query、fragment、userinfo 与 `urlsplit` 异常均 fail-closed 且不回显原值。
+rename source 在同 scope 或跨 scope 被重建为 untracked 时仍从 tracked manifest 排除，
+untracked 事实只保留在独立审计字段。
+为覆盖最终配置、remote 与 status 代码复核，全量套件重新执行一次（非机械多轮），结果为
+473 passed。Luna 独立审查已通过且无阻塞；是否合并另以 PR 状态为准。这不表示 PR1B 物化、数据库/API、
+默认 V2、真实 provider 或 benchmark 已交付。
+
 ## 3. T0 fixture 场景与 V2 gate 映射
 
 T0 场景 ID 定义在 [RFC §12](rfcs/investigation-protocol-v2.md#12-t0-场景索引与验收入口)。
@@ -147,7 +180,7 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 ## 6. T0 当前结论
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
-文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`。PR1A–PR8、G0、
-G1 仍为 `planned`，默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项
-都必须继续显式列出，不得用 V1 characterization 代替；当前没有真实 LLM 调用或用户
-数据库迁移。
+文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 的本地
+测试已通过，Luna 独立审查已通过且无阻塞，是否合并另以 PR 状态为准。PR1B–PR8、G0、G1 仍为 `planned`，
+默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
+用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。
