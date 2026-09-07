@@ -4,6 +4,10 @@ This branch implements R5 4.1–4.10 and exercises the G0 vertical gate. It is n
 G1, does not switch the default protocol, and does not enable HTTP, cross-process
 resume, manual retry/recovery, per-Issue review writes, or automatic repair.
 
+Status: PR4 and G0 are **verified on the combined branch**, with
+[PR66](https://github.com/xbz123/repo-issue-intelligence/pull/66) kept as an
+unmerged draft. Verification is not a release or authorization to merge.
+
 ## Dependency boundary
 
 PR4 is stacked on `codex/protocol-v2-pr4-base` at `d55e95c`, combining the verified
@@ -122,5 +126,18 @@ Python 3.11/3.12 CI on `e4555fb` each passed 717 tests. Independent Standards
 review found no blockers. Spec review identified a reader-only enum mismatch:
 `review_state` must preserve `approved/rejected/needs_information`, not collapse
 them to `reviewed`. That correction leaves review writes out of scope; the
-expanded Store checks passed 14 tests. Final CI and Spec recheck remain pending.
-No real provider calls or user-database migration are part of this acceptance run.
+expanded Store checks passed 14 tests.
+
+Final code acceptance at `7d9a4cb`:
+
+| Gate | Result |
+|---|---|
+| Python 3.11 CI | [719 passed, 1 existing warning](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34169038405/job/101885665636) |
+| Python 3.12 CI | [719 passed, 1 existing warning](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34169038405/job/101885665482) |
+| Independent Astra Standards | No hard-standard violations, actionable smell findings or blockers; full PR4 diff plus final delta checked |
+| Independent Astra Spec | Initial P2 enum finding fixed; all three decision cases independently checked, no remaining blockers |
+| Local artifact checks | Ruff, format on new execution/evaluation files, compileall, diff whitespace, 195 JSON files and 343 Markdown targets passed |
+
+The review fixed point is `d55e95c`, not `main`; predecessor changes were not
+misrepresented as new PR4 code. No real provider calls or user-database migration
+are part of this acceptance run. PR5–PR8 and G1 remain unimplemented here.
