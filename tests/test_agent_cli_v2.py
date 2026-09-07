@@ -5,6 +5,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from repo_issue_intelligence import cli
@@ -16,9 +17,17 @@ runner = CliRunner()
 
 
 @pytest.mark.parametrize("command", ["agent-run", "agent-evaluate"])
+@pytest.mark.parametrize("color", [False, True])
 def test_v2_external_transfer_requires_current_permission_before_builder(
-    tmp_path: Path, monkeypatch, command: str
+    tmp_path: Path, monkeypatch, command: str, color: bool
 ) -> None:
+    monkeypatch.setenv("TERM", "xterm" if color else "dumb")
+    if color:
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        monkeypatch.setenv("FORCE_COLOR", "1")
+    else:
+        monkeypatch.setenv("NO_COLOR", "1")
+        monkeypatch.delenv("FORCE_COLOR", raising=False)
     calls = []
 
     def forbidden_builder(*args, **kwargs):
@@ -30,9 +39,10 @@ def test_v2_external_transfer_requires_current_permission_before_builder(
     args = [command, str(tmp_path / "input.json"), "--protocol", "v2"]
     if command == "agent-run":
         args += ["--repo", str(tmp_path), "--llm"]
-    result = runner.invoke(cli.app, args)
+    result = runner.invoke(cli.app, args, color=color)
+    assert ("\x1b[" in result.output) is color
     assert result.exit_code == 2
-    assert "--allow-external-llm" in result.output
+    assert "--allow-external-llm" in Text.from_ansi(result.output).plain
     assert calls == []
 
 

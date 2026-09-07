@@ -115,6 +115,9 @@ Local full-suite validation on 2026-09-08 completed with **714 passed**, one
 existing Starlette deprecation warning. A subsequent confirmed-CLI-failure retry
 fix added one case; the final affected HTTP/CLI retry and unknown-outcome selection
 passed **7 tests**. Ruff, compileall, diff whitespace checks and all 195 tracked
-JSON parses passed. Python 3.11/3.12 CI and independent Standards/Spec review are
+JSON parses passed. Initial CI caught two test-only assertions that did not strip
+ANSI color codes; color/plain denial-message coverage now uses Rich's ANSI parser
+while retaining exit-code and zero-dispatch checks (4 focused cases passed).
+Python 3.11/3.12 CI and independent Standards/Spec review are
 pending for the final branch. No real provider calls or user-database migration
 are part of this acceptance run.
