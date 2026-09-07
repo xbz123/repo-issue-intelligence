@@ -728,3 +728,40 @@ def test_backup_missing_wal_shm_rejects_then_retries_when_stable(tmp_path: Path)
     backup_agent_database(source, destination)
     with sqlite3.connect(destination) as connection:
         assert connection.execute("SELECT value FROM marker").fetchone() == ("wal-data",)
+
+
+def test_backup_rejects_canonical_path_resolving_to_another_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    current = tmp_path / "current"
+    other = tmp_path / "other"
+    for directory, marker in ((current, "original"), (other, "wrong")):
+        directory.mkdir()
+        connection = sqlite3.connect(directory / "source.sqlite3")
+        connection.execute("CREATE TABLE marker (value TEXT)")
+        connection.execute("INSERT INTO marker VALUES (?)", (marker,))
+        connection.commit()
+        connection.close()
+    alias = tmp_path / "alias"
+    alias.symlink_to(current, target_is_directory=True)
+    source = alias / "source.sqlite3"
+    destination = tmp_path / "backup.sqlite3"
+    original_bytes = source.read_bytes()
+    real_resolve = Path.resolve
+
+    def resolve(path, *args, **kwargs):
+        if path == source:
+            alias.unlink()
+            alias.symlink_to(other, target_is_directory=True)
+            resolved = real_resolve(path, *args, **kwargs)
+            alias.unlink()
+            alias.symlink_to(current, target_is_directory=True)
+            return resolved
+        return real_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", resolve)
+    with pytest.raises(MigrationError, match="source.*changed"):
+        backup_agent_database(source, destination)
+    assert source.read_bytes() == original_bytes
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".backup.sqlite3.*"))

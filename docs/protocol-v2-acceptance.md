@@ -113,6 +113,7 @@ V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护�
   symlink 替换以及替换后恢复原 inode 均有失败测试，拒绝时不发布目标并清理临时文件。
   打开 canonical source URI 后先开启只读事务固定 SQLite 快照，再检查词法和解析后
   路径的全部父目录身份；覆盖父目录替换恢复及 symlink 隐藏祖先的同类竞态。
+  原路径及 canonical 路径均与首次 source 身份比较，覆盖 resolve 期间 symlink 改指后恢复。
 
 本地证据：REPLACE 初始 12 项失败；ANALYZE 初始 3 项失败；源身份替换初始 6 项失败，
 补充的替换后恢复场景初始 2 项失败；review_version 回归测试先失败后通过。
@@ -121,6 +122,9 @@ CI 各为 560 passed、1 条既有 Starlette 弃用警告。独立 Astra Spec �
 UPDATE OR REPLACE 及父目录替换恢复两条同类遗漏，均已补回归测试和最小修复。
 修订后 focused 为 61 passed，涵盖 WAL 缺失 shm 时拒绝后稳定重试；本地全量重验
 571 passed、1 条既有警告，Ruff、format、compileall 和 diff 检查通过。
+`9451eb1` 的双版本 CI 各 571 passed。最终复核另发现 canonical 路径未绑定初始身份的
+竞态；新增测试先失败，修复后 focused 为 62 passed，静态检查仍通过。最终 CI 与独立
+复核以 PR 最新提交为准，不把前一提交的验证结果当作后续修复的完整证据。
 
 边界：这些 guard 改变尚未冻结的 V2 schema；旧 PR2A 临时 V2 库会被严格识别为不匹配，
 不会自动原地修补。正常 WAL-only 提交仍可备份；备份期间主文件写入/checkpoint 或元数据

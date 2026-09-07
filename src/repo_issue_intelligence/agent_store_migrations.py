@@ -1086,23 +1086,25 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
         raise MigrationError("source database has no stable file identity")
 
     def check_source_identity() -> None:
-        try:
-            current = source_path.lstat()
-        except OSError as error:
-            raise MigrationError("source database identity changed during backup") from error
-        # ctime also detects a replaced path restored to the original inode.
-        # A concurrent main-file write/checkpoint is conservatively rejected;
-        # WAL-only commits remain compatible with SQLite's snapshot backup.
-        if not stat.S_ISREG(current.st_mode) or (
-            current.st_dev,
-            current.st_ino,
-            current.st_ctime_ns,
-        ) != (
-            source_stat.st_dev,
-            source_stat.st_ino,
-            source_stat.st_ctime_ns,
-        ):
-            raise MigrationError("source database identity changed during backup")
+        # The URI resolved through a transient symlink must still name the
+        # originally validated file. Check both spellings against that identity.
+        for path in (source_path, resolved_source):
+            try:
+                current = path.lstat()
+            except OSError as error:
+                raise MigrationError("source database identity changed during backup") from error
+            # ctime detects a replaced path restored to the original inode.
+            # Concurrent main-file writes/checkpoints are conservatively rejected.
+            if not stat.S_ISREG(current.st_mode) or (
+                current.st_dev,
+                current.st_ino,
+                current.st_ctime_ns,
+            ) != (
+                source_stat.st_dev,
+                source_stat.st_ino,
+                source_stat.st_ctime_ns,
+            ):
+                raise MigrationError("source database identity changed during backup")
 
     def source_directory_identities() -> tuple[tuple[int, int, int], ...]:
         # Include ancestors hidden behind symlinks, not just lexical parents.
