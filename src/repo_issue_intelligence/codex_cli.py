@@ -4,13 +4,26 @@ import json
 import os
 import subprocess
 import tempfile
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from time import perf_counter
 from typing import TypeVar
 
 from pydantic import BaseModel, Field, ValidationError
 
+from .analysis_contract import (
+    ANALYSIS_V2_PROMPT_VERSION,
+    PRIMARY_EVIDENCE_INSTRUCTION,
+    normalize_analysis_v2,
+    validated_evidence,
+)
+from .analysis_observations import (
+    AnalysisResultV2,
+    empty_reported,
+    metadata_diagnostics,
+    optional_nonnegative_integer,
+    safe_reported_text,
+)
 from .llm_client import (
     SYSTEM_PROMPT,
     LLMProviderError,
@@ -82,7 +95,11 @@ class _CodexRerankResponse(StrictOutputModel):
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 
 
-def _event_metadata(stdout: str) -> tuple[str | None, int, int, list[str]]:
+def _event_metadata(
+    stdout: str,
+    *,
+    observations: dict | None = None,
+) -> tuple[str | None, int, int, list[str]]:
     request_id = None
     input_tokens = 0
     output_tokens = 0
@@ -97,6 +114,16 @@ def _event_metadata(stdout: str) -> tuple[str | None, int, int, list[str]]:
         event_type = event.get("type")
         if event_type == "thread.started" and isinstance(event.get("thread_id"), str):
             request_id = event["thread_id"]
+            if observations is not None:
+                observations["local"]["thread_id"] = safe_reported_text(event["thread_id"])
+        if observations is not None and event_type == "turn.completed":
+            reported = observations["reported"]
+            for key in ("model", "service_tier"):
+                reported[key] = safe_reported_text(event.get(key))
+            usage = event.get("usage")
+            if isinstance(usage, dict):
+                for key in ("input_tokens", "output_tokens"):
+                    reported[key] = optional_nonnegative_integer(usage.get(key))
         if event_type == "turn.completed" and isinstance(event.get("usage"), dict):
             usage = event["usage"]
             input_tokens = _nonnegative_int(usage.get("input_tokens"))
@@ -269,6 +296,8 @@ class _CodexCLIClient:
         prompt: str,
         response_model: type[StructuredResponseT],
         operation: str,
+        *,
+        observations: dict | None = None,
     ) -> tuple[StructuredResponseT, str | None, int, int, float]:
         with tempfile.TemporaryDirectory(prefix=f"rii-codex-{operation}-") as temporary:
             temporary_root = Path(temporary)
@@ -313,6 +342,11 @@ class _CodexCLIClient:
                 ) from error
             except subprocess.TimeoutExpired as error:
                 elapsed_ms = round((perf_counter() - started) * 1000, 3)
+                if observations is not None:
+                    stdout = error.stdout or ""
+                    if isinstance(stdout, bytes):
+                        stdout = stdout.decode("utf-8", errors="replace")
+                    _event_metadata(stdout, observations=observations)
                 raise LLMProviderError(
                     f"Codex CLI {operation} timed out",
                     category="timeout",
@@ -335,8 +369,12 @@ class _CodexCLIClient:
                 ) from error
             elapsed_ms = round((perf_counter() - started) * 1000, 3)
             request_id, input_tokens, output_tokens, event_errors = _event_metadata(
-                completed.stdout or ""
+                completed.stdout or "", observations=observations
             )
+            if observations is not None:
+                observations["local"].update(
+                    elapsed_ms=elapsed_ms, exit_code=completed.returncode,
+                )
             if completed.returncode != 0:
                 details = "\n".join([*event_errors, completed.stderr or ""])
                 category, message, retryable = _exit_error_category(details)
@@ -456,6 +494,70 @@ class CodexCLIReranker(_CodexCLIClient):
 
 
 class CodexCLIIssueAnalyzer(_CodexCLIClient):
+    def analyze_v2(
+        self,
+        issue: IssueRecord,
+        report: InvestigationReport,
+        input_evidence_ids: Sequence[str],
+        evidence_lookup: Mapping[str, EvidenceSnippet],
+    ) -> AnalysisResultV2:
+        evidence = validated_evidence(input_evidence_ids, evidence_lookup)
+        input_ids = [snippet.id for snippet in evidence]
+        lookup = {snippet.id: snippet for snippet in evidence}
+        payload = {
+            "issue": {
+                "number": issue.number,
+                "title": issue.title,
+                "body": issue.body,
+                "labels": issue.labels,
+            },
+            "repository_evidence": [snippet.model_dump(mode="json") for snippet in evidence],
+        }
+        prompt = CODEX_ANALYSIS_PROMPT.format(
+            payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        ) + "\n\n" + PRIMARY_EVIDENCE_INSTRUCTION
+        observations = {
+            "requested": {
+                "backend": "codex-cli",
+                "provider": self.provider,
+                "model": self.model,
+                "reasoning_effort": self.reasoning_effort,
+                "service_tier": self.service_tier,
+                "timeout_seconds": self.timeout_seconds,
+            },
+            "reported": empty_reported(),
+            "local": {"thread_id": None, "elapsed_ms": None, "exit_code": None},
+        }
+        try:
+            response, _, _, _, elapsed_ms = self._run_structured(
+                prompt, LLMAnalysisResponse, "analysis-v2", observations=observations,
+            )
+            observations["local"]["elapsed_ms"] = elapsed_ms
+            try:
+                normalized = normalize_analysis_v2(response, input_ids, lookup)
+            except ValueError:
+                raise LLMProviderError(
+                    "Codex CLI returned invalid evidence references",
+                    category="evidence_validation",
+                    retryable=True,
+                    elapsed_ms=elapsed_ms,
+                ) from None
+        except LLMProviderError as error:
+            observations["local"]["elapsed_ms"] = error.elapsed_ms
+            # V1 uses the thread ID as request_id; V2 keeps it only in local observations.
+            error.request_id = None
+            observations["diagnostics"] = metadata_diagnostics(
+                observations["requested"], observations["reported"],
+            )
+            error.observations = observations
+            raise
+        return AnalysisResultV2(
+            analysis=normalized,
+            prompt_version=ANALYSIS_V2_PROMPT_VERSION,
+            diagnostics=metadata_diagnostics(observations["requested"], observations["reported"]),
+            **observations,
+        )
+
     def analyze(
         self,
         issue: IssueRecord,

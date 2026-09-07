@@ -16,7 +16,8 @@ V2 命令已经存在。除非另有说明，`MUST`/“必须”表示实现和�
 T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T0 已随 PR60
 于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 已于
 2026-09-06 随 `d386dc8` 合并，PR1B 已随 `d83f051` 合并。PR1B 的本地实现、门禁和独立
-有界复核记录同见验收文档；PR2A–PR8、G0、G1 尚未完成，V2 仍未默认启用。
+有界复核记录同见验收文档；PR2A 已合并，PR2B 在 PR64 中已验证但尚未合并，PR3 正在实施。
+后续 PR、G0、G1 尚未完成，V2 仍未默认启用。
 
 ## 1. 范围与发布边界
 
@@ -194,6 +195,9 @@ unique index、`CHECK`/`NOT NULL`、条件 `UPDATE` 和必要的触发器或等�
 这两层不能互相替代：编排锁保护阶段推进，partial index 保护同一 Issue 的模型调用。
 
 ## 5. Evidence 与 Analysis V2 契约
+
+PR3 的独立实现与验证说明见 [Analysis V2](../protocol-v2-analysis.md)。仅新增显式
+低层 V2 分析方法，默认 V1 与 rank-only 不切换；PR4 尚未接入运行工作流。
 
 evidence 必须完整写入并 seal 后，才允许调用 provider。发送内容直接从同一 sealed set
 读取；客户端不得悄悄重新采样或二次截断。读取适配固定为只读类型：
