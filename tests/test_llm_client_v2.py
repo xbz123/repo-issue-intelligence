@@ -49,7 +49,7 @@ def test_api_v2_uses_snapshot_primary_and_keeps_reported_values_separate():
     assert result.reported["input_tokens"] == 0
     assert result.reported["response_id"] == "completion-3"
     assert result.reported["request_id"] == "http-7"
-    assert result.diagnostics == ("reported_model_mismatch",)
+    assert result.diagnostics == ("reported_model_differs_from_requested",)
     assert result.local["elapsed_ms"] >= 0
     assert captured[0]["messages"][0]["content"].startswith(SYSTEM_PROMPT)
     assert "primary" in captured[0]["messages"][0]["content"]

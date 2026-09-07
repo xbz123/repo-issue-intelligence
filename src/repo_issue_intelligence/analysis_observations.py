@@ -87,7 +87,7 @@ def metadata_diagnostics(
     reported: Mapping[str, object | None],
 ) -> tuple[str, ...]:
     return tuple(
-        f"reported_{key}_mismatch"
+        "reported_model_differs_from_requested" if key == "model" else f"reported_{key}_mismatch"
         for key in ("model", "provider", "temperature", "seed", "reasoning_effort", "service_tier")
         if requested.get(key) is not None
         and reported.get(key) is not None

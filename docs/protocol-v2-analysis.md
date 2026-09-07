@@ -53,7 +53,9 @@ explicitly reports them. A server's reported model string is not independent
 proof of the underlying model or routing.
 
 V2 provider/validation errors carry the same groups in `error.observations` where
-available; API errors suppress raw provider diagnostics. Timeout classification,
+available; both V2 boundaries suppress raw provider exception chains, including
+traceback output. Model differences use the R5 diagnostic
+`reported_model_differs_from_requested`. Timeout classification,
 safe retries and terminal attempt persistence belong to later R5 runtime work.
 
 ## Historical compatibility
@@ -74,6 +76,12 @@ execution and an isolated process with Store/SQLite/provider imports blocked.
 Provider and rank-only schemas are compared structurally with a complete JSON
 snapshot captured from the unchanged baseline models, not a new content hash.
 Ruff, changed-region formatting, compileall and diff checks are required as well.
+
+Initial code `565cdc4` passed Python 3.11/3.12 CI with 620 tests each. Independent
+Astra review identified a Codex traceback privacy gap and a diagnostic-name mismatch.
+Two traceback canary tests reproduced the privacy gap before the V2-only fix;
+the revised focused suite passes 105 tests. Final CI and review evidence are
+recorded on the PR without treating the earlier code's gates as new-code validation.
 
 These checks prove contract behavior and compatibility, not correctness of a root
 cause hypothesis, provider routing, a live model call, Store integration or G0/G1.

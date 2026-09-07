@@ -21,7 +21,9 @@ def test_observations_keep_reported_values_and_identifier_roles_separate():
     assert reported["output_tokens"] == 12
     assert reported["seed"] is None
     assert reported["temperature"] is None
-    assert metadata_diagnostics({"model": "requested-A"}, reported) == ("reported_model_mismatch",)
+    assert metadata_diagnostics({"model": "requested-A"}, reported) == (
+        "reported_model_differs_from_requested",
+    )
 
 
 def test_missing_invalid_or_unsafe_metadata_stays_unknown():

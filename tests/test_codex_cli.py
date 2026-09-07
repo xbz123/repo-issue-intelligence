@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -419,6 +420,25 @@ def _v2_response() -> dict:
     }
 
 
+@pytest.mark.parametrize("failure", ["json", "timeout"])
+def test_codex_v2_traceback_omits_raw_provider_and_command_details(tmp_path, failure):
+    canary = "secret=review-canary"
+
+    def fake_run(command, **options):
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired([canary], options["timeout"])
+        _output_path(command).write_text(canary, encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(LLMProviderError) as error:
+        analyzer.analyze_v2(
+            _issue(), _report(), ["E1", "E2"], {item.id: item for item in _evidence()}
+        )
+    assert canary not in "".join(traceback.format_exception(error.value))
+    assert error.value.observations["local"]["elapsed_ms"] >= 0
+
+
 def test_codex_cli_v2_uses_explicit_contract_and_observed_metadata(tmp_path: Path) -> None:
     observed: dict[str, object] = {}
 
@@ -459,7 +479,7 @@ def test_codex_cli_v2_uses_explicit_contract_and_observed_metadata(tmp_path: Pat
     assert result.reported["response_id"] is None
     assert result.local["thread_id"] == "cli-thread-1"
     assert result.local["exit_code"] == 0
-    assert "reported_model_mismatch" in result.diagnostics
+    assert "reported_model_differs_from_requested" in result.diagnostics
 
 
 @pytest.mark.parametrize("usage", [None, {}, {"input_tokens": True, "output_tokens": "8"}])

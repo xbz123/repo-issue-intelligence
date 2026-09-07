@@ -550,7 +550,7 @@ class CodexCLIIssueAnalyzer(_CodexCLIClient):
                 observations["requested"], observations["reported"],
             )
             error.observations = observations
-            raise
+            raise error from None
         return AnalysisResultV2(
             analysis=normalized,
             prompt_version=ANALYSIS_V2_PROMPT_VERSION,
