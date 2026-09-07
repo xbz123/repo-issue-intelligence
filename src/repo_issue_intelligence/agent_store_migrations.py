@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import stat
 import tempfile
 from collections.abc import Callable
 from contextlib import closing
@@ -67,7 +68,11 @@ V2_TABLES = (
     "agent_v2_traces",
 )
 LEGACY_TABLES = ("agent_runs", "agent_traces", "agent_snapshots")
-_ALLOWED_INTERNAL_TABLES = {"sqlite_sequence"}
+_STATISTICS_TABLE_SQL = {
+    "sqlite_stat1": "CREATE TABLE sqlite_stat1(tbl,idx,stat)",
+    "sqlite_stat4": "CREATE TABLE sqlite_stat4(tbl,idx,neq,nlt,ndlt,sample)",
+}
+_ALLOWED_INTERNAL_TABLES = {"sqlite_sequence", *_STATISTICS_TABLE_SQL}
 _V2_VERSION = 2
 
 
@@ -351,6 +356,34 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
     (
         "ddl",
         """
+        CREATE TRIGGER agent_v2_issues_review_version_insert_guard
+        BEFORE INSERT ON agent_v2_issues
+        WHEN NEW.review_version <> 0
+        BEGIN
+            SELECT RAISE(ABORT, 'initial review version must be zero');
+        END
+        """,
+    ),
+    (
+        "ddl",
+        """
+        CREATE TRIGGER agent_v2_issues_review_version_guard
+        BEFORE UPDATE OF review_version ON agent_v2_issues
+        WHEN NEW.review_version IS NOT OLD.review_version AND (
+            NEW.review_version <> OLD.review_version + 1 OR NOT EXISTS (
+                SELECT 1 FROM agent_v2_reviews
+                WHERE run_id = OLD.run_id AND issue_number = OLD.issue_number
+                  AND expected_review_version = OLD.review_version
+            )
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'review version advances only with an appended review');
+        END
+        """,
+    ),
+    (
+        "ddl",
+        """
         CREATE TRIGGER agent_v2_issues_selected_attempt_guard
         BEFORE UPDATE OF selected_analysis_attempt_id ON agent_v2_issues
         WHEN NEW.selected_analysis_attempt_id IS NOT NULL
@@ -570,6 +603,47 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
 )
 
 
+# REPLACE's implicit DELETE does not fire delete triggers on default connections.
+# Guard every conflicting identity before SQLite can delete the old row, including
+# the implicit rowid and the non-primary unique keys.
+_V2_DDL += tuple(
+    (
+        "ddl",
+        f"""
+        CREATE TRIGGER {table}_no_replace
+        BEFORE INSERT ON {table}
+        WHEN EXISTS (SELECT 1 FROM {table} WHERE rowid = NEW.rowid OR ({conflict}))
+        BEGIN
+            SELECT RAISE(ABORT, 'agent_v2 existing rows cannot be replaced');
+        END
+        """,
+    )
+    for table, conflict in (
+        ("agent_v2_runs", "run_id = NEW.run_id"),
+        ("agent_v2_issues", "run_id = NEW.run_id AND issue_number = NEW.issue_number"),
+        ("agent_v2_evidence_sets", "evidence_set_id = NEW.evidence_set_id"),
+        (
+            "agent_v2_evidence_items",
+            "evidence_set_id = NEW.evidence_set_id "
+            "AND (evidence_id = NEW.evidence_id OR ordinal = NEW.ordinal)",
+        ),
+        (
+            "agent_v2_llm_attempts",
+            "attempt_id = NEW.attempt_id OR "
+            "(NEW.state = 'in_progress' AND state = 'in_progress' "
+            "AND run_id = NEW.run_id AND issue_number = NEW.issue_number)",
+        ),
+        (
+            "agent_v2_reviews",
+            "review_id = NEW.review_id OR (run_id = NEW.run_id "
+            "AND issue_number = NEW.issue_number AND principal_id = NEW.principal_id "
+            "AND idempotency_key = NEW.idempotency_key AND operation = NEW.operation)",
+        ),
+        ("agent_v2_traces", "trace_id = NEW.trace_id"),
+    )
+)
+
+
 # AgentStore's legacy tables are a compatibility source, not a migration target
 # schema.  This small shape is only used to recognize a source without importing
 # or changing AgentStore's initialization path.
@@ -637,7 +711,7 @@ def _normalise_sql(sql: str | None) -> str | None:
 
 def _v2_object_names(connection: sqlite3.Connection) -> tuple[set[str], set[str], set[str]]:
     rows = connection.execute(
-        "SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"
+        "SELECT type, name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"
     ).fetchall()
     tables = {name for kind, name in rows if kind == "table"}
     indexes = {name for kind, name in rows if kind == "index"}
@@ -649,7 +723,7 @@ def _unexpected_user_objects(connection: sqlite3.Connection) -> list[tuple[str, 
     return [
         (kind, name)
         for kind, name in connection.execute(
-            "SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"
+            "SELECT type, name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"
         ).fetchall()
         if kind not in {"table", "index", "trigger"}
     ]
@@ -787,7 +861,7 @@ def _legacy_shape_matches(connection: sqlite3.Connection) -> bool:
     legacy_objects = connection.execute(
         """
         SELECT type, name FROM sqlite_master
-        WHERE name NOT LIKE 'sqlite_%'
+        WHERE name NOT GLOB 'sqlite_*'
           AND tbl_name IN ('agent_runs', 'agent_traces', 'agent_snapshots')
           AND type IN ('index', 'trigger', 'view')
         """
@@ -811,6 +885,11 @@ def _integrity_problems(connection: sqlite3.Connection) -> list[str]:
             problems.append(f"foreign_key_check: {tuple(foreign_key_error)!r}")
     except sqlite3.DatabaseError as error:
         problems.append(f"foreign_key_check failed: {error}")
+    for name, sql in connection.execute(
+        "SELECT name, sql FROM sqlite_master WHERE name IN ('sqlite_stat1', 'sqlite_stat4')"
+    ):
+        if sql != _STATISTICS_TABLE_SQL[name]:
+            problems.append(f"unexpected statistics schema: {name}")
     return problems
 
 
@@ -987,13 +1066,13 @@ def apply_v2_schema(
 def backup_agent_database(source: Path | str, destination: Path | str) -> None:
     """Atomically backup a SQLite source to a new, never-overwritten path."""
 
-    source_path = Path(source)
+    source_path = Path(source).absolute()
     destination_path = Path(destination)
     try:
         source_stat = source_path.lstat()
     except FileNotFoundError as error:
         raise MigrationError(f"source database does not exist: {source_path}") from error
-    if not source_path.is_file() or os.path.islink(source_path):
+    if not stat.S_ISREG(source_stat.st_mode):
         raise MigrationError("source database must be an ordinary file")
     if os.path.lexists(destination_path):
         raise MigrationError(f"destination already exists: {destination_path}")
@@ -1002,6 +1081,25 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
     if source_stat.st_ino == 0:  # pragma: no cover - defensive for unusual filesystems
         raise MigrationError("source database has no stable file identity")
 
+    def check_source_identity() -> None:
+        try:
+            current = source_path.lstat()
+        except OSError as error:
+            raise MigrationError("source database identity changed during backup") from error
+        # ctime also detects a replaced path restored to the original inode.
+        # A concurrent main-file write/checkpoint is conservatively rejected;
+        # WAL-only commits remain compatible with SQLite's snapshot backup.
+        if not stat.S_ISREG(current.st_mode) or (
+            current.st_dev,
+            current.st_ino,
+            current.st_ctime_ns,
+        ) != (
+            source_stat.st_dev,
+            source_stat.st_ino,
+            source_stat.st_ctime_ns,
+        ):
+            raise MigrationError("source database identity changed during backup")
+
     temporary_path: Path | None = None
     try:
         fd, temporary_name = tempfile.mkstemp(
@@ -1009,13 +1107,16 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
         )
         os.close(fd)
         temporary_path = Path(temporary_name)
-        source_uri = f"{source_path.resolve().as_uri()}?mode=ro"
+        check_source_identity()
+        source_uri = f"{source_path.as_uri()}?mode=ro"
         with (
             closing(sqlite3.connect(source_uri, uri=True)) as source_connection,
             closing(sqlite3.connect(temporary_path)) as destination_connection,
         ):
+            check_source_identity()
             source_connection.execute("PRAGMA query_only = ON")
             source_connection.backup(destination_connection)
+            check_source_identity()
             # The backup copies SQLite pages, including a source WAL journal-mode
             # flag.  Publish a self-contained rollback-journal destination rather
             # than carrying a sidecar WAL forward.
@@ -1023,6 +1124,7 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
             destination_connection.commit()
         with temporary_path.open("rb") as handle:
             os.fsync(handle.fileno())
+        check_source_identity()
         # A hard-link publish is atomic and fails if another writer created the
         # destination after the initial lexists check; os.replace would overwrite.
         os.link(temporary_path, destination_path, follow_symlinks=False)

@@ -98,6 +98,29 @@ V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护�
 
 该记录不表示迁移已公开为 CLI/API、默认 V2 已切换或用户数据库已迁移；PR2A 尚未合并。
 
+#### PR2A 四项失效路径补充（2026-09-07，基线 `b11a812`）
+
+本轮仅补 migration 内核的既有契约，不改变 R5 范围或提前实现 PR7B 服务：
+
+- 2A.4/A46：INSERT 冲突保护覆盖七表的主键、非主键唯一约束及显式 rowid；
+  在 recursive_triggers 开/关和重新连接后，REPLACE 均不能覆盖已有记录或重新打开终态。
+- §3.7：初始 review_version 必须为零，只随追加 review 递增；回退、无 review 跳增、
+  旧基线审查均被拒绝，review 和版本更新同事务回滚。完整审查服务验收仍归 PR7B。
+- 2A.1/2A.5：接受 ANALYZE 创建的标准 sqlite_stat1/sqlite_stat4；只允许已知结构，
+  畸形统计表及额外用户对象仍拒绝，不泛化放行 sqlite 前缀。
+- 2A.2：备份连接前后及发布前检查 source 的设备号、inode 和 ctime；路径替换、
+  symlink 替换以及替换后恢复原 inode 均有失败测试，拒绝时不发布目标并清理临时文件。
+
+本地证据：REPLACE 初始 12 项失败；ANALYZE 初始 3 项失败；源身份替换初始 6 项失败，
+补充的替换后恢复场景初始 2 项失败；review_version 回归测试先失败后通过。
+最终 focused 为 50 passed。全量一轮为 558 passed、1 条既有 Starlette 弃用警告；
+该全量在最后两项身份恢复测试及 ctime 加固之前完成，最终全量由更新后双版本 CI 核验。
+
+边界：这些 guard 改变尚未冻结的 V2 schema；旧 PR2A 临时 V2 库会被严格识别为不匹配，
+不会自动原地修补。正常 WAL-only 提交仍可备份；备份期间主文件写入/checkpoint 或元数据
+变化会保守拒绝，需要在稳定窗口重试。身份检查依赖文件系统可靠的 inode/ctime，
+不是对拥有本机文件系统管理权限的攻击者的隔离边界。源库和已有目标均不覆写。
+
 <a id="pr1a-local-validation"></a>
 ### PR1A 本地验证记录（2026-09-06）
 
