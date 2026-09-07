@@ -76,6 +76,28 @@ review/协调记录中登记。
 包括 A/B/C 场景的部分 `v1_observed` 字段尚未逐项断言；未来实现 PR 仍须补齐对应
 acceptance。
 
+<a id="pr2a-local-validation"></a>
+### PR2A 本地实现验证记录（2026-09-07，`verified`，尚未合并）
+
+PR2A 仅新增独立 migration 模块和 focused tests；没有修改 `AgentStore._initialize`、CLI/API、
+默认 V1 路径或任何用户数据库。`inspect_agent_database` 只读区分 empty/legacy0/knownv2/
+unknown/corrupt；`backup_agent_database` 使用 SQLite backup、只读 source 与原子 create-only
+发布，拒绝已有目标、symlink、缺失 source，并保留 WAL 中已提交数据而不复制 source sidecar。
+V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护；legacy-copy 保留旧三表及原 payload，
+不把旧 JSON 转成 V2 attempt。故障点覆盖 DDL/index/version/commit，均在 commit 前校验并完整回滚。
+独立有界复核已通过且无阻塞项；PR2A 状态为 `verified`，但尚未合并，不切换默认 V2。
+
+| 范围 | 命令 | 结果 |
+|---|---|---|
+| PR2A focused | `PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_agent_store_migrations.py` | 退出码 0，10 passed；原始日志已保存 |
+| 全量 pytest（最新 guard 后） | `PYTHONPATH=src .venv/bin/python -m pytest -q` | 退出码 0，520 passed，1 warning；原始日志已保存 |
+| Ruff | `.venv/bin/ruff check . --no-cache` | 退出码 0，`All checks passed!`；原始日志已保存 |
+| Ruff format（新增文件） | `.venv/bin/ruff format --check src/repo_issue_intelligence/agent_store_migrations.py tests/test_agent_store_migrations.py` | 退出码 0，2 files already formatted；原始日志已保存 |
+| compileall | `PYTHONPYCACHEPREFIX=<tmp>/pycache .venv/bin/python -m compileall -q src tests` | 退出码 0；原始日志已保存 |
+| diff check | `git diff --check` | 退出码 0 |
+
+该记录不表示迁移已公开为 CLI/API、默认 V2 已切换或用户数据库已迁移；PR2A 尚未合并。
+
 <a id="pr1a-local-validation"></a>
 ### PR1A 本地验证记录（2026-09-06）
 
@@ -109,10 +131,10 @@ untracked 事实只保留在独立审计字段。
 473 passed。Luna 独立审查已通过且无阻塞；是否合并另以 PR 状态为准。这不表示 PR1B 物化、数据库/API、
 默认 V2、真实 provider 或 benchmark 已交付。
 
-### PR1B 本地实现记录（2026-09-07，`verified`，尚未合并）
+### PR1B 本地实现记录（2026-09-07，`merged`，`d83f051`）
 
-PR1B 的源码边界已实现，独立有界复核已通过且无阻塞项，但尚未合并或切换默认入口；R5
-checklist 标记为 `verified`，不将其写成 `merged`。PR1A 已随 `d386dc8` 合并。
+PR1B 的源码边界已实现，独立有界复核已通过且无阻塞项，并已随 `d83f051` 合并；仍未切换
+默认入口。PR1A 已随 `d386dc8` 合并。
 `repository_view.py` 提供显式的
 `prepare_repository_view(snapshot)`：committed 模式用 captured revision 的 raw blob
 物化运行专属临时根，tracked_worktree 模式只复制当前 tracked 常规文件并让删除路径在
@@ -216,8 +238,8 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 ## 6. T0 当前结论
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
-文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 已合并，
-PR1B 已完成本地门禁与独立有界复核，状态为 `verified` 但尚未合并，是否合并另以 PR 状态为准。
-PR2A–PR8、G0、G1 仍为 `planned`，
+文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 和 PR1B 已合并，
+其中 PR1B 合并提交为 `d83f051`。PR2A 已完成本地门禁与独立有界复核，状态为 `verified`
+但尚未合并；PR3–PR8、G0、G1 仍为 `planned`，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。

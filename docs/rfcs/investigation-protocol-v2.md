@@ -1,8 +1,8 @@
 # Investigation Protocol v2 RFC
 
 状态：T0 契约基线（`verified`；已完成本地验证与独立审查并于 PR60 合并）；
-PR1A（1A.1–1A.8）已随 `d386dc8` 合并；PR1B（1B.1–1B.8）本地门禁和独立有界复核已通过，
-状态为 `verified` 但尚未合并；
+PR1A（1A.1–1A.8）已随 `d386dc8` 合并；PR1B（1B.1–1B.8）已通过本地门禁和独立有界复核，
+并随 `d83f051` 合并；
 V2 尚未默认启用
 
 日期：2026-09-06
@@ -15,8 +15,8 @@ V2 命令已经存在。除非另有说明，`MUST`/“必须”表示实现和�
 
 T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T0 已随 PR60
 于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 已于
-2026-09-06 随 `d386dc8` 合并。PR1B 的本地实现、门禁和独立有界复核记录同见验收文档；
-PR1B 尚未合并，PR2A–PR8、G0、G1 尚未完成，V2 仍未默认启用。
+2026-09-06 随 `d386dc8` 合并，PR1B 已随 `d83f051` 合并。PR1B 的本地实现、门禁和独立
+有界复核记录同见验收文档；PR2A–PR8、G0、G1 尚未完成，V2 仍未默认启用。
 
 ## 1. 范围与发布边界
 
@@ -441,10 +441,18 @@ lower-snake-case IDs 作为括号别名保留，不要求重命名 fixture。实
 
 每个实现 PR 的测试、状态和限制以计划为准；本 RFC 的 T0 已在本地验证和独立审查完成后
 标为 `verified` 并由 PR60 合并；PR1A（1A.1–1A.8）已随 `d386dc8` 合并。PR1B
-（1B.1–1B.8）当前受影响测试 `57 passed`、全量 `510 passed`（1 warning），Ruff、
-compileall 和 `git diff --check` 均通过；独立有界复核已通过，PR1B 状态为 `verified` 但
-尚未合并，因此不能宣称 V2、Store、resume、默认入口或真实 provider 已实现。此前全量
+（1B.1–1B.8）已随 `d83f051` 合并，当前受影响测试 `57 passed`、全量 `510 passed`（1 warning），
+Ruff、compileall 和 `git diff --check` 均通过；独立有界复核已通过，因此不能宣称 V2、Store、
+resume、默认入口或真实 provider 已实现。此前全量
 `500 passed` 是 filter-triple 修复前的中间证据，不作为最终计数。
+
+PR2A 已在独立工作树完成本地 focused 与全量回归验证，独立有界复核已通过，状态为 `verified`
+但尚未合并；新增
+`agent_store_migrations.py` 作为七张 V2 表、FK、索引、写保护触发器和显式事务的唯一 DDL
+来源，`tests/test_agent_store_migrations.py` 覆盖空库/legacy0/knownv2/unknown/corrupt 识别、
+只读 SQLite backup、legacy-copy 保留、attempt/review/evidence 约束及 DDL/index/version/commit
+故障回滚。该 PR 不修改 `AgentStore._initialize`，不开放 CLI/API apply，不做真实用户数据库迁移；
+focused 证据为 `10 passed`，全量回归为 `520 passed`（1 warning），不替代 G0/G1。
 
 ## 13. 参考与非目标
 
