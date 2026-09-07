@@ -118,6 +118,9 @@ passed **7 tests**. Ruff, compileall, diff whitespace checks and all 195 tracked
 JSON parses passed. Initial CI caught two test-only assertions that did not strip
 ANSI color codes; color/plain denial-message coverage now uses Rich's ANSI parser
 while retaining exit-code and zero-dispatch checks (4 focused cases passed).
-Python 3.11/3.12 CI and independent Standards/Spec review are
-pending for the final branch. No real provider calls or user-database migration
-are part of this acceptance run.
+Python 3.11/3.12 CI on `e4555fb` each passed 717 tests. Independent Standards
+review found no blockers. Spec review identified a reader-only enum mismatch:
+`review_state` must preserve `approved/rejected/needs_information`, not collapse
+them to `reviewed`. That correction leaves review writes out of scope; the
+expanded Store checks passed 14 tests. Final CI and Spec recheck remain pending.
+No real provider calls or user-database migration are part of this acceptance run.

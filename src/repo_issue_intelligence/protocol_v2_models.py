@@ -836,7 +836,7 @@ class IssueSummaryV2(IssueExecutionV2):
     latest_attempt: AttemptV2 | None = None
     diagnostics: tuple[str, ...] = ()
     reviews: tuple[FrozenDict, ...] = ()
-    review_state: Literal["pending", "reviewed"] = "pending"
+    review_state: Literal["pending", "approved", "rejected", "needs_information"] = "pending"
 
 
 class RunSummaryV2(RunV2):

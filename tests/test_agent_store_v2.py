@@ -261,7 +261,8 @@ def test_run_summary_reads_one_database_snapshot_during_finalization(tmp_path, m
     assert store.get_run_summary("run").issues[1].llm_state == "succeeded"
 
 
-def test_run_summary_derives_review_completion_without_changing_control_status(tmp_path):
+@pytest.mark.parametrize("decision", ["approved", "rejected", "needs_information"])
+def test_run_summary_derives_review_completion_without_changing_control_status(tmp_path, decision):
     from test_evidence_ledger import save_report
 
     store = new_store(tmp_path / "private")
@@ -277,12 +278,14 @@ def test_run_summary_derives_review_completion_without_changing_control_status(t
                 "INSERT INTO agent_v2_reviews "
                 "(review_id,run_id,issue_number,principal_id,idempotency_key,operation,"
                 "expected_review_version,decision,payload_json,response_json,created_at) "
-                "VALUES (?, 'run', ?, 'reviewer', ?, 'review', 0, 'rejected', '{}', '{}', ?)",
-                (f"review-{number}", number, f"key-{number}", NOW.isoformat()),
+                "VALUES (?, 'run', ?, 'reviewer', ?, 'review', 0, ?, '{}', '{}', ?)",
+                (f"review-{number}", number, f"key-{number}", decision, NOW.isoformat()),
             )
         summary = store.get_run_summary("run")
         assert summary.status == status
         assert summary.reviewed_issues == number
+        reviewed_issue = next(item for item in summary.issues if item.issue_number == number)
+        assert reviewed_issue.review_state == decision
         assert store.get_run("run").status == "AWAITING_REVIEW"
 
 

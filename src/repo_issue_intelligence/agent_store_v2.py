@@ -364,10 +364,10 @@ class AgentStoreV2:
                             else ()
                         ),
                         reviews=reviews,
-                        review_state="reviewed" if reviewed else "pending",
+                        review_state=reviews[-1]["decision"] if reviewed else "pending",
                     )
                 )
-        reviewed_count = sum(issue.review_state == "reviewed" for issue in summaries)
+        reviewed_count = sum(issue.review_state != "pending" for issue in summaries)
         fields = {name: getattr(run, name) for name in RunV2.model_fields}
         if run.status in {"AWAITING_REVIEW", "PARTIALLY_REVIEWED", "REVIEW_COMPLETED"}:
             fields["status"] = (
