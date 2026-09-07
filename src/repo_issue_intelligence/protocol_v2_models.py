@@ -777,6 +777,7 @@ class ReportedObservation(SafeMetadata):
     reasoning_effort: str | None = None
     service_tier: str | None = None
     request_id: str | None = None
+    response_id: str | None = None
     system_fingerprint: str | None = None
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
@@ -787,6 +788,8 @@ class LocalObservation(SafeMetadata):
     exit_code: int | None = None
     category: Literal["completed", "transport", "timeout", "interrupted", "local"] | None = None
     invocation_id: str | None = None
+    http_status: int | None = Field(default=None, ge=100, le=599)
+    thread_id: str | None = None
 
 
 class AttemptTerminalFields(ProtocolV2Model):
@@ -829,21 +832,42 @@ class AttemptV2(ProtocolV2Model):
     local: LocalObservation | None
 
 
+class IssueSummaryV2(IssueExecutionV2):
+    latest_attempt: AttemptV2 | None = None
+    diagnostics: tuple[str, ...] = ()
+    reviews: tuple[FrozenDict, ...] = ()
+    review_state: Literal["pending", "reviewed"] = "pending"
+
+
+class RunSummaryV2(RunV2):
+    """Reader-only projection; no second stored Issue or LLM outcome."""
+
+    protocol: Literal["v2"] = "v2"
+    issues: tuple[IssueSummaryV2, ...]
+    llm_outcomes: FrozenDict
+    reviewed_issues: int
+
+
 class TracePayloadV2(SafeMetadata):
     event: Literal[
         "run_created",
         "deterministic_started",
         "deterministic_completed",
+        "deterministic_failed",
         "evidence_sealed",
         "attempt_started",
         "attempt_finished",
         "run_interrupted",
+        "run_failed",
     ]
     issue_number: int | None = Field(default=None, ge=1)
     evidence_set_id: str | None = Field(default=None, min_length=1, max_length=128)
     attempt_id: str | None = Field(default=None, min_length=1, max_length=128)
     item_count: int | None = Field(default=None, ge=0)
     elapsed_ms: float | None = Field(default=None, ge=0)
+    failure_category: (
+        Literal["repository", "configuration", "store", "programming", "interrupted"] | None
+    ) = None
 
 
 class TraceV2(ProtocolV2Model):
@@ -875,6 +899,7 @@ __all__ = [
     "FrozenSelection",
     "ParameterOrigin",
     "IssueExecutionV2",
+    "IssueSummaryV2",
     "LocalObservation",
     "ProtocolConfiguration",
     "ProtocolV2Model",
@@ -887,6 +912,7 @@ __all__ = [
     "RunConfiguration",
     "RunInputs",
     "RunV2",
+    "RunSummaryV2",
     "TracePayloadV2",
     "TraceV2",
     "freeze_mapping",

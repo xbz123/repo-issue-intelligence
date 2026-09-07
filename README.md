@@ -55,7 +55,7 @@ uv pip install --python "$(conda run -n agent_dev python -c 'import sys; print(s
 conda run -n agent_dev python -m pytest -q
 ```
 
-Protocol v2 currently exposes **storage tools only**; the Agent workflow still
+Protocol v2 offers an **opt-in foreground CLI beta**; the Agent workflow still
 defaults to V1. Create a separate private database explicitly:
 
 ```bash
@@ -68,6 +68,11 @@ Existing destinations are never overwritten. A migrated legacy source remains
 available to V1; its imported history is read-only. See the
 [local data protection and retention rules](docs/protocol-v2-data-protection.md)
 before storing evidence or moving a migrated database and its provenance receipt.
+
+`agent-run`/`agent-show --protocol v2` use this dedicated database. V2 model
+analysis requires current `--allow-external-llm` permission, and only one local
+writer may execute against a database. See [PR4 CLI usage and G0 boundaries](docs/protocol-v2-execution.md).
+V2 resume, HTTP and per-Issue review writes are not yet available.
 
 Run the included offline demo:
 
@@ -475,10 +480,10 @@ The current proposed Protocol v2 design is the
 tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md).
 The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-protocol-v2.md),
 and its executable baseline plus future-gate boundary is recorded in
-[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). As of 2026-09-05, T0's
-documentation, fixture, and characterization baseline are `verified` by local validation and
-independent review. PR1A–PR8, G0, and G1 remain `planned`; the default path remains V1 until G1,
-and T0 verification does not claim that V2 is implemented. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
+[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). T0, PR1A, PR1B and PR2A
+have merged; PR2B and PR3 are verified but remain open. This branch integrates
+their code for [PR4/G0](docs/protocol-v2-execution.md), not a G1 release.
+The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
 records the documentation checks and implementation boundaries.
 
 ## Evaluation

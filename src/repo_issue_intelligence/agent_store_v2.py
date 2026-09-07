@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import sqlite3
 import stat
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from contextlib import closing, contextmanager
 from datetime import UTC, datetime
@@ -14,6 +16,7 @@ from types import MappingProxyType
 from uuid import uuid4
 
 from .agent_store_migrations import DatabaseKind, inspect_agent_database
+from .analysis_observations import metadata_diagnostics
 from .models import EvidenceSnippet, InvestigationReport
 from .protocol_v2_models import (
     AnalysisV2,
@@ -28,11 +31,13 @@ from .protocol_v2_models import (
     FrozenEvidenceSnippet,
     FrozenSelection,
     IssueExecutionV2,
+    IssueSummaryV2,
     LocalObservation,
     ReportedObservation,
     RepositorySnapshot,
     RunConfiguration,
     RunInputs,
+    RunSummaryV2,
     RunV2,
     TracePayloadV2,
     TraceV2,
@@ -104,6 +109,42 @@ class AgentStoreV2:
         return identity
 
     @contextmanager
+    def writer_lock(self):
+        """Refuse a second foreground V2 executor without locking SQLite readers."""
+        identity = self._check_path()
+        # A flock on the database itself also blocks SQLite writes on macOS.
+        lock_path = self.path.with_name(self.path.name + ".writer.lock")
+        descriptor = os.open(
+            lock_path,
+            os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
+            0o600,
+        )
+        try:
+            info = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) & 0o077
+                or info.st_nlink != 1
+            ):
+                raise StoreError("Store refuses unsafe writer lock files")
+            try:
+                # ponytail: database-wide beta lock; PR5 adds finer request ownership.
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise StoreConflict("V2 database already has a foreground writer") from None
+            current = lock_path.lstat()
+            if self._check_path() != identity or (current.st_dev, current.st_ino) != (
+                info.st_dev,
+                info.st_ino,
+            ):
+                raise StoreError("Store target changed during writer lock acquisition")
+            yield
+        finally:
+            # Keep the sidecar: unlinking it could allow two separately locked inodes.
+            os.close(descriptor)
+
+    @contextmanager
     def _connect(self):
         identity = self._check_path()
         with closing(sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True)) as connection:
@@ -169,6 +210,10 @@ class AgentStoreV2:
             row = connection.execute(
                 "SELECT * FROM agent_v2_runs WHERE run_id = ?", (run_id,)
             ).fetchone()
+        return self._run(row)
+
+    @staticmethod
+    def _run(row: sqlite3.Row | None) -> RunV2 | None:
         if row is None:
             return None
         configuration = json.loads(row["configuration_json"])
@@ -195,23 +240,32 @@ class AgentStoreV2:
             return None
         with self._connect() as connection:
             connection.execute("BEGIN")
-            row = connection.execute(
-                "SELECT * FROM agent_v2_issues WHERE run_id = ? AND issue_number = ?",
-                (run_id, issue_number),
-            ).fetchone()
-            attempts = connection.execute(
-                "SELECT * FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
-                "ORDER BY ordinal",
-                (run_id, issue_number),
-            ).fetchall()
-            item_count = (
-                connection.execute(
-                    "SELECT count(*) FROM agent_v2_evidence_items WHERE evidence_set_id=?",
-                    (row["evidence_set_id"],),
-                ).fetchone()[0]
-                if row is not None and row["evidence_set_id"]
-                else None
-            )
+            return self._issue(connection, run, issue_number)
+
+    def _issue(
+        self,
+        connection: sqlite3.Connection,
+        run: RunV2,
+        issue_number: int,
+    ) -> IssueExecutionV2 | None:
+        run_id = run.run_id
+        row = connection.execute(
+            "SELECT * FROM agent_v2_issues WHERE run_id = ? AND issue_number = ?",
+            (run_id, issue_number),
+        ).fetchone()
+        attempts = connection.execute(
+            "SELECT * FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
+            "ORDER BY ordinal",
+            (run_id, issue_number),
+        ).fetchall()
+        item_count = (
+            connection.execute(
+                "SELECT count(*) FROM agent_v2_evidence_items WHERE evidence_set_id=?",
+                (row["evidence_set_id"],),
+            ).fetchone()[0]
+            if row is not None and row["evidence_set_id"]
+            else None
+        )
         if row is None:
             return None
         llm_state = "pending" if run.configuration.llm_enabled else "disabled"
@@ -257,6 +311,77 @@ class AgentStoreV2:
             else tuple(
                 self.get_issue(run_id, number) for number in run.selection.selected_issue_numbers
             )
+        )
+
+    def get_run_summary(self, run_id: str) -> RunSummaryV2 | None:
+        """Derive the CLI view from committed stages, attempts and review records."""
+        summaries = []
+        with self._connect() as connection:
+            # Short read snapshot: concurrent readers cannot mix an earlier Issue
+            # state with an attempt finalized midway through this projection.
+            connection.execute("BEGIN")
+            run = self._run(
+                connection.execute(
+                    "SELECT * FROM agent_v2_runs WHERE run_id=?",
+                    (run_id,),
+                ).fetchone()
+            )
+            if run is None:
+                return None
+            for number in run.selection.selected_issue_numbers:
+                issue = self._issue(connection, run, number)
+                if issue is None:
+                    raise StoreError("Stored run is missing a selected Issue")
+                latest_row = connection.execute(
+                    "SELECT * FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
+                    "ORDER BY ordinal DESC LIMIT 1",
+                    (run_id, number),
+                ).fetchone()
+                latest = self._attempt(latest_row) if latest_row is not None else None
+                rows = connection.execute(
+                    "SELECT review_id,evidence_set_id,selected_attempt_id,principal_id,"
+                    "expected_review_version,decision,created_at FROM agent_v2_reviews "
+                    "WHERE run_id=? AND issue_number=? ORDER BY expected_review_version",
+                    (run_id, issue.issue_number),
+                ).fetchall()
+                reviews = tuple(FrozenDict(dict(row)) for row in rows)
+                reviewed = bool(
+                    reviews
+                    and reviews[-1]["evidence_set_id"] == issue.evidence_set_id
+                    and reviews[-1]["selected_attempt_id"] == issue.selected_analysis_attempt_id
+                    and reviews[-1]["expected_review_version"] + 1 == issue.review_version
+                )
+                summaries.append(
+                    IssueSummaryV2(
+                        **{name: getattr(issue, name) for name in IssueExecutionV2.model_fields},
+                        latest_attempt=latest,
+                        diagnostics=(
+                            metadata_diagnostics(
+                                latest.request.model_dump(exclude_unset=True),
+                                latest.reported.model_dump(),
+                            )
+                            if latest is not None and latest.reported is not None
+                            else ()
+                        ),
+                        reviews=reviews,
+                        review_state="reviewed" if reviewed else "pending",
+                    )
+                )
+        reviewed_count = sum(issue.review_state == "reviewed" for issue in summaries)
+        fields = {name: getattr(run, name) for name in RunV2.model_fields}
+        if run.status in {"AWAITING_REVIEW", "PARTIALLY_REVIEWED", "REVIEW_COMPLETED"}:
+            fields["status"] = (
+                "REVIEW_COMPLETED"
+                if summaries and reviewed_count == len(summaries)
+                else "PARTIALLY_REVIEWED"
+                if reviewed_count
+                else "AWAITING_REVIEW"
+            )
+        return RunSummaryV2(
+            **fields,
+            issues=tuple(summaries),
+            llm_outcomes=FrozenDict(Counter(issue.llm_state for issue in summaries)),
+            reviewed_issues=reviewed_count,
         )
 
     def set_run_status(self, run_id: str, status: str, *, expected_status: str) -> RunV2:

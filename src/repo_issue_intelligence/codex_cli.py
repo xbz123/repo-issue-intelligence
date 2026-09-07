@@ -494,6 +494,19 @@ class CodexCLIReranker(_CodexCLIClient):
 
 
 class CodexCLIIssueAnalyzer(_CodexCLIClient):
+    backend = "codex-cli"
+
+    def requested_configuration_v2(self) -> dict[str, object]:
+        """One controlled CLI invocation, not an asserted remote-request count."""
+        return {
+            "backend": self.backend,
+            "provider": self.provider,
+            "model": self.model,
+            "reasoning_effort": self.reasoning_effort,
+            "service_tier": self.service_tier,
+            "timeout_seconds": self.timeout_seconds,
+        }
+
     def analyze_v2(
         self,
         issue: IssueRecord,
@@ -517,14 +530,7 @@ class CodexCLIIssueAnalyzer(_CodexCLIClient):
             payload=json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         ) + "\n\n" + PRIMARY_EVIDENCE_INSTRUCTION
         observations = {
-            "requested": {
-                "backend": "codex-cli",
-                "provider": self.provider,
-                "model": self.model,
-                "reasoning_effort": self.reasoning_effort,
-                "service_tier": self.service_tier,
-                "timeout_seconds": self.timeout_seconds,
-            },
+            "requested": self.requested_configuration_v2(),
             "reported": empty_reported(),
             "local": {"thread_id": None, "elapsed_ms": None, "exit_code": None},
         }
