@@ -77,7 +77,7 @@ review/协调记录中登记。
 acceptance。
 
 <a id="pr2b-local-validation"></a>
-### PR2B 本地实现验证（2026-09-07，待 CI 与独立双轴复核）
+### PR2B 实现验证（2026-09-07，verified，尚未合并）
 
 基线为已合并的 PR63 `ca6792592954f05c3aed76a70f4bc0d98126e845`，实现分支
 `codex/protocol-v2-pr2b`，本地验证时 tracked 工作区包含本次变更。没有运行真实 provider、
@@ -99,7 +99,9 @@ acceptance。
 1 条既有 Starlette 弃用警告。Ruff、格式（改动区域）、compileall、diff 检查通过。
 原始测试日志保存在验证环境，不将本机路径或真实源码证据加入公共文档。
 
-当前记录只覆盖 PR2B 本地门禁；CI 与最终独立审查完成前，任务状态仍为 in_progress。
+代码提交 `1b24cf0` 的 [Python 3.11/3.12 CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34162842223)
+均为 609 passed、1 条既有警告，Ruff 通过。独立 Astra Standards 与 Spec 双轴审查
+覆盖 `ca67925...1b24cf0` 全部差异，分别 0 项违规/阻塞；任务状态为 verified，PR64 尚未合并。
 PR3 normalizer、PR4 Agent/G0、恢复/HTTP/review 及 G1 均不由本 PR 提前宣称完成。
 
 <a id="pr2a-local-validation"></a>
@@ -303,7 +305,7 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
 文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 和 PR1B 已合并，
-其中 PR1B 合并提交为 `d83f051`。PR2A 已随 PR63 合并为 `ca67925`；PR2B 正在实施，
+其中 PR1B 合并提交为 `d83f051`。PR2A 已随 PR63 合并为 `ca67925`；PR2B 已验证但尚未合并，
 PR3–PR8、G0、G1 仍为 `planned`，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。
