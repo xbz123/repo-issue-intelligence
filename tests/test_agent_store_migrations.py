@@ -461,6 +461,66 @@ def test_replace_cannot_reopen_terminal_attempt(tmp_path: Path, state: str) -> N
         assert list(connection.iterdump()) == before
 
 
+@pytest.mark.parametrize("recursive_triggers", [0, 1])
+@pytest.mark.parametrize(
+    "table", ["agent_v2_runs", "agent_v2_issues", "agent_v2_evidence_sets", "agent_v2_llm_attempts"]
+)
+def test_update_replace_cannot_delete_another_row(
+    tmp_path: Path, table: str, recursive_triggers: int
+) -> None:
+    with _new_v2_connection(tmp_path / "update-replace.sqlite3") as connection:
+        _seed_issue(connection)
+        connection.execute(f"PRAGMA recursive_triggers = {recursive_triggers}")
+        connection.execute("""
+            INSERT INTO agent_v2_runs
+                (run_id, snapshot_json, configuration_json, inputs_json, selection_json,
+                 status, created_at, updated_at)
+            VALUES ('run-2', '{}', '{}', '{}', '{}', 'RUNNING', 't0', 't0')
+            """)
+        connection.execute("""
+            INSERT INTO agent_v2_issues (run_id, issue_number, deterministic_state)
+            VALUES ('run-1', 8, 'pending')
+            """)
+        connection.execute("""
+            INSERT INTO agent_v2_runs
+                (run_id, snapshot_json, configuration_json, inputs_json, selection_json,
+                 status, created_at, updated_at)
+            VALUES ('run-3', '{}', '{}', '{}', '{}', 'RUNNING', 't0', 't0')
+            """)
+        connection.execute("""
+            INSERT INTO agent_v2_evidence_sets
+                (evidence_set_id, run_id, issue_number, collection_context_json)
+            VALUES ('unsealed', 'run-1', 7, '{}')
+            """)
+        insert = """
+            INSERT INTO agent_v2_llm_attempts
+                (attempt_id, run_id, issue_number, evidence_set_id, ordinal, request_json,
+                 started_at, state)
+            VALUES (?, 'run-1', 7, 'evidence-1', ?, '{}', 't2', 'in_progress')
+            """
+        connection.execute(insert, ("attempt-1", 0))
+        connection.execute("""
+            UPDATE agent_v2_llm_attempts
+            SET state = 'failure', finished_at = 't3', error_json = '{}'
+            """)
+        connection.execute(insert, ("attempt-2", 1))
+        connection.commit()
+        extra = {
+            "agent_v2_runs": "",
+            "agent_v2_issues": "",
+            "agent_v2_evidence_sets": ", sealed = 1, sealed_at = 't4'",
+            "agent_v2_llm_attempts": ", state = 'failure', finished_at = 't4', error_json = '{}'",
+        }[table]
+        before = list(connection.iterdump())
+        target_row, source_row = (2, 3) if table == "agent_v2_runs" else (1, 2)
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                f"UPDATE OR REPLACE {table} SET rowid = {target_row}{extra} "
+                f"WHERE rowid = {source_row}"
+            )
+        assert list(connection.iterdump()) == before
+
+
 def test_review_version_only_advances_with_an_appended_review(tmp_path: Path) -> None:
     with _new_v2_connection(tmp_path / "review.sqlite3") as connection:
         _seed_issue(connection)
@@ -593,3 +653,78 @@ def test_backup_rejects_source_identity_change(
     assert not list(tmp_path.glob(".backup.sqlite3.*"))
     assert (source if boundary == "swap_and_restore" else displaced).read_bytes() == original_bytes
     assert other.read_bytes() == other_bytes
+
+
+@pytest.mark.parametrize("via_symlink", [False, True])
+def test_backup_rejects_parent_directory_swap_and_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, via_symlink: bool
+) -> None:
+    current = tmp_path / "current"
+    other = tmp_path / "other"
+    saved = tmp_path / "saved"
+    for directory, marker in ((current, "original"), (other, "wrong")):
+        (directory / "sub").mkdir(parents=True)
+        connection = sqlite3.connect(directory / "sub" / "source.sqlite3")
+        connection.execute("CREATE TABLE marker (value TEXT)")
+        connection.execute("INSERT INTO marker VALUES (?)", (marker,))
+        connection.commit()
+        connection.close()
+    if via_symlink:
+        alias = tmp_path / "alias"
+        alias.symlink_to(current / "sub", target_is_directory=True)
+        source = alias / "source.sqlite3"
+    else:
+        source = current / "sub" / "source.sqlite3"
+    original_stat = source.stat()
+    destination = tmp_path / "backup.sqlite3"
+    real_connect = sqlite3.connect
+
+    def connect(database, *args, **kwargs):
+        if isinstance(database, str) and database.startswith("file:"):
+            current.rename(saved)
+            other.rename(current)
+            connection = real_connect(database, *args, **kwargs)
+            connection.execute("BEGIN")
+            connection.execute("SELECT count(*) FROM sqlite_master").fetchone()
+            connection.rollback()
+            current.rename(other)
+            saved.rename(current)
+            return connection
+        return real_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", connect)
+    with pytest.raises(MigrationError, match="source.*changed"):
+        backup_agent_database(source, destination)
+    assert source.stat() == original_stat
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".backup.sqlite3.*"))
+    with real_connect(source) as connection:
+        assert connection.execute("SELECT value FROM marker").fetchone() == ("original",)
+
+
+def test_backup_missing_wal_shm_rejects_then_retries_when_stable(tmp_path: Path) -> None:
+    live = tmp_path / "live.sqlite3"
+    source = tmp_path / "source.sqlite3"
+    destination = tmp_path / "backup.sqlite3"
+    writer = sqlite3.connect(live)
+    try:
+        writer.execute("PRAGMA journal_mode = WAL")
+        writer.execute("CREATE TABLE marker (value TEXT)")
+        writer.execute("INSERT INTO marker VALUES ('wal-data')")
+        writer.commit()
+        # A recoverable WAL database whose shared-memory index is not yet present.
+        shutil.copy2(live, source)
+        shutil.copy2(Path(f"{live}-wal"), Path(f"{source}-wal"))
+    finally:
+        writer.close()
+    source_bytes = source.read_bytes()
+    wal_bytes = Path(f"{source}-wal").read_bytes()
+    with pytest.raises(MigrationError, match="source directory identity changed"):
+        backup_agent_database(source, destination)
+    assert source.read_bytes() == source_bytes
+    assert Path(f"{source}-wal").read_bytes() == wal_bytes
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".backup.sqlite3.*"))
+    backup_agent_database(source, destination)
+    with sqlite3.connect(destination) as connection:
+        assert connection.execute("SELECT value FROM marker").fetchone() == ("wal-data",)

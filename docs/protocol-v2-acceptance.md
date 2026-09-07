@@ -104,21 +104,30 @@ V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护�
 
 - 2A.4/A46：INSERT 冲突保护覆盖七表的主键、非主键唯一约束及显式 rowid；
   在 recursive_triggers 开/关和重新连接后，REPLACE 均不能覆盖已有记录或重新打开终态。
+  UPDATE 的 rowid 也不可变，防止 UPDATE OR REPLACE 隐式删除另一记录。
 - §3.7：初始 review_version 必须为零，只随追加 review 递增；回退、无 review 跳增、
   旧基线审查均被拒绝，review 和版本更新同事务回滚。完整审查服务验收仍归 PR7B。
 - 2A.1/2A.5：接受 ANALYZE 创建的标准 sqlite_stat1/sqlite_stat4；只允许已知结构，
   畸形统计表及额外用户对象仍拒绝，不泛化放行 sqlite 前缀。
 - 2A.2：备份连接前后及发布前检查 source 的设备号、inode 和 ctime；路径替换、
   symlink 替换以及替换后恢复原 inode 均有失败测试，拒绝时不发布目标并清理临时文件。
+  打开 canonical source URI 后先开启只读事务固定 SQLite 快照，再检查词法和解析后
+  路径的全部父目录身份；覆盖父目录替换恢复及 symlink 隐藏祖先的同类竞态。
 
 本地证据：REPLACE 初始 12 项失败；ANALYZE 初始 3 项失败；源身份替换初始 6 项失败，
 补充的替换后恢复场景初始 2 项失败；review_version 回归测试先失败后通过。
-最终 focused 为 50 passed。全量一轮为 558 passed、1 条既有 Starlette 弃用警告；
-该全量在最后两项身份恢复测试及 ctime 加固之前完成，最终全量由更新后双版本 CI 核验。
+首轮 focused 为 50 passed，本地全量为 558 passed；随后 `a4f07f6` 的 Python 3.11/3.12
+CI 各为 560 passed、1 条既有 Starlette 弃用警告。独立 Astra Spec 审查又复现了
+UPDATE OR REPLACE 及父目录替换恢复两条同类遗漏，均已补回归测试和最小修复。
+修订后 focused 为 61 passed，涵盖 WAL 缺失 shm 时拒绝后稳定重试；本地全量重验
+571 passed、1 条既有警告，Ruff、format、compileall 和 diff 检查通过。
 
 边界：这些 guard 改变尚未冻结的 V2 schema；旧 PR2A 临时 V2 库会被严格识别为不匹配，
 不会自动原地修补。正常 WAL-only 提交仍可备份；备份期间主文件写入/checkpoint 或元数据
-变化会保守拒绝，需要在稳定窗口重试。身份检查依赖文件系统可靠的 inode/ctime，
+变化会保守拒绝，需要在稳定窗口重试。打开快照时祖先目录发生无关变化也会保守拒绝。
+WAL 缺失共享内存索引时，SQLite 首次只读访问可创建 -shm，此时拒绝发布并允许在稳定后
+重试；测试确认源 db/WAL 内容不变，重试保留已提交 WAL 数据。
+身份检查依赖文件系统可靠的 inode/ctime，
 不是对拥有本机文件系统管理权限的攻击者的隔离边界。源库和已有目标均不覆写。
 
 <a id="pr1a-local-validation"></a>

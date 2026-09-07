@@ -304,7 +304,8 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
         """
         CREATE TRIGGER agent_v2_runs_immutable_inputs
         BEFORE UPDATE ON agent_v2_runs
-        WHEN OLD.run_id IS NOT NEW.run_id
+        WHEN OLD.rowid IS NOT NEW.rowid
+          OR OLD.run_id IS NOT NEW.run_id
           OR OLD.parent_run_id IS NOT NEW.parent_run_id
           OR OLD.snapshot_json IS NOT NEW.snapshot_json
           OR OLD.configuration_json IS NOT NEW.configuration_json
@@ -330,7 +331,8 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
         """
         CREATE TRIGGER agent_v2_issues_immutable_fields
         BEFORE UPDATE ON agent_v2_issues
-        WHEN OLD.run_id IS NOT NEW.run_id
+        WHEN OLD.rowid IS NOT NEW.rowid
+          OR OLD.run_id IS NOT NEW.run_id
           OR OLD.issue_number IS NOT NEW.issue_number
           OR (OLD.deterministic_report_json IS NOT NULL
               AND OLD.deterministic_report_json IS NOT NEW.deterministic_report_json)
@@ -415,7 +417,8 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
         """
         CREATE TRIGGER agent_v2_evidence_sets_seal_guard
         BEFORE UPDATE ON agent_v2_evidence_sets
-        WHEN OLD.evidence_set_id IS NOT NEW.evidence_set_id
+        WHEN OLD.rowid IS NOT NEW.rowid
+          OR OLD.evidence_set_id IS NOT NEW.evidence_set_id
           OR OLD.run_id IS NOT NEW.run_id
           OR OLD.issue_number IS NOT NEW.issue_number
           OR OLD.collection_context_json IS NOT NEW.collection_context_json
@@ -503,7 +506,8 @@ _V2_DDL: tuple[tuple[str, str], ...] = (
         """
         CREATE TRIGGER agent_v2_attempts_finalize_once
         BEFORE UPDATE ON agent_v2_llm_attempts
-        WHEN OLD.attempt_id IS NOT NEW.attempt_id
+        WHEN OLD.rowid IS NOT NEW.rowid
+          OR OLD.attempt_id IS NOT NEW.attempt_id
           OR OLD.run_id IS NOT NEW.run_id
           OR OLD.issue_number IS NOT NEW.issue_number
           OR OLD.evidence_set_id IS NOT NEW.evidence_set_id
@@ -1100,6 +1104,14 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
         ):
             raise MigrationError("source database identity changed during backup")
 
+    def source_directory_identities() -> tuple[tuple[int, int, int], ...]:
+        # Include ancestors hidden behind symlinks, not just lexical parents.
+        return tuple(
+            (info.st_dev, info.st_ino, info.st_ctime_ns)
+            for parent in (*source_path.parents, *resolved_source.parents)
+            for info in (parent.stat(),)
+        )
+
     temporary_path: Path | None = None
     try:
         fd, temporary_name = tempfile.mkstemp(
@@ -1107,21 +1119,26 @@ def backup_agent_database(source: Path | str, destination: Path | str) -> None:
         )
         os.close(fd)
         temporary_path = Path(temporary_name)
+        resolved_source = source_path.resolve(strict=True)
         check_source_identity()
-        source_uri = f"{source_path.as_uri()}?mode=ro"
-        with (
-            closing(sqlite3.connect(source_uri, uri=True)) as source_connection,
-            closing(sqlite3.connect(temporary_path)) as destination_connection,
-        ):
-            check_source_identity()
+        source_directories = source_directory_identities()
+        source_uri = f"{resolved_source.as_uri()}?mode=ro"
+        with closing(sqlite3.connect(source_uri, uri=True)) as source_connection:
             source_connection.execute("PRAGMA query_only = ON")
-            source_connection.backup(destination_connection)
+            source_connection.execute("BEGIN")
+            # Pin the actual read snapshot (including WAL) before verifying the
+            # path chain. Subsequent destination writes may change a shared dir.
+            source_connection.execute("SELECT count(*) FROM sqlite_master").fetchone()
             check_source_identity()
-            # The backup copies SQLite pages, including a source WAL journal-mode
-            # flag.  Publish a self-contained rollback-journal destination rather
-            # than carrying a sidecar WAL forward.
-            destination_connection.execute("PRAGMA journal_mode = DELETE")
-            destination_connection.commit()
+            if source_directory_identities() != source_directories:
+                raise MigrationError("source directory identity changed while opening snapshot")
+            with closing(sqlite3.connect(temporary_path)) as destination_connection:
+                source_connection.backup(destination_connection)
+                check_source_identity()
+                # Publish a self-contained rollback-journal destination, retaining
+                # committed WAL data without carrying a source sidecar forward.
+                destination_connection.execute("PRAGMA journal_mode = DELETE")
+                destination_connection.commit()
         with temporary_path.open("rb") as handle:
             os.fsync(handle.fileno())
         check_source_identity()
