@@ -25,7 +25,7 @@ T0.1–T0.7 已于 2026-09-05 完成本地验证并经独立审查，随后随 P
 [T0 验收记录](protocol-v2-acceptance.md)。该状态只覆盖 T0 契约、fixture 和 V1
 characterization baseline；PR1A 的本地实现验证见下方，PR1B 已完成本地门禁和独立有界
 复核并随 `d83f051` 合并；PR2A 已随 `ca67925` 合并；PR2B 在 PR64 中已验证但尚未合并；
-PR3 正在实施，其他 PR/G0/G1 仍为 `planned`，不表示
+PR3 已验证但尚未合并，其他 PR/G0/G1 仍为 `planned`，不表示
 V2 已默认启用或已发布。
 
 ## PR1A
@@ -97,14 +97,14 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 3.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-1) |
-| 3.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-2) |
-| 3.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-3) |
-| 3.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-4) |
-| 3.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-5) |
-| 3.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-6) |
-| 3.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-7) |
-| 3.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-8) |
+| 3.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-1) |
+| 3.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-2) |
+| 3.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-3) |
+| 3.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-4) |
+| 3.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-5) |
+| 3.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-6) |
+| 3.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-7) |
+| 3.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr3) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-3-8) |
 
 ## PR4
 

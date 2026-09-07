@@ -80,8 +80,12 @@ Ruff, changed-region formatting, compileall and diff checks are required as well
 Initial code `565cdc4` passed Python 3.11/3.12 CI with 620 tests each. Independent
 Astra review identified a Codex traceback privacy gap and a diagnostic-name mismatch.
 Two traceback canary tests reproduced the privacy gap before the V2-only fix;
-the revised focused suite passes 105 tests. Final CI and review evidence are
-recorded on the PR without treating the earlier code's gates as new-code validation.
+the revised focused suite passes 105 tests. Code `f935646` passed
+[Python 3.11/3.12 CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34165531039)
+with 622 tests and one existing warning each. Independent Astra Standards and Spec
+reviews confirmed both findings closed, with zero remaining issues. R5 3.1–3.8 are
+verified in PR65, which remains unmerged. Earlier gates are not substituted for
+the revised code's validation.
 
 These checks prove contract behavior and compatibility, not correctness of a root
 cause hypothesis, provider routing, a live model call, Store integration or G0/G1.
