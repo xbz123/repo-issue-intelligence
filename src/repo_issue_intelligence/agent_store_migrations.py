@@ -704,6 +704,23 @@ _LEGACY_TABLE_SQL = {
                 )""",
 }
 
+# Imported history stays byte-for-byte intact. INSERT guards also reject REPLACE
+# before its implicit DELETE, even when recursive_triggers is disabled.
+_LEGACY_PROTECTION_DDL = tuple(
+    (
+        "ddl",
+        f"""
+        CREATE TRIGGER {table}_legacy_no_{operation.lower()}
+        BEFORE {operation} ON {table}
+        BEGIN
+            SELECT RAISE(ABORT, 'legacy history is read-only');
+        END
+        """,
+    )
+    for table in LEGACY_TABLES
+    for operation in ("INSERT", "UPDATE", "DELETE")
+)
+
 
 def _normalise_sql(sql: str | None) -> str | None:
     """Keep sqlite_master SQL literal-sensitive while trimming outer padding."""
@@ -791,12 +808,16 @@ def _v2_signature(connection: sqlite3.Connection) -> tuple[object, ...]:
     return tuple(table_signature), index_signature, trigger_signature
 
 
-@lru_cache(maxsize=1)
-def _expected_v2_signature() -> tuple[object, ...]:
+@lru_cache(maxsize=2)
+def _expected_v2_signature(allow_legacy: bool = False) -> tuple[object, ...]:
     connection = sqlite3.connect(":memory:")
     try:
         connection.execute("PRAGMA foreign_keys = ON")
         _execute_ddl(connection, _V2_DDL, fault_at=None)
+        if allow_legacy:
+            for statement in _LEGACY_TABLE_SQL.values():
+                connection.execute(statement)
+            _execute_ddl(connection, _LEGACY_PROTECTION_DDL, fault_at=None)
         return _v2_signature(connection)
     finally:
         connection.close()
@@ -837,7 +858,7 @@ def _read_user_version(connection: sqlite3.Connection) -> int:
     return int(connection.execute("PRAGMA user_version").fetchone()[0])
 
 
-def _legacy_shape_matches(connection: sqlite3.Connection) -> bool:
+def _legacy_shape_matches(connection: sqlite3.Connection, *, protected: bool = False) -> bool:
     for table, expected_columns in _LEGACY_COLUMNS.items():
         actual = tuple(
             tuple(row[1:]) for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
@@ -870,9 +891,16 @@ def _legacy_shape_matches(connection: sqlite3.Connection) -> bool:
           AND type IN ('index', 'trigger', 'view')
         """
     ).fetchall()
-    if legacy_objects:
-        return False
-    return True
+    expected_objects = (
+        {
+            ("trigger", f"{table}_legacy_no_{operation}")
+            for table in LEGACY_TABLES
+            for operation in ("insert", "update", "delete")
+        }
+        if protected
+        else set()
+    )
+    return {tuple(row) for row in legacy_objects} == expected_objects
 
 
 def _integrity_problems(connection: sqlite3.Connection) -> list[str]:
@@ -921,9 +949,9 @@ def _validate_v2_structure(connection: sqlite3.Connection, *, allow_legacy: bool
         raise MigrationError(f"unexpected internal tables: {sorted(internal_tables)!r}")
     if not allow_legacy and "sqlite_sequence" in internal_tables:
         raise MigrationError("unexpected sqlite_sequence in an empty V2 database")
-    if allow_legacy and not _legacy_shape_matches(connection):
+    if allow_legacy and not _legacy_shape_matches(connection, protected=True):
         raise MigrationError("legacy tables changed during V2 preparation")
-    if _v2_signature(connection) != _expected_v2_signature():
+    if _v2_signature(connection) != _expected_v2_signature(allow_legacy):
         raise MigrationError("V2 schema validation failed")
 
 
@@ -968,12 +996,12 @@ def _inspect_connection(connection: sqlite3.Connection) -> DatabaseInspection:
     if problems:
         return DatabaseInspection(DatabaseKind.CORRUPT, user_version, tables, tuple(problems))
     if v2_tables_exact:
-        if _v2_signature(connection) != _expected_v2_signature():
+        if _v2_signature(connection) != _expected_v2_signature(has_legacy_name):
             return DatabaseInspection(
                 DatabaseKind.CORRUPT, user_version, tables, ("V2 schema mismatch",)
             )
         if user_version == _V2_VERSION and (
-            table_set == set(V2_TABLES) or _legacy_shape_matches(connection)
+            table_set == set(V2_TABLES) or _legacy_shape_matches(connection, protected=True)
         ):
             return DatabaseInspection(DatabaseKind.KNOWN_V2, user_version, tables)
         return DatabaseInspection(
@@ -1043,13 +1071,16 @@ def apply_v2_schema(
         raise MigrationError(f"refusing migration from {detail}")
 
     _enable_foreign_keys(connection)
+    statements = _V2_DDL + (
+        _LEGACY_PROTECTION_DDL if inspection.kind is DatabaseKind.LEGACY0 else ()
+    )
     try:
         connection.execute("BEGIN IMMEDIATE")
-        _execute_ddl(connection, _V2_DDL, fault_at=fault_at)
+        _execute_ddl(connection, statements, fault_at=fault_at)
         # The version is still zero while structure and FK/integrity state are
         # checked.  A legacy copy may retain its exact source tables.
         _validate_v2_structure(connection, allow_legacy=inspection.kind is DatabaseKind.LEGACY0)
-        _inject_fault(fault_at, "version", len(_V2_DDL), "PRAGMA user_version = 2")
+        _inject_fault(fault_at, "version", len(statements), "PRAGMA user_version = 2")
         connection.execute("PRAGMA user_version = 2")
         candidate = _inspect_connection(connection)
         if candidate.kind is not DatabaseKind.KNOWN_V2:
@@ -1057,7 +1088,7 @@ def apply_v2_schema(
                 "versioned V2 schema failed final validation: "
                 + "; ".join(candidate.problems or (candidate.kind.value,))
             )
-        _inject_fault(fault_at, "commit", len(_V2_DDL) + 1, "COMMIT")
+        _inject_fault(fault_at, "commit", len(statements) + 1, "COMMIT")
         connection.commit()
     except BaseException:
         try:

@@ -10,8 +10,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .agent_database import create_v2_database, inspect_database, migrate_legacy_database
 from .agent_evaluation import run_agent_analysis_evaluation, save_agent_analysis_run
 from .agent_store import AgentStore
+from .agent_store_migrations import MigrationError
 from .agent_workflow import run_agent
 from .benchmark import (
     BenchmarkCaseResult,
@@ -49,8 +51,53 @@ from .repository_index import build_repository_map, save_repository_map
 from .service import rank_issues
 
 app = typer.Typer(no_args_is_help=True)
+agent_db_app = typer.Typer(no_args_is_help=True, help="Explicit private database tools; no V2 run.")
+app.add_typer(agent_db_app, name="agent-db")
 console = Console()
 ANALYSIS_EVALUATION_TIMEOUT_SECONDS = 180.0
+
+
+@agent_db_app.command("inspect")
+def agent_db_inspect(database: Annotated[Path, typer.Argument()]) -> None:
+    """Inspect an existing database without creating or migrating it."""
+    try:
+        inspection = inspect_database(database)
+    except (MigrationError, OSError):
+        typer.echo(
+            "Database inspection refused; check the existing file and permissions.", err=True
+        )
+        raise typer.Exit(2) from None
+    typer.echo(json.dumps({"kind": inspection.kind.value, "user_version": inspection.user_version}))
+
+
+@agent_db_app.command("create-v2")
+def agent_db_create(destination: Annotated[Path, typer.Option()]) -> None:
+    """Create a new private V2 database; existing destinations are never overwritten."""
+    try:
+        create_v2_database(destination)
+    except (MigrationError, OSError):
+        typer.echo(
+            "Database creation refused; use a new path in a private (0700) directory.", err=True
+        )
+        raise typer.Exit(2) from None
+    typer.echo(json.dumps({"operation": "create-v2", "kind": "knownv2"}))
+
+
+@agent_db_app.command("migrate")
+def agent_db_migrate(
+    source: Annotated[Path, typer.Option()],
+    destination: Annotated[Path, typer.Option()],
+) -> None:
+    """Copy a legacy source into a new V2 target; leave the source available to V1."""
+    try:
+        migrate_legacy_database(source, destination)
+    except (MigrationError, OSError):
+        typer.echo(
+            "Migration refused; inspect the legacy source and use a new private destination.",
+            err=True,
+        )
+        raise typer.Exit(2) from None
+    typer.echo(json.dumps({"operation": "migrate", "kind": "knownv2"}))
 
 
 class LLMBackend(StrEnum):

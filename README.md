@@ -55,6 +55,20 @@ uv pip install --python "$(conda run -n agent_dev python -c 'import sys; print(s
 conda run -n agent_dev python -m pytest -q
 ```
 
+Protocol v2 currently exposes **storage tools only**; the Agent workflow still
+defaults to V1. Create a separate private database explicitly:
+
+```bash
+uv run rii agent-db create-v2 --destination private/v2.sqlite3
+uv run rii agent-db inspect private/v2.sqlite3
+uv run rii agent-db migrate --source data/agent.sqlite3 --destination private/imported.sqlite3
+```
+
+Existing destinations are never overwritten. A migrated legacy source remains
+available to V1; its imported history is read-only. See the
+[local data protection and retention rules](docs/protocol-v2-data-protection.md)
+before storing evidence or moving a migrated database and its provenance receipt.
+
 Run the included offline demo:
 
 ```bash
