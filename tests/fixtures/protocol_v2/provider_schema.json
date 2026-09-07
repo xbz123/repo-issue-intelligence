@@ -1,0 +1,151 @@
+{
+  "baseline_commit": "ca6792592954f05c3aed76a70f4bc0d98126e845",
+  "full_analysis": {
+    "$defs": {
+      "EvidenceAlignment": {
+        "enum": [
+          "supports_issue",
+          "contradicts_issue",
+          "neutral"
+        ],
+        "title": "EvidenceAlignment",
+        "type": "string"
+      },
+      "IssueType": {
+        "enum": [
+          "bug",
+          "feature",
+          "security",
+          "performance",
+          "documentation",
+          "question",
+          "other"
+        ],
+        "title": "IssueType",
+        "type": "string"
+      },
+      "LLMEvidenceObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "alignment": {
+            "$ref": "#/$defs/EvidenceAlignment"
+          },
+          "observation": {
+            "title": "Observation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "alignment",
+          "observation"
+        ],
+        "title": "LLMEvidenceObservation",
+        "type": "object"
+      },
+      "LLMProviderHypothesis": {
+        "additionalProperties": false,
+        "description": "Minimal provider hypothesis; validation remains deterministic and local.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "missing_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Evidence",
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "confidence",
+          "evidence_ids",
+          "missing_evidence"
+        ],
+        "title": "LLMProviderHypothesis",
+        "type": "object"
+      },
+      "ReproductionCompleteness": {
+        "enum": [
+          "complete",
+          "partial",
+          "insufficient"
+        ],
+        "title": "ReproductionCompleteness",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Compact provider contract; persisted analyses retain the public full schema.",
+    "properties": {
+      "summary": {
+        "title": "Summary",
+        "type": "string"
+      },
+      "issue_type": {
+        "$ref": "#/$defs/IssueType"
+      },
+      "reproduction_completeness": {
+        "$ref": "#/$defs/ReproductionCompleteness"
+      },
+      "evidence_observations": {
+        "items": {
+          "$ref": "#/$defs/LLMEvidenceObservation"
+        },
+        "title": "Evidence Observations",
+        "type": "array"
+      },
+      "hypothesis": {
+        "$ref": "#/$defs/LLMProviderHypothesis"
+      }
+    },
+    "required": [
+      "summary",
+      "issue_type",
+      "reproduction_completeness",
+      "evidence_observations",
+      "hypothesis"
+    ],
+    "title": "LLMAnalysisResponse",
+    "type": "object"
+  },
+  "rank_only": {
+    "additionalProperties": false,
+    "properties": {
+      "reranked_evidence_ids": {
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "title": "Reranked Evidence Ids",
+        "type": "array"
+      }
+    },
+    "required": [
+      "reranked_evidence_ids"
+    ],
+    "title": "EvidenceRerankAnalysis",
+    "type": "object"
+  }
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -399,3 +400,202 @@ def test_codex_cli_reranker_classifies_timeout_and_missing_executable() -> None:
         CodexCLIReranker(run_command=missing_run).rerank(_issue(), _evidence())
     assert missing.value.category == "cli_unavailable"
     assert missing.value.retryable is False
+
+
+def _v2_response() -> dict:
+    return {
+        "summary": "Validation raises an error.",
+        "issue_type": "bug",
+        "reproduction_completeness": "partial",
+        "evidence_observations": [
+            {"evidence_id": item.id, "alignment": "supports_issue", "observation": "Observed."}
+            for item in _evidence()
+        ],
+        "hypothesis": {
+            "description": "Validation errors escape.",
+            "confidence": 0.8,
+            "evidence_ids": ["E2", "E1"],
+            "missing_evidence": [],
+        },
+    }
+
+
+@pytest.mark.parametrize("failure", ["json", "timeout"])
+def test_codex_v2_traceback_omits_raw_provider_and_command_details(tmp_path, failure):
+    canary = "secret=review-canary"
+
+    def fake_run(command, **options):
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired([canary], options["timeout"])
+        _output_path(command).write_text(canary, encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(LLMProviderError) as error:
+        analyzer.analyze_v2(
+            _issue(), _report(), ["E1", "E2"], {item.id: item for item in _evidence()}
+        )
+    assert canary not in "".join(traceback.format_exception(error.value))
+    assert error.value.observations["local"]["elapsed_ms"] >= 0
+
+
+def test_codex_cli_v2_uses_explicit_contract_and_observed_metadata(tmp_path: Path) -> None:
+    observed: dict[str, object] = {}
+
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        observed["command"] = command
+        observed["prompt"] = options["input"]
+        schema_path = Path(command[command.index("--output-schema") + 1])
+        observed["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
+        _output_path(command).write_text(json.dumps(_v2_response()), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "\n".join([
+            json.dumps({"type": "thread.started", "thread_id": "cli-thread-1"}),
+            json.dumps({"type": "turn.completed", "model": "reported-B",
+                        "service_tier": "default",
+                        "usage": {"input_tokens": 0, "output_tokens": 7}}),
+        ]), "")
+
+    analyzer = CodexCLIIssueAnalyzer(
+        model="requested-A", service_tier="fast", auth_file=tmp_path / "missing-auth",
+        run_command=fake_run,
+    )
+    evidence = _evidence()
+    result = analyzer.analyze_v2(_issue(), _report(), ["E1", "E2"],
+                                 {item.id: item for item in evidence})
+
+    assert result.protocol == "analysis-v2"
+    assert result.analysis.primary_evidence_id == "E2"
+    assert result.analysis.affected_component == "src/token.py::validate"
+    assert result.analysis.input_evidence_ids == ["E1", "E2"]
+    assert "reranked_evidence_ids" not in result.analysis.model_dump()
+    assert set(observed["schema"]["properties"]) == set(_v2_response())
+    assert "primary" in observed["prompt"]
+    assert result.requested["model"] == "requested-A"
+    assert result.reported["model"] == "reported-B"
+    assert result.reported["service_tier"] == "default"
+    assert result.reported["input_tokens"] == 0
+    assert result.reported["output_tokens"] == 7
+    assert result.reported["request_id"] is None
+    assert result.reported["response_id"] is None
+    assert result.local["thread_id"] == "cli-thread-1"
+    assert result.local["exit_code"] == 0
+    assert "reported_model_differs_from_requested" in result.diagnostics
+
+
+@pytest.mark.parametrize("usage", [None, {}, {"input_tokens": True, "output_tokens": "8"}])
+def test_codex_cli_v2_missing_metadata_stays_unknown(tmp_path: Path, usage: object) -> None:
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        _output_path(command).write_text(json.dumps(_v2_response()), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "\n".join([
+            "not-json", "[]",
+            json.dumps({"type": "item.completed", "model": "not-a-model-observation",
+                        "service_tier": "fast", "usage": {"input_tokens": 999}}),
+            json.dumps({"type": "turn.completed", "usage": usage}),
+        ]), "")
+
+    result = CodexCLIIssueAnalyzer(
+        service_tier="fast", auth_file=tmp_path / "missing-auth", run_command=fake_run,
+    ).analyze_v2(_issue(), _report(), ["E1", "E2"], {item.id: item for item in _evidence()})
+
+    assert result.reported["model"] is None
+    assert result.reported["service_tier"] is None
+    assert result.reported["input_tokens"] is None
+    assert result.reported["output_tokens"] is None
+    assert result.local["thread_id"] is None
+    assert not result.diagnostics
+
+
+@pytest.mark.parametrize("input_ids", [["E1", "E1"], ["E999"], []])
+def test_codex_cli_v2_invalid_input_never_dispatches(tmp_path: Path, input_ids: list[str]) -> None:
+    def fake_run(*args, **kwargs):
+        pytest.fail("invalid evidence must fail before dispatch")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(ValueError):
+        analyzer.analyze_v2(_issue(), _report(), input_ids, {item.id: item for item in _evidence()})
+
+
+@pytest.mark.parametrize(("output", "exit_code", "category"), [
+    ("not-json", 0, "invalid_json"),
+    (json.dumps({}), 0, "schema_validation"),
+    (None, 1, "cli_exit"),
+])
+def test_codex_cli_v2_failure_keeps_event_observations(
+    tmp_path: Path, output: str | None, exit_code: int, category: str,
+) -> None:
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        if output is not None:
+            _output_path(command).write_text(output, encoding="utf-8")
+        stdout = "\n".join([
+            json.dumps({"type": "thread.started", "thread_id": "failed-thread"}),
+            json.dumps({"type": "turn.completed", "usage": {"input_tokens": 3}}),
+        ])
+        return subprocess.CompletedProcess(command, exit_code, stdout, "private error detail")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(LLMProviderError) as caught:
+        analyzer.analyze_v2(_issue(), _report(), ["E1", "E2"],
+                            {item.id: item for item in _evidence()})
+
+    assert caught.value.category == category
+    assert caught.value.observations["local"]["thread_id"] == "failed-thread"
+    assert caught.value.observations["local"]["exit_code"] == exit_code
+    assert caught.value.observations["reported"]["input_tokens"] == 3
+    assert caught.value.observations["reported"]["output_tokens"] is None
+    assert caught.value.request_id is None
+    assert "private error detail" not in str(caught.value)
+
+
+def test_codex_cli_v2_rejects_unknown_primary_without_fallback(tmp_path: Path) -> None:
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        response = _v2_response()
+        response["hypothesis"]["evidence_ids"] = ["E999", "E2"]
+        _output_path(command).write_text(json.dumps(response), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, json.dumps({
+            "type": "turn.completed", "usage": {"output_tokens": 4},
+        }), "")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(LLMProviderError) as caught:
+        analyzer.analyze_v2(_issue(), _report(), ["E1", "E2"],
+                            {item.id: item for item in _evidence()})
+
+    assert caught.value.category == "evidence_validation"
+    assert caught.value.retryable is True
+    assert caught.value.observations["reported"]["output_tokens"] == 4
+    assert caught.value.observations["reported"]["input_tokens"] is None
+
+
+def test_codex_cli_v2_snapshots_input_before_dispatch(tmp_path: Path) -> None:
+    evidence_lookup = {item.id: item for item in _evidence()}
+    input_ids = ["E1", "E2"]
+
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        assert "src/token.py" in options["input"]
+        evidence_lookup["E2"].file = "mutated.py"
+        input_ids.reverse()
+        _output_path(command).write_text(json.dumps(_v2_response()), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    result = analyzer.analyze_v2(_issue(), _report(), input_ids, evidence_lookup)
+
+    assert result.analysis.input_evidence_ids == ["E1", "E2"]
+    assert result.analysis.affected_component == "src/token.py::validate"
+
+
+def test_codex_cli_v2_timeout_preserves_partial_events(tmp_path: Path) -> None:
+    def fake_run(command: list[str], **options) -> subprocess.CompletedProcess[str]:
+        stdout = json.dumps({"type": "thread.started", "thread_id": "timed-out-thread"})
+        raise subprocess.TimeoutExpired(command, options["timeout"], output=stdout.encode())
+
+    analyzer = CodexCLIIssueAnalyzer(auth_file=tmp_path / "missing-auth", run_command=fake_run)
+    with pytest.raises(LLMProviderError) as caught:
+        analyzer.analyze_v2(_issue(), _report(), ["E1", "E2"],
+                            {item.id: item for item in _evidence()})
+
+    assert caught.value.category == "timeout"
+    assert caught.value.observations["local"]["thread_id"] == "timed-out-thread"
+    assert caught.value.observations["local"]["exit_code"] is None
+    assert caught.value.observations["local"]["elapsed_ms"] >= 0
+    assert caught.value.observations["reported"]["input_tokens"] is None
