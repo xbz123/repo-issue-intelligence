@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .models import EvidenceSnippet, InvestigationReport
+
+if TYPE_CHECKING:
+    from .repository_view import RepositoryView
 
 SENSITIVE_FILENAMES = {
     ".env",
@@ -19,8 +23,19 @@ DEFAULT_MAX_TOTAL_CHARS = 100_000
 DEFAULT_MAX_LINES_PER_SNIPPET = 200
 
 
-def _candidate_path(root: Path, relative_path: str) -> Path | None:
-    path = (root / relative_path).resolve()
+def _candidate_path(
+    root: Path,
+    relative_path: str,
+    *,
+    allowed_paths: frozenset[str] | None = None,
+) -> Path | None:
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        return None
+    normalized = candidate.as_posix()
+    if allowed_paths is not None and normalized not in allowed_paths:
+        return None
+    path = (root / candidate).resolve()
     if not path.is_relative_to(root):
         return None
     if path.name.lower() in SENSITIVE_FILENAMES:
@@ -52,6 +67,9 @@ def collect_evidence(
     max_lines_per_snippet: int | None = DEFAULT_MAX_LINES_PER_SNIPPET,
     context_lines: int = 12,
     max_chars_per_snippet: int | None = None,
+    *,
+    repository_view: RepositoryView | None = None,
+    view: RepositoryView | None = None,
 ) -> list[EvidenceSnippet]:
     if max_total_chars is not None and max_total_chars < 1:
         raise ValueError("max_total_chars must be positive")
@@ -62,11 +80,23 @@ def collect_evidence(
     if max_chars_per_snippet is not None and max_chars_per_snippet < 1:
         raise ValueError("max_chars_per_snippet must be positive")
 
-    root = report.repository_root.expanduser().resolve()
+    if repository_view is not None and view is not None and repository_view is not view:
+        raise ValueError("repository_view and view must refer to the same source view")
+    active_view = repository_view or view
+    root = (
+        active_view.materialized_root.expanduser().resolve()
+        if active_view is not None
+        else report.repository_root.expanduser().resolve()
+    )
+    allowed_paths = (
+        frozenset(active_view.files)
+        if active_view is not None
+        else None
+    )
     snippets: list[EvidenceSnippet] = []
     remaining = max_total_chars
     for candidate in report.candidates:
-        path = _candidate_path(root, candidate.file)
+        path = _candidate_path(root, candidate.file, allowed_paths=allowed_paths)
         if path is None:
             continue
         try:

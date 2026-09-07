@@ -151,7 +151,7 @@ COMPACT_TRACEBACK_FRAME_PATTERN = re.compile(
 )
 IMMUTABLE_SOURCE_LINE_REFERENCE_PATTERN = re.compile(
     r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/blob/"
-    r"(?P<revision>[0-9a-f]{40})/"
+    r"(?P<revision>(?:[0-9a-f]{40}|[0-9a-f]{64}))/"
     r"(?P<path>[A-Za-z0-9_.~%+/-]+\.py)#L(?P<line>[1-9][0-9]*)"
     r"(?:-L[1-9][0-9]*)?",
     re.IGNORECASE,
@@ -1917,37 +1917,64 @@ def _source_at_revision(
     root: Path,
     revision: str,
     relative_path: str,
+    *,
+    git_root: Path | None = None,
+    analysis_prefix: str = "",
 ) -> str | None:
-    if not (root / ".git").exists():
+    source_root = (git_root or root).resolve()
+    if not (source_root / ".git").exists() and not git_root:
         return None
+    path = relative_path.replace("\\", "/")
+    if path.startswith("/") or any(part in {"", ".", ".."} for part in path.split("/")):
+        return None
+    if analysis_prefix:
+        prefix = analysis_prefix.strip("/")
+        if path == prefix or path.startswith(f"{prefix}/"):
+            git_path = path
+        else:
+            git_path = f"{prefix}/{path}"
+    else:
+        git_path = path
     try:
         completed = subprocess.run(
-            ["git", "show", f"{revision}:{relative_path}"],
-            cwd=root,
+            ["git", "cat-file", "blob", f"{revision}:{git_path}"],
+            cwd=source_root,
             check=False,
             capture_output=True,
-            text=True,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_NO_LAZY_FETCH": "1"},
             timeout=3,
         )
-    except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError):
+    except (OSError, subprocess.TimeoutExpired):
         return None
     if completed.returncode:
         return None
-    return completed.stdout
+    try:
+        return completed.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
 
 
 def _source_line_positions_by_path(
     root: Path,
     files: list[FileRecord],
     references: tuple[SourceLineReference, ...],
+    *,
+    git_root: Path | None = None,
+    captured_revision: str | None = None,
+    analysis_prefix: str = "",
 ) -> dict[str, dict[str, int]]:
     file_paths = [file.path for file in files]
     files_by_path = {file.path: file for file in files}
     positions_by_path: dict[str, dict[str, int]] = {}
     for index, reference in enumerate(references, start=1):
+        reference_path = reference.path.replace("\\", "/")
+        if analysis_prefix:
+            prefix = analysis_prefix.strip("/")
+            if reference_path == prefix or reference_path.startswith(f"{prefix}/"):
+                reference_path = reference_path[len(prefix) + 1 :]
         scoped_paths = _symbol_scoped_paths(
             file_paths,
-            frozenset({reference.path}),
+            frozenset({reference_path}),
         )
         if len(scoped_paths) != 1:
             continue
@@ -1959,10 +1986,17 @@ def _source_line_positions_by_path(
                 ((index, reference.line),),
             )
         else:
+            # A V2 map may only use source-line evidence from its captured
+            # revision.  Do not let an Issue URL silently query an unrelated
+            # object and then rank the current materialized file with it.
+            if captured_revision is not None and reference.revision != captured_revision:
+                continue
             source = _source_at_revision(
                 root,
                 reference.revision,
-                reference.path,
+                path,
+                git_root=git_root,
+                analysis_prefix=analysis_prefix,
             )
             identity = (
                 _symbol_identity_at_source_line(source, reference.line)
@@ -2390,31 +2424,73 @@ def _semantic_test_source_matches(
     return matches
 
 
+def _git_path_for_analysis_path(path: str, analysis_prefix: str) -> str:
+    normalized = path.replace("\\", "/")
+    prefix = analysis_prefix.strip("/")
+    if not prefix:
+        return normalized
+    if normalized == prefix or normalized.startswith(f"{prefix}/"):
+        return normalized
+    return f"{prefix}/{normalized}"
+
+
+def _analysis_path_for_git_path(path: str, analysis_prefix: str) -> str | None:
+    normalized = path.replace("\\", "/")
+    prefix = analysis_prefix.strip("/")
+    if not prefix:
+        return normalized
+    if normalized == prefix or not normalized.startswith(f"{prefix}/"):
+        return None
+    return normalized[len(prefix) + 1 :]
+
+
+def _parse_nul_git_paths(data: bytes) -> list[str] | None:
+    paths: list[str] = []
+    for raw in data.split(b"\0"):
+        if not raw:
+            continue
+        try:
+            value = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+        paths.append(value)
+    return paths
+
+
 def _history_relations(
     root: Path,
     seed_paths: list[str],
     eligible_paths: set[str],
     auxiliary_files: dict[str, bool],
+    *,
+    git_root: Path | None = None,
+    captured_revision: str | None = None,
+    analysis_prefix: str = "",
 ) -> dict[str, list[tuple[float, str]]]:
-    if not seed_paths or not (root / ".git").exists():
+    source_root = (git_root or root).resolve()
+    if not seed_paths or (git_root is None and not (root / ".git").exists()):
         return {}
+    revision = captured_revision or "HEAD"
+    command = [
+        "git",
+        "log",
+        "-n",
+        str(HISTORY_ANCESTOR_LIMIT),
+        "--full-diff",
+        "--format=%x1e%H",
+        "--name-only",
+        "-z",
+        revision,
+    ]
+    if analysis_prefix:
+        command.extend(["--", f":(literal){analysis_prefix}"])
     try:
         completed = subprocess.run(
-            [
-                "git",
-                "log",
-                "-n",
-                str(HISTORY_ANCESTOR_LIMIT),
-                "--full-diff",
-                "--format=%x1e%H",
-                "--name-only",
-                "HEAD",
-            ],
-            cwd=root,
+            command,
+            cwd=source_root,
             check=False,
             capture_output=True,
             env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
-            text=True,
             timeout=30,
         )
     except (OSError, subprocess.TimeoutExpired):
@@ -2425,18 +2501,44 @@ def _history_relations(
     counts: Counter[str] = Counter()
     latest_commit: dict[str, str] = {}
     seed_set = set(seed_paths)
+    seed_git_paths = {
+        _git_path_for_analysis_path(path, analysis_prefix) for path in seed_paths
+    }
     seed_commit_count = 0
-    for record in completed.stdout.split("\x1e"):
-        lines = [line for line in record.splitlines() if line]
-        if len(lines) < 2:
+    records: list[tuple[str, set[str]]] = []
+    current_commit: str | None = None
+    current_paths: set[str] = set()
+    first_path_after_commit = False
+    raw_paths = _parse_nul_git_paths(completed.stdout)
+    if raw_paths is None:
+        return {}
+    for value in raw_paths:
+        if value.startswith("\x1e"):
+            if current_commit is not None:
+                records.append((current_commit, current_paths))
+            current_commit = value[1:].strip()
+            current_paths = set()
+            first_path_after_commit = True
             continue
-        commit, *changed_files = lines
-        changed = set(changed_files)
-        if not changed.intersection(seed_set):
+        if current_commit is not None:
+            if first_path_after_commit and value.startswith("\n"):
+                value = value[1:]
+            first_path_after_commit = False
+            current_paths.add(value)
+    if current_commit is not None:
+        records.append((current_commit, current_paths))
+    for commit, changed_git in records:
+        if not changed_git.intersection(seed_git_paths):
             continue
         seed_commit_count += 1
         if seed_commit_count > HISTORY_COMMIT_LIMIT:
             break
+        changed = {
+            converted
+            for changed_path in changed_git
+            if (converted := _analysis_path_for_git_path(changed_path, analysis_prefix))
+            is not None
+        }
         if len(changed) > HISTORY_FILE_LIMIT:
             continue
         for path in changed.intersection(eligible_paths) - seed_set:
@@ -2463,8 +2565,18 @@ def _blame_relations(
     candidate_lines: dict[str, str | None],
     eligible_paths: set[str],
     auxiliary_files: dict[str, bool],
+    *,
+    git_root: Path | None = None,
+    captured_revision: str | None = None,
+    analysis_prefix: str = "",
 ) -> dict[str, list[tuple[float, str]]]:
     relations: dict[str, list[tuple[float, str]]] = {}
+    source_root = (git_root or root).resolve()
+    revision = captured_revision or "HEAD"
+    oid_length = len(captured_revision) if captured_revision is not None else 40
+    if oid_length not in {40, 64}:
+        return {}
+    blame_oid_pattern = re.compile(rf"^[0-9a-f]{{{oid_length}}} \d+ \d+")
     for seed_path in seed_paths[:BLAME_SEED_LIMIT]:
         location = candidate_lines[seed_path]
         if location is None:
@@ -2483,25 +2595,28 @@ def _blame_relations(
                     "--porcelain",
                     "-L",
                     f"{start_line},{end_line}",
-                    "HEAD",
+                    revision,
                     "--",
-                    seed_path,
+                    _git_path_for_analysis_path(seed_path, analysis_prefix),
                 ],
-                cwd=root,
+                cwd=source_root,
                 check=False,
                 capture_output=True,
                 env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
-                text=True,
                 timeout=2,
             )
         except (OSError, subprocess.TimeoutExpired):
             continue
         if blame.returncode:
             continue
+        try:
+            blame_text = blame.stdout.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
         commits = {
             line.partition(" ")[0]
-            for line in blame.stdout.splitlines()
-            if re.match(r"^[0-9a-f]{40} \d+ \d+", line)
+            for line in blame_text.splitlines()
+            if blame_oid_pattern.match(line)
             and set(line.partition(" ")[0]) != {"0"}
         }
         for commit in commits:
@@ -2512,23 +2627,30 @@ def _blame_relations(
                         "show",
                         "--format=",
                         "--name-only",
+                        "-z",
                         "--diff-filter=AM",
                         commit,
                     ],
-                    cwd=root,
+                    cwd=source_root,
                     check=False,
                     capture_output=True,
                     env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
-                    text=True,
                     timeout=2,
                 )
             except (OSError, subprocess.TimeoutExpired):
                 continue
             if changed.returncode:
                 continue
-            changed_paths = {
-                path for path in changed.stdout.splitlines() if path
-            }
+            changed_paths_raw = _parse_nul_git_paths(changed.stdout)
+            if changed_paths_raw is None:
+                continue
+            changed_paths: set[str] = set()
+            for index, changed_path in enumerate(changed_paths_raw):
+                if index == 0 and changed_path.startswith("\n"):
+                    changed_path = changed_path[1:]
+                converted = _analysis_path_for_git_path(changed_path, analysis_prefix)
+                if converted is not None:
+                    changed_paths.add(converted)
             if len(changed_paths) > BLAME_FILE_LIMIT:
                 continue
             for path in changed_paths.intersection(eligible_paths) - {seed_path}:
@@ -3166,6 +3288,13 @@ def locate_candidates(
     )
     keywords = set(signals.terms)
     root = Path(repository_map.root).resolve()
+    git_root = (
+        Path(repository_map.git_root).resolve()
+        if repository_map.git_root is not None
+        else None
+    )
+    captured_revision = repository_map.captured_revision
+    analysis_prefix = repository_map.analysis_prefix
     base_scores: dict[str, float] = {}
     auxiliary_files: dict[str, bool] = {}
     candidates: dict[str, CandidateLocation] = {}
@@ -3227,6 +3356,9 @@ def locate_candidates(
         root,
         repository_map.files,
         signals.source_line_references,
+        git_root=git_root,
+        captured_revision=captured_revision,
+        analysis_prefix=analysis_prefix,
     )
     source_snippet_positions_by_path = _source_snippet_positions_by_path(
         root,
@@ -3544,6 +3676,9 @@ def locate_candidates(
         _graph_seed_paths(base_scores, auxiliary_files),
         set(base_scores),
         auxiliary_files,
+        git_root=git_root,
+        captured_revision=captured_revision,
+        analysis_prefix=analysis_prefix,
     )
     for path, relations in history_relations.items():
         graph_relations.setdefault(path, []).extend(relations)
@@ -3553,6 +3688,9 @@ def locate_candidates(
         blame_lines,
         set(base_scores),
         auxiliary_files,
+        git_root=git_root,
+        captured_revision=captured_revision,
+        analysis_prefix=analysis_prefix,
     )
     final_scores = dict(base_scores)
     for path, relations in graph_relations.items():

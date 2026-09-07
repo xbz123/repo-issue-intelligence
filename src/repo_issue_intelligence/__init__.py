@@ -22,6 +22,12 @@ from .protocol_v2_models import (  # noqa: E402  (exports after version lookup)
     RunInputs,
 )
 from .repository_context import capture_repository_context  # noqa: E402
+from .repository_view import (  # noqa: E402
+    DeterministicResumeError,
+    RepositoryView,
+    RepositoryViewError,
+    prepare_repository_view,
+)
 from .run_configuration import (  # noqa: E402
     capture_engine_runtime,
     capture_requested_run_configuration,
@@ -36,4 +42,8 @@ __all__ = [
     "capture_engine_runtime",
     "capture_repository_context",
     "capture_requested_run_configuration",
+    "DeterministicResumeError",
+    "RepositoryView",
+    "RepositoryViewError",
+    "prepare_repository_view",
 ]

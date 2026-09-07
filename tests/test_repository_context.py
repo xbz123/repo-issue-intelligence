@@ -39,6 +39,30 @@ def _repository(tmp_path: Path, *, origin: str | None = None) -> Path:
     return repository
 
 
+@pytest.mark.parametrize("filter_value", [None, "set", "unset", "unspecified", "-"])
+def test_current_filter_attribute_detection_is_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    filter_value: str | None,
+) -> None:
+    output = (
+        b""
+        if filter_value is None
+        else f"src/service.py\0filter\0{filter_value}\0".encode()
+    )
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(args, 0, stdout=output, stderr=b"")
+
+    monkeypatch.setattr(repository_context.subprocess, "run", fake_run)
+
+    paths = repository_context._current_external_filter_paths(
+        tmp_path,
+        ("src/service.py",),
+    )
+    assert paths == (() if filter_value is None else ("src/service.py",))
+
+
 def test_capture_nested_scope_uses_nul_manifest_and_safe_remote(tmp_path: Path) -> None:
     repository = _repository(
         tmp_path,

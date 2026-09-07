@@ -19,23 +19,23 @@
 T0.1–T0.7 已于 2026-09-05 完成本地验证并经独立审查，随后随 PR60 于
 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`。详见
 [T0 验收记录](protocol-v2-acceptance.md)。该状态只覆盖 T0 契约、fixture 和 V1
-characterization baseline；PR1A 的本地实现验证见下方，其他 PR/G0/G1 仍为
-`planned`，不表示 V2 已默认启用或已发布。
+characterization baseline；PR1A 的本地实现验证见下方，PR1B 已完成本地门禁和独立有界
+复核但尚未合并；其他 PR/G0/G1 仍为 `planned`，不表示 V2 已默认启用或已发布。
 
 ## PR1A
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 1A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-1) |
-| 1A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-2) |
-| 1A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-3) |
-| 1A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-4) |
-| 1A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-5) |
-| 1A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-6) |
-| 1A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-7) |
-| 1A.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-8) |
+| 1A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-1) |
+| 1A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-2) |
+| 1A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-3) |
+| 1A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-4) |
+| 1A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-5) |
+| 1A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-6) |
+| 1A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-7) |
+| 1A.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1a) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1a-8) |
 
-PR1A（1A.1–1A.8）已于 2026-09-06 完成本地测试：URL/retry-policy/repository-context
+PR1A（1A.1–1A.8）已于 2026-09-06 完成本地测试并随 `d386dc8` 合并：URL/retry-policy/repository-context
 focused tests `54 passed`；最终配置、remote、status 与 rename 复核后全量 pytest `473 passed`、1 warning，ruff、compileall
 和 `git diff --check` 均退出码 0。该全量是为覆盖最终代码复核重新执行的一次验证，不是
 机械多轮。Luna 独立审查已通过且无阻塞；证据与限制见
@@ -46,14 +46,19 @@ focused tests `54 passed`；最终配置、remote、status 与 rename 复核后�
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 1B.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-1) |
-| 1B.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-2) |
-| 1B.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-3) |
-| 1B.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-4) |
-| 1B.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-5) |
-| 1B.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-6) |
-| 1B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-7) |
-| 1B.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-8) |
+| 1B.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-1) |
+| 1B.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-2) |
+| 1B.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-3) |
+| 1B.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-4) |
+| 1B.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-5) |
+| 1B.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-6) |
+| 1B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-7) |
+| 1B.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr1b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-1b-8) |
+
+PR1B（1B.1–1B.8）已于 2026-09-07 完成本地门禁和独立有界复核，状态为 `verified`；尚未
+合并，不切换默认 V2。最终受影响测试 `57 passed`，全量 pytest `510 passed`（1 warning），
+Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 passed` 是 filter-triple
+修复前的中间证据，不作为最终计数。详细范围和限制见 [PR1B 验收记录](protocol-v2-acceptance.md)。
 
 ## PR2A
 
