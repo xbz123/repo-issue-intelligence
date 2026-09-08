@@ -167,6 +167,60 @@ def test_v2_frozen_endpoint_matches_transport_authority(tmp_path, base_url):
     assert len(received) == 1
 
 
+@pytest.mark.parametrize(
+    "initial_url,replacement,expected_endpoint,expected_url",
+    [
+        (
+            "https://example.test/v1/",
+            "https://example.test/v1",
+            "https://example.test/v1",
+            "https://example.test/v1/chat/completions",
+        ),
+        (
+            "https://example.test/v1/",
+            "https://example.test/v1///",
+            "https://example.test/v1",
+            "https://example.test/v1/chat/completions",
+        ),
+        (
+            "https://example.test/nested/chat/completions/chat/completions",
+            "https://example.test/nested/chat/completions",
+            "https://example.test/nested/chat/completions",
+            "https://example.test/nested/chat/completions/chat/completions",
+        ),
+    ],
+)
+def test_v2_equivalent_endpoint_spelling_keeps_frozen_dispatch(
+    tmp_path, initial_url, replacement, expected_endpoint, expected_url
+):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    received = []
+
+    def handler(request):
+        received.append(str(request.url))
+        assert store.get_run("run").configuration.client.endpoint == expected_endpoint
+        if len(received) == 1:
+            analyzer.base_url = replacement
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer("test-key", base_url=initial_url, client=client)
+        run = run_agent_v2(
+            issues(1, 2),
+            root,
+            2,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+    assert run.status == "AWAITING_REVIEW"
+    assert received == [expected_url, expected_url]
+
+
 def test_v2_custom_http_timeout_cannot_override_frozen_budget(tmp_path):
     root = repository(tmp_path / "repo")
     store = new_store(tmp_path / "private")

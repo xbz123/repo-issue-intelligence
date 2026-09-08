@@ -4,19 +4,20 @@ This branch implements R5 4.1–4.10 and exercises the G0 vertical gate. It is n
 G1, does not switch the default protocol, and does not enable HTTP, cross-process
 resume, manual retry/recovery, per-Issue review writes, or automatic repair.
 
-Status: PR4 and G0 are **verified on the combined branch**, with
-[PR66](https://github.com/xbz123/repo-issue-intelligence/pull/66) kept as an
-unmerged, ready-for-review PR. Verification is not a release or authorization to merge.
+Status: PR4 and G0 are **verified on the combined branch**; the exact revisions
+and results are recorded below. Current integration status is tracked in
+[PR66](https://github.com/xbz123/repo-issue-intelligence/pull/66).
+Verification is not a G1 release or authorization to merge.
 
 ## Dependency boundary
 
 PR4 is stacked on `codex/protocol-v2-pr4-base` at `d55e95c`, combining the verified
 PR2B head `4461ca9` ([PR64](https://github.com/xbz123/repo-issue-intelligence/pull/64))
 and PR3 head `f9b6902` ([PR65](https://github.com/xbz123/repo-issue-intelligence/pull/65)).
-Both prerequisites have since merged into `main`. PR4 now also incorporates PR67
-through `b9e7e08` by a normal branch merge. This is not a release branch;
-the PR still targets the original stacked base. Retargeting and validation
-against the intended release base remain separate from this repair.
+Both prerequisites have since merged into `main`. PR4 also incorporates PR67
+through `b9e7e08` by a normal branch merge; PR67 subsequently merged into `main`
+as `7e87d70`. The original stacked base is not a release branch. Final integration
+must target `main` and validate the resulting tree; PR66 records that target and status.
 No R5 scope or acceptance requirement is changed by the stack.
 
 ## Opt in explicitly
@@ -217,6 +218,24 @@ Independent Luna max Standards and Spec reviews of the actual combined tree
 report no confirmed blockers. [Combined CI on `9ed5d94`](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34234039003)
 passes **828 tests** on both Python 3.11 and 3.12, with one existing test warning.
 Runner deprecation and transient cache-service warnings did not fail either job.
-The two PRs remain open; no merge
-to `main`, automatic source-database migration or real provider call is authorized
-by these checks.
+At that validation point both PRs remained open. These checks alone authorize
+neither a merge to `main`, automatic source-database migration nor a real provider call.
+
+## Endpoint spelling follow-up
+
+Pre-merge review of `afeb4ee` reproduced a runtime-only spelling defect: removing
+the analyzer endpoint's trailing slash passed frozen configuration validation but
+sent the next request to `/v1chat/completions`. Constructor inputs with or without
+the slash were already safe. V2 sends now use the same `normalize_endpoint`
+function as capture and dispatch validation before appending `/chat/completions`.
+The already captured base path is preserved, even when it ends in that suffix;
+constructor-only full-completion-URL interpretation is not applied a second time.
+V1 request construction, frozen timeouts and redirect refusal remain unchanged.
+
+The missing/multiple trailing-slash cases first failed against the old sender;
+the final three-case regression also protects completion-suffix base paths.
+Affected HTTP/execution tests: **88 passed**. Local full suite: **831 passed**,
+one existing Starlette warning. Ruff, compileall and diff checks pass. Independent
+Luna max Standards and Spec reviews of this repair report no confirmed blockers.
+See PR66 for remote CI and integration status. No real provider calls or user
+databases were used.

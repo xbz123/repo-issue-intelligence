@@ -34,6 +34,7 @@ from .models import (
     LLMAnalysisResult,
     LLMHypothesis,
 )
+from .run_configuration import normalize_endpoint
 
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
@@ -293,8 +294,11 @@ class OpenAICompatibleIssueAnalyzer:
         try:
             if observations is not None:
                 # V2 binds dispatch to the captured analyzer endpoint, even with a custom client.
+                endpoint = normalize_endpoint(self.base_url)
+                if endpoint is None:
+                    raise ValueError("API base URL is required")
                 response = self._client.post(
-                    f"{self.base_url}chat/completions",
+                    f"{endpoint}/chat/completions",
                     json=payload,
                     timeout=self.timeout_seconds,
                     follow_redirects=False,
