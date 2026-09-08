@@ -93,6 +93,29 @@ def test_foreground_writer_lock_refuses_second_process_but_keeps_readers(tmp_pat
     assert child.stdout.strip() == "acquired"
 
 
+def test_v1_cli_remains_importable_without_fcntl():
+    command = [
+        sys.executable,
+        "-c",
+        "import sys\n"
+        "sys.modules['fcntl'] = None\n"
+        "from repo_issue_intelligence.cli import app\n"
+        "from typer.testing import CliRunner\n"
+        "result = CliRunner().invoke(app, ['agent-show', '--help'])\n"
+        "assert result.exit_code == 0, result.output\n"
+        "from repo_issue_intelligence.agent_store_v2 import AgentStoreV2, StoreError\n"
+        "try:\n"
+        "    AgentStoreV2('must-not-be-created.sqlite3')\n"
+        "except StoreError as error:\n"
+        "    assert 'POSIX' in str(error)\n"
+        "else:\n"
+        "    raise AssertionError('V2 storage must refuse unavailable locking')\n",
+    ]
+    environment = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+    child = subprocess.run(command, capture_output=True, text=True, env=environment)
+    assert child.returncode == 0, child.stderr
+
+
 def successful_analysis():
     from repo_issue_intelligence.protocol_v2_models import AnalysisV2
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from math import isfinite
 from pathlib import Path
@@ -101,6 +101,8 @@ def process_issue(
     repository_view: RepositoryView,
     store: AgentStoreV2,
     llm_analyzer: IssueAnalyzerV2 | None = None,
+    *,
+    before_provider_case: Callable[[], None] | None = None,
 ) -> IssueExecutionV2:
     store.set_deterministic_state(run.run_id, issue.number, "running")
     try:
@@ -150,6 +152,9 @@ def process_issue(
     policy = budgets.retry_policy
     for ordinal in range(policy["max_attempts"]):
         request = _assert_current_configuration(run, llm_analyzer)
+        if ordinal == 0 and before_provider_case is not None:
+            before_provider_case()
+            request = _assert_current_configuration(run, llm_analyzer)
         attempt = store.start_attempt(run.run_id, issue.number, evidence.evidence_set_id, request)
         started = perf_counter()
         try:
@@ -258,6 +263,7 @@ def run_agent_v2(
     as_of: datetime | None = None,
     run_id: str | None = None,
     parameter_origins: Mapping[str, str] | None = None,
+    before_provider_case: Callable[[], None] | None = None,
 ) -> RunV2:
     if not issues or len({issue.number for issue in issues}) != len(issues):
         raise ValueError("At least one Issue with unique numbers is required")
@@ -332,7 +338,13 @@ def run_agent_v2(
                 by_number = {issue.number: issue for issue in inputs.issues}
                 for number in inputs.selection.selected_issue_numbers:
                     process_issue(
-                        run, by_number[number].to_issue(), repository_map, view, store, llm_analyzer
+                        run,
+                        by_number[number].to_issue(),
+                        repository_map,
+                        view,
+                        store,
+                        llm_analyzer,
+                        before_provider_case=before_provider_case,
                     )
         except (Exception, KeyboardInterrupt, SystemExit) as error:
             interrupted = isinstance(error, (KeyboardInterrupt, SystemExit))

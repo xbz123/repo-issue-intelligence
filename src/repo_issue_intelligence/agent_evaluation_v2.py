@@ -195,7 +195,19 @@ def run_agent_analysis_evaluation_v2(
     if not selected:
         raise ValueError("No benchmark cases matched the requested case IDs")
     results = []
-    for index, case in enumerate(selected):
+    provider_case_seen = False
+
+    def before_provider_case() -> None:
+        nonlocal provider_case_seen
+        if provider_case_seen and llm_delay_seconds > 0:
+            minutes, seconds = divmod(llm_delay_seconds, 60)
+            for _ in range(int(minutes)):
+                sleep(60)
+            if seconds:
+                sleep(seconds)
+        provider_case_seen = True
+
+    for case in selected:
         root = prepare_repository(case, workspace)
         run_id = str(uuid4())
         database_path = Path(".agent-evaluation-v2") / run_id / "agent.sqlite3"
@@ -220,6 +232,7 @@ def run_agent_analysis_evaluation_v2(
                 as_of=case.issue_updated_at,
                 run_id=run_id,
                 parameter_origins=parameter_origins,
+                before_provider_case=before_provider_case,
             )
         except Exception:
             run = store.get_run(run_id)
@@ -299,12 +312,6 @@ def run_agent_analysis_evaluation_v2(
         )
         if error_category is not None:
             break
-        if llm_delay_seconds > 0 and index + 1 < len(selected):
-            minutes, seconds = divmod(llm_delay_seconds, 60)
-            for _ in range(int(minutes)):
-                sleep(60)
-            if seconds:
-                sleep(seconds)
     completed = not any(result.error_category for result in results)
     return AgentAnalysisRunV2(
         manifest_name=manifest.name,

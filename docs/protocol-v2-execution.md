@@ -6,15 +6,16 @@ resume, manual retry/recovery, per-Issue review writes, or automatic repair.
 
 Status: PR4 and G0 are **verified on the combined branch**, with
 [PR66](https://github.com/xbz123/repo-issue-intelligence/pull/66) kept as an
-unmerged draft. Verification is not a release or authorization to merge.
+unmerged, ready-for-review PR. Verification is not a release or authorization to merge.
 
 ## Dependency boundary
 
 PR4 is stacked on `codex/protocol-v2-pr4-base` at `d55e95c`, combining the verified
 PR2B head `4461ca9` ([PR64](https://github.com/xbz123/repo-issue-intelligence/pull/64))
 and PR3 head `f9b6902` ([PR65](https://github.com/xbz123/repo-issue-intelligence/pull/65)).
-Both prerequisites remain open. This integration branch is not a release branch;
-PR4 must be retargeted and its combined checks rerun after the prerequisites merge.
+Both prerequisites have since merged into `main`. This integration branch is not
+a release branch; PR4 still needs the repaired base from PR67, retargeting and
+combined revalidation before integration into `main`.
 No R5 scope or acceptance requirement is changed by the stack.
 
 ## Opt in explicitly
@@ -65,7 +66,11 @@ storage failures stop the run; previously committed sibling reports remain
 readable. If the database itself becomes inaccessible or corrupt, recording a
 final failure status may also fail: a missing terminal marker is not success.
 
-The default HTTP client explicitly disables transport retries. A Codex attempt
+The default HTTP client explicitly disables transport retries. V2 HTTP sends
+use the captured analyzer endpoint as an absolute URL and disable automatic
+redirects, including with a custom `httpx.Client`. Set the analyzer's `base_url`
+to choose that endpoint; a custom client's `base_url` does not override it in V2.
+V1 retains its existing relative-request behavior. A Codex attempt
 counts one controlled CLI invocation, not a known number of its internal remote
 requests. Requested parameters, reported metadata, and local observations remain
 separate; absent model/usage reports stay null. Summary diagnostics report model
@@ -76,6 +81,11 @@ database. It does not hold a long SQLite write transaction and readers remain
 available. Do not remove the lock file while a process may use the database.
 This is a local-operator beta boundary, not a sandbox against a malicious user
 with the same OS account.
+
+V2 storage currently requires POSIX file locking. If `fcntl` is unavailable,
+V2 Store construction fails explicitly before filesystem access; importing the
+CLI and running V1 commands does not require that module. This is not a claim
+of Windows V2 storage support.
 
 `agent-show` derives summaries in one read snapshot from stages, sealed evidence,
 latest/selected attempts, and existing review records. It writes no second
@@ -90,6 +100,11 @@ attempts, not a second evidence collection or V1 graph replay. Execution cases,
 provider cases/attempts, no-evidence-eligible cases, and grounding cases have
 separate denominators. Missing usage coverage yields null totals, not zero usage.
 These metrics describe execution and file grounding, not verified root causes.
+
+`--llm-delay-seconds` waits only before the next evidence-bearing provider case,
+after its evidence is sealed and configuration checked. No-evidence cases do
+not wait or trigger a trailing delay. Retries within a case retain the separate
+existing backoff policy; configuration is checked again after a pacing wait.
 
 Evaluation ledgers remain at `WORKSPACE/.agent-evaluation-v2/RUN_ID/agent.sqlite3`;
 each case artifact records a workspace-relative `database_path`. They are not
@@ -141,3 +156,24 @@ Final code acceptance at `7d9a4cb`:
 The review fixed point is `d55e95c`, not `main`; predecessor changes were not
 misrepresented as new PR4 code. No real provider calls or user-database migration
 are part of this acceptance run. PR5–PR8 and G1 remain unimplemented here.
+
+## PR66 review follow-up
+
+The follow-up delta starts at reviewed commit `c20cb5b`; it does not change
+PR66's stacked base or incorporate PR67, and does not authorize merging either PR.
+
+| Review finding | Reproduction and regression boundary |
+|---|---|
+| [Actual HTTP destination, P1](https://github.com/xbz123/repo-issue-intelligence/pull/66#discussion_r3956514604) | A custom client's base previously redirected a V2 request away from the frozen endpoint. Real `httpx.Client` plus `MockTransport` checks actual request URLs against the persisted endpoint, and a custom redirect-enabled client cannot follow a cross-host 307. |
+| [Provider-case delay, P2](https://github.com/xbz123/repo-issue-intelligence/pull/66#discussion_r3956514613) | Four no-evidence arrangements previously slept unnecessarily. Real committed non-empty/empty source snapshots verify exact send/wait order across empty-only, leading-empty, trailing-empty and interleaved cases; adjacent provider cases retain their configured delay. |
+| [V1 portability, P2](https://github.com/xbz123/repo-issue-intelligence/pull/66#discussion_r3956514621) | A subprocess with `fcntl` unavailable previously failed while importing the CLI. It now runs V1 `agent-show --help` and confirms that V2 Store construction rejects unsupported locking. Existing two-process POSIX lock exclusion remains covered. |
+
+The no-`fcntl` test simulates the missing module on the local platform; it is
+not native Windows CI. No real provider requests or user databases are used.
+Follow-up local validation: **727 passed**, one existing Starlette deprecation
+warning; the affected execution/evaluation/Store suite passes **54 tests**.
+Ruff, compileall, changed-region formatting, diff whitespace and all 195 tracked
+JSON parses pass. Unrelated existing formatting drift is left untouched.
+Independent Luna max Standards and Spec reviews of the delta from `c20cb5b`
+report no findings or blockers. Dual-Python CI is pending the follow-up push;
+the earlier acceptance results above cover only earlier code.

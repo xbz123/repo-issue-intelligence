@@ -93,6 +93,44 @@ def successful_response(evidence, *, metadata=True):
     )
 
 
+@pytest.mark.parametrize("redirect", [False, True])
+def test_v2_custom_http_client_cannot_override_frozen_endpoint(tmp_path, redirect):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    received = []
+
+    def handler(request):
+        received.append(str(request.url))
+        endpoint = store.get_run("run").configuration.client.endpoint
+        assert str(request.url) == f"{endpoint}/chat/completions"
+        if redirect:
+            return httpx.Response(307, headers={"location": "https://other.test/collect"})
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(
+        base_url="https://actual.test/api/v1",
+        transport=httpx.MockTransport(handler),
+        follow_redirects=True,
+    ) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer(
+            "test-key", base_url="https://frozen.test/api/v1", client=client
+        )
+        run = run_agent_v2(
+            issues(1),
+            root,
+            1,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+    assert run.status == "AWAITING_REVIEW"
+    assert received == ["https://frozen.test/api/v1/chat/completions"]
+    assert store.list_attempts("run", 1)[0].state == ("failure" if redirect else "success")
+
+
 @pytest.mark.parametrize("file_count,metadata", [(1, True), (7, True), (1, False)])
 def test_provider_receives_committed_report_and_exact_sealed_ledger(tmp_path, file_count, metadata):
     root = repository(tmp_path / "repo", file_count=file_count)

@@ -187,6 +187,59 @@ def test_v2_no_evidence_has_execution_but_no_provider_or_grounding_denominator(t
     assert run.overall.input_tokens is None
 
 
+@pytest.mark.parametrize(
+    "provider_cases",
+    [(False, False), (False, True), (True, False), (True, False, True), (True, True)],
+)
+def test_v2_delay_only_occurs_between_provider_cases(tmp_path, monkeypatch, provider_cases):
+    manifest = manifest_in_workspace(tmp_path / "workspace")
+    template = manifest.cases[0]
+    repository = tmp_path / "workspace" / "example--project"
+    (repository / "service.py").write_text("")
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-qam", "empty evidence"],
+        check=True,
+        capture_output=True,
+    )
+    empty_sha = subprocess.check_output(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"], text=True
+    ).strip()
+    manifest.cases = [
+        template.model_copy(
+            update={
+                "id": f"case-{index}",
+                "pre_fix_sha": template.pre_fix_sha if has_evidence else empty_sha,
+            }
+        )
+        for index, has_evidence in enumerate(provider_cases)
+    ]
+    events = []
+    monkeypatch.setattr(
+        "repo_issue_intelligence.agent_evaluation_v2.sleep", lambda delay: events.append(delay)
+    )
+
+    def handler(request):
+        events.append("send")
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps(response_for(request))}}]}
+        )
+
+    with httpx.Client(
+        base_url="https://example.test/v1", transport=httpx.MockTransport(handler)
+    ) as client:
+        run = run_agent_analysis_evaluation_v2(
+            manifest,
+            tmp_path / "workspace",
+            OpenCodeIssueAnalyzer("test-key", client=client),
+            llm_delay_seconds=7,
+            allow_external_llm=True,
+        )
+    count = sum(provider_cases)
+    assert run.overall.provider_cases == count
+    assert run.overall.no_evidence_cases == len(provider_cases) - count
+    assert events == ([] if count == 0 else ["send"] + [7, "send"] * (count - 1))
+
+
 def test_v2_missing_observations_stay_null_and_protocols_cannot_mix(tmp_path, monkeypatch):
     manifest = manifest_in_workspace(tmp_path / "workspace")
     manifest.cases.append(manifest.cases[0].model_copy(update={"id": "token-without-metadata"}))

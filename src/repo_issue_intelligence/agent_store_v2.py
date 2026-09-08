@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import sqlite3
@@ -14,6 +13,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
 from uuid import uuid4
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 from .agent_store_migrations import DatabaseKind, inspect_agent_database
 from .analysis_observations import metadata_diagnostics
@@ -64,6 +68,8 @@ class AgentStoreV2:
     """
 
     def __init__(self, path: Path | str):
+        if fcntl is None:
+            raise StoreError("Protocol v2 storage requires POSIX file locking")
         self.path = Path(path).absolute()
         self._identity: tuple[int, int] | None = None
         self._schema_version: int | None = None
