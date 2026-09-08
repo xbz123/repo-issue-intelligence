@@ -60,5 +60,8 @@ ran against an isolated `395f9e8` source snapshot: all six failed because the
 expected rejection was missing, and all pass in the repaired full suite.
 Independent Luna max Standards and Spec reviews of the new delta from
 `395f9e8` report zero remaining findings; the Spec reviewer independently ran
-the 75 configuration/Store tests. CI is pending the follow-up push. The earlier
-Astra and CI results above apply only to the earlier revision.
+the 75 configuration/Store tests.
+[Follow-up CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34213674624)
+on repair commit `aa93f0b`: Python 3.11 and 3.12 each pass **708 tests**, with
+one existing warning. Review scope is `395f9e8...aa93f0b`; the earlier Astra
+and CI results above apply only to the earlier revision. PR67 remains unmerged.
