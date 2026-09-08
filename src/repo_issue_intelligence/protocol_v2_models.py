@@ -260,6 +260,11 @@ class ParameterOrigin(StrEnum):
     OMITTED = "omitted"
 
 
+def request_budget_origin(origins: Mapping[str, Any], name: str) -> ParameterOrigin:
+    """Interpret both current budget markers and the markerless legacy format."""
+    return ParameterOrigin(origins.get(f"budget.{name}", origins.get(name, "omitted")))
+
+
 class ClientConfiguration(ProtocolV2Model):
     """Safe client identity; secret-bearing settings are intentionally absent."""
 
@@ -273,11 +278,20 @@ class ClientConfiguration(ProtocolV2Model):
 
 
 class BudgetConfiguration(ProtocolV2Model):
+    model_config = ConfigDict(allow_inf_nan=False, hide_input_in_errors=True)
+
     output_tokens: int | None = Field(default=None, ge=1)
     evidence_chars: int | None = Field(default=None, ge=1)
     evidence_lines: int | None = Field(default=None, ge=1)
     timeout_seconds: float | None = Field(default=None, gt=0)
     retry_policy: FrozenDict = Field(default_factory=FrozenDict)
+
+    @model_validator(mode="after")
+    def validate_retry_policy(self) -> Self:
+        from .run_configuration import _validate_retry_policy
+
+        _validate_retry_policy(self.retry_policy)
+        return self
 
     @property
     def max_output_tokens(self) -> int | None:
@@ -321,14 +335,29 @@ class RunConfiguration(ProtocolV2Model):
 
     def has_request_budget(self, name: str) -> bool:
         value = getattr(self.budgets, name)
-        origin = self.parameter_origins.get(
-            f"budget.{name}", self.parameter_origins.get(name, "omitted")
-        )
+        origin = request_budget_origin(self.parameter_origins, name)
         # A model_copy can add explicit null without updating origin markers.
         return value is not None or name in self.budgets.model_fields_set or origin != "omitted"
 
     @model_validator(mode="after")
     def validate_request_budget_consistency(self) -> Self:
+        from .run_configuration import _validated_parameter
+
+        # Validate copied/constructed values before serialization can erase field presence.
+        BudgetConfiguration.model_validate(
+            {name: getattr(self.budgets, name) for name in BudgetConfiguration.model_fields},
+            strict=True,
+        )
+        for name, value in self.request_parameters.items():
+            _validated_parameter(name, value)
+        parameters = {
+            name: value
+            for name, value in self.request_parameters.items()
+            if name in AttemptRequest.model_fields
+        }
+        if "output_tokens" in self.request_parameters:
+            parameters["max_output_tokens"] = self.request_parameters["output_tokens"]
+        AttemptRequest.model_validate(parameters, strict=True)
         for parameter, budget in (
             ("max_output_tokens", "output_tokens"),
             ("output_tokens", "output_tokens"),
@@ -336,11 +365,10 @@ class RunConfiguration(ProtocolV2Model):
         ):
             value = getattr(self.budgets, budget)
             if (
-                value is None
-                and budget in self.budgets.model_fields_set
-                and self.parameter_origins.get(f"budget.{budget}") == "omitted"
+                self.has_request_budget(budget)
+                and request_budget_origin(self.parameter_origins, budget) == "omitted"
             ):
-                raise ValueError("Conflicting explicit-null budget and omitted origin")
+                raise ValueError("Conflicting explicit budget and omitted origin")
             if (
                 parameter in self.request_parameters
                 and self.has_request_budget(budget)
@@ -938,5 +966,6 @@ __all__ = [
     "TraceV2",
     "freeze_mapping",
     "freeze_run_inputs",
+    "request_budget_origin",
     "thaw_issue_snapshots",
 ]

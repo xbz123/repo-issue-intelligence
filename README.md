@@ -475,10 +475,10 @@ The current proposed Protocol v2 design is the
 tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md).
 The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-protocol-v2.md),
 and its executable baseline plus future-gate boundary is recorded in
-[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). As of 2026-09-05, T0's
-documentation, fixture, and characterization baseline are `verified` by local validation and
-independent review. PR1A–PR8, G0, and G1 remain `planned`; the default path remains V1 until G1,
-and T0 verification does not claim that V2 is implemented. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
+[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). T0, PR1A, PR1B, PR2A,
+PR2B and PR3 have merged. PR67 repairs that base; PR66 separately implements the
+opt-in PR4/G0 CLI. Both follow-ups remain unmerged, and this branch contains no V2
+execution entrypoint. The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
 records the documentation checks and implementation boundaries.
 
 ## Evaluation

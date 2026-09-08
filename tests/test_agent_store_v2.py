@@ -216,6 +216,41 @@ def test_legacy_serialized_null_defaults_remain_omitted(tmp_path, parameter):
 
 
 @pytest.mark.parametrize("budget", ["output_tokens", "timeout_seconds"])
+@pytest.mark.parametrize("origin", ["omitted", "user_config"])
+@pytest.mark.parametrize("value", [None, 100])
+def test_markerless_legacy_budget_copy_preserves_omission_contract(tmp_path, budget, origin, value):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    payload = json.loads(template.configuration.model_dump_json())
+    payload["budgets"] = template.configuration.budgets.model_dump(mode="json")
+    for name in ("output_tokens", "timeout_seconds"):
+        payload["parameter_origins"].pop(f"budget.{name}")
+    payload["parameter_origins"][budget] = origin
+    with closing(sqlite3.connect(store.path)) as connection, connection:
+        connection.execute(
+            "INSERT INTO agent_v2_runs SELECT ?, parent_run_id, snapshot_json, ?, "
+            "inputs_json, selection_json, status, created_at, updated_at "
+            "FROM agent_v2_runs WHERE run_id = ?",
+            ("legacy", json.dumps(payload), template.run_id),
+        )
+    legacy = store.get_run("legacy")
+    assert legacy.configuration.has_request_budget(budget) == (origin != "omitted")
+    copied = legacy.configuration.model_copy(
+        update={"budgets": BudgetConfiguration(**{budget: value})}
+    )
+    if origin == "omitted":
+        with pytest.raises(StoreError, match="Conflicting"):
+            store.create_run(legacy.snapshot, copied, legacy.inputs, run_id="copy")
+        assert store.get_run("copy") is None
+    else:
+        restored = store.create_run(legacy.snapshot, copied, legacy.inputs, run_id="copy")
+        assert restored.configuration.has_request_budget(budget)
+        assert budget in restored.configuration.budgets.model_fields_set
+
+
+@pytest.mark.parametrize("budget", ["output_tokens", "timeout_seconds"])
 def test_constructed_non_default_budget_survives_store_roundtrip(tmp_path, budget):
     from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration
 
@@ -224,8 +259,55 @@ def test_constructed_non_default_budget_survives_store_roundtrip(tmp_path, budge
     config = capture_requested_run_configuration(
         budgets=BudgetConfiguration.model_construct(_fields_set=set(), **{budget: 100})
     )
+    assert config.parameter_origins[f"budget.{budget}"] == "user_config"
     restored = store.create_run(template.snapshot, config, template.inputs, run_id="constructed")
     assert getattr(restored.configuration.budgets, budget) == 100
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("output_tokens", 0),
+        ("output_tokens", -1),
+        ("timeout_seconds", 0),
+        ("evidence_chars", 0),
+        ("evidence_lines", 0),
+        ("top_k", 0),
+        ("request_alias", 0),
+        ("timeout_seconds", float("inf")),
+        ("retry_policy", {"backoff": [-1]}),
+        ("unsupported_parameter", "model"),
+        ("unsupported_parameter", "api_key"),
+        ("non_string_parameter", 1),
+    ],
+)
+def test_invalid_copied_configuration_is_rejected_before_persistence(tmp_path, field, value):
+    from repo_issue_intelligence.protocol_v2_models import (
+        BudgetConfiguration,
+        FrozenDict,
+        ProtocolConfiguration,
+    )
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    if field == "top_k":
+        update = {"protocol": ProtocolConfiguration.model_construct(top_k=value)}
+    elif field == "request_alias":
+        update = {"request_parameters": FrozenDict({"output_tokens": value})}
+    elif field == "unsupported_parameter":
+        update = {"request_parameters": FrozenDict({value: "synthetic-value"})}
+    elif field == "non_string_parameter":
+        update = {"request_parameters": {value: "synthetic-value"}}
+    else:
+        if field == "retry_policy":
+            value = FrozenDict(value)
+        update = {"budgets": BudgetConfiguration.model_construct(**{field: value})}
+    invalid = template.configuration.model_copy(update=update)
+    with pytest.raises(StoreError):
+        store.create_run(template.snapshot, invalid, template.inputs, run_id="invalid")
+    assert store.get_run("invalid") is None
+    assert store.list_issues("invalid") == ()
+    create_run(store, run_id="invalid")
 
 
 @pytest.mark.parametrize("value", [100, None])

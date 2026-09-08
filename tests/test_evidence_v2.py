@@ -223,3 +223,18 @@ def test_closed_view_rejects_recreated_directory(tmp_path, empty, collector):
     finally:
         (root / "source.py").unlink()
         root.rmdir()
+
+
+@pytest.mark.parametrize("collector", [collect_evidence_v2, collect_evidence])
+def test_closed_view_rejects_before_resolving_replacement_symlink(tmp_path, collector):
+    repository = _repository(tmp_path)
+    report = _report(repository)
+    view = prepare_repository_view(capture_repository_context(repository))
+    root = view.materialized_root
+    view.close()
+    root.symlink_to(root.name)
+    try:
+        with pytest.raises(ValueError, match="closed"):
+            collector(report, repository_view=view)
+    finally:
+        root.unlink()

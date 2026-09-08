@@ -65,3 +65,36 @@ the 75 configuration/Store tests.
 on repair commit `aa93f0b`: Python 3.11 and 3.12 each pass **708 tests**, with
 one existing warning. Review scope is `395f9e8...aa93f0b`; the earlier Astra
 and CI results above apply only to the earlier revision. PR67 remains unmerged.
+
+## Combined PR66/67 contract repair
+
+The follow-up from `ee5d90d` uses one budget-origin interpreter for capture
+validation, copied models and legacy readback. An explicitly supplied budget
+cannot retain an `omitted` origin, whether its value is null or non-null.
+Markerless legacy records retain the documented shared-origin fallback; no
+historical row is rewritten or assigned a guessed origin.
+
+Request parameters reuse capture's field whitelist, type and JSON-safety rules
+and the existing `AttemptRequest` domain; copied/constructed budgets are checked
+before serialization. The Store then
+runs its exact configuration reader on the exact serialized payload before any
+INSERT. Invalid configurations leave neither a run nor Issue rows, and a valid
+run can subsequently reuse the refused ID. This also validates nested protocol
+fields without changing the DDL or weakening frozen input ownership.
+
+Regressions cover actual markerless rows, null/non-null copies, boundary numbers,
+invalid nested models, unsupported/secret-bearing request fields and budget
+presence after readback (not only model value equality). Both collectors check
+closure before traversing a replaced view path.
+PR66 separately binds the HTTP timeout to the captured request and preserves
+independent budget origins; combined validation is required before delivery.
+
+The shared endpoint normalizer also addresses [PR66's authority finding](https://github.com/xbz123/repo-issue-intelligence/pull/66#discussion_r3957457689):
+only the selected scheme's default port is removed, and IPv6 brackets survive.
+Capture and dispatch checks therefore compare the same destination authority.
+
+Standalone local validation of this follow-up: **749 passed**, one existing
+Starlette warning; Ruff, compileall and diff checks pass. Independent Luna max
+Standards and Spec reviews report no remaining confirmed blockers on this
+candidate. CI and the combined PR66 validation are pending. Earlier test counts and reviews
+are not substituted for the revised code. PR64/65 are merged; PR66/67 remain unmerged.

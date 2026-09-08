@@ -164,6 +164,16 @@ def test_output_tokens_request_alias_conflicts_with_budget(parameters, budgets):
         )
 
 
+@pytest.mark.parametrize("parameter", ["output_tokens", "max_output_tokens", "timeout_seconds"])
+@pytest.mark.parametrize("value", [0, -1])
+@pytest.mark.parametrize("budgets", [{}, {"evidence_chars": 1000}])
+def test_request_only_budgets_reject_nonpositive_values(parameter, value, budgets):
+    with pytest.raises(ValueError):
+        capture_requested_run_configuration(
+            request_parameters={parameter: value}, budgets=budgets, captured_at=FIXED_TIME
+        )
+
+
 def test_configuration_rejects_credentials_and_unsafe_endpoint() -> None:
     with pytest.raises(RunConfigurationError) as error:
         capture_requested_run_configuration(
@@ -306,6 +316,24 @@ def test_endpoint_preserves_safe_encoded_path_spelling() -> None:
         captured_at=FIXED_TIME,
     )
     assert configuration.client.endpoint == endpoint
+
+
+@pytest.mark.parametrize(
+    "endpoint,expected",
+    [
+        ("https://example.com:80/v1", "https://example.com:80/v1"),
+        ("http://example.com:443/v1", "http://example.com:443/v1"),
+        ("http://example.com:80/v1", "http://example.com/v1"),
+        ("https://example.com:443/v1", "https://example.com/v1"),
+        ("https://[::1]:80/v1", "https://[::1]:80/v1"),
+        ("http://[::1]:443/v1", "http://[::1]:443/v1"),
+        ("https://[::1]:443/v1", "https://[::1]/v1"),
+    ],
+)
+def test_endpoint_preserves_destination_authority(endpoint, expected):
+    configuration = capture_requested_run_configuration(client={"endpoint": endpoint})
+    assert configuration.client.endpoint == expected
+    assert normalize_endpoint(expected) == expected
 
 
 def test_cli_flags_preserve_non_url_encoded_values() -> None:

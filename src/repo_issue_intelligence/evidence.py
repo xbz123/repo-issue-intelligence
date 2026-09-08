@@ -177,8 +177,10 @@ def collect_evidence_v2(
     if not isinstance(repository_view, RepositoryView):
         raise ValueError("repository_view must be a captured RepositoryView")
 
+    if repository_view.closed:
+        raise ValueError("repository_view is closed or unavailable")
     root = repository_view.materialized_root.expanduser().resolve()
-    if repository_view.closed or not root.is_dir():
+    if not root.is_dir():
         raise ValueError("repository_view is closed or unavailable")
     allowed_paths = frozenset(repository_view.files)
     items: list[EvidenceItemV2] = []
