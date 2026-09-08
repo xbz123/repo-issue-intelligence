@@ -174,6 +174,7 @@ Follow-up local validation: **727 passed**, one existing Starlette deprecation
 warning; the affected execution/evaluation/Store suite passes **54 tests**.
 Ruff, compileall, changed-region formatting, diff whitespace and all 195 tracked
 JSON parses pass. Unrelated existing formatting drift is left untouched.
-Independent Luna max Standards and Spec reviews of the delta from `c20cb5b`
-report no findings or blockers. Dual-Python CI is pending the follow-up push;
-the earlier acceptance results above cover only earlier code.
+Independent Luna max Standards and Spec reviews of `c20cb5b...c511c71` report
+no findings or blockers. [Repair CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34216389618)
+on `c511c71`: Python 3.11 and 3.12 each pass **727 tests**, with one existing
+warning. The earlier acceptance results above cover only earlier code.
