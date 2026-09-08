@@ -76,8 +76,38 @@ review/协调记录中登记。
 包括 A/B/C 场景的部分 `v1_observed` 字段尚未逐项断言；未来实现 PR 仍须补齐对应
 acceptance。
 
+<a id="pr2b-local-validation"></a>
+### PR2B 实现验证（2026-09-07，verified，尚未合并）
+
+基线为已合并的 PR63 `ca6792592954f05c3aed76a70f4bc0d98126e845`，实现分支
+`codex/protocol-v2-pr2b`，本地验证时 tracked 工作区包含本次变更。没有运行真实 provider、
+迁移用户数据库、运行 benchmark 或改变默认 V1 工作流。仅在 disposable 数据库中验证：
+
+- 2B.1–2B.2：Run 输入、选中顺序和唯一 report 不可变；阶段更新条件提交。
+- 2B.3–2B.5：完整 evidence set/items/pointer 同事务封存；失败无半集合；V2 collector
+  使用固定 RepositoryView、整行截断及准确范围/字符数；fake provider 获得封存的逐字段原值。
+- 2B.6：请求参数与冻结配置一致，单行 attempt 条件终结；success 与 selected 指针同事务，
+  指针失败整体回滚；null 和零回报区分；并发读使用一致快照，LLM 状态从 attempts 派生。
+- 2B.7–2B.8：有序 EvidenceLookup 不依赖 normalizer/HTTP；trace 仅接受小型元数据和引用。
+- 2B.9–2B.10：owner-only 数据库/目录、显式 create-only 工具、私有迁移 receipt、
+  原 source 保持 V1 可写、导入 legacy 副本只读、旧 writer 拒绝 V2；详见
+  [隐私与保留政策](protocol-v2-data-protection.md)。
+
+先完成 Store CRUD/失败测试再注册 agent-db CLI。Store/evidence focused 17 passed；
+包含 lifecycle、legacy、collector、CLI 和原 migration 回归的集成 focused 初次 98 passed
+（Store 的最终一致读回归另行通过）；最终全量 `python -m pytest -q` 为 609 passed、
+1 条既有 Starlette 弃用警告。Ruff、格式（改动区域）、compileall、diff 检查通过。
+原始测试日志保存在验证环境，不将本机路径或真实源码证据加入公共文档。
+
+代码提交 `1b24cf0` 的 [Python 3.11/3.12 CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34162842223)
+均为 609 passed、1 条既有警告，Ruff 通过。独立 Astra Standards 与 Spec 双轴审查
+覆盖 `ca67925...1b24cf0` 全部差异，分别 0 项违规/阻塞；任务状态为 verified，PR64 尚未合并。
+PR3 normalizer、PR4 Agent/G0、恢复/HTTP/review 及 G1 均不由本 PR 提前宣称完成。
+
 <a id="pr2a-local-validation"></a>
-### PR2A 本地实现验证记录（2026-09-07，`verified`，尚未合并）
+### PR2A 本地实现验证记录（2026-09-07，历史初始验证）
+
+PR63 最终已合并为 `ca67925`；以下初始计数保留作为历史证据，最终补修见下节。
 
 PR2A 仅新增独立 migration 模块和 focused tests；没有修改 `AgentStore._initialize`、CLI/API、
 默认 V1 路径或任何用户数据库。`inspect_agent_database` 只读区分 empty/legacy0/knownv2/
@@ -85,7 +115,7 @@ unknown/corrupt；`backup_agent_database` 使用 SQLite backup、只读 source �
 发布，拒绝已有目标、symlink、缺失 source，并保留 WAL 中已提交数据而不复制 source sidecar。
 V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护；legacy-copy 保留旧三表及原 payload，
 不把旧 JSON 转成 V2 attempt。故障点覆盖 DDL/index/version/commit，均在 commit 前校验并完整回滚。
-独立有界复核已通过且无阻塞项；PR2A 状态为 `verified`，但尚未合并，不切换默认 V2。
+当时独立有界复核已通过且无阻塞项；当时状态为 `verified`，未切换默认 V2。
 
 | 范围 | 命令 | 结果 |
 |---|---|---|
@@ -96,7 +126,7 @@ V2 DDL、索引、触发器和版本写入由一个显式逐语句事务维护�
 | compileall | `PYTHONPYCACHEPREFIX=<tmp>/pycache .venv/bin/python -m compileall -q src tests` | 退出码 0；原始日志已保存 |
 | diff check | `git diff --check` | 退出码 0 |
 
-该记录不表示迁移已公开为 CLI/API、默认 V2 已切换或用户数据库已迁移；PR2A 尚未合并。
+该初始记录不表示迁移已公开为 CLI/API、默认 V2 已切换或用户数据库已迁移。
 
 #### PR2A 四项失效路径补充（2026-09-07，基线 `b11a812`）
 
@@ -275,7 +305,7 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
 文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 和 PR1B 已合并，
-其中 PR1B 合并提交为 `d83f051`。PR2A 已完成本地门禁与独立有界复核，状态为 `verified`
-但尚未合并；PR3–PR8、G0、G1 仍为 `planned`，
+其中 PR1B 合并提交为 `d83f051`。PR2A 已随 PR63 合并为 `ca67925`；PR2B 已验证但尚未合并，
+PR3–PR8、G0、G1 仍为 `planned`，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。

@@ -192,6 +192,35 @@ def test_legacy_copy_upgrade_preserves_old_tables_and_payload(tmp_path: Path) ->
         assert connection.execute("PRAGMA user_version").fetchone()[0] == 0
 
 
+def test_imported_legacy_tables_reject_all_writes_and_require_exact_guards(tmp_path: Path) -> None:
+    destination = tmp_path / "destination.sqlite3"
+    shutil.copy2(LEGACY_FIXTURE, destination)
+    with _connection(destination) as connection:
+        original = {
+            table: connection.execute(f"SELECT * FROM {table}").fetchall()
+            for table in ("agent_runs", "agent_traces", "agent_snapshots")
+        }
+        apply_v2_schema(connection)
+        for table, rows in original.items():
+            for statement in (
+                f"INSERT INTO {table} SELECT * FROM {table} LIMIT 1",
+                f"INSERT OR REPLACE INTO {table} SELECT * FROM {table} LIMIT 1",
+                f"UPDATE {table} SET run_id = run_id",
+                f"DELETE FROM {table}",
+            ):
+                with pytest.raises(sqlite3.IntegrityError, match="legacy history is read-only"):
+                    connection.execute(statement)
+                assert connection.execute(f"SELECT * FROM {table}").fetchall() == rows
+        assert inspect_agent_database(connection).kind is DatabaseKind.KNOWN_V2
+        connection.execute("DROP TRIGGER agent_runs_legacy_no_insert")
+        assert inspect_agent_database(connection).kind is DatabaseKind.CORRUPT
+        connection.execute(
+            "CREATE TRIGGER agent_runs_legacy_no_insert BEFORE INSERT ON agent_runs "
+            "BEGIN SELECT 1; END"
+        )
+        assert inspect_agent_database(connection).kind is DatabaseKind.CORRUPT
+
+
 def test_attempt_is_single_row_finalize_once_with_strict_ownership(tmp_path: Path) -> None:
     path = tmp_path / "v2.sqlite3"
     with _new_v2_connection(path) as connection:
