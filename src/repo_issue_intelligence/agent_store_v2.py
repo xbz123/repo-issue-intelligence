@@ -177,6 +177,18 @@ class AgentStoreV2:
         if row is None:
             return None
         configuration = json.loads(row["configuration_json"])
+        # Older captures serialized unset budget defaults as null. Their stored
+        # origin marker remains authoritative; in-memory copies are checked at
+        # create_run before this serialization boundary.
+        for name in ("output_tokens", "timeout_seconds"):
+            if (
+                configuration["parameter_origins"].get(
+                    f"budget.{name}", configuration["parameter_origins"].get(name, "omitted")
+                )
+                == "omitted"
+                and configuration["budgets"].get(name) is None
+            ):
+                configuration["budgets"].pop(name, None)
         for key in ("request_parameters", "parameter_origins"):
             configuration[key] = FrozenDict(configuration[key])
         configuration["budgets"]["retry_policy"] = FrozenDict(
@@ -500,6 +512,9 @@ class AgentStoreV2:
         ):
             present = name in configuration.request_parameters
             value = configuration.request_parameters.get(name)
+            if name == "max_output_tokens" and not present:
+                present = "output_tokens" in configuration.request_parameters
+                value = configuration.request_parameters.get("output_tokens")
             if name in {"max_output_tokens", "timeout_seconds"}:
                 budget_name = "output_tokens" if name == "max_output_tokens" else name
                 budget_value = getattr(configuration.budgets, budget_name)

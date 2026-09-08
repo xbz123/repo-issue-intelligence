@@ -2,7 +2,7 @@
 
 This follow-up targets `main` after PR64/65 (`31930db`). It fixes the five PR64
 comments published after merge, without adding PR4/PR5 behavior or changing R5.
-PR66 remains a separate draft; apply the repaired base before its next validation.
+PR66 remains a separate PR; apply the repaired base before its next validation.
 
 | Feedback | Reproduction and correction |
 |---|---|
@@ -32,3 +32,33 @@ on `5520ef9`: Python 3.11 and 3.12 each pass **691 tests**, with one existing
 dependency warning. Review scope is `31930db...5520ef9`; no real power-loss or
 provider validation is claimed. Delivery is [PR67](https://github.com/xbz123/repo-issue-intelligence/pull/67),
 kept unmerged. PR66 is unchanged and must receive this repaired base separately.
+
+## PR67 follow-up: aliases and copied explicit nulls
+
+Review of `395f9e8` found two remaining configuration paths:
+
+| Feedback | Regression and correction |
+|---|---|
+| [Output-token alias](https://github.com/xbz123/repo-issue-intelligence/pull/67#discussion_r3956408459) | Reject `request_parameters.output_tokens=100` with budget `200`, and contradictory request aliases. Bind a valid alias to the attempt's canonical `max_output_tokens`, including explicit null. Explicit request aliases still supersede lower-priority defaults. |
+| [Copied explicit-null budget](https://github.com/xbz123/repo-issue-intelligence/pull/67#discussion_r3956408466) | Check budget field presence before persistence, so `model_copy` cannot conceal an explicit null behind a stale omitted marker. Reject that contradiction even without a corresponding request parameter, preventing a null from silently disappearing on readback. |
+
+Budget serialization omits only unset null output-token/timeout fields and
+preserves non-null values even on models constructed with an empty field set.
+The Store read adapter retains
+compatibility with older serialized null defaults using their stored origins;
+it does not rewrite historical rows. Those origins cannot independently prove
+the intent of an already ambiguous historical record. New in-memory copies are
+checked before that boundary. Regression tests use capture, Store creation,
+readback and attempt binding; historical rows are represented at the SQLite
+persistence boundary. No schema or V1 default changes are included.
+
+Follow-up local full suite: **708 passed**, one existing Starlette deprecation
+warning. Ruff, compileall, changed-region formatting, diff whitespace checks
+and all 195 tracked JSON parses passed. Existing unrelated formatting drift
+was left untouched. The six alias-conflict/copied-null regression cases also
+ran against an isolated `395f9e8` source snapshot: all six failed because the
+expected rejection was missing, and all pass in the repaired full suite.
+Independent Luna max Standards and Spec reviews of the new delta from
+`395f9e8` report zero remaining findings; the Spec reviewer independently ran
+the 75 configuration/Store tests. CI is pending the follow-up push. The earlier
+Astra and CI results above apply only to the earlier revision.

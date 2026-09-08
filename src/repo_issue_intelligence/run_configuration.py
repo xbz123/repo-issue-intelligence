@@ -632,20 +632,23 @@ def _validate_retry_policy(value: Any) -> dict[str, Any]:
 
 def _as_budget(values: Mapping[str, Any]) -> BudgetConfiguration:
     source = _object_values(values)
+
     def value(*names: str) -> Any:
         found = _get_first(source, names)
         return None if found is _OMITTED else found
+
     retry = value(*_BUDGET_ALIASES["retry_policy"])
     if retry is None:
         retry = {}
     retry = _validate_retry_policy(retry)
-    return BudgetConfiguration(
-        output_tokens=value(*_BUDGET_ALIASES["output_tokens"]),
-        evidence_chars=value(*_BUDGET_ALIASES["evidence_chars"]),
-        evidence_lines=value(*_BUDGET_ALIASES["evidence_lines"]),
-        timeout_seconds=value(*_BUDGET_ALIASES["timeout_seconds"]),
-        retry_policy=freeze_mapping(_json_safe(retry, name="retry_policy")),
-    )
+    fields = {
+        name: value(*aliases)
+        for name, aliases in _BUDGET_ALIASES.items()
+        if _get_first(source, aliases) is not _OMITTED
+    }
+    if "retry_policy" in fields:
+        fields["retry_policy"] = freeze_mapping(_json_safe(retry, name="retry_policy"))
+    return BudgetConfiguration(**fields)
 
 
 def _validated_budget_model(value: BudgetConfiguration) -> BudgetConfiguration:
@@ -842,6 +845,15 @@ def capture_requested_run_configuration(
             origins[name] = ParameterOrigin.CLIENT_DEFAULT.value
         else:
             origins[name] = ParameterOrigin.OMITTED.value
+    # A caller override of either spelling supersedes the other spelling's
+    # client default; contradictory values from the same request still fail.
+    for name, other in (
+        ("max_output_tokens", "output_tokens"),
+        ("output_tokens", "max_output_tokens"),
+    ):
+        if name in explicit_parameters and other not in explicit_parameters:
+            safe_parameters.pop(other, None)
+            origins[other] = ParameterOrigin.OMITTED.value
     if requested_model is not _OMITTED:
         model = requested_model
         model_origin = ParameterOrigin.USER_CONFIG.value

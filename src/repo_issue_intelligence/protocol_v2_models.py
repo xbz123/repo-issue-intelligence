@@ -15,7 +15,7 @@ from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Any, ClassVar, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from .models import (
     EvidenceAlignment,
@@ -309,26 +309,51 @@ class RunConfiguration(ProtocolV2Model):
     safe_cli_flags: tuple[str, ...] = ()
     captured_at: AwareDatetime
 
+    @field_serializer("budgets")
+    def serialize_budgets(self, value: BudgetConfiguration) -> dict[str, Any]:
+        return value.model_dump(
+            exclude={
+                name
+                for name in ("output_tokens", "timeout_seconds")
+                if name not in value.model_fields_set and getattr(value, name) is None
+            }
+        )
+
     def has_request_budget(self, name: str) -> bool:
         value = getattr(self.budgets, name)
         origin = self.parameter_origins.get(
             f"budget.{name}", self.parameter_origins.get(name, "omitted")
         )
-        return value is not None or origin != "omitted"
+        # A model_copy can add explicit null without updating origin markers.
+        return value is not None or name in self.budgets.model_fields_set or origin != "omitted"
 
     @model_validator(mode="after")
     def validate_request_budget_consistency(self) -> Self:
         for parameter, budget in (
             ("max_output_tokens", "output_tokens"),
+            ("output_tokens", "output_tokens"),
             ("timeout_seconds", "timeout_seconds"),
         ):
             value = getattr(self.budgets, budget)
+            if (
+                value is None
+                and budget in self.budgets.model_fields_set
+                and self.parameter_origins.get(f"budget.{budget}") == "omitted"
+            ):
+                raise ValueError("Conflicting explicit-null budget and omitted origin")
             if (
                 parameter in self.request_parameters
                 and self.has_request_budget(budget)
                 and self.request_parameters[parameter] != value
             ):
                 raise ValueError("Conflicting request-parameter and budget values")
+        if (
+            "output_tokens" in self.request_parameters
+            and "max_output_tokens" in self.request_parameters
+            and self.request_parameters["output_tokens"]
+            != self.request_parameters["max_output_tokens"]
+        ):
+            raise ValueError("Conflicting output-token request aliases")
         return self
 
     @property
