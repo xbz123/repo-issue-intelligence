@@ -19,5 +19,16 @@ See [data protection](protocol-v2-data-protection.md) for failure/retention limi
 
 Local validation: 75 affected tests passed; one full suite completed with
 685 passed and one existing Starlette deprecation warning. Ruff, compileall,
-diff whitespace checks and all 195 tracked JSON parses passed. Dual-version CI
-and independent Standards/Spec review are pending.
+diff whitespace checks and all 195 tracked JSON parses passed.
+
+Independent Spec review caught an additional omission edge case in the initial
+fix: request-only timeout was mistaken for an explicit null budget. `5520ef9`
+adds separate persisted budget origins and six capture/Store/read/attempt cases;
+the related configuration/Store suite passes 58 tests. Explicit conflicts remain
+rejected. Both independent Astra Standards and Spec rechecks report no blockers.
+
+[Final code CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34187765869)
+on `5520ef9`: Python 3.11 and 3.12 each pass **691 tests**, with one existing
+dependency warning. Review scope is `31930db...5520ef9`; no real power-loss or
+provider validation is claimed. Delivery is [PR67](https://github.com/xbz123/repo-issue-intelligence/pull/67),
+kept unmerged. PR66 is unchanged and must receive this repaired base separately.
