@@ -1,7 +1,7 @@
 # Protocol v2 local data protection
 
-PR2B supplies an explicit Store and database tools, not a runnable V2 Agent.
-The existing Agent CLI/API continue to use V1 by default. No migration runs on
+PR2B supplies an explicit Store and database tools; [PR4](protocol-v2-execution.md)
+adds the opt-in foreground CLI. The existing Agent CLI/API continue to use V1 by default. No migration runs on
 startup, and no command automatically combines a beta database with legacy data.
 
 ## Create or inspect
@@ -96,6 +96,13 @@ CLI database commands report operation/kind/version only, and suppress raw SQLit
 or filesystem error text. Provenance paths are local private receipt contents,
 not routine console diagnostics. Retention is explicit: users decide separately
 when to archive or delete historical data; this release sets no automatic TTL.
+
+V2 evaluation ledgers are retained in private per-run directories below
+`WORKSPACE/.agent-evaluation-v2/`; case exports contain relative database paths.
+The `DATABASE.writer.lock` sidecar is retained to keep process-lock identity stable
+and must not be removed while an executor may be running. Summary exports include
+Issue text, provenance and analyses, so treat them as private as well; no source
+export or automatic publication is enabled by the CLI beta.
 
 HTTP evidence access, authorization, recovery/retry and review services remain in
 their later R5 work packages. Local Store availability grants no provider-transfer

@@ -5,6 +5,7 @@ import subprocess
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
+from uuid import uuid4
 
 import typer
 from rich.console import Console
@@ -14,6 +15,7 @@ from .agent_database import create_v2_database, inspect_database, migrate_legacy
 from .agent_evaluation import run_agent_analysis_evaluation, save_agent_analysis_run
 from .agent_store import AgentStore
 from .agent_store_migrations import MigrationError
+from .agent_store_v2 import AgentStoreV2, StoreError
 from .agent_workflow import run_agent
 from .benchmark import (
     BenchmarkCaseResult,
@@ -47,7 +49,10 @@ from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import IssueAnalyzer, OpenAICompatibleIssueAnalyzer
 from .models import IssueRecord, ReviewDecision
+from .protocol_v2_models import RepositoryCaptureMode
+from .repository_context import RepositoryContextError
 from .repository_index import build_repository_map, save_repository_map
+from .repository_view import RepositoryViewError
 from .service import rank_issues
 
 app = typer.Typer(no_args_is_help=True)
@@ -103,6 +108,56 @@ def agent_db_migrate(
 class LLMBackend(StrEnum):
     API = "api"
     CODEX_CLI = "codex-cli"
+
+
+class AgentProtocol(StrEnum):
+    V1 = "v1"
+    V2 = "v2"
+
+
+def _v2_store(database: Path | None) -> AgentStoreV2:
+    if database is None:
+        raise typer.BadParameter("V2 requires an explicit existing private --database")
+    try:
+        return AgentStoreV2(database)
+    except (StoreError, OSError):
+        raise typer.BadParameter(
+            "V2 requires an existing private V2 database; use agent-db create-v2 first"
+        ) from None
+
+
+def _v2_parameter_origins(ctx: typer.Context, settings: Settings, analyzer) -> dict[str, str]:
+    fields = settings.model_fields_set
+
+    def origin(option: str | None, setting: str | None = None) -> str:
+        source = ctx.get_parameter_source(option) if option else None
+        explicit = source is not None and source.name == "COMMANDLINE"
+        return "user_config" if explicit or setting in fields else "client_default"
+
+    origins = {
+        "retry_policy": origin("max_llm_attempts"),
+        "evidence_chars": origin(None, "llm_max_evidence_chars"),
+        "evidence_lines": origin(None, "llm_max_lines_per_evidence"),
+    }
+    if analyzer is None:
+        return origins
+    requested = analyzer.requested_configuration_v2()
+    api = requested["backend"] == "api"
+    settings_prefix = "llm" if api else "codex_cli"
+    sources = {
+        "model": ("llm_model", f"{settings_prefix}_model"),
+        "temperature": ("temperature", None if "temperature" in ctx.params else "llm_temperature"),
+        "seed": ("seed", None),
+        "service_tier": ("llm_fast", None),
+        "max_output_tokens": (None, "llm_max_output_tokens"),
+        "timeout_seconds": (None, f"{settings_prefix}_timeout_seconds"),
+        "reasoning_effort": (None, f"{settings_prefix}_reasoning_effort"),
+        "response_format_json": (None, "llm_response_format_json"),
+    }
+    for key, (option, setting) in sources.items():
+        if key in requested:
+            origins["requested_model" if key == "model" else key] = origin(option, setting)
+    return origins
 
 
 def _benchmark_source_revision() -> str:
@@ -412,8 +467,19 @@ def investigate_issue(
 
 @app.command("agent-run")
 def agent_run_command(
+    ctx: typer.Context,
     issues_file: Path,
     repo: Annotated[Path, typer.Option("--repo", help="Repository path to inspect.")],
+    protocol: Annotated[AgentProtocol, typer.Option("--protocol")] = AgentProtocol.V1,
+    allow_external_llm: Annotated[
+        bool, typer.Option("--allow-external-llm", help="Allow V2 evidence transfer this run.")
+    ] = False,
+    capture_mode: Annotated[
+        RepositoryCaptureMode, typer.Option("--capture-mode", help="V2 repository input view.")
+    ] = RepositoryCaptureMode.COMMITTED,
+    max_llm_attempts: Annotated[
+        int, typer.Option("--max-llm-attempts", min=1, help="V2 per-Issue attempt budget.")
+    ] = 2,
     top_k: Annotated[
         int,
         typer.Option("--top-k", min=1, help="Number of ranked issues to investigate."),
@@ -446,41 +512,80 @@ def agent_run_command(
         bool,
         typer.Option("--llm-fast", help="Use the Codex CLI Fast service tier."),
     ] = False,
-    output: Path = Path("reports/agent-run.json"),
+    output: Path | None = None,
 ) -> None:
     """Run the synchronous LangGraph workflow up to human review."""
-    settings = Settings()
-    database = database or settings.agent_db_path
+    if protocol is AgentProtocol.V2 and llm and not allow_external_llm:
+        raise typer.BadParameter("V2 model analysis requires --allow-external-llm")
+    v2_store = _v2_store(database) if protocol is AgentProtocol.V2 else None
+    output = output or Path(
+        "reports/agent-run-v2.json" if v2_store is not None else "reports/agent-run.json"
+    )
     analyzer = None
-    if llm:
-        analyzer = _build_issue_analyzer(
-            settings,
-            backend=llm_backend,
-            model=llm_model,
-            base_url=llm_base_url,
-            provider=llm_provider,
-            fast=llm_fast,
-        )
+    run_id = str(uuid4()) if v2_store is not None else None
     try:
-        run = run_agent(
-            _load(issues_file),
-            repo,
-            top_k,
-            AgentStore(database),
-            llm_analyzer=analyzer,
-            max_evidence_chars=settings.llm_max_evidence_chars,
-            max_evidence_lines=settings.llm_max_lines_per_evidence,
-        )
-    except ValueError as error:
-        raise typer.BadParameter(str(error)) from error
+        settings = Settings()
+        database = database or settings.agent_db_path
+        if llm:
+            analyzer = _build_issue_analyzer(
+                settings,
+                backend=llm_backend,
+                model=llm_model,
+                base_url=llm_base_url,
+                provider=llm_provider,
+                fast=llm_fast,
+            )
+        if v2_store is not None:
+            from .issue_execution import run_agent_v2
+
+            run_agent_v2(
+                _load(issues_file), repo, top_k, v2_store,
+                llm_analyzer=analyzer,
+                allow_external_llm=allow_external_llm,
+                capture_mode=capture_mode,
+                max_evidence_chars=settings.llm_max_evidence_chars,
+                max_evidence_lines=settings.llm_max_lines_per_evidence,
+                max_attempts=max_llm_attempts,
+                run_id=run_id,
+                parameter_origins=_v2_parameter_origins(ctx, settings, analyzer),
+            )
+            run = v2_store.get_run_summary(run_id)
+        else:
+            run = run_agent(
+                _load(issues_file), repo, top_k, AgentStore(database),
+                llm_analyzer=analyzer,
+                max_evidence_chars=settings.llm_max_evidence_chars,
+                max_evidence_lines=settings.llm_max_lines_per_evidence,
+            )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
+    except Exception as error:
+        if v2_store is None:
+            if isinstance(error, ValueError):
+                raise typer.BadParameter(str(error)) from error
+            raise
+        message = "V2 execution failed; internal details were withheld."
+        if isinstance(error, StoreError):
+            message = "V2 database write refused; check private database and single-writer access."
+        elif isinstance(error, (RepositoryContextError, RepositoryViewError)):
+            message = "V2 repository capture refused; check supported Git inputs in analysis scope."
+        try:
+            persisted = v2_store.get_run(run_id)
+        except (StoreError, OSError):
+            persisted = None
+        if persisted is not None:
+            message += f" Run {run_id} remains readable with agent-show --protocol v2."
+        typer.echo(message, err=True)
+        raise typer.Exit(2) from None
     finally:
         if analyzer is not None:
             analyzer.close()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
+    selected = (
+        run.selection.selected_issue_numbers if v2_store is not None else run.selected_issue_numbers
+    )
     console.print(
         f"Run {run.run_id} is {run.status}; "
-        f"selected issue(s): {', '.join(f'#{number}' for number in run.selected_issue_numbers)}"
+        f"selected issue(s): {', '.join(f'#{number}' for number in selected)}"
     )
     console.print(f"Saved Agent run to {output}")
 
@@ -488,14 +593,21 @@ def agent_run_command(
 @app.command("agent-show")
 def agent_show_command(
     run_id: str,
+    protocol: Annotated[AgentProtocol, typer.Option("--protocol")] = AgentProtocol.V1,
     database: Annotated[
         Path | None,
         typer.Option("--database", help="SQLite database for Agent run state."),
     ] = None,
 ) -> None:
     """Show a persisted Agent run."""
-    database = database or Settings().agent_db_path
-    run = AgentStore(database).get_run(run_id)
+    if protocol is AgentProtocol.V2:
+        try:
+            run = _v2_store(database).get_run_summary(run_id)
+        except (StoreError, OSError):
+            raise typer.BadParameter("V2 database read refused") from None
+    else:
+        database = database or Settings().agent_db_path
+        run = AgentStore(database).get_run(run_id)
     if run is None:
         raise typer.BadParameter(f"Run {run_id} was not found")
     console.print_json(run.model_dump_json())
@@ -528,13 +640,19 @@ def agent_review_command(
 
 @app.command("agent-evaluate")
 def agent_evaluate_command(
+    ctx: typer.Context,
     manifest: Path,
+    protocol: Annotated[AgentProtocol, typer.Option("--protocol")] = AgentProtocol.V1,
+    allow_external_llm: Annotated[
+        bool,
+        typer.Option("--allow-external-llm", help="Allow V2 evidence transfer this evaluation."),
+    ] = False,
     case_id: Annotated[
         list[str] | None,
         typer.Option("--case-id", help="Evaluate only this frozen case; repeat as needed."),
     ] = None,
     workspace: Path = Path("benchmarks/workspaces"),
-    output: Path = Path("benchmarks/results/agent-analysis-latest.json"),
+    output: Path | None = None,
     llm_delay_seconds: Annotated[
         float,
         typer.Option("--llm-delay-seconds", min=0, help="Delay between provider cases."),
@@ -573,33 +691,71 @@ def agent_evaluate_command(
     ] = False,
 ) -> None:
     """Evaluate full model analysis through the persisted Agent graph."""
-    settings = Settings()
-    analyzer = _build_analysis_evaluator(
-        settings,
-        temperature,
-        seed,
-        backend=llm_backend,
-        model=llm_model,
-        base_url=llm_base_url,
-        provider=llm_provider,
-        fast=llm_fast,
-        omit_max_tokens=omit_max_tokens,
+    if protocol is AgentProtocol.V2 and not allow_external_llm:
+        raise typer.BadParameter("V2 model evaluation requires --allow-external-llm")
+    output = output or Path(
+        "benchmarks/results/agent-analysis-v2-latest.json"
+        if protocol is AgentProtocol.V2 else "benchmarks/results/agent-analysis-latest.json"
     )
+    settings = Settings()
+    analyzer = None
     try:
-        run = run_agent_analysis_evaluation(
-            load_manifest(manifest),
-            workspace,
-            analyzer,
-            case_ids=set(case_id) if case_id else None,
-            max_evidence_chars=settings.llm_max_evidence_chars,
-            max_lines_per_evidence=settings.llm_max_lines_per_evidence,
-            llm_delay_seconds=llm_delay_seconds,
+        analyzer = _build_analysis_evaluator(
+            settings,
+            temperature,
+            seed,
+            backend=llm_backend,
+            model=llm_model,
+            base_url=llm_base_url,
+            provider=llm_provider,
+            fast=llm_fast,
+            omit_max_tokens=omit_max_tokens,
         )
-    except ValueError as error:
-        raise typer.BadParameter(str(error)) from error
+        evaluation_options = {
+            "case_ids": set(case_id) if case_id else None,
+            "max_evidence_chars": settings.llm_max_evidence_chars,
+            "max_lines_per_evidence": settings.llm_max_lines_per_evidence,
+            "llm_delay_seconds": llm_delay_seconds,
+        }
+        if protocol is AgentProtocol.V2:
+            from .agent_evaluation_v2 import run_agent_analysis_evaluation_v2
+
+            run = run_agent_analysis_evaluation_v2(
+                load_manifest(manifest), workspace, analyzer,
+                parameter_origins=_v2_parameter_origins(ctx, settings, analyzer),
+                allow_external_llm=allow_external_llm, **evaluation_options,
+            )
+        else:
+            run = run_agent_analysis_evaluation(
+                load_manifest(manifest), workspace, analyzer, **evaluation_options,
+            )
+    except Exception as error:
+        if protocol is AgentProtocol.V2:
+            typer.echo("V2 evaluation failed; internal details were withheld.", err=True)
+            raise typer.Exit(2) from None
+        if isinstance(error, ValueError):
+            raise typer.BadParameter(str(error)) from error
+        raise
     finally:
-        analyzer.close()
+        if analyzer is not None:
+            analyzer.close()
     save_agent_analysis_run(run, output)
+    if protocol is AgentProtocol.V2:
+        console.print(
+            f"Protocol v2: {run.overall.execution_successes}/{run.overall.execution_cases} "
+            f"executions; {run.overall.provider_successes}/{run.overall.provider_cases} "
+            f"provider cases; no evidence={run.overall.no_evidence_cases}; "
+            f"grounding={run.overall.grounding_hits}/{run.overall.grounding_cases}"
+        )
+        console.print(f"Saved Agent analysis results to {output}")
+        if (
+            not run.completed
+            or run.overall.execution_successes != run.overall.execution_cases
+            or run.overall.provider_successes != run.overall.provider_cases
+            or run.overall.no_evidence_cases
+        ):
+            raise typer.Exit(code=1)
+        return
     console.print(
         f"Agent analysis: {run.overall.analysis_successes}/{run.overall.cases} valid; "
         f"first-attempt success={run.overall.first_attempt_success_rate:.4f}; "

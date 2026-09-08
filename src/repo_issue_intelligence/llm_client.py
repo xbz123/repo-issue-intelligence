@@ -34,6 +34,7 @@ from .models import (
     LLMAnalysisResult,
     LLMHypothesis,
 )
+from .run_configuration import normalize_endpoint
 
 OPENCODE_API_BASE_URL = "https://opencode.ai/zen/go/v1"
 OPENCODE_DEFAULT_MODEL = "deepseek-v4-flash"
@@ -185,6 +186,8 @@ class LLMProviderError(RuntimeError):
 
 
 class OpenAICompatibleIssueAnalyzer:
+    backend = "api"
+
     def __init__(
         self,
         api_key: str,
@@ -232,6 +235,7 @@ class OpenAICompatibleIssueAnalyzer:
             headers={"Authorization": f"Bearer {api_key}"},
             timeout=timeout_seconds,
             trust_env=False,
+            transport=httpx.HTTPTransport(retries=0, trust_env=False),
         )
         self._owns_client = client is None
         self.rerank_initial_output_tokens = OPENCODE_RERANK_INITIAL_OUTPUT_TOKENS
@@ -276,21 +280,7 @@ class OpenAICompatibleIssueAnalyzer:
             payload["seed"] = self.seed
 
         if observations is not None:
-            requested = {
-                "backend": "api",
-                "provider": self.provider,
-                "model": payload["model"],
-                "temperature": payload["temperature"],
-                "timeout_seconds": self.timeout_seconds,
-            }
-            for key in ("reasoning_effort", "seed"):
-                if key in payload:
-                    requested[key] = payload[key]
-            if "max_tokens" in payload:
-                requested["max_output_tokens"] = payload["max_tokens"]
-            if "response_format" in payload:
-                requested["response_format_json"] = True
-            observations["requested"] = requested
+            observations["requested"] = self.requested_configuration_v2()
             return self._request_completion(payload, observations=observations)
         return self._request_completion(payload)
 
@@ -302,7 +292,19 @@ class OpenAICompatibleIssueAnalyzer:
     ) -> tuple[str, dict, float]:
         started = perf_counter()
         try:
-            response = self._client.post("chat/completions", json=payload)
+            if observations is not None:
+                # V2 binds dispatch to the captured analyzer endpoint, even with a custom client.
+                endpoint = normalize_endpoint(self.base_url)
+                if endpoint is None:
+                    raise ValueError("API base URL is required")
+                response = self._client.post(
+                    f"{endpoint}/chat/completions",
+                    json=payload,
+                    timeout=self.timeout_seconds,
+                    follow_redirects=False,
+                )
+            else:
+                response = self._client.post("chat/completions", json=payload)
         except httpx.HTTPError as error:
             elapsed_ms = round((perf_counter() - started) * 1000, 3)
             if observations is not None:
@@ -459,6 +461,25 @@ class OpenAICompatibleIssueAnalyzer:
             elapsed_ms=elapsed_ms,
             analysis=normalized_analysis,
         )
+
+    def requested_configuration_v2(self) -> dict[str, object]:
+        """Describe the next V2 send before its immutable attempt is started."""
+        requested = {
+            "backend": self.backend,
+            "provider": self.provider,
+            "model": self.model,
+            "temperature": self.temperature,
+            "timeout_seconds": self.timeout_seconds,
+        }
+        if self.reasoning_effort:
+            requested["reasoning_effort"] = self.reasoning_effort
+        if self.seed is not None:
+            requested["seed"] = self.seed
+        if self.max_output_tokens is not None:
+            requested["max_output_tokens"] = self.max_output_tokens
+        if self.response_format_json:
+            requested["response_format_json"] = True
+        return requested
 
     def analyze_v2(
         self,

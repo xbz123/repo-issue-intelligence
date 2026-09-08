@@ -460,6 +460,7 @@ def test_codex_cli_v2_uses_explicit_contract_and_observed_metadata(tmp_path: Pat
         run_command=fake_run,
     )
     evidence = _evidence()
+    requested = analyzer.requested_configuration_v2()
     result = analyzer.analyze_v2(_issue(), _report(), ["E1", "E2"],
                                  {item.id: item for item in evidence})
 
@@ -471,6 +472,7 @@ def test_codex_cli_v2_uses_explicit_contract_and_observed_metadata(tmp_path: Pat
     assert set(observed["schema"]["properties"]) == set(_v2_response())
     assert "primary" in observed["prompt"]
     assert result.requested["model"] == "requested-A"
+    assert result.requested == requested
     assert result.reported["model"] == "reported-B"
     assert result.reported["service_tier"] == "default"
     assert result.reported["input_tokens"] == 0

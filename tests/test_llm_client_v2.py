@@ -37,6 +37,7 @@ def test_api_v2_uses_snapshot_primary_and_keeps_reported_values_separate():
     ) as client:
         analyzer = OpenCodeIssueAnalyzer("test-key", model="requested-A", seed=7, client=client)
         record = issue()
+        requested = analyzer.requested_configuration_v2()
         result = analyzer.analyze_v2(record, report(record), ["E1", "E7"], lookup)
     assert len(captured) == 1
     assert result.analysis.primary_evidence_id == "E7"
@@ -44,6 +45,7 @@ def test_api_v2_uses_snapshot_primary_and_keeps_reported_values_separate():
     assert "reranked_evidence_ids" not in result.analysis.model_dump()
     assert result.prompt_version == ANALYSIS_V2_PROMPT_VERSION
     assert result.requested["model"] == "requested-A"
+    assert requested == result.requested
     assert result.reported["model"] == "reported-B"
     assert result.reported["seed"] is None
     assert result.reported["input_tokens"] == 0
@@ -95,6 +97,26 @@ def test_api_v2_rejects_invalid_input_before_transport():
         with pytest.raises(ValueError):
             analyzer.analyze_v2(record, report(record), ["E1", "E1"], evidence_lookup())
     assert calls == []
+
+
+def test_v2_preflight_keeps_omitted_options_out_of_the_request():
+    analyzer = OpenCodeIssueAnalyzer(
+        "test-key",
+        seed=None,
+        reasoning_effort=None,
+        max_output_tokens=None,
+        response_format_json=False,
+    )
+    try:
+        assert analyzer.requested_configuration_v2() == {
+            "backend": "api",
+            "provider": analyzer.provider,
+            "model": analyzer.model,
+            "temperature": analyzer.temperature,
+            "timeout_seconds": analyzer.timeout_seconds,
+        }
+    finally:
+        analyzer.close()
 
 
 @pytest.mark.parametrize("mode", ["http", "truncated", "json", "transport"])

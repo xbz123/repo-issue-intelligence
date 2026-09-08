@@ -1,5 +1,8 @@
 import json
+import os
 import sqlite3
+import subprocess
+import sys
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
@@ -61,6 +64,57 @@ def test_run_is_frozen_and_issues_keep_selected_order(tmp_path):
     with pytest.raises(StoreConflict):
         create_run(store)
     assert store.get_run("absent") is None
+
+
+def test_foreground_writer_lock_refuses_second_process_but_keeps_readers(tmp_path):
+    store = new_store(tmp_path / "private")
+    create_run(store)
+    command = [
+        sys.executable,
+        "-c",
+        "from pathlib import Path\n"
+        "from repo_issue_intelligence.agent_store_v2 import AgentStoreV2, StoreConflict\n"
+        "import sys\n"
+        "store = AgentStoreV2(Path(sys.argv[1]))\n"
+        "assert store.get_run('run') is not None\n"
+        "try:\n"
+        "    with store.writer_lock():\n"
+        "        print('acquired')\n"
+        "except StoreConflict:\n"
+        "    print('refused')\n",
+        str(store.path),
+    ]
+    environment = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+    with store.writer_lock():
+        create_run(store, run_id="committed-under-lock")
+        child = subprocess.run(command, capture_output=True, text=True, check=True, env=environment)
+        assert child.stdout.strip() == "refused"
+        assert store.get_run("committed-under-lock") is not None
+    child = subprocess.run(command, capture_output=True, text=True, check=True, env=environment)
+    assert child.stdout.strip() == "acquired"
+
+
+def test_v1_cli_remains_importable_without_fcntl():
+    command = [
+        sys.executable,
+        "-c",
+        "import sys\n"
+        "sys.modules['fcntl'] = None\n"
+        "from repo_issue_intelligence.cli import app\n"
+        "from typer.testing import CliRunner\n"
+        "result = CliRunner().invoke(app, ['agent-show', '--help'])\n"
+        "assert result.exit_code == 0, result.output\n"
+        "from repo_issue_intelligence.agent_store_v2 import AgentStoreV2, StoreError\n"
+        "try:\n"
+        "    AgentStoreV2('must-not-be-created.sqlite3')\n"
+        "except StoreError as error:\n"
+        "    assert 'POSIX' in str(error)\n"
+        "else:\n"
+        "    raise AssertionError('V2 storage must refuse unavailable locking')\n",
+    ]
+    environment = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
+    child = subprocess.run(command, capture_output=True, text=True, env=environment)
+    assert child.returncode == 0, child.stderr
 
 
 @pytest.mark.parametrize(
@@ -381,6 +435,7 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
         AttemptError,
         AttemptRequest,
         AttemptTerminalFields,
+        LocalObservation,
         ReportedObservation,
     )
 
@@ -405,7 +460,8 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
         AttemptTerminalFields(
             state="success",
             analysis=successful_analysis(),
-            reported=ReportedObservation(model="reported-B"),
+            reported=ReportedObservation(model="reported-B", response_id="response-7"),
+            local=LocalObservation(http_status=200, thread_id=None),
         ),
     )
     assert result.state == "success"
@@ -414,7 +470,9 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
     assert result.reported.seed is None
     assert result.reported.temperature is None
     assert result.reported.input_tokens is None
-    assert result.local is None
+    assert result.reported.response_id == "response-7"
+    assert result.local.http_status == 200
+    assert result.local.thread_id is None
     issue = store.get_issue("run", 1)
     assert issue.selected_analysis_attempt_id == second.attempt_id
     assert issue.llm_state == "succeeded"
@@ -431,6 +489,16 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
     assert store.get_issue("run", 1) == issue
     assert [attempt.state for attempt in store.list_attempts("run", 1)] == ["unknown", "success"]
     assert store.get_attempt("absent") is None
+    summary = store.get_run_summary("run")
+    assert summary.protocol == "v2"
+    assert [item.issue_number for item in summary.issues] == [2, 1]
+    assert summary.llm_outcomes == {"pending": 1, "succeeded": 1}
+    assert summary.issues[1].latest_attempt == result
+    assert summary.issues[1].diagnostics == ("reported_model_differs_from_requested",)
+    assert summary.issues[1].review_state == "pending"
+    assert summary.issues[1].reviews == ()
+    assert summary.reviewed_issues == 0
+    assert store.get_run_summary("absent") is None
 
 
 def test_store_refuses_missing_legacy_unsafe_and_replaced_targets(tmp_path):
@@ -451,6 +519,78 @@ def test_store_refuses_missing_legacy_unsafe_and_replaced_targets(tmp_path):
     replacement.path.rename(store.path)
     with pytest.raises(StoreError):
         store.get_run("absent")
+
+
+def test_run_summary_reads_one_database_snapshot_during_finalization(tmp_path, monkeypatch):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest, AttemptTerminalFields
+
+    store = new_store(tmp_path / "private")
+    create_run(store)
+    save_report(store)
+    evidence = seal(store)
+    attempt = store.start_attempt(
+        "run",
+        1,
+        evidence.evidence_set_id,
+        AttemptRequest(model="requested-A", temperature=0.2, seed=7),
+    )
+    connect = sqlite3.connect
+    with closing(connect(store.path)) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+    finalized = False
+
+    def finalize_between_reads(sql):
+        nonlocal finalized
+        if not finalized and "ORDER BY ordinal DESC LIMIT 1" in sql:
+            finalized = True
+            store.finalize_attempt(
+                attempt.attempt_id,
+                AttemptTerminalFields(state="success", analysis=successful_analysis()),
+            )
+
+    def observed_connection(*args, **kwargs):
+        connection = connect(*args, **kwargs)
+        connection.set_trace_callback(finalize_between_reads)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", observed_connection)
+    summary = store.get_run_summary("run")
+    assert finalized
+    issue = summary.issues[1]
+    assert issue.llm_state == "in_progress"
+    assert issue.latest_attempt.state == "in_progress"
+    assert issue.selected_analysis_attempt_id is None
+    assert store.get_run_summary("run").issues[1].llm_state == "succeeded"
+
+
+@pytest.mark.parametrize("decision", ["approved", "rejected", "needs_information"])
+def test_run_summary_derives_review_completion_without_changing_control_status(tmp_path, decision):
+    from test_evidence_ledger import save_report
+
+    store = new_store(tmp_path / "private")
+    create_run(store, llm_enabled=False)
+    for number in (1, 2):
+        save_report(store, issue_number=number)
+    store.set_run_status("run", "AWAITING_REVIEW", expected_status="RUNNING")
+    # Seed already-persisted review records through the database boundary;
+    # the future PR7B review service is deliberately not part of this reader test.
+    for number, status in ((1, "PARTIALLY_REVIEWED"), (2, "REVIEW_COMPLETED")):
+        with closing(sqlite3.connect(store.path)) as connection, connection:
+            connection.execute(
+                "INSERT INTO agent_v2_reviews "
+                "(review_id,run_id,issue_number,principal_id,idempotency_key,operation,"
+                "expected_review_version,decision,payload_json,response_json,created_at) "
+                "VALUES (?, 'run', ?, 'reviewer', ?, 'review', 0, ?, '{}', '{}', ?)",
+                (f"review-{number}", number, f"key-{number}", decision, NOW.isoformat()),
+            )
+        summary = store.get_run_summary("run")
+        assert summary.status == status
+        assert summary.reviewed_issues == number
+        reviewed_issue = next(item for item in summary.issues if item.issue_number == number)
+        assert reviewed_issue.review_state == decision
+        assert store.get_run("run").status == "AWAITING_REVIEW"
 
 
 def test_trace_is_small_closed_and_issue_bound(tmp_path):
