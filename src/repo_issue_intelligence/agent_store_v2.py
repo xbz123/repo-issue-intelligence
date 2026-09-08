@@ -57,6 +57,9 @@ class StoreConflict(StoreError):
     """The requested write could not claim its immutable record or transition."""
 
 
+_SQLITE_BUSY_TIMEOUT_SECONDS = 5.0
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -152,7 +155,7 @@ class AgentStoreV2:
             ):
                 raise StoreError("Store refuses unsafe writer lock files")
             try:
-                # ponytail: database-wide beta lock; PR5 adds finer request ownership.
+                # ponytail: one foreground run per database; use per-run locks if parallelized.
                 fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 raise StoreConflict("V2 database already has a foreground writer") from None
@@ -170,7 +173,13 @@ class AgentStoreV2:
     @contextmanager
     def _connect(self):
         identity = self._check_path()
-        with closing(sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True)) as connection:
+        with closing(
+            sqlite3.connect(
+                self.path.as_uri() + "?mode=rw",
+                uri=True,
+                timeout=_SQLITE_BUSY_TIMEOUT_SECONDS,
+            )
+        ) as connection:
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys = ON")
             try:
@@ -189,6 +198,13 @@ class AgentStoreV2:
                 raise StoreConflict(
                     "Store write conflicts with an immutable record or binding"
                 ) from None
+            except sqlite3.OperationalError as error:
+                if getattr(error, "sqlite_errorcode", 0) & 0xFF in {
+                    sqlite3.SQLITE_BUSY,
+                    sqlite3.SQLITE_LOCKED,
+                }:
+                    raise StoreConflict("SQLite contention exceeded the bounded wait") from None
+                raise StoreError("SQLite operation failed; transaction rolled back") from None
             except sqlite3.DatabaseError:
                 raise StoreError("SQLite operation failed; transaction rolled back") from None
 
@@ -616,51 +632,58 @@ class AgentStoreV2:
         *,
         attempt_id: str | None = None,
     ) -> AttemptV2:
+        """Claim a sealed Issue in a running run; unknown history is never replayed here."""
         request = AttemptRequest.model_validate(
             requested_configuration.model_dump(exclude_unset=True)
         )
-        run = self.get_run(run_id)
-        if run is None or not run.configuration.llm_enabled:
-            raise StoreError("attempt requires an LLM-enabled run")
-        configuration = run.configuration
-        if (
-            request.backend != configuration.client.backend
-            or request.provider != configuration.client.provider
-            or request.model != configuration.requested_model
-        ):
-            raise StoreError("changing the requested model or client requires a new run")
-        model_present = (
-            configuration.requested_model is not None
-            or configuration.parameter_origins.get("requested_model", "omitted") != "omitted"
-        )
-        if model_present != ("model" in request.model_fields_set):
-            raise StoreError("changing requested model omission requires a new run")
-        for name in (
-            "temperature",
-            "seed",
-            "reasoning_effort",
-            "service_tier",
-            "max_output_tokens",
-            "timeout_seconds",
-            "response_format_json",
-        ):
-            present = name in configuration.request_parameters
-            value = configuration.request_parameters.get(name)
-            if name == "max_output_tokens" and not present:
-                present = "output_tokens" in configuration.request_parameters
-                value = configuration.request_parameters.get("output_tokens")
-            if name in {"max_output_tokens", "timeout_seconds"}:
-                budget_name = "output_tokens" if name == "max_output_tokens" else name
-                budget_value = getattr(configuration.budgets, budget_name)
-                if configuration.has_request_budget(budget_name):
-                    value, present = budget_value, True
-            if present != (name in request.model_fields_set) or (
-                present and getattr(request, name) != value
-            ):
-                raise StoreError("changing requested parameters or omission requires a new run")
         attempt_id = attempt_id or str(uuid4())
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
+            run = self._run(
+                connection.execute(
+                    "SELECT * FROM agent_v2_runs WHERE run_id=?", (run_id,)
+                ).fetchone()
+            )
+            if run is None or not run.configuration.llm_enabled:
+                raise StoreError("attempt requires an LLM-enabled run")
+            if run.status != "RUNNING":
+                raise StoreConflict("attempt requires a running run")
+            configuration = run.configuration
+            if (
+                request.backend != configuration.client.backend
+                or request.provider != configuration.client.provider
+                or request.model != configuration.requested_model
+            ):
+                raise StoreError("changing the requested model or client requires a new run")
+            model_present = (
+                configuration.requested_model is not None
+                or configuration.parameter_origins.get("requested_model", "omitted") != "omitted"
+            )
+            if model_present != ("model" in request.model_fields_set):
+                raise StoreError("changing requested model omission requires a new run")
+            for name in (
+                "temperature",
+                "seed",
+                "reasoning_effort",
+                "service_tier",
+                "max_output_tokens",
+                "timeout_seconds",
+                "response_format_json",
+            ):
+                present = name in configuration.request_parameters
+                value = configuration.request_parameters.get(name)
+                if name == "max_output_tokens" and not present:
+                    present = "output_tokens" in configuration.request_parameters
+                    value = configuration.request_parameters.get("output_tokens")
+                if name in {"max_output_tokens", "timeout_seconds"}:
+                    budget_name = "output_tokens" if name == "max_output_tokens" else name
+                    budget_value = getattr(configuration.budgets, budget_name)
+                    if configuration.has_request_budget(budget_name):
+                        value, present = budget_value, True
+                if present != (name in request.model_fields_set) or (
+                    present and getattr(request, name) != value
+                ):
+                    raise StoreError("changing requested parameters or omission requires a new run")
             issue = connection.execute(
                 "SELECT * FROM agent_v2_issues WHERE run_id=? AND issue_number=?",
                 (run_id, issue_number),
@@ -671,6 +694,8 @@ class AgentStoreV2:
             ).fetchone()[0]
             if (
                 issue is None
+                or issue["deterministic_state"] != "succeeded"
+                or issue["deterministic_report_json"] is None
                 or issue["evidence_set_id"] != evidence_set_id
                 or not count
                 or issue["selected_analysis_attempt_id"] is not None
@@ -678,6 +703,15 @@ class AgentStoreV2:
                 raise StoreConflict(
                     "attempt requires current nonempty evidence and no selected success"
                 )
+            if (
+                connection.execute(
+                    "SELECT 1 FROM agent_v2_llm_attempts "
+                    "WHERE run_id=? AND issue_number=? AND state='unknown' LIMIT 1",
+                    (run_id, issue_number),
+                ).fetchone()
+                is not None
+            ):
+                raise StoreConflict("unknown attempt requires explicit recovery; new start refused")
             ordinal = connection.execute(
                 "SELECT coalesce(max(ordinal), -1) + 1 FROM agent_v2_llm_attempts "
                 "WHERE run_id=? AND issue_number=?",

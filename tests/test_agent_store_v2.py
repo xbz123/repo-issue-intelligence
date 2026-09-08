@@ -450,8 +450,8 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
     store.finalize_attempt(
         first.attempt_id,
         AttemptTerminalFields(
-            state="unknown",
-            error=AttemptError(category="interrupted", detail="Local interruption"),
+            state="failure",
+            error=AttemptError(category="provider", detail="Confirmed provider failure"),
         ),
     )
     second = store.start_attempt("run", 1, evidence.evidence_set_id, request)
@@ -487,7 +487,7 @@ def test_attempt_terminal_row_is_once_and_selected_analysis_is_derived(tmp_path)
             ),
         )
     assert store.get_issue("run", 1) == issue
-    assert [attempt.state for attempt in store.list_attempts("run", 1)] == ["unknown", "success"]
+    assert [attempt.state for attempt in store.list_attempts("run", 1)] == ["failure", "success"]
     assert store.get_attempt("absent") is None
     summary = store.get_run_summary("run")
     assert summary.protocol == "v2"
