@@ -183,3 +183,58 @@ def test_v2_preserves_candidate_order_and_skips_incomplete_first_lines(tmp_path:
         assert complete[0].content == "2: two\n3: three\n4: four"
         assert complete[0].requested_range == complete[0].actual_range == (2, 4)
         assert complete[0].truncation_reason is None
+
+
+@pytest.mark.parametrize("context", [0, 12, 200])
+def test_v2_skips_ranges_wholly_beyond_captured_file(tmp_path, context):
+    repository = _repository(tmp_path)
+    report = _report(repository)
+    candidate = report.candidates[1]
+    report = report.model_copy(
+        update={
+            "candidates": [
+                candidate.model_copy(update={"lines": "100-110"}),
+                candidate.model_copy(update={"lines": "3-4"}),
+            ]
+        }
+    )
+    with prepare_repository_view(capture_repository_context(repository)) as view:
+        items = collect_evidence_v2(report, repository_view=view, context_lines=context)
+    assert len(items) == 1
+    assert items[0].candidate_rank == 1
+    assert items[0].evidence_id == "E1"
+
+
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("collector", [collect_evidence_v2, collect_evidence])
+def test_closed_view_rejects_recreated_directory(tmp_path, empty, collector):
+    repository = _repository(tmp_path)
+    report = _report(repository)
+    if empty:
+        report = report.model_copy(update={"candidates": []})
+    view = prepare_repository_view(capture_repository_context(repository))
+    root = view.materialized_root
+    view.close()
+    root.mkdir()
+    try:
+        (root / "source.py").write_text("replacement\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="closed"):
+            collector(report, repository_view=view)
+    finally:
+        (root / "source.py").unlink()
+        root.rmdir()
+
+
+@pytest.mark.parametrize("collector", [collect_evidence_v2, collect_evidence])
+def test_closed_view_rejects_before_resolving_replacement_symlink(tmp_path, collector):
+    repository = _repository(tmp_path)
+    report = _report(repository)
+    view = prepare_repository_view(capture_repository_context(repository))
+    root = view.materialized_root
+    view.close()
+    root.symlink_to(root.name)
+    try:
+        with pytest.raises(ValueError, match="closed"):
+            collector(report, repository_view=view)
+    finally:
+        root.unlink()

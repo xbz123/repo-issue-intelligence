@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import sqlite3
+import stat
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,26 @@ def test_create_refuses_existing_symlink_and_public_directory(tmp_path: Path) ->
         assert public.stat().st_mode & 0o777 == 0o755
 
 
+@pytest.mark.parametrize("migrate", [False, True])
+@pytest.mark.parametrize("nested", [False, True])
+def test_destination_symlink_ancestor_is_rejected_before_any_creation(tmp_path, migrate, nested):
+    private = tmp_path / "private"
+    private.mkdir(mode=0o700)
+    alias = tmp_path / "alias"
+    alias.symlink_to(private, target_is_directory=True)
+    destination = alias / "new" / "db.sqlite3" if nested else alias / "db.sqlite3"
+    source = tmp_path / "legacy.sqlite3"
+    shutil.copy2(Path(__file__).parent / "fixtures/protocol_v2/legacy_agent.sqlite3", source)
+    original = source.read_bytes()
+    with pytest.raises(MigrationError):
+        if migrate:
+            migrate_legacy_database(source, destination)
+        else:
+            create_v2_database(destination)
+    assert list(private.iterdir()) == []
+    assert source.read_bytes() == original
+
+
 def test_explicit_migration_preserves_source_and_records_private_provenance(tmp_path: Path) -> None:
     source = tmp_path / "legacy.sqlite3"
     fixture = Path(__file__).parent / "fixtures" / "protocol_v2" / "legacy_agent.sqlite3"
@@ -101,3 +122,86 @@ def test_failed_migration_never_overwrites_or_publishes_partial_target(
     assert not destination.exists()
     assert not list(destination.parent.iterdir())
     assert inspect_database(source).kind is DatabaseKind.LEGACY0
+
+
+@pytest.mark.parametrize("migrate", [False, True])
+def test_publication_syncs_directory_entries_in_order(tmp_path, monkeypatch, migrate):
+    source = tmp_path / "legacy.sqlite3"
+    shutil.copy2(Path(__file__).parent / "fixtures/protocol_v2/legacy_agent.sqlite3", source)
+    destination = tmp_path / "new" / "private" / "db.sqlite3"
+    events = []
+    real_link, real_fsync = os.link, os.fsync
+
+    def link(src, dst, *args, **kwargs):
+        result = real_link(src, dst, *args, **kwargs)
+        if Path(dst).parent == destination.parent:
+            events.append("receipt" if str(dst).endswith(".json") else "database")
+        return result
+
+    def fsync(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode):
+            events.append("directory")
+        return real_fsync(fd)
+
+    monkeypatch.setattr(os, "link", link)
+    monkeypatch.setattr(os, "fsync", fsync)
+    if migrate:
+        migrate_legacy_database(source, destination)
+        assert events == ["directory", "directory", "receipt", "directory", "database", "directory"]
+        assert read_migration_provenance(destination) is not None
+    else:
+        create_v2_database(destination)
+        assert events == ["directory", "directory", "database", "directory"]
+
+
+@pytest.mark.parametrize("after_database", [False, True])
+def test_migration_directory_sync_failure_preserves_publication_invariant(
+    tmp_path,
+    monkeypatch,
+    after_database,
+):
+    source = tmp_path / "legacy.sqlite3"
+    shutil.copy2(Path(__file__).parent / "fixtures/protocol_v2/legacy_agent.sqlite3", source)
+    before = source.read_bytes()
+    destination = tmp_path / "private" / "db.sqlite3"
+    destination.parent.mkdir(mode=0o700)
+    receipt = destination.with_name(destination.name + ".legacy.json")
+    real_fsync = os.fsync
+
+    def fsync(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode) and receipt.exists():
+            if destination.exists() == after_database:
+                raise OSError("private-sync-error")
+        return real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    with pytest.raises(MigrationError) as error:
+        migrate_legacy_database(source, destination)
+    assert "private-sync-error" not in str(error.value)
+    assert source.read_bytes() == before
+    assert destination.exists() == after_database
+    assert receipt.exists() == after_database
+    if after_database:
+        assert read_migration_provenance(destination) is not None
+
+
+def test_create_directory_sync_failure_does_not_claim_success_or_overwrite(tmp_path, monkeypatch):
+    destination = tmp_path / "private" / "db.sqlite3"
+    destination.parent.mkdir(mode=0o700)
+    real_fsync = os.fsync
+
+    def fsync(fd):
+        if stat.S_ISDIR(os.fstat(fd).st_mode):
+            raise OSError("private-sync-error")
+        return real_fsync(fd)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "fsync", fsync)
+        with pytest.raises(MigrationError) as error:
+            create_v2_database(destination)
+    assert "private-sync-error" not in str(error.value)
+    assert inspect_database(destination).kind is DatabaseKind.KNOWN_V2
+    before = destination.read_bytes()
+    with pytest.raises(MigrationError):
+        create_v2_database(destination)
+    assert destination.read_bytes() == before

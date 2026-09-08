@@ -591,6 +591,10 @@ class RepositoryView:
     def files(self) -> tuple[str, ...]:
         return tuple(record.path for record in self.manifest)
 
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
     def path_for(self, relative_path: str) -> Path:
         if self._closed:
             raise RepositoryViewError(
