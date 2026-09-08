@@ -62,6 +62,66 @@ def test_run_is_frozen_and_issues_keep_selected_order(tmp_path):
     assert store.get_run("absent") is None
 
 
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+def test_store_refuses_bypassed_conflicting_configuration_without_creating_run(
+    tmp_path,
+    parameter,
+    budget,
+):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration, FrozenDict
+
+    store = new_store(tmp_path / "private")
+    run = create_run(store)
+    invalid = run.configuration.model_copy(
+        update={
+            "request_parameters": FrozenDict({parameter: 100}),
+            "budgets": BudgetConfiguration(**{budget: 200}),
+        }
+    )
+    with pytest.raises(StoreError, match="Conflicting"):
+        store.create_run(run.snapshot, invalid, run.inputs, run_id="invalid")
+    assert store.get_run("invalid") is None
+
+
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+def test_matching_and_budget_only_configuration_accepts_exact_attempt(tmp_path, parameter, budget):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    for index, parameters in enumerate(({parameter: 100}, {})):
+        configuration = capture_requested_run_configuration(
+            requested_model="requested-A",
+            request_parameters=parameters,
+            budgets={budget: 100},
+        ).model_copy(update={"llm_enabled": True})
+        run_id = f"consistent-{index}"
+        store.create_run(template.snapshot, configuration, template.inputs, run_id=run_id)
+        save_report(store, run_id=run_id)
+        evidence = seal(store, run_id=run_id)
+        attempt = store.start_attempt(
+            run_id,
+            1,
+            evidence.evidence_set_id,
+            AttemptRequest(model="requested-A", **{parameter: 100}),
+        )
+        assert getattr(attempt.request, parameter) == 100
+
+
 def successful_analysis():
     from repo_issue_intelligence.protocol_v2_models import AnalysisV2
 

@@ -123,6 +123,23 @@ def test_budget_model_preserves_explicit_null_vs_omitted_origin() -> None:
     assert explicit_null.parameter_origins["output_tokens"] == "user_config"
 
 
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+@pytest.mark.parametrize("requested,limit", [(100, 200), (None, 200), (100, None)])
+def test_conflicting_request_and_budget_are_rejected(parameter, budget, requested, limit):
+    with pytest.raises(ValueError, match="[Cc]onflicting"):
+        capture_requested_run_configuration(
+            request_parameters={parameter: requested},
+            budgets={budget: limit},
+            captured_at=FIXED_TIME,
+        )
+
+
 def test_configuration_rejects_credentials_and_unsafe_endpoint() -> None:
     with pytest.raises(RunConfigurationError) as error:
         capture_requested_run_configuration(

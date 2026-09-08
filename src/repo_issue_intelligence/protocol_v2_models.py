@@ -309,6 +309,24 @@ class RunConfiguration(ProtocolV2Model):
     safe_cli_flags: tuple[str, ...] = ()
     captured_at: AwareDatetime
 
+    @model_validator(mode="after")
+    def validate_request_budget_consistency(self) -> Self:
+        for parameter, budget in (
+            ("max_output_tokens", "output_tokens"),
+            ("timeout_seconds", "timeout_seconds"),
+        ):
+            value = getattr(self.budgets, budget)
+            budget_present = (
+                value is not None or self.parameter_origins.get(budget, "omitted") != "omitted"
+            )
+            if (
+                parameter in self.request_parameters
+                and budget_present
+                and self.request_parameters[parameter] != value
+            ):
+                raise ValueError("Conflicting request-parameter and budget values")
+        return self
+
     @property
     def requested(self) -> FrozenDict:
         """Read-only conceptual group used by the R5 contract."""

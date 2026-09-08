@@ -138,6 +138,11 @@ class AgentStoreV2:
         run_id: str | None = None,
         parent_run_id: str | None = None,
     ) -> RunV2:
+        # model_copy/model_construct can bypass Pydantic validation at the caller.
+        try:
+            configuration.validate_request_budget_consistency()
+        except ValueError:
+            raise StoreError("Conflicting request-parameter and budget values") from None
         selection = selection if selection is not None else inputs.selection
         if selection != inputs.selection:
             raise StoreError("selection must match frozen run inputs")

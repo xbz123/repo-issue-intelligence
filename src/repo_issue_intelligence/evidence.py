@@ -84,6 +84,8 @@ def collect_evidence(
     if repository_view is not None and view is not None and repository_view is not view:
         raise ValueError("repository_view and view must refer to the same source view")
     active_view = repository_view or view
+    if active_view is not None and active_view.closed:
+        raise ValueError("repository_view is closed or unavailable")
     root = (
         active_view.materialized_root.expanduser().resolve()
         if active_view is not None
@@ -176,7 +178,7 @@ def collect_evidence_v2(
         raise ValueError("repository_view must be a captured RepositoryView")
 
     root = repository_view.materialized_root.expanduser().resolve()
-    if not root.is_dir():
+    if repository_view.closed or not root.is_dir():
         raise ValueError("repository_view is closed or unavailable")
     allowed_paths = frozenset(repository_view.files)
     items: list[EvidenceItemV2] = []
@@ -194,6 +196,9 @@ def collect_evidence_v2(
         except (OSError, UnicodeDecodeError):
             continue
         if "\x00" in source or not (source_lines := source.splitlines()):
+            continue
+        # Context expansion must not turn an entirely stale location into evidence.
+        if candidate.lines is not None and int(match["start"]) > len(source_lines):
             continue
         start, requested_end = _line_range(
             candidate.lines,

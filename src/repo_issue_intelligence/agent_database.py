@@ -35,6 +35,10 @@ def inspect_database(path: Path) -> DatabaseInspection:
 
 def _private_destination(destination: Path) -> Path:
     destination = destination.absolute()
+    # Match Store path handling before resolving aliases or creating directories.
+    for ancestor in destination.parents:
+        if ancestor.is_symlink() and ancestor not in (Path("/tmp"), Path("/var")):
+            raise MigrationError("destination refuses symlinked database directories")
     if os.path.lexists(destination) or os.path.lexists(_receipt_path(destination)):
         raise MigrationError("destination or migration receipt already exists; choose a new path")
     parent = destination.parent
@@ -44,6 +48,7 @@ def _private_destination(destination: Path) -> Path:
         parent = parent.parent
     for directory in reversed(missing):
         directory.mkdir(mode=0o700)
+        _sync_directory(directory.parent)
     parent = destination.parent.resolve(strict=True)
     info = parent.stat()
     if not stat.S_ISDIR(info.st_mode) or (
@@ -55,6 +60,15 @@ def _private_destination(destination: Path) -> Path:
 
 def _receipt_path(database: Path) -> Path:
     return database.with_name(f"{database.name}.legacy.json")
+
+
+def _sync_directory(directory: Path) -> None:
+    """Persist publication names, not just the contents of their linked files."""
+    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def create_v2_database(destination: Path) -> None:
@@ -70,6 +84,7 @@ def create_v2_database(destination: Path) -> None:
             with staged.open("rb") as handle:
                 os.fsync(handle.fileno())
             os.link(staged, destination, follow_symlinks=False)
+            _sync_directory(destination.parent)
     except (OSError, sqlite3.DatabaseError):
         raise MigrationError(
             "database creation failed; existing files were not overwritten"
@@ -120,10 +135,13 @@ def migrate_legacy_database(source: Path, destination: Path) -> None:
             receipt_stat = staged_receipt.stat()
             os.link(staged_receipt, receipt, follow_symlinks=False)
             published_receipt_identity = (receipt_stat.st_dev, receipt_stat.st_ino)
+            _sync_directory(destination.parent)
             # Publish the fully upgraded DB last. A crash before here leaves only
             # a receipt: never reuse that destination automatically.
             os.link(staged, destination, follow_symlinks=False)
             published = True
+            # Once the DB link exists, retain its receipt even if syncing fails.
+            _sync_directory(destination.parent)
     except (OSError, sqlite3.DatabaseError):
         raise MigrationError(
             "migration failed; source and existing destinations were not overwritten"
@@ -134,8 +152,11 @@ def migrate_legacy_database(source: Path, destination: Path) -> None:
                 current = receipt.lstat()
                 if (current.st_dev, current.st_ino) == published_receipt_identity:
                     receipt.unlink()
+                    _sync_directory(receipt.parent)
             except FileNotFoundError:
                 pass
+            except OSError:
+                raise MigrationError("migration cleanup could not be persisted") from None
 
 
 def read_migration_provenance(database: Path) -> dict[str, object] | None:
