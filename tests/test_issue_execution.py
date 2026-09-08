@@ -93,6 +93,51 @@ def successful_response(evidence, *, metadata=True):
     )
 
 
+def test_different_result_prompt_version_is_fatal_without_rewriting_siblings(tmp_path):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    received = []
+
+    class CustomAnalyzer(OpenAICompatibleIssueAnalyzer):
+        def analyze_v2(self, issue, *args, **kwargs):
+            response = super().analyze_v2(issue, *args, **kwargs)
+            if issue.number == 2:
+                return response.model_copy(update={"prompt_version": "different-prompt-v99"})
+            return response
+
+    def handler(request):
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        received.append(payload["issue"]["number"])
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        analyzer = CustomAnalyzer("test-key", base_url="https://example.test/v1", client=client)
+        with pytest.raises(RunConfigurationError, match="prompt version"):
+            run_agent_v2(
+                issues(1, 2, 3),
+                root,
+                3,
+                store,
+                llm_analyzer=analyzer,
+                allow_external_llm=True,
+                run_id="run",
+                as_of=NOW,
+                max_attempts=3,
+            )
+    assert received == [1, 2]
+    assert store.get_run("run").status == "FAILED"
+    assert store.get_run("run").configuration.protocol.prompt_version == "analysis-v2-primary-1"
+    assert store.list_attempts("run", 1)[0].state == "success"
+    (attempt,) = store.list_attempts("run", 2)
+    assert attempt.state == "failure"
+    assert attempt.analysis is None
+    assert attempt.error.category == "local"
+    assert store.get_issue("run", 2).selected_analysis_attempt_id is None
+    assert store.list_attempts("run", 3) == ()
+    assert store.list_traces("run")[-1].payload.failure_category == "configuration"
+    assert "different-prompt-v99" not in store.get_run_summary("run").model_dump_json()
+
+
 @pytest.mark.parametrize("redirect", [False, True])
 def test_v2_custom_http_client_cannot_override_frozen_endpoint(tmp_path, redirect):
     root = repository(tmp_path / "repo")

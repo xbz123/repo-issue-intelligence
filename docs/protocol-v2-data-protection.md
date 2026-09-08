@@ -104,6 +104,21 @@ and must not be removed while an executor may be running. Summary exports includ
 Issue text, provenance and analyses, so treat them as private as well; no source
 export or automatic publication is enabled by the CLI beta.
 
+V2 run and evaluation summaries are written to an owner-only (`0600`) temporary
+file and atomically replace the selected output entry after flushing the file.
+Replacing an existing public JSON file does not retain its public permissions;
+an output symlink/hardlink is not opened for truncation. A failure before the
+replacement leaves the previous export intact and cleans up the temporary file.
+This is not a physical power-loss durability guarantee or a sandbox against a
+malicious same-account process changing directory entries.
+
+Before execution, `agent-run --protocol v2` rejects outputs that alias its
+database, SQLite sidecars, writer lock or migration receipt. Publication checks
+the target again, and both V2 exporters refuse existing SQLite database files.
+V2 evaluation CLI outputs must also remain outside its private retention tree.
+These guards do not change V1 export behavior and do not repair previously
+overwritten databases or retroactively secure historical exports.
+
 HTTP evidence access, authorization, recovery/retry and review services remain in
 their later R5 work packages. Local Store availability grants no provider-transfer
 permission and does not change the G0/G1 release gates.

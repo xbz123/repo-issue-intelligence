@@ -166,6 +166,10 @@ def process_issue(
         started = perf_counter()
         try:
             response = llm_analyzer.analyze_v2(issue, report, input_ids, lookup)
+            if response.prompt_version != run.configuration.protocol.prompt_version:
+                raise RunConfigurationError(
+                    "Analyzer result prompt version differs from the frozen run configuration"
+                )
             terminal = AttemptTerminalFields(
                 state="success",
                 analysis=AnalysisV2.model_validate(response.analysis.model_dump()),

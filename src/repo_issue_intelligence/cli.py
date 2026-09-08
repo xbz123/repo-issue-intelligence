@@ -49,6 +49,7 @@ from .github_client import GitHubClient
 from .investigator import investigate
 from .llm_client import IssueAnalyzer, OpenAICompatibleIssueAnalyzer
 from .models import IssueRecord, ReviewDecision
+from .private_exports import validate_private_export_output, write_private_json
 from .protocol_v2_models import RepositoryCaptureMode
 from .repository_context import RepositoryContextError
 from .repository_index import build_repository_map, save_repository_map
@@ -124,6 +125,16 @@ def _v2_store(database: Path | None) -> AgentStoreV2:
         raise typer.BadParameter(
             "V2 requires an existing private V2 database; use agent-db create-v2 first"
         ) from None
+
+
+def _validate_v2_evaluation_output(output: Path, workspace: Path) -> None:
+    validate_private_export_output(output)
+    retention = (workspace.expanduser().resolve() / ".agent-evaluation-v2").resolve()
+    if (
+        output.resolve().is_relative_to(retention)
+        or output.parent.resolve().is_relative_to(retention)
+    ):
+        raise ValueError("V2 output must not replace retained evaluation data")
 
 
 def _v2_parameter_origins(ctx: typer.Context, settings: Settings, analyzer) -> dict[str, str]:
@@ -521,6 +532,11 @@ def agent_run_command(
     output = output or Path(
         "reports/agent-run-v2.json" if v2_store is not None else "reports/agent-run.json"
     )
+    if v2_store is not None:
+        try:
+            validate_private_export_output(output, (v2_store.path,))
+        except ValueError as error:
+            raise typer.BadParameter(str(error), param_hint="--output") from None
     analyzer = None
     run_id = str(uuid4()) if v2_store is not None else None
     try:
@@ -557,8 +573,11 @@ def agent_run_command(
                 max_evidence_chars=settings.llm_max_evidence_chars,
                 max_evidence_lines=settings.llm_max_lines_per_evidence,
             )
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
+        if v2_store is not None:
+            write_private_json(output, run.model_dump_json(indent=2), (v2_store.path,))
+        else:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(run.model_dump_json(indent=2), encoding="utf-8")
     except Exception as error:
         if v2_store is None:
             if isinstance(error, ValueError):
@@ -700,6 +719,8 @@ def agent_evaluate_command(
     settings = Settings()
     analyzer = None
     try:
+        if protocol is AgentProtocol.V2:
+            _validate_v2_evaluation_output(output, workspace)
         analyzer = _build_analysis_evaluator(
             settings,
             temperature,
@@ -729,6 +750,9 @@ def agent_evaluate_command(
             run = run_agent_analysis_evaluation(
                 load_manifest(manifest), workspace, analyzer, **evaluation_options,
             )
+        if protocol is AgentProtocol.V2:
+            _validate_v2_evaluation_output(output, workspace)
+            save_agent_analysis_run(run, output)
     except Exception as error:
         if protocol is AgentProtocol.V2:
             typer.echo("V2 evaluation failed; internal details were withheld.", err=True)
@@ -739,7 +763,8 @@ def agent_evaluate_command(
     finally:
         if analyzer is not None:
             analyzer.close()
-    save_agent_analysis_run(run, output)
+    if protocol is AgentProtocol.V1:
+        save_agent_analysis_run(run, output)
     if protocol is AgentProtocol.V2:
         console.print(
             f"Protocol v2: {run.overall.execution_successes}/{run.overall.execution_cases} "

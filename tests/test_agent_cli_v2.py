@@ -1,5 +1,7 @@
 import json
+import os
 import shutil
+import stat
 import subprocess
 from pathlib import Path
 
@@ -79,6 +81,108 @@ def private_database(tmp_path):
     database = directory / "v2.sqlite3"
     create_v2_database(database)
     return database
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "database",
+        "symlink",
+        "hardlink",
+        "parent_symlink",
+        "-wal",
+        "-shm",
+        "-journal",
+        ".writer.lock",
+        ".legacy.json",
+    ],
+)
+def test_v2_export_refuses_ledger_paths_before_execution(tmp_path, monkeypatch, target):
+    database = private_database(tmp_path)
+    demo = demo_checkout(tmp_path)
+    baseline_output = tmp_path / "baseline.json"
+    args = [
+        "agent-run",
+        "examples/issues.json",
+        "--repo",
+        str(demo),
+        "--protocol",
+        "v2",
+        "--database",
+        str(database),
+    ]
+    baseline = runner.invoke(cli.app, [*args, "--output", str(baseline_output)])
+    assert baseline.exit_code == 0, baseline.output
+    summary = json.loads(baseline_output.read_text())
+    before = database.read_bytes()
+    if target in {"symlink", "hardlink"}:
+        output = tmp_path / "alias.json"
+        if target == "symlink":
+            output.symlink_to(database)
+        else:
+            os.link(database, output)
+    elif target == "parent_symlink":
+        directory = tmp_path / "alias"
+        directory.symlink_to(database.parent, target_is_directory=True)
+        output = directory / database.name
+    else:
+        output = database if target == "database" else database.with_name(database.name + target)
+    output_before = output.read_bytes() if output.exists() else None
+    requests = fake_api(monkeypatch)
+    result = runner.invoke(
+        cli.app, [*args, "--output", str(output), "--llm", "--allow-external-llm"]
+    )
+    assert result.exit_code == 2, result.output
+    assert requests == []
+    assert database.read_bytes() == before
+    assert (output.read_bytes() if output.exists() else None) == output_before
+    if target == "hardlink":
+        output.unlink()  # Remove only the fixture alias so the Store can read again.
+    shown = runner.invoke(
+        cli.app, ["agent-show", summary["run_id"], "--protocol", "v2", "--database", str(database)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output) == summary
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_v2_summary_export_is_private_under_public_umask(tmp_path, existing):
+    database = private_database(tmp_path)
+    demo = demo_checkout(tmp_path)
+    directory = tmp_path / "public"
+    directory.mkdir(mode=0o755)
+    output = directory / "run.json"
+    if existing:
+        output.touch()
+        output.chmod(0o644)
+    previous_umask = os.umask(0o022)
+    try:
+        result = runner.invoke(
+            cli.app,
+            [
+                "agent-run",
+                "examples/issues.json",
+                "--repo",
+                str(demo),
+                "--protocol",
+                "v2",
+                "--database",
+                str(database),
+                "--output",
+                str(output),
+            ],
+        )
+    finally:
+        os.umask(previous_umask)
+    assert result.exit_code == 0, result.output
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    summary = json.loads(output.read_text())
+    assert summary["protocol"] == "v2"
+    shown = runner.invoke(
+        cli.app, ["agent-show", summary["run_id"], "--protocol", "v2", "--database", str(database)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output) == summary
 
 
 @pytest.mark.parametrize("model_options", [[], ["--llm-model", "inactive-model"]])
@@ -478,7 +582,7 @@ def test_v2_fatal_provider_bug_is_sanitized_and_prior_run_remains_readable(tmp_p
     assert "PRIVATE_PROVIDER" not in shown.output
 
 
-def test_v2_output_failure_reports_persisted_run_id(tmp_path):
+def test_v2_output_directory_is_refused_before_execution(tmp_path):
     database = private_database(tmp_path)
     result = runner.invoke(
         cli.app,
@@ -496,8 +600,134 @@ def test_v2_output_failure_reports_persisted_run_id(tmp_path):
         ],
     )
     assert result.exit_code == 2
-    assert "remains readable with agent-show --protocol v2" in result.output
+    assert "regular file" in result.output
+    assert "remains readable" not in result.output
     assert "IsADirectoryError" not in result.output
+
+
+@pytest.mark.parametrize("failure", ["fsync", "replace"])
+def test_v2_export_publication_failure_preserves_previous_file_and_ledger(
+    tmp_path, monkeypatch, failure
+):
+    import re
+
+    database = private_database(tmp_path)
+    output = tmp_path / "run.json"
+    output.write_text("previous export")
+
+    def fail(*args, **kwargs):
+        raise OSError("PRIVATE_EXPORT_FAILURE")
+
+    monkeypatch.setattr(f"repo_issue_intelligence.private_exports.os.{failure}", fail)
+    result = runner.invoke(
+        cli.app,
+        [
+            "agent-run",
+            "examples/issues.json",
+            "--repo",
+            "examples/demo_repository",
+            "--protocol",
+            "v2",
+            "--database",
+            str(database),
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "PRIVATE_EXPORT_FAILURE" not in result.output
+    assert output.read_text() == "previous export"
+    assert list(tmp_path.glob(".run.json.*.tmp")) == []
+    run_id = re.search(r"Run ([a-f0-9-]{36}) remains readable", result.output).group(1)
+    assert AgentStoreV2(database).get_run_summary(run_id).status == "AWAITING_REVIEW"
+
+
+def test_v2_export_rechecks_database_alias_created_during_provider_call(tmp_path, monkeypatch):
+    database = private_database(tmp_path)
+    output = tmp_path / "run.json"
+
+    def handler(payload):
+        output.symlink_to(database)
+        return httpx.Response(503)
+
+    requests = fake_api(monkeypatch, handler)
+    result = runner.invoke(
+        cli.app,
+        [
+            "agent-run",
+            "examples/issues.json",
+            "--repo",
+            "examples/demo_repository",
+            "--protocol",
+            "v2",
+            "--database",
+            str(database),
+            "--output",
+            str(output),
+            "--llm",
+            "--allow-external-llm",
+            "--max-llm-attempts",
+            "1",
+        ],
+    )
+    assert result.exit_code == 2
+    assert len(requests) == 1
+    assert output.is_symlink()
+    assert database.read_bytes().startswith(b"SQLite format 3\x00")
+    assert "remains readable" in result.output
+    assert list(tmp_path.glob(".run.json.*.tmp")) == []
+
+
+@pytest.mark.parametrize(
+    "target", ["database", "retained_sidecar", "retention_alias", "outbound_retention_symlink"]
+)
+def test_v2_evaluation_refuses_ledger_outputs_before_provider_setup(tmp_path, monkeypatch, target):
+    database = private_database(tmp_path)
+    before = database.read_bytes()
+    workspace = tmp_path / "workspace"
+    retention = workspace / ".agent-evaluation-v2"
+    retention.mkdir(parents=True, mode=0o700)
+    output = retention / "run" / "agent.sqlite3.writer.lock"
+    if target == "database":
+        output = database
+    elif target == "retention_alias":
+        alias = tmp_path / "alias"
+        alias.symlink_to(retention, target_is_directory=True)
+        output = alias / "run" / "agent.sqlite3"
+    elif target == "outbound_retention_symlink":
+        external = tmp_path / "outside.json"
+        external.write_text("existing export")
+        output = retention / "summary.json"
+        output.symlink_to(external)
+    retained_before = list(retention.iterdir())
+    calls = []
+
+    def forbidden_builder(*args, **kwargs):
+        calls.append(True)
+        raise AssertionError("Unsafe output must be rejected before provider setup")
+
+    monkeypatch.setattr(cli, "_build_analysis_evaluator", forbidden_builder)
+    result = runner.invoke(
+        cli.app,
+        [
+            "agent-evaluate",
+            str(tmp_path / "manifest.json"),
+            "--workspace",
+            str(workspace),
+            "--output",
+            str(output),
+            "--protocol",
+            "v2",
+            "--allow-external-llm",
+        ],
+    )
+    assert result.exit_code == 2
+    assert calls == []
+    assert database.read_bytes() == before
+    assert list(retention.iterdir()) == retained_before
+    if target == "outbound_retention_symlink":
+        assert output.is_symlink()
+        assert external.read_text() == "existing export"
 
 
 @pytest.mark.parametrize("fatal", [False, True])
