@@ -1,4 +1,6 @@
 import json
+import os
+import stat
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -286,7 +288,14 @@ def test_v2_missing_observations_stay_null_and_protocols_cannot_mix(tmp_path, mo
     assert missing_only.input_tokens is None
     assert missing_only.input_token_observations == 0
     output = tmp_path / "v2.json"
-    save_agent_analysis_run(run, output)
+    output.touch()
+    output.chmod(0o644)
+    previous_umask = os.umask(0o022)
+    try:
+        save_agent_analysis_run(run, output)
+    finally:
+        os.umask(previous_umask)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
     assert AgentAnalysisRunV2.model_validate_json(output.read_text()) == run
     v1 = AgentAnalysisCaseResult(
         case_id="legacy",

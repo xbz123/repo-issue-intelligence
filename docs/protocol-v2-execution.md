@@ -68,6 +68,12 @@ storage failures stop the run; previously committed sibling reports remain
 readable. If the database itself becomes inaccessible or corrupt, recording a
 final failure status may also fail: a missing terminal marker is not success.
 
+An analyzer result must report the frozen `prompt_version`. A mismatch is a
+local configuration error: finalize the current attempt as failed without
+selecting its analysis, stop the run and retain completed siblings. It is not
+a provider retry condition, and the untrusted version string is not copied to
+the ledger or error output. This does not change reported-model mismatch policy.
+
 The default HTTP client explicitly disables transport retries. V2 HTTP sends
 use the captured analyzer endpoint as an absolute URL and disable automatic
 redirects, including with a custom `httpx.Client`. Set the analyzer's `base_url`
@@ -239,3 +245,39 @@ one existing Starlette warning. Ruff, compileall and diff checks pass. Independe
 Luna max Standards and Spec reviews of this repair report no confirmed blockers.
 See PR66 for remote CI and integration status. No real provider calls or user
 databases were used.
+
+## Post-merge export and prompt-version follow-up
+
+Review of merged PR66 (`b489f41`) found three missing boundaries: output could
+overwrite the active database, summary files inherited public permissions, and
+a custom analyzer's mismatching prompt version could be discarded at success
+finalization. The original failures were reproduced using temporary repositories,
+databases and mock transports; no user database or real provider was involved.
+
+The repair adds pre-execution/publication output checks and private atomic
+summary writing, shared by V2 run and evaluation exports. Database aliases,
+SQLite sidecars, lock/receipt paths, retained evaluation data and existing SQLite
+targets are refused; V1 exports remain unchanged. Prompt-version mismatch follows
+the existing fatal configuration path and cannot select an analysis or retry.
+Regression tests cover preserved ledger readback, zero dispatch on preflight
+refusal, permissions, late output aliases, publication failures and preserved
+successful siblings. Validation and independent review results are recorded in
+the follow-up PR; this repair does not advance G0 to G1.
+
+Local full suite before the additional review correction: **849 passed**, with
+one existing Starlette warning. The
+original diagnostic scenarios now pass all **7 checks** (including the explicit
+configuration-error outcome). A targeted regression selection gives **15 failed,
+1 passed** against the original merged code and **16 passed** against this repair.
+Ruff, compileall, focused formatting and diff
+checks pass. Remote CI and independent review are separate gates recorded in
+the follow-up PR.
+
+Independent Spec review found an additional final-symlink case: an output entry
+inside evaluation retention could resolve to an external target and pass the
+first guard. Both the resolved target and the resolved output parent are now
+checked. Its regression failed before the correction; all four evaluation target
+cases pass, and the independent Spec recheck closed the finding.
+Final local full suite: **850 passed**, with the same existing warning. Final
+independent Standards and Spec reviews report no confirmed blockers; Ruff,
+compileall and diff checks pass. Remote CI remains a separate follow-up PR gate.

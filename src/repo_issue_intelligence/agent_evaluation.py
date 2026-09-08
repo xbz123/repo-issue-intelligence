@@ -10,6 +10,7 @@ from time import sleep
 
 from pydantic import BaseModel, Field
 
+from .agent_evaluation_v2 import AgentAnalysisRunV2
 from .agent_store import AgentStore
 from .agent_workflow import run_agent
 from .benchmark import (
@@ -33,6 +34,7 @@ from .models import (
     LLMAnalysis,
     LLMAnalysisResult,
 )
+from .private_exports import write_private_json
 
 
 class AgentAnalysisCaseResult(BaseModel):
@@ -539,7 +541,12 @@ def run_agent_analysis_evaluation(
     )
 
 
-def save_agent_analysis_run(run: AgentAnalysisRun, output: Path) -> None:
+def save_agent_analysis_run(run: AgentAnalysisRun | AgentAnalysisRunV2, output: Path) -> None:
+    if isinstance(run, AgentAnalysisRunV2):
+        write_private_json(
+            output, json.dumps(run.model_dump(mode="json"), indent=2, ensure_ascii=False)
+        )
+        return
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
         json.dumps(run.model_dump(mode="json"), indent=2, ensure_ascii=False),
