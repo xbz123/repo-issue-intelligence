@@ -22,6 +22,12 @@ receipts are never overwritten. The V2 Store validates an explicit target rather
 than creating tables. A legacy writer directed at V2 refuses before initialization
 or writes, including when an existing writer instance is reused.
 
+Destination ancestors follow the Store policy: user-created symlink directories
+are rejected before creating subdirectories or publishing files. The existing
+system `/tmp` and `/var` aliases remain accepted. Resolve an intended alias
+explicitly before selecting the destination; creation does not silently change
+the accepted path to one the Store would refuse.
+
 ## Migration and provenance
 
 Migration uses SQLite backup into a private staging directory, validates the
@@ -46,6 +52,14 @@ reusing or deleting that artifact. Ordinary pre-publication errors clean up only
 temporary files and the receipt created by that invocation. No historical run,
 evidence, attempt, review, source or backup is automatically removed.
 
+Publication syncs new parent-directory entries, then the receipt entry, then the
+database entry. The command reports failure if a required directory `fsync`
+fails. If the database link is already visible when this happens, it is retained
+(with its receipt for migration); inspect it rather than retrying over the same
+destination. Pre-database-link cleanup removes only this invocation's receipt
+and syncs that removal. Tests check ordering and injected I/O failures, not actual
+power-loss behavior; durability still depends on filesystem/hardware guarantees.
+
 Source identity checks conservatively refuse changes while opening a snapshot,
 including source-path and parent-directory replacement. Unrelated directory
 metadata changes can also cause refusal. SQLite can create a missing `-shm` index
@@ -61,6 +75,20 @@ truncation; the client-facing evidence lookup returns the stored snippets withou
 another truncation pass. Evidence is stored inside the private database, not in
 an additional public source directory. Treat the database and its backups as
 sensitive source-code artifacts; this version does not provide encryption at rest.
+
+V2 candidates wholly beyond the captured file are skipped before context
+expansion, rather than being clamped to unrelated last-line evidence. Both
+collectors reject an explicitly closed RepositoryView, even if its former
+directory still exists or has been recreated; the default V1 checkout path is
+unchanged. Conflicting duplicated output-token/timeout request parameters and
+budgets are rejected at configuration capture/read and before creating a run,
+including caller-created model copies. No existing configuration is rewritten
+automatically; matching duplicates and budget-only requests remain supported.
+New captures record `budget.output_tokens` and `budget.timeout_seconds` origins
+separately, so an omitted budget remains distinguishable from explicit null after
+JSON roundtrips. Older records lacking those markers retain the legacy origin
+interpretation and are not silently rewritten; a conflicting/ambiguous record
+must be investigated rather than assigned an invented request value.
 
 V2 traces accept only small, typed diagnostic metadata and references. Full maps,
 source text, arbitrary provider responses and credentials do not belong in traces.

@@ -344,6 +344,18 @@ def _validate_parameter_type(name: str, value: Any) -> None:
         )
 
 
+def _validated_parameter(name: str, value: Any) -> Any:
+    if not isinstance(name, str):
+        raise RunConfigurationError("Requested parameter names must be strings")
+    if name not in _SAFE_PARAMETER_NAMES:
+        _assert_safe_name(name)
+        raise RunConfigurationError(
+            f"Unsupported requested parameter: {name}", code="unsupported_parameter"
+        )
+    _validate_parameter_type(name, value)
+    return _json_safe(value, name=name)
+
+
 def normalize_endpoint(endpoint: str | None) -> str | None:
     """Normalize an API endpoint while rejecting userinfo/query/fragment."""
 
@@ -376,9 +388,10 @@ def normalize_endpoint(endpoint: str | None) -> str | None:
     host = parsed.hostname.lower().rstrip(".")
     if not host:
         raise RunConfigurationError("Endpoint host is missing", code="invalid_endpoint")
-    host_part = host
-    if port is not None and port not in {80, 443}:
-        host_part = f"{host}:{port}"
+    host_part = f"[{host}]" if ":" in host else host
+    default_port = 443 if parsed.scheme == "https" else 80
+    if port is not None and port != default_port:
+        host_part = f"{host_part}:{port}"
     path = parsed.path.rstrip("/")
     return f"{parsed.scheme.lower()}://{host_part}{path}"
 
@@ -632,20 +645,23 @@ def _validate_retry_policy(value: Any) -> dict[str, Any]:
 
 def _as_budget(values: Mapping[str, Any]) -> BudgetConfiguration:
     source = _object_values(values)
+
     def value(*names: str) -> Any:
         found = _get_first(source, names)
         return None if found is _OMITTED else found
+
     retry = value(*_BUDGET_ALIASES["retry_policy"])
     if retry is None:
         retry = {}
     retry = _validate_retry_policy(retry)
-    return BudgetConfiguration(
-        output_tokens=value(*_BUDGET_ALIASES["output_tokens"]),
-        evidence_chars=value(*_BUDGET_ALIASES["evidence_chars"]),
-        evidence_lines=value(*_BUDGET_ALIASES["evidence_lines"]),
-        timeout_seconds=value(*_BUDGET_ALIASES["timeout_seconds"]),
-        retry_policy=freeze_mapping(_json_safe(retry, name="retry_policy")),
-    )
+    fields = {
+        name: value(*aliases)
+        for name, aliases in _BUDGET_ALIASES.items()
+        if _get_first(source, aliases) is not _OMITTED
+    }
+    if "retry_policy" in fields:
+        fields["retry_policy"] = freeze_mapping(_json_safe(retry, name="retry_policy"))
+    return BudgetConfiguration(**fields)
 
 
 def _validated_budget_model(value: BudgetConfiguration) -> BudgetConfiguration:
@@ -717,7 +733,9 @@ def _record_budget_origins(
 ) -> None:
     for field, aliases in _BUDGET_ALIASES.items():
         if isinstance(budgets, BudgetConfiguration):
-            if field in budgets.model_fields_set:
+            if field in budgets.model_fields_set or (
+                field != "retry_policy" and getattr(budget, field) is not None
+            ):
                 origins[field] = ParameterOrigin.USER_CONFIG.value
             continue
         source_key: str | None = None
@@ -805,43 +823,36 @@ def capture_requested_run_configuration(
         explicit_parameters.update(embedded_parameters)
     if request_parameters is not None:
         explicit_parameters.update(request_parameters)
-    for name in explicit_parameters:
-        if name not in _SAFE_PARAMETER_NAMES:
-            _assert_safe_name(name)
-            raise RunConfigurationError(
-                f"Unsupported requested parameter: {name}",
-                code="unsupported_parameter",
-            )
+    explicit_parameters = {
+        name: _validated_parameter(name, value) for name, value in explicit_parameters.items()
+    }
     safe_parameters: dict[str, Any] = {}
     origins: dict[str, str] = {}
     for name in sorted(_SAFE_PARAMETER_NAMES):
         if name in explicit_parameters:
-            parameter_value = explicit_parameters[name]
-            _validate_parameter_type(name, parameter_value)
-            if name == "retry_policy" and parameter_value is not None:
-                parameter_value = _validate_retry_policy(parameter_value)
-            safe_parameters[name] = _json_safe(parameter_value, name=name)
+            safe_parameters[name] = explicit_parameters[name]
             origins[name] = ParameterOrigin.USER_CONFIG.value
             continue
         aliases = _PARAMETER_ALIASES.get(name, (name,))
         default_value = _get_first(defaults, aliases)
         client_value = _get_first(client_values, aliases)
         if default_value is not _OMITTED:
-            _validate_parameter_type(name, default_value)
-            parameter_value = default_value
-            if name == "retry_policy" and parameter_value is not None:
-                parameter_value = _validate_retry_policy(parameter_value)
-            safe_parameters[name] = _json_safe(parameter_value, name=name)
+            safe_parameters[name] = _validated_parameter(name, default_value)
             origins[name] = ParameterOrigin.CLIENT_DEFAULT.value
         elif client_value is not _OMITTED:
-            _validate_parameter_type(name, client_value)
-            parameter_value = client_value
-            if name == "retry_policy" and parameter_value is not None:
-                parameter_value = _validate_retry_policy(parameter_value)
-            safe_parameters[name] = _json_safe(parameter_value, name=name)
+            safe_parameters[name] = _validated_parameter(name, client_value)
             origins[name] = ParameterOrigin.CLIENT_DEFAULT.value
         else:
             origins[name] = ParameterOrigin.OMITTED.value
+    # A caller override of either spelling supersedes the other spelling's
+    # client default; contradictory values from the same request still fail.
+    for name, other in (
+        ("max_output_tokens", "output_tokens"),
+        ("output_tokens", "max_output_tokens"),
+    ):
+        if name in explicit_parameters and other not in explicit_parameters:
+            safe_parameters.pop(other, None)
+            origins[other] = ParameterOrigin.OMITTED.value
     if requested_model is not _OMITTED:
         model = requested_model
         model_origin = ParameterOrigin.USER_CONFIG.value
@@ -970,6 +981,15 @@ def capture_requested_run_configuration(
         defaults=defaults,
         client_values=client_values,
     )
+    # timeout_seconds is also a request key; keep budget omission unambiguous
+    # after serialization, where model defaults otherwise look explicitly set.
+    for name in ("output_tokens", "timeout_seconds"):
+        present = (
+            name in budgets.model_fields_set or getattr(budget, name) is not None
+            if isinstance(budgets, BudgetConfiguration)
+            else name in budget_values
+        )
+        origins[f"budget.{name}"] = origins.get(name, "client_default") if present else "omitted"
     safe_flags_source = safe_cli_flags
     if safe_flags_source is None:
         embedded_flags = _get_first(client_values, ("safe_cli_flags", "cli_flags"))

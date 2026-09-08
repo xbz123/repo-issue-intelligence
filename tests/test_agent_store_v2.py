@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import subprocess
@@ -114,6 +115,286 @@ def test_v1_cli_remains_importable_without_fcntl():
     environment = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
     child = subprocess.run(command, capture_output=True, text=True, env=environment)
     assert child.returncode == 0, child.stderr
+
+
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+def test_store_refuses_bypassed_conflicting_configuration_without_creating_run(
+    tmp_path,
+    parameter,
+    budget,
+):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration, FrozenDict
+
+    store = new_store(tmp_path / "private")
+    run = create_run(store)
+    invalid = run.configuration.model_copy(
+        update={
+            "request_parameters": FrozenDict({parameter: 100}),
+            "budgets": BudgetConfiguration(**{budget: 200}),
+        }
+    )
+    with pytest.raises(StoreError, match="Conflicting"):
+        store.create_run(run.snapshot, invalid, run.inputs, run_id="invalid")
+    assert store.get_run("invalid") is None
+
+
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+def test_matching_and_budget_only_configuration_accepts_exact_attempt(tmp_path, parameter, budget):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    for index, parameters in enumerate(({parameter: 100}, {})):
+        configuration = capture_requested_run_configuration(
+            requested_model="requested-A",
+            request_parameters=parameters,
+            budgets={budget: 100},
+        ).model_copy(update={"llm_enabled": True})
+        run_id = f"consistent-{index}"
+        store.create_run(template.snapshot, configuration, template.inputs, run_id=run_id)
+        save_report(store, run_id=run_id)
+        evidence = seal(store, run_id=run_id)
+        attempt = store.start_attempt(
+            run_id,
+            1,
+            evidence.evidence_set_id,
+            AttemptRequest(model="requested-A", **{parameter: 100}),
+        )
+        assert getattr(attempt.request, parameter) == 100
+
+
+@pytest.mark.parametrize("parameter", ["timeout_seconds", "max_output_tokens"])
+@pytest.mark.parametrize("budget_kind", ["evidence", "empty", "model"])
+def test_request_only_budget_omission_survives_store_roundtrip(tmp_path, parameter, budget_kind):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest, BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    budgets = {"evidence_chars": 1000} if budget_kind == "evidence" else {}
+    if budget_kind == "model":
+        budgets = BudgetConfiguration()
+    config = capture_requested_run_configuration(
+        requested_model="requested-A",
+        request_parameters={parameter: 100},
+        budgets=budgets,
+    ).model_copy(update={"llm_enabled": True})
+    store.create_run(template.snapshot, config, template.inputs, run_id="request-only")
+    save_report(store, run_id="request-only")
+    evidence = seal(store, run_id="request-only")
+    attempt = store.start_attempt(
+        "request-only",
+        1,
+        evidence.evidence_set_id,
+        AttemptRequest(model="requested-A", **{parameter: 100}),
+    )
+    assert getattr(attempt.request, parameter) == 100
+
+
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+def test_copied_explicit_null_budget_is_rejected_before_store(tmp_path, parameter, budget):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration, RunConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    config = capture_requested_run_configuration(
+        requested_model="requested-A",
+        request_parameters={parameter: 100},
+        budgets={"evidence_chars": 1000},
+    ).model_copy(update={"llm_enabled": True})
+    stored = store.create_run(template.snapshot, config, template.inputs, run_id="valid")
+    assert stored.configuration == config
+    copied = config.model_copy(update={"budgets": BudgetConfiguration(**{budget: None})})
+    with pytest.raises(ValueError, match="Conflicting"):
+        RunConfiguration.model_validate(copied)
+    with pytest.raises(StoreError, match="Conflicting"):
+        store.create_run(template.snapshot, copied, template.inputs, run_id="copied-null")
+    assert store.get_run("copied-null") is None
+
+
+@pytest.mark.parametrize("budget", ["output_tokens", "timeout_seconds"])
+def test_copied_null_budget_cannot_be_silently_lost_on_store_roundtrip(tmp_path, budget):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    copied = template.configuration.model_copy(
+        update={"budgets": BudgetConfiguration(**{budget: None})}
+    )
+    with pytest.raises(StoreError, match="Conflicting"):
+        store.create_run(template.snapshot, copied, template.inputs, run_id="copied-null")
+    assert store.get_run("copied-null") is None
+
+
+@pytest.mark.parametrize("parameter", ["max_output_tokens", "timeout_seconds"])
+def test_legacy_serialized_null_defaults_remain_omitted(tmp_path, parameter):
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    config = capture_requested_run_configuration(request_parameters={parameter: 100}, budgets={})
+    # Historical writers emitted every budget default, including omitted nulls.
+    payload = json.loads(config.model_dump_json())
+    payload["budgets"] = config.budgets.model_dump(mode="json")
+    with closing(sqlite3.connect(store.path)) as connection, connection:
+        connection.execute(
+            "INSERT INTO agent_v2_runs SELECT ?, parent_run_id, snapshot_json, ?, "
+            "inputs_json, selection_json, status, created_at, updated_at "
+            "FROM agent_v2_runs WHERE run_id = ?",
+            ("legacy", json.dumps(payload), template.run_id),
+        )
+    restored = store.get_run("legacy").configuration
+    assert restored == config
+    budget = "output_tokens" if parameter == "max_output_tokens" else parameter
+    assert not restored.has_request_budget(budget)
+
+
+@pytest.mark.parametrize("budget", ["output_tokens", "timeout_seconds"])
+@pytest.mark.parametrize("origin", ["omitted", "user_config"])
+@pytest.mark.parametrize("value", [None, 100])
+def test_markerless_legacy_budget_copy_preserves_omission_contract(tmp_path, budget, origin, value):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    payload = json.loads(template.configuration.model_dump_json())
+    payload["budgets"] = template.configuration.budgets.model_dump(mode="json")
+    for name in ("output_tokens", "timeout_seconds"):
+        payload["parameter_origins"].pop(f"budget.{name}")
+    payload["parameter_origins"][budget] = origin
+    with closing(sqlite3.connect(store.path)) as connection, connection:
+        connection.execute(
+            "INSERT INTO agent_v2_runs SELECT ?, parent_run_id, snapshot_json, ?, "
+            "inputs_json, selection_json, status, created_at, updated_at "
+            "FROM agent_v2_runs WHERE run_id = ?",
+            ("legacy", json.dumps(payload), template.run_id),
+        )
+    legacy = store.get_run("legacy")
+    assert legacy.configuration.has_request_budget(budget) == (origin != "omitted")
+    copied = legacy.configuration.model_copy(
+        update={"budgets": BudgetConfiguration(**{budget: value})}
+    )
+    if origin == "omitted":
+        with pytest.raises(StoreError, match="Conflicting"):
+            store.create_run(legacy.snapshot, copied, legacy.inputs, run_id="copy")
+        assert store.get_run("copy") is None
+    else:
+        restored = store.create_run(legacy.snapshot, copied, legacy.inputs, run_id="copy")
+        assert restored.configuration.has_request_budget(budget)
+        assert budget in restored.configuration.budgets.model_fields_set
+
+
+@pytest.mark.parametrize("budget", ["output_tokens", "timeout_seconds"])
+def test_constructed_non_default_budget_survives_store_roundtrip(tmp_path, budget):
+    from repo_issue_intelligence.protocol_v2_models import BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    config = capture_requested_run_configuration(
+        budgets=BudgetConfiguration.model_construct(_fields_set=set(), **{budget: 100})
+    )
+    assert config.parameter_origins[f"budget.{budget}"] == "user_config"
+    restored = store.create_run(template.snapshot, config, template.inputs, run_id="constructed")
+    assert getattr(restored.configuration.budgets, budget) == 100
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("output_tokens", 0),
+        ("output_tokens", -1),
+        ("timeout_seconds", 0),
+        ("evidence_chars", 0),
+        ("evidence_lines", 0),
+        ("top_k", 0),
+        ("request_alias", 0),
+        ("timeout_seconds", float("inf")),
+        ("retry_policy", {"backoff": [-1]}),
+        ("unsupported_parameter", "model"),
+        ("unsupported_parameter", "api_key"),
+        ("non_string_parameter", 1),
+    ],
+)
+def test_invalid_copied_configuration_is_rejected_before_persistence(tmp_path, field, value):
+    from repo_issue_intelligence.protocol_v2_models import (
+        BudgetConfiguration,
+        FrozenDict,
+        ProtocolConfiguration,
+    )
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    if field == "top_k":
+        update = {"protocol": ProtocolConfiguration.model_construct(top_k=value)}
+    elif field == "request_alias":
+        update = {"request_parameters": FrozenDict({"output_tokens": value})}
+    elif field == "unsupported_parameter":
+        update = {"request_parameters": FrozenDict({value: "synthetic-value"})}
+    elif field == "non_string_parameter":
+        update = {"request_parameters": {value: "synthetic-value"}}
+    else:
+        if field == "retry_policy":
+            value = FrozenDict(value)
+        update = {"budgets": BudgetConfiguration.model_construct(**{field: value})}
+    invalid = template.configuration.model_copy(update=update)
+    with pytest.raises(StoreError):
+        store.create_run(template.snapshot, invalid, template.inputs, run_id="invalid")
+    assert store.get_run("invalid") is None
+    assert store.list_issues("invalid") == ()
+    create_run(store, run_id="invalid")
+
+
+@pytest.mark.parametrize("value", [100, None])
+@pytest.mark.parametrize("with_budget", [False, True])
+def test_output_tokens_alias_is_bound_to_attempt(tmp_path, with_budget, value):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    config = capture_requested_run_configuration(
+        requested_model="requested-A",
+        request_parameters={"output_tokens": value},
+        budgets={"output_tokens": value} if with_budget else {},
+    ).model_copy(update={"llm_enabled": True})
+    store.create_run(template.snapshot, config, template.inputs, run_id="alias")
+    save_report(store, run_id="alias")
+    evidence = seal(store, run_id="alias")
+    with pytest.raises(StoreError):
+        store.start_attempt(
+            "alias",
+            1,
+            evidence.evidence_set_id,
+            AttemptRequest(model="requested-A", max_output_tokens=200),
+        )
+    attempt = store.start_attempt(
+        "alias",
+        1,
+        evidence.evidence_set_id,
+        AttemptRequest(model="requested-A", max_output_tokens=value),
+    )
+    assert attempt.request.max_output_tokens == value
 
 
 def successful_analysis():

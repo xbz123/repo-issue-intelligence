@@ -6,7 +6,8 @@
 
 PR4 分支说明：在组合基线 `d55e95c` 上完成 4.1–4.10 与 G0 的分支验证；
 PR64（2B）与 PR65（3）现已分别合并为 `927e42f` 与 `31930db`。
-PR66 已正式提交审查但未合并，仍以原组合基线为目标；共享修复归 PR67。
+PR66 已正式提交审查但未合并，仍以原组合基线为目标；已同步 PR67 的共享修复
+（`b9e7e08`），修复证据见 [post-review fixes](protocol-v2-post-review-fixes.md)。
 本分支不切换默认 V2，PR5 以后不在本次范围。验收见
 [PR4/G0 执行记录](protocol-v2-execution.md)；PR3 原独立验收见
 [Analysis V2](protocol-v2-analysis.md)。

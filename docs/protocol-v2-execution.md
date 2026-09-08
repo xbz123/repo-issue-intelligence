@@ -13,9 +13,10 @@ unmerged, ready-for-review PR. Verification is not a release or authorization to
 PR4 is stacked on `codex/protocol-v2-pr4-base` at `d55e95c`, combining the verified
 PR2B head `4461ca9` ([PR64](https://github.com/xbz123/repo-issue-intelligence/pull/64))
 and PR3 head `f9b6902` ([PR65](https://github.com/xbz123/repo-issue-intelligence/pull/65)).
-Both prerequisites have since merged into `main`. This integration branch is not
-a release branch; PR4 still needs the repaired base from PR67, retargeting and
-combined revalidation before integration into `main`.
+Both prerequisites have since merged into `main`. PR4 now also incorporates PR67
+through `b9e7e08` by a normal branch merge. This is not a release branch;
+the PR still targets the original stacked base. Retargeting and validation
+against the intended release base remain separate from this repair.
 No R5 scope or acceptance requirement is changed by the stack.
 
 ## Opt in explicitly
@@ -159,8 +160,9 @@ are part of this acceptance run. PR5–PR8 and G1 remain unimplemented here.
 
 ## PR66 review follow-up
 
-The follow-up delta starts at reviewed commit `c20cb5b`; it does not change
-PR66's stacked base or incorporate PR67, and does not authorize merging either PR.
+The historical follow-up delta `c20cb5b...c511c71` did not change PR66's stacked
+base or incorporate PR67. The later combined repair below includes PR67 without
+retargeting or authorizing a GitHub PR merge.
 
 | Review finding | Reproduction and regression boundary |
 |---|---|
@@ -196,12 +198,22 @@ the version is local client provenance, not a reported model identity.
 One request-to-budget mapping drives capture and origin bookkeeping, including
 the separate `budget.output_tokens` and `budget.timeout_seconds` markers used by
 PR67. User overrides and client defaults remain distinct. Shared validation and
-evidence fixes remain owned by PR67 and must be included in combined validation.
+evidence fixes remain owned by PR67 and are included in this combined tree.
 No R5 task, acceptance threshold, default protocol or service scope changes.
 
 Standalone local validation of this follow-up: **733 passed**, one existing
 Starlette warning; Ruff, compileall and diff checks pass. Independent Luna max
 Standards and Spec reviews report no remaining confirmed blockers on this
-candidate. CI and the combined PR67 validation are pending. The two PRs remain open; no merge to
-`main`, automatic source-database migration or real provider call is authorized
+candidate. That standalone result is not substituted for combined validation.
+
+Integration of PR67 `b9e7e08` preserves its publication/configuration/evidence
+repairs and PR66's executor, reader summaries and foreground lock. The test
+inventory retains both branches' scenarios (one old alias test is represented
+by its expanded parametrized cases) and adds five actual HTTP authority checks.
+Combined local validation: **828 passed**, one existing Starlette warning;
+the configuration/Store/execution selection passes **153 tests**. Ruff,
+compileall, diff whitespace and all **195 tracked JSON** parses pass.
+Independent Luna max Standards and Spec reviews of the actual combined tree
+report no confirmed blockers. Combined CI is pending. The two PRs remain open; no merge
+to `main`, automatic source-database migration or real provider call is authorized
 by these checks.

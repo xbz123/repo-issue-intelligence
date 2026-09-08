@@ -45,6 +45,7 @@ from .protocol_v2_models import (
     RunV2,
     TracePayloadV2,
     TraceV2,
+    request_budget_origin,
 )
 
 
@@ -58,6 +59,22 @@ class StoreConflict(StoreError):
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _decode_run_configuration(serialized: str) -> RunConfiguration:
+    configuration = json.loads(serialized)
+    # Only stored data uses legacy null-default recovery; in-memory copies must
+    # pass their field-presence checks before reaching this boundary.
+    for name in ("output_tokens", "timeout_seconds"):
+        if (
+            request_budget_origin(configuration["parameter_origins"], name) == "omitted"
+            and configuration["budgets"].get(name) is None
+        ):
+            configuration["budgets"].pop(name, None)
+    for key in ("request_parameters", "parameter_origins"):
+        configuration[key] = FrozenDict(configuration[key])
+    configuration["budgets"]["retry_policy"] = FrozenDict(configuration["budgets"]["retry_policy"])
+    return RunConfiguration.model_validate(configuration)
 
 
 class AgentStoreV2:
@@ -185,6 +202,15 @@ class AgentStoreV2:
         run_id: str | None = None,
         parent_run_id: str | None = None,
     ) -> RunV2:
+        # model_copy/model_construct can bypass Pydantic validation at the caller.
+        try:
+            configuration.validate_request_budget_consistency()
+            configuration_json = configuration.model_dump_json()
+            # Apply the exact reader to the exact payload before any INSERT, so
+            # invalid nested models cannot leave a committed, unreadable run.
+            _decode_run_configuration(configuration_json)
+        except ValueError:
+            raise StoreError("Conflicting or invalid run configuration") from None
         selection = selection if selection is not None else inputs.selection
         if selection != inputs.selection:
             raise StoreError("selection must match frozen run inputs")
@@ -197,7 +223,7 @@ class AgentStoreV2:
                     run_id,
                     parent_run_id,
                     snapshot.model_dump_json(),
-                    configuration.model_dump_json(),
+                    configuration_json,
                     inputs.model_dump_json(),
                     selection.model_dump_json(),
                     now,
@@ -222,17 +248,11 @@ class AgentStoreV2:
     def _run(row: sqlite3.Row | None) -> RunV2 | None:
         if row is None:
             return None
-        configuration = json.loads(row["configuration_json"])
-        for key in ("request_parameters", "parameter_origins"):
-            configuration[key] = FrozenDict(configuration[key])
-        configuration["budgets"]["retry_policy"] = FrozenDict(
-            configuration["budgets"]["retry_policy"]
-        )
         return RunV2(
             run_id=row["run_id"],
             parent_run_id=row["parent_run_id"],
             snapshot=RepositorySnapshot.model_validate_json(row["snapshot_json"]),
-            configuration=RunConfiguration.model_validate(configuration),
+            configuration=_decode_run_configuration(row["configuration_json"]),
             inputs=RunInputs.model_validate_json(row["inputs_json"]),
             selection=FrozenSelection.model_validate_json(row["selection_json"]),
             status=row["status"],
@@ -626,13 +646,13 @@ class AgentStoreV2:
         ):
             present = name in configuration.request_parameters
             value = configuration.request_parameters.get(name)
+            if name == "max_output_tokens" and not present:
+                present = "output_tokens" in configuration.request_parameters
+                value = configuration.request_parameters.get("output_tokens")
             if name in {"max_output_tokens", "timeout_seconds"}:
                 budget_name = "output_tokens" if name == "max_output_tokens" else name
                 budget_value = getattr(configuration.budgets, budget_name)
-                if (
-                    budget_value is not None
-                    or configuration.parameter_origins.get(budget_name, "omitted") != "omitted"
-                ):
+                if configuration.has_request_budget(budget_name):
                     value, present = budget_value, True
             if present != (name in request.model_fields_set) or (
                 present and getattr(request, name) != value

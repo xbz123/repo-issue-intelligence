@@ -131,6 +131,42 @@ def test_v2_custom_http_client_cannot_override_frozen_endpoint(tmp_path, redirec
     assert store.list_attempts("run", 1)[0].state == ("failure" if redirect else "success")
 
 
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://example.test:80/v1/",
+        "http://example.test:443/v1/",
+        "https://[::1]:80/v1/",
+        "http://[::1]:443/v1/",
+        "https://[::1]:443/v1/",
+    ],
+)
+def test_v2_frozen_endpoint_matches_transport_authority(tmp_path, base_url):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    received = []
+
+    def handler(request):
+        received.append(request.url)
+        frozen = store.get_run("run").configuration.client.endpoint
+        assert httpx.URL(frozen) == httpx.URL(base_url.rstrip("/"))
+        assert request.url == httpx.URL(base_url).join("chat/completions")
+        assert (httpx.URL(frozen).host, httpx.URL(frozen).port) == (
+            request.url.host,
+            request.url.port,
+        )
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer("test-key", base_url=base_url, client=client)
+        run = run_agent_v2(
+            issues(1), root, 1, store, llm_analyzer=analyzer, allow_external_llm=True, run_id="run"
+        )
+    assert run.status == "AWAITING_REVIEW"
+    assert len(received) == 1
+
+
 def test_v2_custom_http_timeout_cannot_override_frozen_budget(tmp_path):
     root = repository(tmp_path / "repo")
     store = new_store(tmp_path / "private")

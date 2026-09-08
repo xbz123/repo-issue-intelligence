@@ -482,7 +482,7 @@ The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-p
 and its executable baseline plus future-gate boundary is recorded in
 [protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). T0, PR1A, PR1B and PR2A
 have merged; PR2B and PR3 merged through PR64 and PR65. This branch integrates
-their code for [PR4/G0](docs/protocol-v2-execution.md), with base repairs in PR67;
+their code for [PR4/G0](docs/protocol-v2-execution.md), including the base repairs from PR67;
 the open PRs are not a G1 release or a default-protocol switch.
 The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
 records the documentation checks and implementation boundaries.

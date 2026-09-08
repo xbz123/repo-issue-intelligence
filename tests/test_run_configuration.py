@@ -89,16 +89,23 @@ def test_configuration_is_deeply_immutable() -> None:
         configuration.budgets.retry_policy["new"] = True
 
 
-def test_budget_aliases_follow_source_precedence_before_canonical_selection() -> None:
+@pytest.mark.parametrize(
+    "default_name,request_name",
+    [("output_tokens", "max_output_tokens"), ("max_output_tokens", "output_tokens")],
+)
+def test_budget_aliases_follow_source_precedence_before_canonical_selection(
+    default_name, request_name
+) -> None:
     configuration = capture_requested_run_configuration(
-        client_defaults={"output_tokens": 64},
-        request_parameters={"max_output_tokens": 128},
+        client_defaults={default_name: 64},
+        request_parameters={request_name: 128},
         captured_at=FIXED_TIME,
     )
 
     assert configuration.budgets.output_tokens == 128
     assert configuration.parameter_origins["output_tokens"] == "user_config"
-    assert configuration.parameter_origins["max_output_tokens"] == "user_config"
+    assert configuration.parameter_origins[request_name] == "user_config"
+    assert configuration.request_parameters == {request_name: 128}
 
     with pytest.raises(RunConfigurationError, match="Conflicting aliases"):
         capture_requested_run_configuration(
@@ -121,6 +128,50 @@ def test_budget_model_preserves_explicit_null_vs_omitted_origin() -> None:
     assert "output_tokens" in BudgetConfiguration(output_tokens=None).model_fields_set
     assert omitted.parameter_origins["output_tokens"] == "omitted"
     assert explicit_null.parameter_origins["output_tokens"] == "user_config"
+
+
+@pytest.mark.parametrize(
+    "parameter,budget",
+    [
+        ("max_output_tokens", "output_tokens"),
+        ("timeout_seconds", "timeout_seconds"),
+    ],
+)
+@pytest.mark.parametrize("requested,limit", [(100, 200), (None, 200), (100, None)])
+def test_conflicting_request_and_budget_are_rejected(parameter, budget, requested, limit):
+    with pytest.raises(ValueError, match="[Cc]onflicting"):
+        capture_requested_run_configuration(
+            request_parameters={parameter: requested},
+            budgets={budget: limit},
+            captured_at=FIXED_TIME,
+        )
+
+
+@pytest.mark.parametrize(
+    "parameters,budgets",
+    [
+        ({"output_tokens": 100}, {"output_tokens": 200}),
+        ({"output_tokens": None}, {"output_tokens": 200}),
+        ({"output_tokens": 100, "max_output_tokens": 200}, {}),
+    ],
+)
+def test_output_tokens_request_alias_conflicts_with_budget(parameters, budgets):
+    with pytest.raises(ValueError, match="[Cc]onflicting"):
+        capture_requested_run_configuration(
+            request_parameters=parameters,
+            budgets=budgets,
+            captured_at=FIXED_TIME,
+        )
+
+
+@pytest.mark.parametrize("parameter", ["output_tokens", "max_output_tokens", "timeout_seconds"])
+@pytest.mark.parametrize("value", [0, -1])
+@pytest.mark.parametrize("budgets", [{}, {"evidence_chars": 1000}])
+def test_request_only_budgets_reject_nonpositive_values(parameter, value, budgets):
+    with pytest.raises(ValueError):
+        capture_requested_run_configuration(
+            request_parameters={parameter: value}, budgets=budgets, captured_at=FIXED_TIME
+        )
 
 
 def test_configuration_rejects_credentials_and_unsafe_endpoint() -> None:
@@ -265,6 +316,24 @@ def test_endpoint_preserves_safe_encoded_path_spelling() -> None:
         captured_at=FIXED_TIME,
     )
     assert configuration.client.endpoint == endpoint
+
+
+@pytest.mark.parametrize(
+    "endpoint,expected",
+    [
+        ("https://example.com:80/v1", "https://example.com:80/v1"),
+        ("http://example.com:443/v1", "http://example.com:443/v1"),
+        ("http://example.com:80/v1", "http://example.com/v1"),
+        ("https://example.com:443/v1", "https://example.com/v1"),
+        ("https://[::1]:80/v1", "https://[::1]:80/v1"),
+        ("http://[::1]:443/v1", "http://[::1]:443/v1"),
+        ("https://[::1]:443/v1", "https://[::1]/v1"),
+    ],
+)
+def test_endpoint_preserves_destination_authority(endpoint, expected):
+    configuration = capture_requested_run_configuration(client={"endpoint": endpoint})
+    assert configuration.client.endpoint == expected
+    assert normalize_endpoint(expected) == expected
 
 
 def test_cli_flags_preserve_non_url_encoded_values() -> None:
