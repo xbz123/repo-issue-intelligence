@@ -294,7 +294,10 @@ class OpenAICompatibleIssueAnalyzer:
             if observations is not None:
                 # V2 binds dispatch to the captured analyzer endpoint, even with a custom client.
                 response = self._client.post(
-                    f"{self.base_url}chat/completions", json=payload, follow_redirects=False
+                    f"{self.base_url}chat/completions",
+                    json=payload,
+                    timeout=self.timeout_seconds,
+                    follow_redirects=False,
                 )
             else:
                 response = self._client.post("chat/completions", json=payload)

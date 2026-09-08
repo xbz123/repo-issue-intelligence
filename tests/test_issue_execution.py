@@ -131,6 +131,46 @@ def test_v2_custom_http_client_cannot_override_frozen_endpoint(tmp_path, redirec
     assert store.list_attempts("run", 1)[0].state == ("failure" if redirect else "success")
 
 
+def test_v2_custom_http_timeout_cannot_override_frozen_budget(tmp_path):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    received = []
+
+    def handler(request):
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        number = payload["issue"]["number"]
+        received.append(number)
+        assert store.get_run("run").configuration.budgets.timeout_seconds == 120
+        assert store.list_attempts("run", number)[-1].request.timeout_seconds == 120
+        assert request.extensions["timeout"] == {
+            "connect": 120,
+            "read": 120,
+            "write": 120,
+            "pool": 120,
+        }
+        client.timeout = httpx.Timeout(0.1)
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(
+        base_url="https://example.test/v1", timeout=7, transport=httpx.MockTransport(handler)
+    ) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer(
+            "test-key", base_url="https://example.test/v1", timeout_seconds=120, client=client
+        )
+        run = run_agent_v2(
+            issues(1, 2),
+            root,
+            2,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+    assert run.status == "AWAITING_REVIEW"
+    assert received == [1, 2]
+
+
 @pytest.mark.parametrize("file_count,metadata", [(1, True), (7, True), (1, False)])
 def test_provider_receives_committed_report_and_exact_sealed_ledger(tmp_path, file_count, metadata):
     root = repository(tmp_path / "repo", file_count=file_count)
@@ -173,6 +213,8 @@ def test_provider_receives_committed_report_and_exact_sealed_ledger(tmp_path, fi
     assert issue.selected_analysis_attempt_id == attempt.attempt_id
     assert attempt.state == "success"
     assert attempt.request.model == "requested-A"
+    assert run.configuration.parameter_origins["budget.output_tokens"] == "client_default"
+    assert run.configuration.parameter_origins["budget.timeout_seconds"] == "client_default"
     assert attempt.reported.model == ("reported-B" if metadata else None)
     assert attempt.reported.response_id == ("response-1" if metadata else None)
     assert attempt.reported.temperature is None
@@ -324,6 +366,7 @@ def test_frozen_configuration_keeps_default_origins_and_explicit_budget_override
     assert origins["retry_policy"] == "user_config"
     assert origins["requested_model"] == "user_config"
     assert origins["timeout_seconds"] == "user_config"
+    assert origins["budget.timeout_seconds"] == "user_config"
     assert origins["temperature"] == "client_default"
     assert origins["max_output_tokens"] == "omitted"
     assert origins["seed"] == "omitted"
@@ -544,12 +587,18 @@ def test_controlled_cli_invocation_preserves_local_and_reported_observations(tmp
     received = []
 
     def fake_run(command, **options):
+        if command == ["codex", "--version"]:
+            assert options["input"] == ""
+            assert options["timeout"] == 5
+            assert not options["shell"]
+            return subprocess.CompletedProcess(command, 0, "codex-cli 1.2.3\n", "")
         payload = json.loads(
             options["input"]
             .split("UNTRUSTED_DATA_BEGIN\n", 1)[1]
             .split("\nUNTRUSTED_DATA_END", 1)[0]
         )
         received.append(payload)
+        assert store.get_run("run").configuration.client.cli_version == "codex-cli 1.2.3"
         ids, lookup = store.evidence_lookup("run", 1)
         assert payload["repository_evidence"] == [
             lookup[key].model_dump(mode="json") for key in ids
@@ -590,6 +639,7 @@ def test_controlled_cli_invocation_preserves_local_and_reported_observations(tmp
 
     assert run.status == "AWAITING_REVIEW"
     assert len(received) == 1
+    assert run.configuration.client.cli_version == "codex-cli 1.2.3"
     (attempt,) = store.list_attempts("run", 1)
     assert attempt.state == ("success" if outcome == "success" else "unknown")
     assert attempt.request.backend == "codex-cli"
@@ -600,6 +650,56 @@ def test_controlled_cli_invocation_preserves_local_and_reported_observations(tmp
     assert attempt.reported.model == ("reported-B" if outcome == "success" else None)
     assert attempt.local.exit_code == (0 if outcome == "success" else None)
     assert attempt.local.elapsed_ms >= 0
+
+
+@pytest.mark.parametrize("failure", ["missing", "timeout", "exit", "unsafe_output"])
+def test_cli_version_preflight_failure_leaves_no_run_or_provider_dispatch(tmp_path, failure):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+
+    def fake_run(command, **options):
+        assert command == ["codex", "--version"]
+        assert options["input"] == ""
+        assert not (Path(options["env"]["CODEX_HOME"]) / "auth.json").exists()
+        if failure == "missing":
+            raise FileNotFoundError("private diagnostic")
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(command, 5, output="private diagnostic")
+        return subprocess.CompletedProcess(
+            command,
+            1 if failure == "exit" else 0,
+            "codex-cli secret=private-diagnostic",
+            "private diagnostic",
+        )
+
+    analyzer = CodexCLIIssueAnalyzer(run_command=fake_run, auth_file=tmp_path / "missing-auth")
+    with pytest.raises(RunConfigurationError, match="version could not be verified") as error:
+        run_agent_v2(
+            issues(1), root, 1, store, llm_analyzer=analyzer, allow_external_llm=True, run_id="run"
+        )
+    assert "private" not in str(error.value)
+    assert store.get_run("run") is None
+    assert store.list_issues("run") == ()
+
+
+def test_cli_version_drift_is_rejected_before_provider_dispatch(tmp_path):
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    versions = iter(["codex-cli 1.2.3", "codex-cli 1.2.4"])
+
+    def fake_run(command, **options):
+        assert command == ["codex", "--version"]
+        return subprocess.CompletedProcess(command, 0, next(versions), "")
+
+    analyzer = CodexCLIIssueAnalyzer(run_command=fake_run, auth_file=tmp_path / "missing-auth")
+    with pytest.raises(RunConfigurationError, match="frozen run configuration"):
+        run_agent_v2(
+            issues(1), root, 1, store, llm_analyzer=analyzer, allow_external_llm=True, run_id="run"
+        )
+    run = store.get_run("run")
+    assert run.status == "FAILED"
+    assert run.configuration.client.cli_version == "codex-cli 1.2.3"
+    assert store.list_attempts("run", 1) == ()
 
 
 @pytest.mark.parametrize("field", ["model", "base_url"])
@@ -646,6 +746,8 @@ def test_confirmed_cli_rate_limit_retries_only_failed_issue(tmp_path):
     received = []
 
     def fake_run(command, **options):
+        if command == ["codex", "--version"]:
+            return subprocess.CompletedProcess(command, 0, "codex-cli 1.2.3\n", "")
         payload = json.loads(
             options["input"]
             .split("UNTRUSTED_DATA_BEGIN\n", 1)[1]

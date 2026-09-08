@@ -40,6 +40,7 @@ from .models import (
     LLMAnalysisResult,
     StrictOutputModel,
 )
+from .run_configuration import RunConfigurationError
 
 CODEX_CLI_PROVIDER = "codex-cli"
 CODEX_CLI_DEFAULT_MODEL = "gpt-5.6-luna"
@@ -495,6 +496,29 @@ class CodexCLIReranker(_CodexCLIClient):
 
 class CodexCLIIssueAnalyzer(_CodexCLIClient):
     backend = "codex-cli"
+
+    def read_cli_version_v2(self) -> str:
+        """Observe the executable locally without sending Issue data or reading auth."""
+        with tempfile.TemporaryDirectory(prefix="rii-codex-version-") as temporary:
+            try:
+                completed = self._run_command(
+                    [self._executable, "--version"],
+                    input="",
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    cwd=temporary,
+                    env={**os.environ, "CODEX_HOME": temporary},
+                    timeout=5,
+                    check=False,
+                    shell=False,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                raise RunConfigurationError("Codex CLI version could not be verified") from None
+        version = safe_reported_text(completed.stdout.strip())
+        if completed.returncode != 0 or version is None or not version.startswith("codex-cli "):
+            raise RunConfigurationError("Codex CLI version could not be verified")
+        return version
 
     def requested_configuration_v2(self) -> dict[str, object]:
         """One controlled CLI invocation, not an asserted remote-request count."""

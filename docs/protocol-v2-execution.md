@@ -178,3 +178,30 @@ Independent Luna max Standards and Spec reviews of `c20cb5b...c511c71` report
 no findings or blockers. [Repair CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34216389618)
 on `c511c71`: Python 3.11 and 3.12 each pass **727 tests**, with one existing
 warning. The earlier acceptance results above cover only earlier code.
+
+## Combined PR66/67 contract repair
+
+The follow-up from `aaaddb2` sends each V2 HTTP request with its frozen timeout,
+including when an injected client has a different timeout or is changed between
+Issues. The mock transport checks all four HTTPX timeout phases against the
+stored run and active attempt; V1's transport behavior is unchanged.
+
+V2 Codex runs now record the local executable's `--version` result before Run
+creation and verify it again before provider dispatch. The five-second probe
+uses empty stdin and an isolated home without authentication material. Failed
+or unsafe version output prevents creation; version drift prevents dispatch.
+Raw output and diagnostics are not persisted. V1 never performs this probe;
+the version is local client provenance, not a reported model identity.
+
+One request-to-budget mapping drives capture and origin bookkeeping, including
+the separate `budget.output_tokens` and `budget.timeout_seconds` markers used by
+PR67. User overrides and client defaults remain distinct. Shared validation and
+evidence fixes remain owned by PR67 and must be included in combined validation.
+No R5 task, acceptance threshold, default protocol or service scope changes.
+
+Standalone local validation of this follow-up: **733 passed**, one existing
+Starlette warning; Ruff, compileall and diff checks pass. Independent Luna max
+Standards and Spec reviews report no remaining confirmed blockers on this
+candidate. CI and the combined PR67 validation are pending. The two PRs remain open; no merge to
+`main`, automatic source-database migration or real provider call is authorized
+by these checks.

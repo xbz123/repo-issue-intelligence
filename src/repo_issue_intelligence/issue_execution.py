@@ -41,6 +41,11 @@ from .run_configuration import (
 )
 from .service import rank_issues
 
+_REQUEST_BUDGET_FIELDS = (
+    ("timeout_seconds", "timeout_seconds"),
+    ("max_output_tokens", "output_tokens"),
+)
+
 
 class IssueAnalyzerV2(Protocol):
     def requested_configuration_v2(self) -> dict[str, object]: ...
@@ -84,9 +89,11 @@ def _assert_current_configuration(run: RunV2, analyzer: IssueAnalyzerV2) -> Atte
     if analyzer.requested_configuration_v2() != request.model_dump(exclude_unset=True):
         raise RunConfigurationError("Analyzer request differs from the frozen run configuration")
     client = run.configuration.client
+    read_cli_version = getattr(analyzer, "read_cli_version_v2", None)
     if (
         normalize_endpoint(getattr(analyzer, "base_url", None)) != client.endpoint
         or getattr(analyzer, "executable", None) != client.cli_executable
+        or (read_cli_version is not None and read_cli_version() != client.cli_version)
     ):
         raise RunConfigurationError(
             "Analyzer destination differs from the frozen run configuration"
@@ -288,6 +295,9 @@ def run_agent_v2(
     executable = getattr(llm_analyzer, "executable", None)
     if executable is not None:
         client["cli_executable"] = executable
+    read_cli_version = getattr(llm_analyzer, "read_cli_version_v2", None)
+    if read_cli_version is not None:
+        client["cli_version"] = read_cli_version()
     budgets = {
         "evidence_chars": max_evidence_chars,
         "evidence_lines": max_evidence_lines,
@@ -297,10 +307,7 @@ def run_agent_v2(
             "backoff": [1.0],
         },
     }
-    for request_key, budget_key in (
-        ("timeout_seconds", "timeout_seconds"),
-        ("max_output_tokens", "output_tokens"),
-    ):
+    for request_key, budget_key in _REQUEST_BUDGET_FIELDS:
         if request_key in requested:
             budgets[budget_key] = requested[request_key]
     configuration = capture_requested_run_configuration(
@@ -316,13 +323,13 @@ def run_agent_v2(
     origins = dict(configuration.parameter_origins)
     for name in ("evidence_chars", "evidence_lines", "retry_policy"):
         origins[name] = (parameter_origins or {}).get(name, "client_default")
-    for request_key, budget_key in (
-        ("timeout_seconds", "timeout_seconds"),
-        ("max_output_tokens", "output_tokens"),
-    ):
+    for request_key, budget_key in _REQUEST_BUDGET_FIELDS:
         if request_key in requested:
             origin = (parameter_origins or {}).get(request_key, "client_default")
             origins[request_key] = origins[budget_key] = origin
+            origins[f"budget.{budget_key}"] = origin
+        else:
+            origins[f"budget.{budget_key}"] = "omitted"
     configuration = configuration.model_copy(
         update={
             "llm_enabled": llm_analyzer is not None,
