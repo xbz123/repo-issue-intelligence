@@ -9,6 +9,19 @@ from typing import Protocol
 import httpx
 from pydantic import ValidationError
 
+from .analysis_contract import (
+    ANALYSIS_V2_PROMPT_VERSION,
+    PRIMARY_EVIDENCE_INSTRUCTION,
+    EvidenceLookup,
+    normalize_analysis_v2,
+    validated_evidence,
+)
+from .analysis_observations import (
+    AnalysisResultV2,
+    empty_reported,
+    extract_api_observations,
+    metadata_diagnostics,
+)
 from .models import (
     EvidenceAlignment,
     EvidenceRerankAnalysis,
@@ -234,6 +247,8 @@ class OpenAICompatibleIssueAnalyzer:
         system_prompt: str,
         user_payload: dict,
         schema: dict,
+        *,
+        observations: dict | None = None,
     ) -> tuple[str, dict, float]:
         schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         system_prompt = (
@@ -260,14 +275,38 @@ class OpenAICompatibleIssueAnalyzer:
         if self.seed is not None:
             payload["seed"] = self.seed
 
+        if observations is not None:
+            requested = {
+                "backend": "api",
+                "provider": self.provider,
+                "model": payload["model"],
+                "temperature": payload["temperature"],
+                "timeout_seconds": self.timeout_seconds,
+            }
+            for key in ("reasoning_effort", "seed"):
+                if key in payload:
+                    requested[key] = payload[key]
+            if "max_tokens" in payload:
+                requested["max_output_tokens"] = payload["max_tokens"]
+            if "response_format" in payload:
+                requested["response_format_json"] = True
+            observations["requested"] = requested
+            return self._request_completion(payload, observations=observations)
         return self._request_completion(payload)
 
-    def _request_completion(self, payload: dict) -> tuple[str, dict, float]:
+    def _request_completion(
+        self,
+        payload: dict,
+        *,
+        observations: dict | None = None,
+    ) -> tuple[str, dict, float]:
         started = perf_counter()
         try:
             response = self._client.post("chat/completions", json=payload)
         except httpx.HTTPError as error:
             elapsed_ms = round((perf_counter() - started) * 1000, 3)
+            if observations is not None:
+                observations["local"]["elapsed_ms"] = elapsed_ms
             raise LLMProviderError(
                 f"{self.provider_label} request failed: {type(error).__name__}",
                 retryable=True,
@@ -275,6 +314,16 @@ class OpenAICompatibleIssueAnalyzer:
                 elapsed_ms=elapsed_ms,
             ) from error
         elapsed_ms = round((perf_counter() - started) * 1000, 3)
+        if observations is not None:
+            observations["local"] = {"elapsed_ms": elapsed_ms, "http_status": response.status_code}
+            try:
+                reported_payload = response.json()
+            except ValueError:
+                reported_payload = {}
+            observations["reported"] = extract_api_observations(
+                reported_payload if isinstance(reported_payload, dict) else {},
+                response.headers,
+            )
         if response.status_code >= 400:
             retry_after = None
             if response.status_code == 429:
@@ -409,6 +458,87 @@ class OpenAICompatibleIssueAnalyzer:
             output_tokens=output_tokens,
             elapsed_ms=elapsed_ms,
             analysis=normalized_analysis,
+        )
+
+    def analyze_v2(
+        self,
+        issue: IssueRecord,
+        report: InvestigationReport,
+        input_evidence_ids: Sequence[str],
+        evidence_lookup: EvidenceLookup,
+    ) -> AnalysisResultV2:
+        """Explicit V2 full analysis, independent of storage and the default V1 path."""
+        evidence = validated_evidence(input_evidence_ids, evidence_lookup)
+        input_ids = tuple(item.id for item in evidence)
+        lookup = {item.id: item for item in evidence}
+        payload = {
+            "issue": {
+                "number": issue.number,
+                "title": issue.title,
+                "body": issue.body,
+                "labels": list(issue.labels),
+            },
+            "repository_evidence": [item.model_dump(mode="json") for item in evidence],
+        }
+        observations = {
+            "requested": {},
+            "reported": empty_reported(),
+            "local": {"elapsed_ms": None, "http_status": None},
+            "diagnostics": (),
+        }
+        try:
+            content, response_payload, _ = self._request_structured(
+                SYSTEM_PROMPT + "\n" + PRIMARY_EVIDENCE_INSTRUCTION,
+                payload,
+                LLMAnalysisResponse.model_json_schema(),
+                observations=observations,
+            )
+            choices = response_payload.get("choices")
+            if (
+                isinstance(choices, list)
+                and choices
+                and choices[0].get("finish_reason") == "length"
+            ):
+                raise LLMProviderError(
+                    "V2 analysis output budget exhausted", category="output_truncated"
+                )
+            try:
+                response = LLMAnalysisResponse.model_validate_json(content)
+            except (TypeError, ValueError) as error:
+                category, _ = _structured_validation_detail(error)
+                raise LLMProviderError(
+                    "Invalid V2 provider analysis", category=category, retryable=True
+                ) from None
+            try:
+                normalized = normalize_analysis_v2(response, input_ids, lookup)
+            except ValueError:
+                raise LLMProviderError(
+                    "Invalid V2 evidence references", category="evidence_validation", retryable=True
+                ) from None
+        except LLMProviderError as error:
+            safe_error = LLMProviderError(
+                "V2 API analysis failed",
+                retry_after=error.retry_after,
+                retryable=error.retryable,
+                category=error.category,
+                elapsed_ms=observations["local"]["elapsed_ms"] or 0,
+            )
+            observations["diagnostics"] = metadata_diagnostics(
+                observations["requested"],
+                observations["reported"],
+            )
+            safe_error.observations = observations
+            raise safe_error from None
+        return AnalysisResultV2(
+            analysis=normalized,
+            prompt_version=ANALYSIS_V2_PROMPT_VERSION,
+            requested=observations["requested"],
+            reported=observations["reported"],
+            local=observations["local"],
+            diagnostics=metadata_diagnostics(
+                observations["requested"],
+                observations["reported"],
+            ),
         )
 
     @staticmethod

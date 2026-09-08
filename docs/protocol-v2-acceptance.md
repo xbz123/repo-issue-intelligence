@@ -305,7 +305,7 @@ uv run pytest -q tests/test_api_security.py tests/test_review_service.py     # P
 
 本文件和 RFC 已冻结执行契约，baseline artifact 和测试输出按实际运行结果记录；T0
 文档、fixture 和基线已完成本地验证并经独立审查，状态为 `verified`；PR1A 和 PR1B 已合并，
-其中 PR1B 合并提交为 `d83f051`。PR2A 已随 PR63 合并为 `ca67925`；PR2B 已验证但尚未合并，
-PR3–PR8、G0、G1 仍为 `planned`，
+其中 PR1B 合并提交为 `d83f051`。PR2A 已随 PR63 合并为 `ca67925`；PR2B 已随 PR64
+合并为 `927e42f`；PR3 已验证，合并状态以 PR65 为准。本分支不包含 PR4–PR8、G0、G1，
 默认路径仍是 V1。未来 V2 acceptance 的任何空缺、失败或未运行项都必须继续显式列出，不得
 用 V1 characterization 代替；当前没有真实 LLM 调用或用户数据库迁移。

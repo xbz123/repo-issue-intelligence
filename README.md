@@ -726,6 +726,12 @@ limitations, and next retrieval improvements.
 
 The MVP does not execute generated commands, modify the target repository, post labels, close issues, or create pull requests. The default Agent path is deterministic and offline. The optional LLM path analyzes only supplied Top-K evidence, cannot expand repository access, and still ends at the same human review gate. LLM output is an evidence-linked hypothesis, not a confirmed root cause.
 
+## Explicit Analysis V2
+
+The explicit low-level Analysis V2 methods are documented in
+[Protocol v2 analysis](docs/protocol-v2-analysis.md). They do not change the default
+V1 Agent workflow or enable the later V2 runtime and release gates.
+
 ## License
 
 MIT
