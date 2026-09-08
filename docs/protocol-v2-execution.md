@@ -214,6 +214,9 @@ Combined local validation: **828 passed**, one existing Starlette warning;
 the configuration/Store/execution selection passes **153 tests**. Ruff,
 compileall, diff whitespace and all **195 tracked JSON** parses pass.
 Independent Luna max Standards and Spec reviews of the actual combined tree
-report no confirmed blockers. Combined CI is pending. The two PRs remain open; no merge
+report no confirmed blockers. [Combined CI on `9ed5d94`](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34234039003)
+passes **828 tests** on both Python 3.11 and 3.12, with one existing test warning.
+Runner deprecation and transient cache-service warnings did not fail either job.
+The two PRs remain open; no merge
 to `main`, automatic source-database migration or real provider call is authorized
 by these checks.
