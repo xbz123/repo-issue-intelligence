@@ -96,5 +96,7 @@ Capture and dispatch checks therefore compare the same destination authority.
 Standalone local validation of this follow-up: **749 passed**, one existing
 Starlette warning; Ruff, compileall and diff checks pass. Independent Luna max
 Standards and Spec reviews report no remaining confirmed blockers on this
-candidate. CI and the combined PR66 validation are pending. Earlier test counts and reviews
+candidate. [CI on `87d8c38`](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34232549956)
+passes **749 tests** on both Python 3.11 and 3.12, with one existing warning.
+The combined PR66 validation remains a separate gate. Earlier test counts and reviews
 are not substituted for the revised code. PR64/65 are merged; PR66/67 remain unmerged.
