@@ -122,6 +122,35 @@ def test_matching_and_budget_only_configuration_accepts_exact_attempt(tmp_path, 
         assert getattr(attempt.request, parameter) == 100
 
 
+@pytest.mark.parametrize("parameter", ["timeout_seconds", "max_output_tokens"])
+@pytest.mark.parametrize("budget_kind", ["evidence", "empty", "model"])
+def test_request_only_budget_omission_survives_store_roundtrip(tmp_path, parameter, budget_kind):
+    from test_evidence_ledger import save_report, seal
+
+    from repo_issue_intelligence.protocol_v2_models import AttemptRequest, BudgetConfiguration
+
+    store = new_store(tmp_path / "private")
+    template = create_run(store)
+    budgets = {"evidence_chars": 1000} if budget_kind == "evidence" else {}
+    if budget_kind == "model":
+        budgets = BudgetConfiguration()
+    config = capture_requested_run_configuration(
+        requested_model="requested-A",
+        request_parameters={parameter: 100},
+        budgets=budgets,
+    ).model_copy(update={"llm_enabled": True})
+    store.create_run(template.snapshot, config, template.inputs, run_id="request-only")
+    save_report(store, run_id="request-only")
+    evidence = seal(store, run_id="request-only")
+    attempt = store.start_attempt(
+        "request-only",
+        1,
+        evidence.evidence_set_id,
+        AttemptRequest(model="requested-A", **{parameter: 100}),
+    )
+    assert getattr(attempt.request, parameter) == 100
+
+
 def successful_analysis():
     from repo_issue_intelligence.protocol_v2_models import AnalysisV2
 

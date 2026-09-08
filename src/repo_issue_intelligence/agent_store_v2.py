@@ -503,10 +503,7 @@ class AgentStoreV2:
             if name in {"max_output_tokens", "timeout_seconds"}:
                 budget_name = "output_tokens" if name == "max_output_tokens" else name
                 budget_value = getattr(configuration.budgets, budget_name)
-                if (
-                    budget_value is not None
-                    or configuration.parameter_origins.get(budget_name, "omitted") != "omitted"
-                ):
+                if configuration.has_request_budget(budget_name):
                     value, present = budget_value, True
             if present != (name in request.model_fields_set) or (
                 present and getattr(request, name) != value

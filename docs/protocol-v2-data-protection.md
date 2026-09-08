@@ -84,6 +84,11 @@ unchanged. Conflicting duplicated output-token/timeout request parameters and
 budgets are rejected at configuration capture/read and before creating a run,
 including caller-created model copies. No existing configuration is rewritten
 automatically; matching duplicates and budget-only requests remain supported.
+New captures record `budget.output_tokens` and `budget.timeout_seconds` origins
+separately, so an omitted budget remains distinguishable from explicit null after
+JSON roundtrips. Older records lacking those markers retain the legacy origin
+interpretation and are not silently rewritten; a conflicting/ambiguous record
+must be investigated rather than assigned an invented request value.
 
 V2 traces accept only small, typed diagnostic metadata and references. Full maps,
 source text, arbitrary provider responses and credentials do not belong in traces.

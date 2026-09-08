@@ -309,6 +309,13 @@ class RunConfiguration(ProtocolV2Model):
     safe_cli_flags: tuple[str, ...] = ()
     captured_at: AwareDatetime
 
+    def has_request_budget(self, name: str) -> bool:
+        value = getattr(self.budgets, name)
+        origin = self.parameter_origins.get(
+            f"budget.{name}", self.parameter_origins.get(name, "omitted")
+        )
+        return value is not None or origin != "omitted"
+
     @model_validator(mode="after")
     def validate_request_budget_consistency(self) -> Self:
         for parameter, budget in (
@@ -316,12 +323,9 @@ class RunConfiguration(ProtocolV2Model):
             ("timeout_seconds", "timeout_seconds"),
         ):
             value = getattr(self.budgets, budget)
-            budget_present = (
-                value is not None or self.parameter_origins.get(budget, "omitted") != "omitted"
-            )
             if (
                 parameter in self.request_parameters
-                and budget_present
+                and self.has_request_budget(budget)
                 and self.request_parameters[parameter] != value
             ):
                 raise ValueError("Conflicting request-parameter and budget values")

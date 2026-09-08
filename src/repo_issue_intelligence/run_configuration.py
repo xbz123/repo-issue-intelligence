@@ -970,6 +970,15 @@ def capture_requested_run_configuration(
         defaults=defaults,
         client_values=client_values,
     )
+    # timeout_seconds is also a request key; keep budget omission unambiguous
+    # after serialization, where model defaults otherwise look explicitly set.
+    for name in ("output_tokens", "timeout_seconds"):
+        present = (
+            name in budgets.model_fields_set
+            if isinstance(budgets, BudgetConfiguration)
+            else name in budget_values
+        )
+        origins[f"budget.{name}"] = origins.get(name, "client_default") if present else "omitted"
     safe_flags_source = safe_cli_flags
     if safe_flags_source is None:
         embedded_flags = _get_first(client_values, ("safe_cli_flags", "cli_flags"))
