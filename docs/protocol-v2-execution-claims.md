@@ -70,5 +70,20 @@ of this gate.
 - Independent Spec review against `7cbf600`: no confirmed blockers for
   5A.1–5A.7, including the conservative no-recovery boundary above.
 
-These are local and independent-review results, not GitHub CI or merge
-evidence. PR5A remains unmerged; remote checks will be recorded separately.
+## GitHub validation and delivery
+
+[PR69](https://github.com/xbz123/repo-issue-intelligence/pull/69) is open and
+unmerged. Code head `660d04dba317de4e7eedc687d3696ccfec435051` passed
+[CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34275717360):
+Python 3.11 and 3.12 each passed Ruff and `864 tests`, with one existing test
+warning per job.
+
+Both checkout logs identify merge ref
+`563321c674e3c1fcecec106236a3c7de07968010`, combining `main` at `7cbf600` with
+the code head. Its tree, `0af0f80a2662662033e2198ccef1533219a4f7b5`, exactly
+matches the locally validated and independently reviewed head tree.
+
+The checklist records 5A.1–5A.7 as `verified`, not `merged`. GitHub bot review
+status remains separate from these local/CI gates and is reported on the PR.
+Copilot's quota-blocked review did not execute and is not counted as approval.
+PR5B–PR8 and G1 remain planned; V1 remains the default.

@@ -29,7 +29,7 @@ T0.1–T0.7 已于 2026-09-05 完成本地验证并经独立审查，随后随 P
 [T0 验收记录](protocol-v2-acceptance.md)。该状态只覆盖 T0 契约、fixture 和 V1
 characterization baseline；PR1A 的本地实现验证见下方，PR1B 已完成本地门禁和独立有界
 复核并随 `d83f051` 合并；PR2A 已随 `ca67925` 合并；PR2B、PR3 已随 PR64、PR65 合并；
-PR4/G0 的验证及后续修复以执行记录中的提交为准；本分支 PR5A 为 `in_progress`，
+PR4/G0 的验证及后续修复以执行记录中的提交为准；本分支 PR5A 为 `verified`（未合并），
 PR5B–PR8/G1 仍为 `planned`，不表示 V2 已默认启用或已发布。
 
 ## PR1A
@@ -141,13 +141,13 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 5A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-1) |
-| 5A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-2) |
-| 5A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-3) |
-| 5A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-4) |
-| 5A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-5) |
-| 5A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-6) |
-| 5A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-7) |
+| 5A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-1) |
+| 5A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-2) |
+| 5A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-3) |
+| 5A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-4) |
+| 5A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-5) |
+| 5A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-6) |
+| 5A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr5a) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-5a-7) |
 
 ## PR5B
 
