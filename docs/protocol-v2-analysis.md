@@ -3,7 +3,7 @@
 R5 PR3 adds a pure local analysis contract and explicit low-level backend methods.
 The existing `analyze()` methods, V1 prompts, provider five-field response schema,
 rank-only reranking, default Agent workflow and CLI model defaults are unchanged.
-PR2B storage is a separate, unmerged peer PR; this implementation neither imports
+PR2B storage merged separately in PR64; this analysis implementation neither imports
 it nor requires SQLite. PR4 will connect storage, current transfer permission and
 the V2 Agent entrypoints. PR3 alone does not enable G0 or G1.
 
@@ -84,7 +84,7 @@ the revised focused suite passes 105 tests. Code `f935646` passed
 [Python 3.11/3.12 CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34165531039)
 with 622 tests and one existing warning each. Independent Astra Standards and Spec
 reviews confirmed both findings closed, with zero remaining issues. R5 3.1–3.8 are
-verified in PR65, which remains unmerged. Earlier gates are not substituted for
+verified in PR65; consult that PR for its merge state. Earlier gates are not substituted for
 the revised code's validation.
 
 These checks prove contract behavior and compatibility, not correctness of a root

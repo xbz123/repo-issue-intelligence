@@ -16,8 +16,8 @@ V2 命令已经存在。除非另有说明，`MUST`/“必须”表示实现和�
 T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T0 已随 PR60
 于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 已于
 2026-09-06 随 `d386dc8` 合并，PR1B 已随 `d83f051` 合并。PR1B 的本地实现、门禁和独立
-有界复核记录同见验收文档；PR2A 已合并，PR2B 在 PR64、PR3 在 PR65 中已验证但尚未合并。
-后续 PR、G0、G1 尚未完成，V2 仍未默认启用。
+有界复核记录同见验收文档；PR2A 已合并，PR2B 已随 PR64（`927e42f`）合并。
+PR3 已验证，合并状态以 PR65 为准；本分支不包含后续 PR、G0、G1，V2 仍未默认启用。
 
 ## 1. 范围与发布边界
 
@@ -450,13 +450,14 @@ Ruff、compileall 和 `git diff --check` 均通过；独立有界复核已通过
 resume、默认入口或真实 provider 已实现。此前全量
 `500 passed` 是 filter-triple 修复前的中间证据，不作为最终计数。
 
-PR2A 已在独立工作树完成本地 focused 与全量回归验证，独立有界复核已通过，状态为 `verified`
-但尚未合并；新增
+PR2A 已完成本地与双版本 CI 验证及独立 Astra 双轴复核，并随 PR63 合并为 `ca67925`；新增
 `agent_store_migrations.py` 作为七张 V2 表、FK、索引、写保护触发器和显式事务的唯一 DDL
 来源，`tests/test_agent_store_migrations.py` 覆盖空库/legacy0/knownv2/unknown/corrupt 识别、
 只读 SQLite backup、legacy-copy 保留、attempt/review/evidence 约束及 DDL/index/version/commit
 故障回滚。该 PR 不修改 `AgentStore._initialize`，不开放 CLI/API apply，不做真实用户数据库迁移；
-focused 证据为 `10 passed`，全量回归为 `520 passed`（1 warning），不替代 G0/G1。
+初始 focused 为 `10 passed`、全量为 `520 passed`；最终补修后 focused 为 `62 passed`，
+双版本 CI 各 `572 passed`（1 warning），不替代 G0/G1。PR2B 在此基础上增加显式 Store 和
+数据库工具，仍不切换默认 Agent 工作流。
 
 ## 13. 参考与非目标
 

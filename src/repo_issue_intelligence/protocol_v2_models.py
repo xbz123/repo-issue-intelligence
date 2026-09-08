@@ -8,15 +8,27 @@ capture helpers in :mod:`repository_context` and :mod:`run_configuration`.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from enum import StrEnum
-from pathlib import Path
-from typing import Any, ClassVar, Self
+from pathlib import Path, PurePosixPath
+from typing import Any, ClassVar, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-from .models import IssueRecord, Priority, PriorityResult, ScoreFactors, Severity, Urgency
+from .models import (
+    EvidenceAlignment,
+    EvidenceSnippet,
+    IssueRecord,
+    IssueType,
+    Priority,
+    PriorityResult,
+    ReproductionCompleteness,
+    ScoreFactors,
+    Severity,
+    Urgency,
+)
 
 
 class ProtocolV2Model(BaseModel):
@@ -286,6 +298,7 @@ class RunConfiguration(ProtocolV2Model):
     """Immutable requested/client configuration, never an ``effective`` config."""
 
     schema_version: ClassVar[int] = 1
+    llm_enabled: bool = False
     client: ClientConfiguration = Field(default_factory=ClientConfiguration)
     requested_model: str | None = None
     request_parameters: FrozenDict = Field(default_factory=FrozenDict)
@@ -577,16 +590,292 @@ def thaw_issue_snapshots(issues: tuple[FrozenIssueSnapshot, ...]) -> list[IssueR
     return [issue.to_issue() for issue in issues]
 
 
+class RunV2(ProtocolV2Model):
+    run_id: str
+    parent_run_id: str | None
+    snapshot: RepositorySnapshot
+    configuration: RunConfiguration
+    inputs: RunInputs
+    selection: FrozenSelection
+    status: str
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+
+
+class IssueExecutionV2(ProtocolV2Model):
+    run_id: str
+    issue_number: int
+    deterministic_state: str
+    deterministic_report: FrozenDict | None
+    evidence_set_id: str | None
+    selected_analysis_attempt_id: str | None
+    review_version: int
+    llm_state: str
+    attempt_count: int = 0
+    analysis: FrozenDict | None = None
+
+
+class EvidenceItemV2(ProtocolV2Model):
+    evidence_id: str = Field(min_length=1, max_length=128)
+    ordinal: int = Field(ge=0)
+    candidate_rank: int | None = Field(default=None, ge=0)
+    selection_kind: Literal["candidate", "alternate_symbol", "fallback"]
+    file: str = Field(min_length=1)
+    symbol: str | None = None
+    requested_range: tuple[int, int]
+    actual_range: tuple[int, int]
+    truncation_reason: str | None = Field(default=None, min_length=1, max_length=128)
+    char_count: int = Field(ge=0)
+    content: str = Field(min_length=1)
+    collector_protocol: str = Field(min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def validate_metadata(self) -> Self:
+        path = PurePosixPath(self.file)
+        if path.is_absolute() or ".." in path.parts or "\\" in self.file:
+            raise ValueError("evidence file must be analysis-relative")
+        start, end = self.actual_range
+        requested_start, requested_end = self.requested_range
+        if not 1 <= requested_start <= start <= end <= requested_end:
+            raise ValueError("actual evidence range must be within requested range")
+        if len(self.content.splitlines()) != end - start + 1:
+            raise ValueError("actual evidence range must describe stored content lines")
+        if self.char_count != len(self.content):
+            raise ValueError("evidence character count must match stored content")
+        if self.actual_range != self.requested_range and not self.truncation_reason:
+            raise ValueError("shortened evidence requires a truncation reason")
+        return self
+
+
+class EvidenceCollectionContext(ProtocolV2Model):
+    snapshot_commit: str | None
+    analysis_prefix: str = ""
+    collector_protocol: str = Field(min_length=1, max_length=128)
+    budget_chars: int | None = Field(default=None, ge=1)
+    budget_lines: int | None = Field(default=None, ge=1)
+
+
+class EvidenceSetV2(ProtocolV2Model):
+    evidence_set_id: str
+    run_id: str
+    issue_number: int
+    collection_context: EvidenceCollectionContext
+    sealed_at: AwareDatetime
+    items: tuple[EvidenceItemV2, ...]
+
+
+class FrozenEvidenceSnippet(EvidenceSnippet):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class EvidenceObservationV2(ProtocolV2Model):
+    evidence_id: str = Field(min_length=1)
+    alignment: EvidenceAlignment
+    observation: str
+
+
+class AnalysisHypothesisV2(ProtocolV2Model):
+    description: str = Field(min_length=1)
+    confidence: float = Field(ge=0, le=1)
+    evidence_ids: tuple[str, ...] = Field(min_length=1)
+    missing_evidence: tuple[str, ...]
+    validation_step: str = Field(min_length=1)
+
+
+class AnalysisV2(ProtocolV2Model):
+    """Local storage contract; provider normalization belongs to PR3."""
+
+    summary: str = Field(min_length=1)
+    issue_type: IssueType
+    affected_component: str = Field(min_length=1)
+    reproduction_completeness: ReproductionCompleteness
+    evidence_observations: tuple[EvidenceObservationV2, ...]
+    contradictions: tuple[str, ...]
+    input_evidence_ids: tuple[str, ...] = Field(min_length=1)
+    primary_evidence_id: str = Field(min_length=1)
+    hypotheses: tuple[AnalysisHypothesisV2, ...] = Field(min_length=1)
+    needs_more_evidence: bool
+
+    @model_validator(mode="after")
+    def validate_references(self) -> Self:
+        ids = set(self.input_evidence_ids)
+        observed = tuple(item.evidence_id for item in self.evidence_observations)
+        if (
+            len(ids) != len(self.input_evidence_ids)
+            or len(set(observed)) != len(observed)
+            or set(observed) != ids
+        ):
+            raise ValueError("analysis requires unique input IDs and complete observation coverage")
+        for hypothesis in self.hypotheses:
+            if (
+                len(set(hypothesis.evidence_ids)) != len(hypothesis.evidence_ids)
+                or not set(hypothesis.evidence_ids) <= ids
+            ):
+                raise ValueError("hypothesis requires unique known evidence references")
+        if self.primary_evidence_id != self.hypotheses[0].evidence_ids[0]:
+            raise ValueError("primary evidence must be the first cited hypothesis reference")
+        return self
+
+
+class SafeMetadata(ProtocolV2Model):
+    """Closed short observations, never provider diagnostics or raw payloads."""
+
+    model_config = ConfigDict(hide_input_in_errors=True, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_safe_metadata(self) -> Self:
+        from .run_configuration import _url_security_violation
+
+        for value in self.model_dump().values():
+            if isinstance(value, str) and (
+                len(value) > 512
+                or "\n" in value
+                or "\r" in value
+                or _url_security_violation(value) is not None
+                or re.search(
+                    r"(?i)\bbearer\s+\S+|(?:api[_-]?key|password|secret|authorization|"
+                    r"access[_-]?token)\s*[:=]"
+                    r"|(?:sk-|ghp_|github_pat_)[A-Za-z0-9_-]{8,}",
+                    value,
+                )
+            ):
+                raise ValueError("metadata contains unsafe or oversized text")
+        return self
+
+
+class AttemptRequest(SafeMetadata):
+    model: str | None = None
+    provider: str | None = None
+    backend: str = "api"
+    temperature: float | None = None
+    seed: int | None = None
+    reasoning_effort: str | None = None
+    service_tier: str | None = None
+    max_output_tokens: int | None = Field(default=None, ge=1)
+    timeout_seconds: float | None = Field(default=None, gt=0)
+    response_format_json: bool | None = None
+
+
+class AttemptError(SafeMetadata):
+    category: Literal[
+        "transport",
+        "timeout",
+        "provider",
+        "invalid_response",
+        "interrupted",
+        "outcome_uncertain",
+        "local",
+    ]
+    detail: str = Field(min_length=1, max_length=512)
+
+
+class ReportedObservation(SafeMetadata):
+    model: str | None = None
+    provider: str | None = None
+    temperature: float | None = None
+    seed: int | None = None
+    reasoning_effort: str | None = None
+    service_tier: str | None = None
+    request_id: str | None = None
+    system_fingerprint: str | None = None
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+
+
+class LocalObservation(SafeMetadata):
+    elapsed_ms: float | None = Field(default=None, ge=0)
+    exit_code: int | None = None
+    category: Literal["completed", "transport", "timeout", "interrupted", "local"] | None = None
+    invocation_id: str | None = None
+
+
+class AttemptTerminalFields(ProtocolV2Model):
+    model_config = ConfigDict(hide_input_in_errors=True)
+
+    state: Literal["success", "failure", "unknown"]
+    analysis: AnalysisV2 | None = None
+    error: AttemptError | None = None
+    reported: ReportedObservation | None = None
+    local: LocalObservation | None = None
+
+    @model_validator(mode="after")
+    def validate_terminal_fields(self) -> Self:
+        if self.state == "success":
+            if self.analysis is None or self.error is not None:
+                raise ValueError("successful attempt requires analysis and no error")
+        elif self.analysis is not None or self.error is None:
+            raise ValueError("failed or unknown attempt requires error and no analysis")
+        if self.state == "unknown" and self.error.category not in {
+            "interrupted",
+            "outcome_uncertain",
+        }:
+            raise ValueError("unknown attempt requires an explicit uncertain-outcome reason")
+        return self
+
+
+class AttemptV2(ProtocolV2Model):
+    attempt_id: str
+    run_id: str
+    issue_number: int
+    evidence_set_id: str
+    ordinal: int
+    request: AttemptRequest
+    started_at: AwareDatetime
+    state: Literal["in_progress", "success", "failure", "unknown"]
+    finished_at: AwareDatetime | None
+    analysis: AnalysisV2 | None
+    error: AttemptError | None
+    reported: ReportedObservation | None
+    local: LocalObservation | None
+
+
+class TracePayloadV2(SafeMetadata):
+    event: Literal[
+        "run_created",
+        "deterministic_started",
+        "deterministic_completed",
+        "evidence_sealed",
+        "attempt_started",
+        "attempt_finished",
+        "run_interrupted",
+    ]
+    issue_number: int | None = Field(default=None, ge=1)
+    evidence_set_id: str | None = Field(default=None, min_length=1, max_length=128)
+    attempt_id: str | None = Field(default=None, min_length=1, max_length=128)
+    item_count: int | None = Field(default=None, ge=0)
+    elapsed_ms: float | None = Field(default=None, ge=0)
+
+
+class TraceV2(ProtocolV2Model):
+    trace_id: str
+    run_id: str
+    payload: TracePayloadV2
+    created_at: AwareDatetime
+
+
 __all__ = [
+    "AnalysisHypothesisV2",
+    "AnalysisV2",
+    "AttemptError",
+    "AttemptRequest",
+    "AttemptTerminalFields",
+    "AttemptV2",
     "BudgetConfiguration",
     "ClientConfiguration",
     "EngineRuntime",
+    "EvidenceCollectionContext",
+    "EvidenceItemV2",
+    "EvidenceObservationV2",
+    "EvidenceSetV2",
     "FrozenDict",
+    "FrozenEvidenceSnippet",
     "FrozenIssueSnapshot",
     "FrozenPriorityResult",
     "FrozenScoreFactors",
     "FrozenSelection",
     "ParameterOrigin",
+    "IssueExecutionV2",
+    "LocalObservation",
     "ProtocolConfiguration",
     "ProtocolV2Model",
     "RepositoryCaptureMode",
@@ -594,8 +883,12 @@ __all__ = [
     "RepositoryFileStatus",
     "RepositorySnapshot",
     "RepositoryStatusEntry",
+    "ReportedObservation",
     "RunConfiguration",
     "RunInputs",
+    "RunV2",
+    "TracePayloadV2",
+    "TraceV2",
     "freeze_mapping",
     "freeze_run_inputs",
     "thaw_issue_snapshots",

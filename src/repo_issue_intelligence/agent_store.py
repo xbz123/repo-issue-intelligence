@@ -31,6 +31,22 @@ class AgentStore:
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
+        try:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            v2_marker = connection.execute(
+                "SELECT 1 FROM sqlite_master "
+                "WHERE lower(name) GLOB 'agent_v2_*' "
+                "OR lower(tbl_name) GLOB 'agent_v2_*' LIMIT 1"
+            ).fetchone()
+            if version != 0 or v2_marker is not None:
+                raise ValueError(
+                    "Legacy AgentStore refuses a V2 or versioned database; "
+                    "use 'rii agent-db inspect' to inspect it and a separate legacy database "
+                    "for V1 runs."
+                )
+        except BaseException:
+            connection.close()
+            raise
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
