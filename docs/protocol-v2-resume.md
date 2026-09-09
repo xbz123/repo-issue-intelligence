@@ -166,3 +166,28 @@ did not fail either job.
 The completed repair gates restore checklist 5B.1–5B.8 to `verified`, not
 `merged`. The documentation-only final-head CI and any subsequent GitHub review
 are recorded on PR70; the original bot finding is not approval of the repair.
+
+## Post-review resume setup repair
+
+[The setup-status finding](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3965056866)
+on `9cc6570` was reproduced twice despite a later no-major-issues review of the
+same unchanged head: after actual process exit, an injected map-construction
+exception left both the retained Run and `agent-show` reporting `RUNNING`.
+The same exception in Issue processing correctly produced `FAILED`.
+
+Map construction now runs inside the existing execution failure handler, after
+the Run enters `RUNNING`. Ordinary setup exceptions produce `FAILED`;
+`KeyboardInterrupt` and `SystemExit` produce `INTERRUPTED`. Configuration,
+repository-view and stop-proof preflight refusals remain outside this transition.
+No old attempt, review or committed Issue result is rewritten.
+
+The existing clean-engine, real-process recovery test now covers a stdlib parser
+`MemoryError`, `KeyboardInterrupt`, `SystemExit`, and the original success path.
+The real map builder, Store and CLI remain in use; the test checks retained
+Issue results, writer-lock release and `agent-show`. Before the repair it gave
+`3 failed, 1 passed`; the repaired recovery/retry selection passed `53 tests`.
+Full local suite: `917 passed`, one existing Starlette deprecation warning.
+Ruff, changed-file formatting, compileall and diff whitespace checks passed.
+These are injected failure paths, not evidence of physical memory exhaustion.
+Independent increment review and repair-head CI evidence are recorded on PR70;
+earlier 914-test gates do not validate this increment.

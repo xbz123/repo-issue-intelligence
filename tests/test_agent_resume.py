@@ -232,7 +232,10 @@ def test_tracked_worktree_deterministic_resume_is_refused_before_mutation(tmp_pa
     assert store.get_run_summary(run.run_id) == before
 
 
-def test_clean_engine_resumes_across_real_process_exit_without_runtime_stubs(tmp_path):
+@pytest.mark.parametrize("parse_failure", [None, "MemoryError", "KeyboardInterrupt", "SystemExit"])
+def test_clean_engine_resumes_across_real_process_exit_without_runtime_stubs(
+    tmp_path, parse_failure
+):
     engine = tmp_path / "engine"
     shutil.copytree(
         Path("src"),
@@ -282,12 +285,26 @@ def test_clean_engine_resumes_across_real_process_exit_without_runtime_stubs(tmp
     )
     assert started.returncode == 23, started.stderr
     first = store.get_issue("run", 1)
+    second = store.get_issue("run", 2)
+    assert store.get_run("run").status == "RUNNING"
     assert store.get_run("run").configuration.engine.source_dirty is False
+    resume_script = "from repo_issue_intelligence.cli import app; app()"
+    if parse_failure:
+        # Inject a stdlib parser failure while exercising the real map builder.
+        resume_script = (
+            "import ast\nfrom repo_issue_intelligence.cli import app\n"
+            "original_parse=ast.parse\n"
+            "def failing_parse(source,*args,**kwargs):\n"
+            " if 'def refresh_token' in source:\n"
+            f"  raise {parse_failure}('synthetic map parse failure')\n"
+            " return original_parse(source,*args,**kwargs)\n"
+            "ast.parse=failing_parse\napp()\n"
+        )
     resumed = subprocess.run(
         [
             sys.executable,
             "-c",
-            "from repo_issue_intelligence.cli import app; app()",
+            resume_script,
             "agent-resume",
             "run",
             "--protocol",
@@ -301,10 +318,22 @@ def test_clean_engine_resumes_across_real_process_exit_without_runtime_stubs(tmp
         text=True,
         timeout=30,
     )
-    assert resumed.returncode == 0, resumed.stderr
     assert store.get_issue("run", 1) == first
-    assert store.get_issue("run", 2).deterministic_state == "succeeded"
-    assert store.get_run("run").status == "AWAITING_REVIEW"
+    if parse_failure:
+        assert resumed.returncode != 0
+        assert store.get_issue("run", 2) == second
+        expected_status = "FAILED" if parse_failure == "MemoryError" else "INTERRUPTED"
+    else:
+        assert resumed.returncode == 0, resumed.stderr
+        assert store.get_issue("run", 2).deterministic_state == "succeeded"
+        expected_status = "AWAITING_REVIEW"
+    with store.writer_lock():
+        assert store.get_run("run").status == expected_status
+    shown = CliRunner().invoke(
+        cli.app, ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output)["status"] == expected_status
 
 
 def test_configuration_reconstruction_rejects_unknown_budget_origin_keys():

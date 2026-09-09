@@ -117,9 +117,9 @@ def resume_agent_run(
             prepare_repository_view(run.snapshot, deterministic_resume=True) as view,
             _stopped_attempts(store, abandoned),
         ):
-            repository_map = build_repository_map(view)
             run = store.set_run_status(run_id, "RUNNING", expected_status=run.status)
             try:
+                repository_map = build_repository_map(view)
                 by_number = {issue.number: issue for issue in run.inputs.issues}
                 for number in run.selection.selected_issue_numbers:
                     process_issue(
