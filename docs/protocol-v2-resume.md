@@ -125,6 +125,32 @@ Both checkout logs identify merge ref `cc0b51bf3bc98cda9b1b2cd9ed74b756880b3129`
 combining baseline `226b9f5` with the code head. Its tree
 `8a8b5f541f6651085b306ccee92c17e899e62745` exactly equals the checked local head.
 
-The checklist records 5B.1–5B.8 as `verified`, not `merged`. GitHub bot review
-is a separate signal reported on the PR; Copilot's quota-blocked review did
+That initial gate recorded 5B.1–5B.8 as `verified`, not `merged`; the later
+repair status is recorded below. GitHub bot review is a separate signal on
+the PR; Copilot's quota-blocked review did
 not execute and is not counted as approval. PR6–PR8 and G1 remain planned.
+
+## Post-review control-status repair
+
+GitHub Codex review of `e1ae1a3` found
+[P2: stale Run status after retry](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3964846411).
+The finding reproduces on documentation head `9a24787`: direct guarded recovery
+after real process termination can leave `RUNNING`, and completed retries can
+restore stale `FAILED`/`INTERRUPTED` states. The three regression cases failed
+before the repair; earlier validation does not close this later finding.
+
+After a retry returns normally, the control status now reflects remaining
+Issue stages: an outstanding deterministic failure keeps `FAILED`; pending,
+active or uncertain work keeps `INTERRUPTED`; fully completed reviewable work
+enters `AWAITING_REVIEW`. The existing reader still derives mixed/final review
+status. If retry raises, its prior control state is restored without masking
+the original exception if that restoration also fails.
+
+The repair also checks incomplete/failed/unknown siblings and exception
+restoration. Recovery/retry selection: `50 passed`; full local suite:
+`914 passed`, one existing Starlette deprecation warning. Ruff, compileall and
+diff whitespace checks passed. Independent Standards and Spec increment reviews
+against `9a24787` found no confirmed blockers; Standards also found no actionable
+heuristic smells. These are separate from GitHub Codex's original finding.
+New repair-head CI remains pending; the checklist is `in_progress` until that
+gate completes. No old attempt or review record is rewritten.

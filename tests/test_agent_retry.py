@@ -98,8 +98,9 @@ def _run_until_dispatch(database, root, runtime, ready, release):
         )
 
 
+@pytest.mark.parametrize("resume_first", [False, True])
 def test_process_exit_settles_guarded_attempt_unknown_but_never_automatically_resends(
-    tmp_path, clean_runtime
+    tmp_path, clean_runtime, resume_first
 ):
     from repo_issue_intelligence.agent_resume import resume_agent_run, retry_issue_llm
 
@@ -138,10 +139,13 @@ def test_process_exit_settles_guarded_attempt_unknown_but_never_automatically_re
             process.terminate()  # Only the fake worker created by this test.
             process.join(timeout=5)
             assert not process.is_alive()
-            resume_agent_run("run", store, llm_analyzer=analyzer, allow_external_llm=True)
-            unknown = store.get_attempt(active.attempt_id)
-            assert unknown.state == "unknown"
-            assert sent == []
+            if resume_first:
+                resume_agent_run("run", store, llm_analyzer=analyzer, allow_external_llm=True)
+                unknown = store.get_attempt(active.attempt_id)
+                assert unknown.state == "unknown"
+                assert sent == []
+            else:
+                assert store.get_run("run").status == "RUNNING"
             retry_issue_llm(
                 "run",
                 1,
@@ -151,7 +155,11 @@ def test_process_exit_settles_guarded_attempt_unknown_but_never_automatically_re
                 recover_unknown=True,
             )
             assert len(sent) == 1
-            assert store.get_attempt(active.attempt_id) == unknown
+            assert store.get_run("run").status == "AWAITING_REVIEW"
+            if resume_first:
+                assert store.get_attempt(active.attempt_id) == unknown
+            else:
+                assert store.get_attempt(active.attempt_id).state == "unknown"
     finally:
         if process.is_alive():
             process.terminate()
@@ -580,3 +588,140 @@ def test_codex_retry_obeys_version_and_unproven_subprocess_stop_boundary(
             )
         assert len(calls) == 1
         assert store.get_run_summary("run") == before
+
+
+@pytest.mark.parametrize("previous_status", ["FAILED", "INTERRUPTED"])
+def test_terminal_retry_clears_stale_control_failure_after_all_work_finishes(
+    tmp_path, clean_runtime, previous_status
+):
+    from repo_issue_intelligence.agent_resume import retry_issue_llm
+
+    store = new_store(tmp_path / "private")
+    calls = []
+
+    def handler(request):
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        calls.append(payload)
+        if len(calls) == 1:
+            return httpx.Response(400, json={"error": "synthetic failure"})
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer("test-key", client=client)
+        run_agent_v2(
+            issues(1),
+            repository(tmp_path / "repo"),
+            1,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+        store.set_run_status("run", previous_status, expected_status="AWAITING_REVIEW")
+        result = retry_issue_llm(
+            "run",
+            1,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+        )
+    assert result.llm_state == "succeeded"
+    assert store.get_run("run").status == "AWAITING_REVIEW"
+
+
+@pytest.mark.parametrize("remaining", ["pending", "failed", "unknown"])
+def test_terminal_retry_does_not_hide_unfinished_sibling_work(
+    tmp_path, monkeypatch, clean_runtime, remaining
+):
+    from repo_issue_intelligence.agent_resume import retry_issue_llm
+
+    store = new_store(tmp_path / "private")
+    sent = []
+
+    def handler(request):
+        payload = json.loads(json.loads(request.content)["messages"][1]["content"])
+        number = payload["issue"]["number"]
+        sent.append(number)
+        if number == 2:
+            raise httpx.ReadTimeout("synthetic unknown sibling", request=request)
+        if sent.count(1) == 1:
+            return httpx.Response(400, json={"error": "synthetic failure"})
+        return successful_response(payload["repository_evidence"])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer("test-key", client=client)
+        start = store.set_deterministic_state
+
+        def interrupted_start(run_id, number, state, **kwargs):
+            if number == 2:
+                if remaining == "failed":
+                    start(run_id, number, "failed")
+                    raise RuntimeError("synthetic deterministic failure")
+                raise KeyboardInterrupt
+            return start(run_id, number, state, **kwargs)
+
+        with monkeypatch.context() as fault:
+            if remaining != "unknown":
+                fault.setattr(store, "set_deterministic_state", interrupted_start)
+                with pytest.raises((KeyboardInterrupt, RuntimeError)):
+                    run_agent_v2(
+                        issues(1, 2),
+                        repository(tmp_path / "repo"),
+                        2,
+                        store,
+                        llm_analyzer=analyzer,
+                        allow_external_llm=True,
+                        run_id="run",
+                        as_of=NOW,
+                    )
+            else:
+                run_agent_v2(
+                    issues(1, 2),
+                    repository(tmp_path / "repo"),
+                    2,
+                    store,
+                    llm_analyzer=analyzer,
+                    allow_external_llm=True,
+                    run_id="run",
+                    as_of=NOW,
+                )
+        sibling = store.get_issue("run", 2)
+        result = retry_issue_llm(
+            "run",
+            1,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+        )
+    assert result.llm_state == "succeeded"
+    assert store.get_issue("run", 2) == sibling
+    assert store.get_run("run").status == ("FAILED" if remaining == "failed" else "INTERRUPTED")
+    assert sent == ([1, 2, 1] if remaining == "unknown" else [1, 1])
+
+
+def test_retry_exception_restores_previous_control_state(tmp_path, monkeypatch, clean_runtime):
+    from repo_issue_intelligence.agent_resume import retry_issue_llm
+
+    store = new_store(tmp_path / "private")
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(400))) as client:
+        analyzer = OpenAICompatibleIssueAnalyzer("test-key", client=client)
+        run_agent_v2(
+            issues(1),
+            repository(tmp_path / "repo"),
+            1,
+            store,
+            llm_analyzer=analyzer,
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+        store.set_run_status("run", "FAILED", expected_status="AWAITING_REVIEW")
+
+        def broken_analysis(*args, **kwargs):
+            raise RuntimeError("synthetic retry failure")
+
+        monkeypatch.setattr(analyzer, "analyze_v2", broken_analysis)
+        with pytest.raises(RuntimeError, match="synthetic retry failure"):
+            retry_issue_llm("run", 1, store, llm_analyzer=analyzer, allow_external_llm=True)
+    assert store.get_run("run").status == "FAILED"

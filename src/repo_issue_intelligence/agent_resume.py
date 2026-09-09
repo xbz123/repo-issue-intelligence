@@ -183,7 +183,7 @@ def retry_issue_llm(
             run = store.set_run_status(run_id, "RUNNING", expected_status=previous_status)
             try:
                 record = next(item for item in run.inputs.issues if item.number == issue_number)
-                return analyze_sealed_issue(
+                result = analyze_sealed_issue(
                     run,
                     record.to_issue(),
                     store,
@@ -191,5 +191,23 @@ def retry_issue_llm(
                     retry=True,
                     recover_unknown=recover_unknown,
                 )
-            finally:
-                store.set_run_status(run_id, previous_status, expected_status="RUNNING")
+                issues = store.list_issues(run_id)
+                status = (
+                    "FAILED"
+                    if any(item.deterministic_state == "failed" for item in issues)
+                    else "INTERRUPTED"
+                    if any(
+                        item.deterministic_state != "succeeded"
+                        or item.llm_state in {"pending", "in_progress", "interrupted_unknown"}
+                        for item in issues
+                    )
+                    else "AWAITING_REVIEW"
+                )
+                store.set_run_status(run_id, status, expected_status="RUNNING")
+                return result
+            except (Exception, KeyboardInterrupt, SystemExit) as error:
+                try:
+                    store.set_run_status(run_id, previous_status, expected_status="RUNNING")
+                except StoreError:
+                    error.add_note("Retry control status could not be restored")
+                raise
