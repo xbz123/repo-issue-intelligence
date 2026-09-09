@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
+from . import agent_queries
 from .agent_store import AgentStore
+from .agent_store_v2 import AgentStoreV2, StoreError
 from .agent_workflow import run_agent
 from .api_security import (
     APIBoundary,
@@ -16,6 +18,7 @@ from .api_security import (
     private_legacy_store,
     require_principal,
 )
+from .config import Settings
 from .models import (
     AgentRun,
     IssueRecord,
@@ -73,6 +76,118 @@ class AgentReviewRequest(BaseModel):
 
 def get_agent_store() -> AgentStore:
     return private_legacy_store()
+
+
+def get_v2_store() -> AgentStoreV2:
+    try:
+        path = Settings().api_v2_database
+        if path is None:
+            raise ValueError
+        return AgentStoreV2(path)
+    except (OSError, ValueError):
+        raise HTTPException(503, "Private V2 database unavailable") from None
+
+
+V2Store = Annotated[AgentStoreV2, Depends(get_v2_store)]
+Principal = Annotated[LocalPrincipal, Depends(require_principal)]
+QueryResponse = agent_queries.QueryResponse
+PageLimit = Annotated[int, Query(ge=1, le=100)]
+PageOffset = Annotated[int, Query(ge=0)]
+
+
+def _authorize_v2(
+    store: AgentStoreV2,
+    run_id: str,
+    principal: LocalPrincipal,
+    operation: str,
+) -> None:
+    run = store.get_run(run_id)
+    if run is None:
+        raise HTTPException(404, "Run not found")
+    authorize_repository_operation(principal, run.snapshot.analysis_root, operation)
+
+
+@app.exception_handler(StoreError)
+async def invalid_stored_query(request: Request, error: StoreError) -> JSONResponse:
+    status = 404 if isinstance(error, agent_queries.QueryNotFound) else 503
+    return JSONResponse({"detail": "Retained resource unavailable"}, status)
+
+
+@app.get("/v2/agent/runs/{run_id}", response_model=agent_queries.QueryResponseModel)
+def v2_run(run_id: str, store: V2Store, principal: Principal) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "read")
+    return agent_queries.run_summary(store, run_id)
+
+
+@app.get("/v2/agent/runs/{run_id}/issues", response_model=agent_queries.QueryResponseModel)
+def v2_issues(
+    run_id: str, store: V2Store, principal: Principal, limit: PageLimit = 50, offset: PageOffset = 0
+) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "read")
+    return agent_queries.issue_page(store, run_id, limit=limit, offset=offset)
+
+
+@app.get(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}", response_model=agent_queries.QueryResponseModel
+)
+def v2_issue(run_id: str, issue_number: int, store: V2Store, principal: Principal) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "read")
+    return agent_queries.issue_detail(store, run_id, issue_number)
+
+
+@app.get(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}/evidence",
+    response_model=agent_queries.QueryResponseModel,
+)
+def v2_evidence(
+    run_id: str,
+    issue_number: int,
+    store: V2Store,
+    principal: Principal,
+    limit: PageLimit = 50,
+    offset: PageOffset = 0,
+) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "evidence")
+    return agent_queries.evidence_page(store, run_id, issue_number, limit=limit, offset=offset)
+
+
+@app.get(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}/evidence/{evidence_id}",
+    response_model=agent_queries.QueryResponseModel,
+)
+def v2_evidence_content(
+    run_id: str,
+    issue_number: int,
+    evidence_id: str,
+    store: V2Store,
+    principal: Principal,
+    evidence_set_id: str | None = None,
+) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "evidence")
+    return agent_queries.evidence_item(
+        store,
+        run_id,
+        issue_number,
+        evidence_id,
+        evidence_set_id=evidence_set_id,
+        include_content=True,
+    )
+
+
+@app.get(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}/attempts",
+    response_model=agent_queries.QueryResponseModel,
+)
+def v2_attempts(
+    run_id: str,
+    issue_number: int,
+    store: V2Store,
+    principal: Principal,
+    limit: PageLimit = 50,
+    offset: PageOffset = 0,
+) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "read")
+    return agent_queries.attempt_page(store, run_id, issue_number, limit=limit, offset=offset)
 
 
 @app.exception_handler(RequestValidationError)

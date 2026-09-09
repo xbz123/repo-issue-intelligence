@@ -2,7 +2,8 @@
 
 Scope: R5 6.1–6.9, based on PR70 merged as `bf17ac6`. G0 and PR1A are already
 available. This is a deliberate security change to the existing V1 HTTP API,
-not a default V2 switch. V2 query/evidence/review/retry routes remain PR7 work.
+not a default V2 switch. PR7A now adds [V2 query/evidence reads](protocol-v2-api-query.md);
+review/retry HTTP writes remain PR7B work.
 The authorization service is available for their later integration; it does not
 send a provider request or replace the CLI's current external-transfer consent.
 

@@ -72,7 +72,10 @@ before storing evidence or moving a migrated database and its provenance receipt
 `agent-run`/`agent-show --protocol v2` use this dedicated database. V2 model
 analysis requires current `--allow-external-llm` permission, and only one local
 writer may execute against a database. See [PR4 CLI usage and G0 boundaries](docs/protocol-v2-execution.md).
-V2 resume, HTTP and per-Issue review writes are not yet available.
+V2 resume/retry and trusted-local HTTP authorization are available. PR7A adds
+read-only query/evidence APIs and explicit CLI queries; see
+[query and compatibility boundaries](docs/protocol-v2-api-query.md). Per-Issue
+review/retry HTTP writes remain PR7B work. The default protocol remains V1.
 
 Run the included offline demo:
 

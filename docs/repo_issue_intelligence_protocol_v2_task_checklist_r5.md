@@ -181,14 +181,14 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 7A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-1) |
-| 7A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-2) |
-| 7A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-3) |
-| 7A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-4) |
-| 7A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-5) |
-| 7A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-6) |
-| 7A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-7) |
-| 7A.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-8) |
+| 7A.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-1) |
+| 7A.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-2) |
+| 7A.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-3) |
+| 7A.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-4) |
+| 7A.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-5) |
+| 7A.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-6) |
+| 7A.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-7) |
+| 7A.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7a) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7a-8) |
 
 ## PR7B
 

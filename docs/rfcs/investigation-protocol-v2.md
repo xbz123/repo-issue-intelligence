@@ -21,7 +21,8 @@ PR65（`31930db`）合并。PR66/67/68 已合并，PR69（PR5A）已合并为 `2
 PR4/G0 当前进度单独记录在 [CLI beta 验收](../protocol-v2-execution.md)；
 PR5A 的证据见 [执行权与并发保护](../protocol-v2-execution-claims.md)。
 [PR5B 恢复与显式重试](../protocol-v2-resume.md) 已随 PR70 合并为 `bf17ac6`；本分支推进
-[PR6 本地 API 安全](../protocol-v2-api-security.md)，PR7–PR8、G1 尚未完成，
+[PR6 本地 API 安全](../protocol-v2-api-security.md) 已随 PR71 合并为 `48e13be`；
+本分支推进 [PR7A 只读查询](../protocol-v2-api-query.md)，PR7B–PR8、G1 尚未完成，
 V2 仍未默认启用。
 
 ## 1. 范围与发布边界
@@ -386,8 +387,8 @@ agent-retry-llm <run-id> --issue <number> --protocol v2
 agent-retry-llm <run-id> --issue <number> --protocol v2 --recover-unknown
 ```
 
-不新增 `agent-recover`。HTTP V2 的读取/审查/retry endpoint 在其安全 PR 完成前不
-宣称可用；健康检查不等于敏感资源授权。
+不新增 `agent-recover`。PR7A 提供 HTTP V2 只读查询/evidence 和 `agent-query`；
+审查/retry HTTP 写入口仍待 PR7B；健康检查不等于敏感资源授权。
 
 ## 10. Review、幂等与 mixed 状态
 
