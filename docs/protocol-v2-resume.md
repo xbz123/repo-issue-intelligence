@@ -87,9 +87,9 @@ uncommitted deterministic stages, parent linkage and guard export aliases.
 A process-test cleanup initially waited on a terminated multiprocessing Event;
 that unsuccessful run was interrupted and is not counted as validation.
 
-Local validation on 2026-09-09:
+Initial implementation validation on 2026-09-09 (historical):
 
-- Final full suite: `907 passed`, one existing Starlette deprecation warning.
+- Initial full suite: `907 passed`, one existing Starlette deprecation warning.
 - Final recovery/retry selection: `43 passed`, including Codex confirmed-failure
   retry, version drift and unproven subprocess-stop refusal.
 - Earlier affected Store/execution/CLI selection: `188 passed`. This preceded
@@ -152,5 +152,17 @@ restoration. Recovery/retry selection: `50 passed`; full local suite:
 diff whitespace checks passed. Independent Standards and Spec increment reviews
 against `9a24787` found no confirmed blockers; Standards also found no actionable
 heuristic smells. These are separate from GitHub Codex's original finding.
-New repair-head CI remains pending; the checklist is `in_progress` until that
-gate completes. No old attempt or review record is rewritten.
+No old attempt or review record is rewritten.
+
+Repair code head `c8ff6534d86bab0aa1c522296980e1390863ed84` passed
+[CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34315300560):
+Python 3.11 and 3.12 each passed Ruff and `914 tests`, one existing warning each.
+Both checkout logs identify merge ref `c5e66bc75c97e6cd5ca0a5a254fdea0eb8cd697a`,
+combining baseline `226b9f5` with that repair head. Its tree
+`3b29ad1e83c6233e79ec5f4f11467f27f28f49cd` exactly equals the locally tested and
+reviewed repair tree. Runner-deprecation and transient cache-service annotations
+did not fail either job.
+
+The completed repair gates restore checklist 5B.1–5B.8 to `verified`, not
+`merged`. The documentation-only final-head CI and any subsequent GitHub review
+are recorded on PR70; the original bot finding is not approval of the repair.
