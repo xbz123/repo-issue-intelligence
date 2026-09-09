@@ -1,0 +1,152 @@
+# PR6: trusted-local API security
+
+Scope: R5 6.1–6.9, based on PR70 merged as `bf17ac6`. G0 and PR1A are already
+available. This is a deliberate security change to the existing V1 HTTP API,
+not a default V2 switch. V2 query/evidence/review/retry routes remain PR7 work.
+The authorization service is available for their later integration; it does not
+send a provider request or replace the CLI's current external-transfer consent.
+
+## Supported deployment and identity
+
+Use `rii serve` on a trusted POSIX workstation, one server process. It accepts
+literal loopback IPs (or `localhost`, pinned to `127.0.0.1`), forces one worker
+even when `WEB_CONCURRENCY` is set, and disables proxy-header identity trust and
+request access logs. Startup reports the OS UID as the local launcher identity;
+this is not a human identity or a new review record. Development reload is not
+a durable background-execution service. Direct custom Uvicorn launches, reverse
+proxies, remote/multi-user deployment and multiple server processes are not the
+supported boundary.
+
+Every HTTP path except `/health` requires one `Authorization: Bearer ...` header,
+including legacy write/read routes and OpenAPI documentation. Tokens are supplied
+only by server secret configuration, must be at least 32 ASCII non-whitespace
+characters, and are compared in constant time. Missing/invalid tokens return
+401 before body parsing or Store creation. Cookies, query parameters, body
+reviewer/principal fields and forwarded-user headers cannot authenticate.
+Validation responses do not echo rejected input. Request bodies reject unknown
+fields; Issue URLs reject userinfo, query and fragment rather than retaining
+potential credentials.
+
+`RII_API_PRINCIPAL` is a server-derived logical identity for the shared token.
+It is not proof of distinct people. The token is never stored as a principal or
+passed to run/attempt services. The existing V1 review representation remains V1;
+per-Issue principal-bound review records are not claimed before PR7B.
+
+## Configuration
+
+Use a protected environment or a private `.env` file; do not commit credentials.
+
+| Setting | Default / meaning |
+|---|---|
+| `RII_API_TOKEN` | unset: sensitive HTTP is disabled |
+| `RII_API_PRINCIPAL` | `local-operator`; server identity, not a body field |
+| `RII_API_ANALYSIS_ROOTS` | `[]`; JSON array of absolute canonical source roots |
+| `RII_API_OPERATIONS` | `["index","run","read","review","evidence"]`; allowed operations |
+| `RII_API_ORIGINS` | `[]`; additional exact loopback origins accepted by the header policy |
+| `RII_API_EXTERNAL_GRANTS` | `[]`; explicit principal/root/provider/operation grants |
+| `AGENT_DB_PATH` | existing legacy DB setting; HTTP additionally enforces private storage |
+
+Configuration is read on each request/authorization check. A private `.env`
+change is visible to subsequent checks; changes to a shell's environment require
+restarting the server. Revoking roots, operations or transfer grants denies
+subsequent operations. PR7B must authenticate and authorize again immediately
+before retry/recovery dispatch; this PR tests decisions, not that future endpoint.
+
+Hosts must identify loopback. A supplied Origin must be the exact request origin
+or an explicitly allowed loopback origin. Duplicate Host/Authorization/Origin
+headers and Forwarded/X-Forwarded-* headers are rejected. No cookies or permissive
+CORS headers are installed; adding an origin to the header allowlist does not
+enable a cross-origin browser UI. Use an explicit Authorization header, including
+when fetching `/openapi.json`.
+
+An example transfer grant (not enabled by default) is:
+
+```json
+{"principal":"local-operator","analysis_root":"/path/to/repo/src","provider":"opencode","operation":"retry"}
+```
+
+The corresponding operation must also be enabled. Provider must match current
+server configuration; unsafe configured API URLs are refused through the existing
+endpoint validator. HTTP never accepts a caller's base URL. A `retry` grant does
+not permit `recover-unknown`. Default offline V1 HTTP execution never calls a
+provider, even when CLI provider credentials exist in the environment.
+
+## Source scope and storage
+
+Authorization uses the analysis root, never a discovered parent Git root.
+No allowlist means no scan. Relative paths, `..`, symlink paths and links/special
+files in the scanned subtree are refused. Indexer skip directories are shared;
+unreadable traversal fails closed instead of producing a successful partial map.
+Only index/new-run operations require an existing checkout. Retained read/review
+and future sealed retry authorization use the original absolute scope even after
+the checkout is moved, without rescanning it.
+
+The local same-user filesystem is trusted between validation and reading. This
+is not a sandbox against hostile same-UID path replacement or a remote tenant.
+
+HTTP creates a missing legacy ledger only in an owner-only directory (`0700`)
+with a private regular database (`0600`). Existing unsafe directories, files,
+hardlinks, symlinks or SQLite sidecars are refused, not chmod-ed or migrated.
+V2 data/backup/export protection continues to use the existing private database
+and export tools; see [data protection](protocol-v2-data-protection.md).
+No backups, output files or source archives are published by this API change.
+
+New legacy workflow failure records retain exception type and stage, not raw
+exception text that could contain credentials. The V1 evaluation persistence
+check uses the same safe summary; failure category, attempt counts and telemetry
+remain unchanged. The outer repository-preparation failure export also uses that
+summary; its synthetic Git-process failure canary was reproduced before repair.
+The old multi-Issue batch-abort behavior and immutable T0
+fixture are unchanged; only the current persisted error wording is redacted.
+HTTP also redacts historical Run
+and trace error fields in a response-only projection; original stored errors are
+not rewritten. Authorized Issue text, source evidence and model analyses remain
+sensitive content, not automatically scrubbed public artifacts. Retention and
+cleanup remain manual; no encryption at rest or historical cleanup is implied.
+
+## Fixed resource boundaries
+
+| Resource | Limit |
+|---|---|
+| HTTP request body, including streamed/chunked bodies | 1,048,576 bytes; 10 seconds to receive |
+| Issues per request | 100 |
+| Single JSON text / total JSON text (including supplied evidence) | 100,000 / 250,000 characters |
+| JSON structure | 32 nesting levels, 20,000 visited values |
+| `limit` / `page_size` query parameters | 1–100 (actual V2 pagination is PR7A) |
+| Scanned source file / total scanned bytes | 2,000,000 / 32,000,000 bytes |
+| Scanned directory/file entries | 20,000 |
+| Concurrent state-building HTTP requests | 1 per supported server process; excess returns 503 |
+
+Raw-body and payload checks precede model/state construction; source checks
+precede indexing/workflow execution. Chunked bodies do not trust Content-Length.
+Compressed requests are refused. Execution capacity is released on failure as
+well as success, while health/read requests remain available. These are bounded
+local API limits, not a general distributed quota or job scheduler.
+
+## Validation record
+
+Permanent checks live in `tests/test_api_security.py` at the confirmed serve,
+HTTP and authorization-service boundaries, with the existing V1 API/workflow/CLI
+tests retaining compatibility coverage. RED evidence includes non-loopback
+startup, missing token, browser/proxy spoofing, forged reviewer, default scan
+authorization, absent transfer policy, five resource limits, concurrent runs,
+private-file modes, raw validation/persisted errors and historical error projection.
+Retained-scope authorization and unreadable walks were separately reproduced
+before repair. A real loopback subprocess verifies startup, authentication,
+proxy refusal, local launcher identity and secret-free logs, then is shut down.
+
+Final local validation passed `62` focused security/workflow/evaluation/baseline
+tests and `967` full-suite tests, with one existing Starlette deprecation warning.
+Ruff, formatting of the new/HTTP boundary files, compileall and diff whitespace
+checks passed. The first full run (`2 failed, 964 passed`) exposed old raw-error
+comparison assumptions; the shared summary and current assertions were repaired
+without editing the frozen fixture. An intermediate `966 passed` predates the
+last outer-evaluation repair and is not the final gate.
+
+Independent Standards and Spec reviews against `bf17ac6` found no remaining
+confirmed violations, actionable smells, missing requirements or scope expansion
+after their findings were repaired. Static reviews and executed tests are separate
+evidence. Head-specific CI is recorded with the implementation PR, which remains
+unmerged. This document does not claim real provider
+calls, V2 HTTP retry integration, native Windows, physical power loss, remote
+exactly-once or multi-tenant security.

@@ -490,7 +490,7 @@ def test_agent_persists_terminal_failure_after_retries(tmp_path: Path, monkeypat
     failed_run = store.get_run(run_id)
     assert failed_run is not None
     assert failed_run.status is AgentRunStatus.FAILED
-    assert failed_run.error == "OSError: cannot index repository"
+    assert failed_run.error == "OSError: local execution failed"
     assert [(trace.node_name, trace.status, trace.attempt) for trace in failed_run.traces[-2:]] == [
         ("build_repository_map", "failed", 1),
         ("build_repository_map", "failed", 2),

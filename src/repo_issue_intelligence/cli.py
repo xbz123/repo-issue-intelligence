@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from enum import StrEnum
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -1478,14 +1480,26 @@ def benchmark_curate(
 
 @app.command()
 def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
-    """Run the FastAPI service."""
+    """Run the single-process, trusted-loopback FastAPI service."""
     import uvicorn
 
+    host = "127.0.0.1" if host == "localhost" else host
+    try:
+        if not ip_address(host).is_loopback or "%" in host:
+            raise ValueError
+    except ValueError:
+        raise typer.BadParameter("serve requires a literal loopback address") from None
+    identity = f"uid:{os.getuid()}" if hasattr(os, "getuid") else "unavailable"
+    typer.echo(f"Local execution identity: {identity}")
     uvicorn.run(
         "repo_issue_intelligence.api:app",
         host=host,
         port=port,
         reload=reload,
+        proxy_headers=False,
+        forwarded_allow_ips="",
+        access_log=False,
+        workers=1,
     )
 
 

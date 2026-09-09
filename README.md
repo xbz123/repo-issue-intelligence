@@ -410,11 +410,21 @@ uv run rii investigate-issue data/issues.json --issue 123 --repo /path/to/clone 
 
 ## Run the API
 
+The API is trusted-local and token-protected, including the existing V1 routes.
+Set a private `RII_API_TOKEN` (at least 32 ASCII non-whitespace characters),
+`RII_API_ANALYSIS_ROOTS` (a JSON array of absolute canonical source roots), and
+an `AGENT_DB_PATH` in an owner-only directory. No allowlist means no scanning;
+existing public database files/directories are refused, not modified.
+
 ```bash
 uv run rii serve --host 127.0.0.1 --port 8000
 ```
 
-OpenAPI documentation: `http://127.0.0.1:8000/docs`.
+Only `/health` is anonymous. Send `Authorization: Bearer <token>` on other
+requests, including `/openapi.json`; there is no cookie login or permissive CORS.
+Controlled serve is single-process, loopback-only, with proxy-header trust and
+request access logging disabled. See [API security](docs/protocol-v2-api-security.md)
+for configuration, transfer-policy boundaries and resource limits.
 
 Core endpoints:
 

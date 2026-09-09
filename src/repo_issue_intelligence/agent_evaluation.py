@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from .agent_evaluation_v2 import AgentAnalysisRunV2
 from .agent_store import AgentStore
-from .agent_workflow import run_agent
+from .agent_workflow import execution_error_summary, run_agent
 from .benchmark import (
     BenchmarkCase,
     BenchmarkManifest,
@@ -368,7 +368,7 @@ def _evaluate_case(
             category = (
                 error.category if isinstance(error, LLMProviderError) else type(error).__name__
             )
-            error_text = f"{type(error).__name__}: {error}"
+            error_text = execution_error_summary(error)
             restored = (
                 store.get_run(store.last_run_id)
                 if store.last_run_id is not None
@@ -510,7 +510,7 @@ def run_agent_analysis_evaluation(
                 pre_fix_sha=case.pre_fix_sha,
                 expected_files=case.expected_files,
                 error_category=category,
-                error=f"{type(error).__name__}: {error}",
+                error=execution_error_summary(error),
             )
         results.append(result)
         if llm_delay_seconds > 0 and case is not selected[-1]:
