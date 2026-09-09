@@ -81,6 +81,16 @@ async def invalid_request(request: Request, error: RequestValidationError):
     return JSONResponse({"detail": "Invalid request fields"}, 422)
 
 
+def _public_issue(issue: IssueRecord) -> IssueRecord:
+    if issue.html_url is None:
+        return issue
+    try:
+        normalize_endpoint(issue.html_url)
+    except ValueError:
+        return issue.model_copy(update={"html_url": None})
+    return issue
+
+
 def _public_run(run: AgentRun) -> AgentRun:
     """Do not expose historical raw errors or rewrite their stored records."""
     return run.model_copy(
@@ -95,6 +105,10 @@ def _public_run(run: AgentRun) -> AgentRun:
                     }
                 )
                 for trace in run.traces
+            ],
+            "investigations": [
+                report.model_copy(update={"issue": _public_issue(report.issue)})
+                for report in run.investigations
             ],
         }
     )

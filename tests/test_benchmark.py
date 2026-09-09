@@ -545,6 +545,27 @@ def test_run_benchmark_rejects_unknown_case_id(tmp_path: Path) -> None:
         raise AssertionError("Expected an unknown case ID to fail")
 
 
+def test_run_benchmark_redacts_outer_failure_details(tmp_path: Path, monkeypatch) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+    manifest = BenchmarkManifest(
+        name="test",
+        version=1,
+        cases=[benchmark_case(updated_at)],
+    )
+    canary = "BENCHMARK-OUTER-CANARY"
+
+    def fail_prepare(*args, **kwargs):
+        raise RuntimeError(f"https://user:{canary}@provider.invalid/private")
+
+    monkeypatch.setattr("repo_issue_intelligence.benchmark.prepare_repository", fail_prepare)
+    run = run_benchmark(manifest, tmp_path, BenchmarkVariant.DETERMINISTIC)
+    output = tmp_path / "benchmark.json"
+    save_benchmark_run(run, output)
+
+    assert canary not in output.read_text(encoding="utf-8")
+    assert run.results[0].error == "RuntimeError: local execution failed"
+
+
 def test_benchmark_run_records_provider(tmp_path: Path, monkeypatch) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
     case = benchmark_case(updated_at)
@@ -666,10 +687,47 @@ def test_benchmark_configuration_records_exact_non_secret_inputs(
     assert "key" not in json.dumps(configuration).lower()
 
 
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "https://user:CONFIG-CANARY@provider.invalid/v1",
+        "https://provider.invalid/v1%253Ftoken%253DCONFIG-CANARY",
+    ],
+)
+@pytest.mark.parametrize("source", ["base_url", "issue_url"])
+def test_benchmark_configuration_refuses_credential_urls_before_checkpoint(
+    tmp_path, base_url, source
+):
+    from repo_issue_intelligence.benchmark_store import BenchmarkStore
+
+    manifest = BenchmarkManifest(
+        name="test", version=1, cases=[benchmark_case(datetime(2026, 7, 30, tzinfo=UTC))]
+    )
+    analyzer = ReverseEvidenceAnalyzer()
+    if source == "base_url":
+        analyzer.base_url = base_url
+    else:
+        manifest.cases[0].issue_snapshot.html_url = base_url
+    checkpoint = BenchmarkStore(tmp_path / "config.sqlite3")
+    with pytest.raises(ValueError) as raised:
+        configuration = benchmark_execution_configuration(
+            manifest, tmp_path, BenchmarkVariant.HYBRID, analyzer
+        )
+        checkpoint.create_run(configuration)
+    assert "CONFIG-CANARY" not in str(raised.value)
+    assert b"CONFIG-CANARY" not in checkpoint.database_path.read_bytes()
+
+
+@pytest.mark.parametrize(
+    "historical_error", [None, "RuntimeError: https://user:HISTORY-CANARY@provider.invalid"]
+)
 def test_run_benchmark_reuses_checkpoint_results_without_evaluation(
     tmp_path: Path,
     monkeypatch,
+    historical_error: str | None,
 ) -> None:
+    from repo_issue_intelligence.benchmark_store import BenchmarkStore
+
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
     manifest = BenchmarkManifest(
         name="test",
@@ -690,6 +748,10 @@ def test_run_benchmark_reuses_checkpoint_results_without_evaluation(
         tmp_path,
         BenchmarkVariant.DETERMINISTIC,
     ).results[0]
+    original.error = historical_error
+    checkpoint = BenchmarkStore(tmp_path / "checkpoint.sqlite3")
+    checkpoint_id, _ = checkpoint.create_run({"test": "historical-error"})
+    checkpoint.save_result(checkpoint_id, 1, original)
     monkeypatch.setattr(
         "repo_issue_intelligence.benchmark.prepare_repository",
         lambda selected, workspace: (_ for _ in ()).throw(
@@ -703,7 +765,7 @@ def test_run_benchmark_reuses_checkpoint_results_without_evaluation(
         manifest,
         tmp_path,
         BenchmarkVariant.DETERMINISTIC,
-        existing_results={original.case_id: original},
+        existing_results=checkpoint.load_results(checkpoint_id),
         progress_callback=lambda ordinal, total, result, reused: progress.append(
             (ordinal, total, result.case_id, reused)
         ),
@@ -711,7 +773,17 @@ def test_run_benchmark_reuses_checkpoint_results_without_evaluation(
     )
 
     assert resumed.created_at == created_at
-    assert resumed.results == [original]
+    assert resumed.results[0].model_dump(exclude={"error"}) == original.model_dump(
+        exclude={"error"}
+    )
+    assert resumed.results[0].error == (
+        "Local execution failed (details withheld)" if historical_error else None
+    )
+    output = tmp_path / "resumed.json"
+    save_benchmark_run(resumed, output)
+    assert "HISTORY-CANARY" not in output.read_text()
+    assert original.error == historical_error
+    assert checkpoint.load_results(checkpoint_id)[original.case_id].error == historical_error
     assert progress == [(1, 1, original.case_id, True)]
 
 
@@ -1157,6 +1229,53 @@ class UnknownEvidenceAnalyzer(ReverseEvidenceAnalyzer):
         )
 
 
+class CredentialEvidenceAnalyzer(ReverseEvidenceAnalyzer):
+    def rerank(self, issue, evidence):
+        raise LLMProviderError(
+            "provider response: https://user:BENCHMARK-PROVIDER-CANARY@provider.invalid",
+            category="provider",
+            input_tokens=7,
+            output_tokens=9,
+            elapsed_ms=11,
+            request_id="benchmark-request",
+            system_fingerprint="benchmark-fingerprint",
+        )
+
+
+def test_hybrid_fallback_redacts_provider_error_but_keeps_telemetry(tmp_path: Path) -> None:
+    updated_at = datetime(2026, 7, 30, tzinfo=UTC)
+
+    result = evaluate_case(
+        benchmark_case(updated_at),
+        benchmark_issue(updated_at),
+        create_repository(tmp_path),
+        BenchmarkVariant.HYBRID,
+        analyzer=CredentialEvidenceAnalyzer(),
+    )
+    run = BenchmarkRun(
+        manifest_name="test",
+        manifest_version=1,
+        variant=BenchmarkVariant.HYBRID,
+        created_at=updated_at,
+        results=[result],
+        overall=_aggregate([result]),
+        by_tier={"main": _aggregate([result])},
+    )
+    output = tmp_path / "benchmark.json"
+    save_benchmark_run(run, output)
+
+    assert "BENCHMARK-PROVIDER-CANARY" not in output.read_text(encoding="utf-8")
+    assert result.error == "LLMProviderError: local execution failed"
+    assert result.llm_fallback_used is True
+    assert result.llm_fallback_reason == "provider"
+    assert result.llm_attempts == 1
+    assert result.llm_request_id == "benchmark-request"
+    assert result.llm_system_fingerprint == "benchmark-fingerprint"
+    assert result.llm_input_tokens == 7
+    assert result.llm_output_tokens == 9
+    assert result.llm_elapsed_ms == 11
+
+
 def test_hybrid_unknown_evidence_id_falls_back_without_retry(tmp_path: Path) -> None:
     updated_at = datetime(2026, 7, 30, tzinfo=UTC)
 
@@ -1176,7 +1295,7 @@ def test_hybrid_unknown_evidence_id_falls_back_without_retry(tmp_path: Path) -> 
     assert result.llm_output_tokens == 9
     assert result.llm_elapsed_ms == 1
     assert result.candidate_files
-    assert result.error == "LLMProviderError: Reranker returned unknown evidence IDs: E999"
+    assert result.error == "LLMProviderError: local execution failed"
     aggregate = _aggregate([result])
     assert aggregate.llm_success_rate == 0
     assert aggregate.llm_success_mean_reciprocal_rank is None

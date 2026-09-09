@@ -13,6 +13,26 @@ TOKEN = "synthetic-test-token-0123456789abcdef"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 
+@pytest.mark.parametrize(
+    ("method", "path", "root_path", "expected"),
+    [
+        ("POST", "/v1/repository/index", "", True),
+        ("POST", "/v1/repository/index/", "/service", True),
+        ("POST", "/service/v1/repository/index/", "/service", True),
+        ("POST", "/v1/agent/runs/abc/review/", "/service", True),
+        ("POST", "/v1/agent/runs/abc/review/extra", "", False),
+        ("POST", "/v1//agent/runs", "", False),
+        ("POST", "/v1/issues/score", "", False),
+        ("POST", "/v1/issues/rank", "", False),
+        ("GET", "/v1/agent/runs/abc/review", "", False),
+    ],
+)
+def test_work_slot_covers_only_state_writing_routes(method, path, root_path, expected):
+    from repo_issue_intelligence.api_security import _needs_work_slot
+
+    assert _needs_work_slot({"method": method, "path": path, "root_path": root_path}) is expected
+
+
 @pytest.mark.parametrize("host", ["0.0.0.0", "example.com", "::", "127.0.0.1.example.com"])
 def test_serve_refuses_non_loopback_before_starting_server(monkeypatch, host):
     import uvicorn
@@ -197,11 +217,57 @@ def test_concurrent_run_is_refused_and_capacity_is_released(monkeypatch, tmp_pat
             assert entered.wait(5)
             assert client.get("/health").status_code == 200
             second = client.post("/v1/agent/runs", json=payload)
+            assert client.post("/v1/issues/score", json=issue_payload()).status_code == 200
+            assert (
+                client.post("/v1/issues/rank", json={"issues": [issue_payload()]}).status_code
+                == 200
+            )
         finally:
             release.set()
         assert first.result(timeout=10).status_code == 201
         assert second.status_code == 503
         assert client.post("/v1/agent/runs", json=payload).status_code == 201
+
+
+def test_concurrent_repository_index_is_refused_and_capacity_is_released(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
+    from threading import Event
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    root = tmp_path / "repo"
+    root.mkdir()
+    source = root / "service.py"
+    source.write_text("def refresh(): return 1\n")
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(root)]))
+    entered, release = Event(), Event()
+    read_text = Path.read_text
+
+    def slow_source(path, *args, **kwargs):
+        if path == source and not entered.is_set():
+            entered.set()
+            assert release.wait(10)
+        return read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", slow_source)
+    payload = {"path": str(root)}
+    with (
+        TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client,
+        ThreadPoolExecutor(1) as workers,
+    ):
+        first = workers.submit(client.post, "/v1/repository/index", json=payload)
+        try:
+            assert entered.wait(5)
+            second = client.post("/v1/repository/index", json=payload)
+            assert second.status_code == 503
+            from test_api import issue_payload
+
+            assert client.post("/v1/issues/score", json=issue_payload()).status_code == 200
+        finally:
+            release.set()
+        assert first.result(timeout=10).status_code == 200
+        assert client.post("/v1/repository/index", json=payload).status_code == 200
 
 
 def test_http_validation_does_not_echo_secret_bearing_input(monkeypatch, tmp_path):
@@ -466,7 +532,19 @@ def test_retained_scope_authorization_does_not_need_current_checkout(monkeypatch
     )
 
 
-def test_historical_error_is_redacted_in_http_without_rewriting_history(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    "issue_url",
+    [
+        None,
+        "https://example.com/issues/1",
+        "https://user:LEGACY-URL-CANARY@provider.invalid/issues/1",
+        "https://provider.invalid/issues/1?token=LEGACY-URL-CANARY",
+        "https://provider.invalid/issues/1%253Ftoken%253DLEGACY-URL-CANARY",
+    ],
+)
+def test_historical_error_is_redacted_in_http_without_rewriting_history(
+    monkeypatch, tmp_path, issue_url
+):
     from test_api import issue_payload
 
     from repo_issue_intelligence.agent_store import AgentStore
@@ -488,17 +566,32 @@ def test_historical_error_is_redacted_in_http_without_rewriting_history(monkeypa
         store = AgentStore(database)
         historical = store.get_run(run_id)
         canary = "LEGACY-ERROR-CANARY"
+        url_canary = "LEGACY-URL-CANARY"
         historical.error = f"RuntimeError: https://user:{canary}@provider.invalid"
         historical.traces[-1].error = historical.error
+        historical.investigations[0].issue.html_url = issue_url
         store.save_run(historical)
         url = f"/v1/agent/runs/{run_id}"
-        for response in (
-            client.get(url),
-            client.post(url + "/review", json={"decision": "approved"}),
-        ):
+        expected_url = None if issue_url and url_canary in issue_url else issue_url
+
+        def check_response(response):
             assert response.status_code == 200
             assert canary not in response.text
+            assert url_canary not in response.text
+            assert response.json()["investigations"][0]["issue"]["html_url"] == expected_url
+
+        check_response(client.get(url))
         assert store.get_run(run_id).error == historical.error
+        # Successful historical/CLI results can leak URLs even without any raw error.
+        historical.error = None
+        historical.traces[-1].error = None
+        store.save_run(historical)
+        check_response(client.get(url))
+        check_response(client.post(url + "/review", json={"decision": "approved"}))
+        assert store.get_run(run_id).error is None
+        assert store.get_run(run_id).investigations[0].issue.html_url == (
+            historical.investigations[0].issue.html_url
+        )
 
 
 def test_unreadable_source_walk_is_not_silently_accepted(monkeypatch, tmp_path):

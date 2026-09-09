@@ -12,6 +12,7 @@ from threading import BoundedSemaphore
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
+from starlette._utils import get_route_path
 from starlette.datastructures import Headers, QueryParams
 from starlette.responses import JSONResponse
 
@@ -29,6 +30,19 @@ MAX_PAGE_SIZE = 100
 MAX_SOURCE_FILE_BYTES = 2_000_000
 MAX_SOURCE_BYTES = 32_000_000
 MAX_SOURCE_ENTRIES = 20_000
+
+
+def _needs_work_slot(scope) -> bool:
+    if scope.get("method") != "POST":
+        return False
+    path = get_route_path(scope).rstrip("/")
+    segments = path.split("/")
+    return path in {"/v1/repository/index", "/v1/agent/runs"} or (
+        len(segments) == 6
+        and segments[:4] == ["", "v1", "agent", "runs"]
+        and bool(segments[4])
+        and segments[5] == "review"
+    )
 
 
 def _check_payload(value):
@@ -321,7 +335,7 @@ class APIBoundary:
             consumed = True
             return {"type": "http.request", "body": bytes(body), "more_body": False}
 
-        needs_slot = scope["method"] not in {"GET", "HEAD", "OPTIONS"}
+        needs_slot = _needs_work_slot(scope)
         if needs_slot and not self.work_slot.acquire(blocking=False):
             await JSONResponse(
                 {"detail": "Local executor busy"}, 503, headers={"Retry-After": "1"}

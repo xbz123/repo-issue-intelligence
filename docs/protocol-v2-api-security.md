@@ -94,17 +94,27 @@ V2 data/backup/export protection continues to use the existing private database
 and export tools; see [data protection](protocol-v2-data-protection.md).
 No backups, output files or source archives are published by this API change.
 
-New legacy workflow failure records retain exception type and stage, not raw
-exception text that could contain credentials. The V1 evaluation persistence
-check uses the same safe summary; failure category, attempt counts and telemetry
+New legacy workflow failure records retain exception type and the trace's node
+stage, not raw exception text that could contain credentials. The V1 evaluation
+persistence check uses the same safe summary; failure category, attempt counts and telemetry
 remain unchanged. The outer repository-preparation failure export also uses that
 summary; its synthetic Git-process failure canary was reproduced before repair.
+Regular benchmark preparation/evaluation failures and hybrid provider fallback
+now use the same safe summary. Reused benchmark errors receive a response-only
+generic projection; metrics, fallback classification and telemetry are retained,
+without changing checkpoint records or re-executing reused cases. API analyzer
+construction rejects unsafe base URLs; benchmark configuration checks both base
+URLs and manifest Issue URLs with the shared validator before checkpointing. Valid endpoint
+spelling and the existing checkpoint identity comparison are unchanged.
 The old multi-Issue batch-abort behavior and immutable T0
 fixture are unchanged; only the current persisted error wording is redacted.
 HTTP also redacts historical Run
-and trace error fields in a response-only projection; original stored errors are
-not rewritten. Authorized Issue text, source evidence and model analyses remain
-sensitive content, not automatically scrubbed public artifacts. Retention and
+and trace error fields in a response-only projection. Retained Issue URLs that
+fail the same URL validator as new HTTP input become `null`; safe URLs remain
+unchanged, including successful historical/CLI-created runs without errors.
+Original stored URLs and errors are not rewritten. Authorized Issue text,
+source evidence and model analyses remain sensitive content, not automatically
+scrubbed public artifacts. Retention and
 cleanup remain manual; no encryption at rest or historical cleanup is implied.
 
 ## Fixed resource boundaries
@@ -118,7 +128,7 @@ cleanup remain manual; no encryption at rest or historical cleanup is implied.
 | `limit` / `page_size` query parameters | 1–100 (actual V2 pagination is PR7A) |
 | Indexed source file / total indexed source bytes | 2,000,000 / 32,000,000 bytes |
 | Scanned directory/file entries | 20,000 |
-| Concurrent state-building HTTP requests | 1 per supported server process; excess returns 503 |
+| Concurrent state-building/writing HTTP requests | 1 per supported server process; excess returns 503 |
 
 Raw-body and payload checks precede model/state construction; source checks
 precede indexing/workflow execution. Chunked bodies do not trust Content-Length.
@@ -127,7 +137,11 @@ case-insensitive source extensions and shipped JSON schemas. Non-source assets
 do not consume that byte budget, but still count toward the entry limit and
 undergo link/special-file checks. The resource limit values are unchanged.
 Compressed requests are refused. Execution capacity is released on failure as
-well as success, while health/read requests remain available. These are bounded
+well as success. Only repository indexing, new Runs and legacy Run review use
+the slot. Review retains serialization because its legacy Store operation is
+read/check/write; this is not PR7's per-Issue concurrency protocol. Score/rank,
+health/read and unrelated routes remain independent of an occupied slot.
+Route classification uses Starlette's own root-path handling. These are bounded
 local API limits, not a general distributed quota or job scheduler.
 
 ## Validation record
@@ -150,7 +164,7 @@ comparison assumptions; the shared summary and current assertions were repaired
 without editing the frozen fixture. An intermediate `966 passed` predates the
 last outer-evaluation repair and is not the final gate.
 
-Independent Standards and Spec reviews against `bf17ac6` found no remaining
+Initial independent Standards and Spec reviews against `bf17ac6` found no remaining
 confirmed violations, actionable smells, missing requirements or scope expansion
 after their findings were repaired. Static reviews and executed tests are separate
 evidence. Head-specific CI is recorded with the implementation PR, which remains
@@ -182,3 +196,46 @@ and no confirmed Spec gaps, incorrect behavior or scope expansion for R5 PR6
 6.4/6.8/6.9 and the existing data-protection alias contract. Static review and
 executed tests are separate evidence. Repair-head CI is recorded on PR71; the
 earlier 967-test evidence does not validate this repair.
+
+## Full-PR review after `3d0cfa9`
+
+The next GitHub review identified three distinct defects (the executor-slot
+comment was duplicated): historical Issue URLs escaped the HTTP response
+projection, method-wide serialization blocked independent scoring requests, and
+regular benchmark failures still exported raw exceptions. The full-PR review
+uses base `bf17ac6`, not only the preceding two-fix increment.
+
+Regression tests on `3d0cfa9` produced `4 failed`: historical HTTP URL disclosure,
+scoring blocked during a Run, benchmark preparation failure disclosure, and
+hybrid provider-fallback disclosure. The last path was identified by following
+the benchmark caller chain beyond the original comment. Only synthetic canaries
+and temporary repositories/databases were used; this is evidence of reachable
+disclosure paths, not evidence that real credentials were exposed.
+
+Independent follow-through also reproduced two related gaps: a real API
+analyzer accepted userinfo in its base URL before benchmark configuration was
+stored, and reusing historical benchmark results re-exported their raw errors.
+The same configuration included unvalidated manifest Issue URLs; the final
+configuration guard covers both URL sources. Client/configuration/reuse controls
+gave `6 failed, 5 passed` before repair, and the later manifest-URL controls gave
+`2 failed, 2 passed` before their repair.
+These fall under R5 6.9/A05, not new benchmark functionality or historical-data
+migration. Historical records must remain readable without being silently
+rewritten; newly emitted responses and result artifacts must not repeat their
+credential-bearing diagnostics.
+
+The final affected API/security/benchmark/client selection passed `156` tests,
+and the final local full suite passed `1005` tests, each with one existing
+Starlette deprecation warning. Ruff, changed HTTP files' formatting, changed
+URL-validation range formatting, compileall and diff whitespace checks passed.
+Unrelated legacy formatting is preserved. The intermediate `1003`-test
+full-suite pass predates the final manifest-URL repair and is not its acceptance
+gate. Independent full-PR Standards review against `bf17ac6` identified five
+documented violations in the pre-repair head, now closed; the final WIP has no
+remaining documented violation or actionable Fowler smell. The independent
+Spec review additionally identified the manifest-URL path and confirmed that
+it is closed, with no remaining confirmed gaps, incorrect behavior or PR7 scope
+expansion for PR6 6.1–6.9. Static review is separate from test execution.
+Repair-head CI evidence follows the exact repair tree
+recorded on PR71. No provider request, user database migration, new dependency
+or frozen-fixture/ranking change is part of this repair.
