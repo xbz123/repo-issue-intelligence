@@ -140,9 +140,23 @@ def test_process_exit_settles_guarded_attempt_unknown_but_never_automatically_re
             process.join(timeout=5)
             assert not process.is_alive()
             if resume_first:
-                resume_agent_run("run", store, llm_analyzer=analyzer, allow_external_llm=True)
+                resumed = resume_agent_run(
+                    "run", store, llm_analyzer=analyzer, allow_external_llm=True
+                )
                 unknown = store.get_attempt(active.attempt_id)
                 assert unknown.state == "unknown"
+                assert resumed.status == "INTERRUPTED"
+                shown = CliRunner().invoke(
+                    cli.app,
+                    ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)],
+                )
+                assert shown.exit_code == 0, shown.output
+                assert json.loads(shown.output)["status"] == "INTERRUPTED"
+                resumed_again = resume_agent_run(
+                    "run", store, llm_analyzer=analyzer, allow_external_llm=True
+                )
+                assert resumed_again.status == "INTERRUPTED"
+                assert store.get_attempt(active.attempt_id) == unknown
                 assert sent == []
             else:
                 assert store.get_run("run").status == "RUNNING"

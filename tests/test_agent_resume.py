@@ -155,7 +155,13 @@ def test_resume_continues_exact_unfinished_stage_without_replaying_attempts(
         first = store.get_issue("run", 1)
         attempts = store.list_attempts("run", 1)
         resumed = resume_agent_run("run", store, llm_analyzer=analyzer, allow_external_llm=True)
-    assert resumed.status == "AWAITING_REVIEW"
+    expected_status = "INTERRUPTED" if checkpoint in {"started", "remote"} else "AWAITING_REVIEW"
+    assert resumed.status == expected_status
+    shown = CliRunner().invoke(
+        cli.app, ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output)["status"] == expected_status
     assert store.get_issue("run", 1).deterministic_report == first.deterministic_report
     assert store.get_issue("run", 2).llm_state == "succeeded"
     if checkpoint in {"deterministic", "evidence"}:

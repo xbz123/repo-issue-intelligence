@@ -191,3 +191,31 @@ Ruff, changed-file formatting, compileall and diff whitespace checks passed.
 These are injected failure paths, not evidence of physical memory exhaustion.
 Independent increment review and repair-head CI evidence are recorded on PR70;
 earlier 914-test gates do not validate this increment.
+
+## Post-review unknown aggregation repair
+
+[The unknown-status finding](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3966676630)
+was reproduced on `b44865c`: after guarded process exit, resume retained the
+unknown attempt without replay, but incorrectly returned `AWAITING_REVIEW`.
+Both a single unknown Issue and an unknown Issue with a completed sibling showed
+the same incorrect persisted/CLI status; the successful-attempt control passed.
+
+Resume and retry now share the existing retry completion rule. Remaining failed
+deterministic work keeps `FAILED`; unfinished or uncertain work keeps
+`INTERRUPTED`; otherwise the control state becomes `AWAITING_REVIEW` and the
+reader derives any review state. A later resume of an already unknown attempt
+stays interrupted without resending it. Explicit successful retry can finish
+the Run without rewriting the old unknown attempt. Stop proofs, current
+permission, frozen configuration and exception handling remain unchanged.
+
+The existing interruption-checkpoint and real-process tests were strengthened
+instead of adding a new test framework: the started/remote/abandoned cases
+failed before repair (`3 failed, 4 passed`), while the repaired recovery/retry
+selection passed `53 tests`. Checks include `agent-show`, repeated resume,
+unchanged evidence/report/attempt history and successful sibling preservation.
+This repair's full local suite passed `917 tests`, one existing Starlette warning;
+the count is unchanged because existing tests were strengthened. Ruff, changed-file
+formatting, compileall and diff whitespace checks passed. Independent Standards
+and Spec increment reviews against `b44865c` found no confirmed blockers;
+Standards also found no actionable smells. Repair-head CI evidence is recorded
+on PR70; previous review and CI results do not cover this repair.

@@ -86,6 +86,22 @@ def validate_recovery_configuration(
         raise run_configuration.RunConfigurationError("Disabled run cannot acquire an analyzer")
 
 
+def _finish_recovery(run_id: str, store: AgentStoreV2) -> RunV2:
+    issues = store.list_issues(run_id)
+    status = (
+        "FAILED"
+        if any(item.deterministic_state == "failed" for item in issues)
+        else "INTERRUPTED"
+        if any(
+            item.deterministic_state != "succeeded"
+            or item.llm_state in {"pending", "in_progress", "interrupted_unknown"}
+            for item in issues
+        )
+        else "AWAITING_REVIEW"
+    )
+    return store.set_run_status(run_id, status, expected_status="RUNNING")
+
+
 def resume_agent_run(
     run_id: str,
     store: AgentStoreV2,
@@ -140,7 +156,7 @@ def resume_agent_run(
                     expected_status="RUNNING",
                 )
                 raise
-        return store.set_run_status(run_id, "AWAITING_REVIEW", expected_status="RUNNING")
+        return _finish_recovery(run_id, store)
 
 
 def retry_issue_llm(
@@ -191,19 +207,7 @@ def retry_issue_llm(
                     retry=True,
                     recover_unknown=recover_unknown,
                 )
-                issues = store.list_issues(run_id)
-                status = (
-                    "FAILED"
-                    if any(item.deterministic_state == "failed" for item in issues)
-                    else "INTERRUPTED"
-                    if any(
-                        item.deterministic_state != "succeeded"
-                        or item.llm_state in {"pending", "in_progress", "interrupted_unknown"}
-                        for item in issues
-                    )
-                    else "AWAITING_REVIEW"
-                )
-                store.set_run_status(run_id, status, expected_status="RUNNING")
+                _finish_recovery(run_id, store)
                 return result
             except (Exception, KeyboardInterrupt, SystemExit) as error:
                 try:
