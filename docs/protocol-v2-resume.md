@@ -112,6 +112,19 @@ Independent review against merged baseline `226b9f5`:
   The unavailable reviewer test environment is not counted as a passed test
   run; the actual test results above were executed separately from static review.
 
-GitHub CI remains a separate pending gate; this PR5B branch is not merged.
 No user database was migrated; no physical power-loss, native Windows or
 remote exactly-once behavior is claimed.
+
+## GitHub validation
+
+[PR70](https://github.com/xbz123/repo-issue-intelligence/pull/70) remains open
+and unmerged. Code head `e1ae1a365b00605cdb8b31920d7067949260a97a` passed
+[CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34313136749):
+Python 3.11 and 3.12 each passed Ruff and `907 tests`, one existing warning each.
+Both checkout logs identify merge ref `cc0b51bf3bc98cda9b1b2cd9ed74b756880b3129`,
+combining baseline `226b9f5` with the code head. Its tree
+`8a8b5f541f6651085b306ccee92c17e899e62745` exactly equals the checked local head.
+
+The checklist records 5B.1–5B.8 as `verified`, not `merged`. GitHub bot review
+is a separate signal reported on the PR; Copilot's quota-blocked review did
+not execute and is not counted as approval. PR6–PR8 and G1 remain planned.
