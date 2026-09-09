@@ -368,7 +368,8 @@ def test_v1_provider_failure_aborts_multi_issue_batch_without_external_calls(
     )["v1_observed"]["run_status"]
     assert analyzer.calls == [101, 102]
     assert failed_run.investigations == []
-    assert failed_run.error == "LLMProviderError: synthetic provider failure"
+    # PR6 redacts persisted detail; the characterized V1 batch-abort behavior is unchanged.
+    assert failed_run.error == "LLMProviderError: local execution failed"
     llm_traces = [trace for trace in store.list_traces(run_id) if trace.node_name == "llm_analyze"]
     assert [(trace.status, trace.attempt) for trace in llm_traces] == [("failed", 1)]
     expected_v2 = _scenario(baseline, "t0_6_multi_issue_provider_failure")["v2_expected"]

@@ -17,6 +17,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError
 
+from .agent_workflow import execution_error_summary
 from .evidence import (
     DEFAULT_MAX_LINES_PER_SNIPPET,
     DEFAULT_MAX_TOTAL_CHARS,
@@ -40,6 +41,7 @@ from .repository_index import (
     build_repository_map,
     repository_map_input_files,
 )
+from .run_configuration import normalize_endpoint
 
 SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
 REPOSITORY_MAP_CACHE_SCHEMA_VERSION = 2
@@ -651,7 +653,7 @@ def evaluate_case(
             fallback_used = True
             fallback_reason = llm_error.category
             llm_attempts = llm_error.attempts
-            error = f"{type(llm_error).__name__}: {llm_error}"
+            error = execution_error_summary(llm_error)
 
     expected = set(case.expected_files)
     top_1 = candidate_files[:1]
@@ -1068,6 +1070,11 @@ def benchmark_execution_configuration(
     analyzer_runtime_version: str | None = None,
 ) -> dict[str, object]:
     selected = _selected_cases(manifest, case_ids)
+    # Validate before recording configuration, preserving safe checkpoint identity.
+    for case in selected:
+        normalize_endpoint(case.issue_snapshot.html_url)
+    if analyzer is not None:
+        normalize_endpoint(getattr(analyzer, "base_url", None))
     analyzer_configuration = (
         {
             "class": f"{type(analyzer).__module__}.{type(analyzer).__qualname__}",
@@ -1173,6 +1180,11 @@ def run_benchmark(
         reused = case.id in existing_results
         if reused:
             result = existing_results[case.id]
+            if result.error:
+                # Response-only projection: do not rewrite the historical checkpoint.
+                result = result.model_copy(
+                    update={"error": "Local execution failed (details withheld)"}
+                )
         else:
             try:
                 repository_root = prepare_repository(case, workspace)
@@ -1207,7 +1219,7 @@ def run_benchmark(
                     issue_updated_at=case.issue_updated_at,
                     expected_files=case.expected_files,
                     expected_symbols=case.expected_symbols,
-                    error=f"{type(error).__name__}: {error}",
+                    error=execution_error_summary(error),
                     execution_succeeded=False,
                 )
         results.append(result)

@@ -1008,8 +1008,17 @@ def test_openai_compatible_analyzer_uses_custom_base_url_model_and_provider() ->
 
 @pytest.mark.parametrize(
     "base_url",
-    ("", "gateway.example/v1", "ftp://gateway.example/v1", "https://gateway/x?q=1"),
+    (
+        "",
+        "gateway.example/v1",
+        "ftp://gateway.example/v1",
+        "https://gateway/x?q=1",
+        "https://user:BASE-URL-CANARY@gateway.example/v1",
+        "https://user%3ABASE-URL-CANARY%40gateway.example/v1",
+        "https://gateway.example/v1%253Ftoken%253DBASE-URL-CANARY",
+    ),
 )
 def test_openai_compatible_analyzer_rejects_invalid_base_url(base_url: str) -> None:
-    with pytest.raises(ValueError, match="API base URL"):
+    with pytest.raises(ValueError, match="API base URL") as raised:
         OpenCodeIssueAnalyzer("test-key", base_url=base_url)
+    assert "BASE-URL-CANARY" not in str(raised.value)

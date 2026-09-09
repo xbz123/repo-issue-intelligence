@@ -1,12 +1,39 @@
 from pathlib import Path
+from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .evidence import DEFAULT_MAX_LINES_PER_SNIPPET, DEFAULT_MAX_TOTAL_CHARS
 
 
+class APITransferGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    principal: str
+    analysis_root: Path
+    provider: str
+    operation: Literal["run", "retry", "recover-unknown"]
+
+
 class Settings(BaseSettings):
+    api_external_grants: tuple[APITransferGrant, ...] = Field(
+        default=(),
+        validation_alias="RII_API_EXTERNAL_GRANTS",
+    )
+    api_token: SecretStr | None = Field(default=None, validation_alias="RII_API_TOKEN")
+    api_allowed_origins: tuple[str, ...] = Field(default=(), validation_alias="RII_API_ORIGINS")
+    api_analysis_roots: tuple[Path, ...] = Field(
+        default=(), validation_alias="RII_API_ANALYSIS_ROOTS"
+    )
+    api_operations: tuple[str, ...] = Field(
+        default=("index", "run", "read", "review", "evidence"),
+        validation_alias="RII_API_OPERATIONS",
+    )
+    api_principal: str = Field(
+        default="local-operator",
+        validation_alias="RII_API_PRINCIPAL",
+        pattern=r"^[A-Za-z0-9_.:-]{1,80}$",
+    )
     github_token: str | None = None
     agent_db_path: Path = Path("data/agent-runs.sqlite3")
     llm_backend: str = Field(default="api", pattern=r"^(api|codex-cli)$")

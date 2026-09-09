@@ -90,6 +90,10 @@ def _normalized_api_base_url(value: str) -> str:
         raise ValueError("API base URL must be a valid HTTP(S) URL")
     if parsed.query or parsed.fragment:
         raise ValueError("API base URL must not include a query or fragment")
+    try:
+        normalize_endpoint(normalized)
+    except ValueError:
+        raise ValueError("API base URL contains unsafe or invalid URL components") from None
     return f"{normalized}/"
 
 

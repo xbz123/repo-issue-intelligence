@@ -3,6 +3,8 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from repo_issue_intelligence.agent_evaluation import (
     AgentAnalysisRun,
     _aggregate,
@@ -314,11 +316,21 @@ def test_quality_metrics_separates_retrieval_from_hypothesis_citation(
     assert metrics["hypothesis_expected_file_hit"] is False
 
 
+@pytest.mark.parametrize("failure_stage", ["provider", "repository"])
 def test_agent_analysis_evaluation_records_non_retryable_failure(
     tmp_path: Path,
     monkeypatch,
+    failure_stage: str,
 ) -> None:
-    _patch_repository(monkeypatch, _repository(tmp_path))
+    if failure_stage == "provider":
+        _patch_repository(monkeypatch, _repository(tmp_path))
+    else:
+        import subprocess
+
+        def failed_git(*args, **kwargs):
+            raise RuntimeError("https://user:PREPARATION-SECRET-CANARY@provider.invalid")
+
+        monkeypatch.setattr(subprocess, "run", failed_git)
 
     run = run_agent_analysis_evaluation(
         _manifest(),
@@ -327,6 +339,15 @@ def test_agent_analysis_evaluation_records_non_retryable_failure(
         max_llm_attempts=2,
     )
     result = run.results[0]
+
+    if failure_stage == "repository":
+        assert result.error == "RuntimeError: local execution failed"
+        assert result.error_category == "RuntimeError"
+        assert result.llm_attempts == 0
+        exported = tmp_path / "failure.json"
+        save_agent_analysis_run(run, exported)
+        assert "PREPARATION-SECRET-CANARY" not in exported.read_text()
+        return
 
     assert result.analysis_succeeded is False
     assert result.agent_status == "failed"
@@ -337,7 +358,7 @@ def test_agent_analysis_evaluation_records_non_retryable_failure(
     assert result.output_tokens == 51
     assert result.llm_elapsed_ms == 11
     assert result.error_category == "invalid_response"
-    assert result.error == "LLMProviderError: OpenCode returned invalid JSON"
+    assert result.error == "LLMProviderError: local execution failed"
     assert result.evidence_files == ["data_store.py"]
     assert result.expected_files_in_evidence == ["data_store.py"]
     assert result.expected_file_evidence_recall == 1

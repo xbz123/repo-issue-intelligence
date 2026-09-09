@@ -1,11 +1,26 @@
+import json
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from repo_issue_intelligence.agent_store import AgentStore
 from repo_issue_intelligence.api import app, get_agent_store
 
-client = TestClient(app)
+client = TestClient(
+    app,
+    base_url="http://127.0.0.1",
+    headers={
+        "Authorization": "Bearer synthetic-legacy-api-test-token-0123456789",
+    },
+)
+
+
+@pytest.fixture(autouse=True)
+def local_api_policy(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", "synthetic-legacy-api-test-token-0123456789")
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(tmp_path)]))
 
 
 def issue_payload(number: int = 1) -> dict:
@@ -61,10 +76,10 @@ def test_rank_issues() -> None:
     assert len(response.json()) == 2
 
 
-def test_index_missing_path() -> None:
+def test_index_missing_path(tmp_path) -> None:
     response = client.post(
         "/v1/repository/index",
-        json={"path": "/path/that/does/not/exist"},
+        json={"path": str(tmp_path / "missing")},
     )
     assert response.status_code == 404
 

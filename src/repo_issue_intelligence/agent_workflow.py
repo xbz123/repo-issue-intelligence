@@ -55,6 +55,11 @@ RETRY_BASE_DELAY_SECONDS = 1.0
 RETRY_MAX_DELAY_SECONDS = 30.0
 
 
+def execution_error_summary(error: BaseException) -> str:
+    """Stable persisted failure text without arbitrary credential-bearing details."""
+    return f"{type(error).__name__}: local execution failed"
+
+
 def _summarize(values: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {}
     for key, value in values.items():
@@ -94,7 +99,7 @@ def _traced_node(
                     finished_at=finished_at,
                     elapsed_ms=round((perf_counter() - started_clock) * 1000, 3),
                     input_summary=_summarize(dict(state)),
-                    error=f"{type(error).__name__}: {error}",
+                    error=execution_error_summary(error),
                 )
                 attempt_traces.append(trace)
                 store.append_trace(run_id, trace)
@@ -339,7 +344,7 @@ def run_agent(
         run.status = AgentRunStatus.FAILED
         run.updated_at = datetime.now(UTC)
         run.traces = store.list_traces(run.run_id)
-        run.error = f"{type(error).__name__}: {error}"
+        run.error = execution_error_summary(error)
         store.save_run(run)
         raise
 
