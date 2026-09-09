@@ -219,3 +219,45 @@ formatting, compileall and diff whitespace checks passed. Independent Standards
 and Spec increment reviews against `b44865c` found no confirmed blockers;
 Standards also found no actionable smells. Repair-head CI evidence is recorded
 on PR70; previous review and CI results do not cover this repair.
+
+## Full-review lifecycle repairs
+
+The full PR review at `1697aeb` identified three P2 gaps, beyond the earlier
+single-call checks. Its temporary combination harness produced `7 failed,
+3 passed`: failed explicit recovery could hide an older unknown, retry exceptions
+restored stale control states, and final aggregation failures left `RUNNING`.
+These findings supersede the scope of earlier no-blocker increment reviews.
+
+Normal completion now checks both the latest Issue state and retained unknown
+attempt history. Without a selected success, an older unknown still requires
+`INTERRUPTED` after an appended confirmed failure. A later successful explicit
+retry can enter review while retaining that old unknown record unchanged.
+
+Resume and retry share one execution failure boundary. Configuration, permission,
+Issue eligibility, view preparation and acquisition of every required old guard
+remain before state mutation. After those checks, setting `RUNNING`, settling
+stopped attempts, executing stages and final aggregation are covered by the same
+handler. Keyboard/process interruption produces `INTERRUPTED`; other execution
+errors produce `FAILED`. Failure to persist that status adds a note without
+replacing the original exception. The handler does not restore a historical Run
+state after execution has started. Guards remain held during settlement and work.
+
+Permanent regression coverage now includes unknown → failed recovery → repeated
+resume without dispatch → successful explicit retry, both alone and with a
+successful sibling; old-state/error combinations; actual SQLite final-read
+contention; and a fault after committing `RUNNING` but before returning its
+readback. Before their repairs these selections gave `2 failed, 2 passed`,
+`7 failed, 1 passed`, and `1 failed`, respectively. They check retained history,
+correct `agent-show` state and released locks, alongside existing preflight
+refusal tests. This is injected/temporary-database evidence, not physical
+power-loss or real provider evidence.
+
+The final recovery/retry selection passed `64 tests`; the full local suite
+passed `928 tests`, with one existing Starlette deprecation warning. Ruff,
+changed-file formatting, compileall and diff whitespace checks passed.
+Independent Standards increment review against `1697aeb` found no confirmed
+violations or actionable smells. Independent Spec increment review against the
+same head, in the full PR/R5 context, found no confirmed missing requirements,
+implementation errors or scope expansion. Static review is separate from
+executed tests. Repair-head CI is recorded on PR70; earlier 917-test totals do
+not validate this lifecycle increment.

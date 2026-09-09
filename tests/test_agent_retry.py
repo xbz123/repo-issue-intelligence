@@ -292,8 +292,12 @@ def test_retry_refuses_current_configuration_drift_before_dispatch(tmp_path, cle
     assert store.get_run_summary("run") == before
 
 
-def test_unknown_requires_explicit_recovery_and_preserves_old_terminal(tmp_path, clean_runtime):
-    from repo_issue_intelligence.agent_resume import retry_issue_llm
+@pytest.mark.parametrize("recovery_outcome", ["success", "failure"])
+@pytest.mark.parametrize("issue_count", [1, 2])
+def test_unknown_requires_explicit_recovery_and_preserves_old_terminal(
+    tmp_path, clean_runtime, recovery_outcome, issue_count
+):
+    from repo_issue_intelligence.agent_resume import resume_agent_run, retry_issue_llm
 
     store = new_store(tmp_path / "private")
     received = []
@@ -301,16 +305,20 @@ def test_unknown_requires_explicit_recovery_and_preserves_old_terminal(tmp_path,
     def handler(request):
         payload = json.loads(json.loads(request.content)["messages"][1]["content"])
         received.append(payload)
-        if len(received) == 1:
-            raise httpx.ReadTimeout("Remote outcome is uncertain", request=request)
+        if payload["issue"]["number"] == 1:
+            ordinal = sum(item["issue"]["number"] == 1 for item in received)
+            if ordinal == 1:
+                raise httpx.ReadTimeout("Remote outcome is uncertain", request=request)
+            if ordinal == 2 and recovery_outcome == "failure":
+                return httpx.Response(400, json={"error": "synthetic recovery failure"})
         return successful_response(payload["repository_evidence"])
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         analyzer = OpenAICompatibleIssueAnalyzer("test-key", client=client)
         run_agent_v2(
-            issues(1),
+            issues(*range(1, issue_count + 1)),
             repository(tmp_path / "repo"),
-            1,
+            issue_count,
             store,
             llm_analyzer=analyzer,
             allow_external_llm=True,
@@ -321,7 +329,7 @@ def test_unknown_requires_explicit_recovery_and_preserves_old_terminal(tmp_path,
         assert unknown.state == "unknown"
         with pytest.raises(StoreConflict):
             retry_issue_llm("run", 1, store, llm_analyzer=analyzer, allow_external_llm=True)
-        assert len(received) == 1
+        assert len(received) == issue_count
         result = retry_issue_llm(
             "run",
             1,
@@ -330,11 +338,44 @@ def test_unknown_requires_explicit_recovery_and_preserves_old_terminal(tmp_path,
             allow_external_llm=True,
             recover_unknown=True,
         )
+        if recovery_outcome == "failure":
+            assert result.llm_state == "failed"
+            assert store.get_run("run").status == "INTERRUPTED"
+            shown = CliRunner().invoke(
+                cli.app, ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)]
+            )
+            assert shown.exit_code == 0, shown.output
+            assert json.loads(shown.output)["status"] == "INTERRUPTED"
+            saved = store.get_run_summary("run")
+            with pytest.raises(StoreConflict):
+                retry_issue_llm("run", 1, store, llm_analyzer=analyzer, allow_external_llm=True)
+            assert store.get_run_summary("run") == saved
+            resumed = resume_agent_run("run", store, llm_analyzer=analyzer, allow_external_llm=True)
+            assert resumed.status == "INTERRUPTED"
+            assert len(received) == issue_count + 1
+            result = retry_issue_llm(
+                "run",
+                1,
+                store,
+                llm_analyzer=analyzer,
+                allow_external_llm=True,
+                recover_unknown=True,
+            )
     assert result.llm_state == "succeeded"
-    first, second = store.list_attempts("run", 1)
+    assert store.get_run("run").status == "AWAITING_REVIEW"
+    attempts = store.list_attempts("run", 1)
+    assert [attempt.state for attempt in attempts] == (
+        ["unknown", "failure", "success"]
+        if recovery_outcome == "failure"
+        else ["unknown", "success"]
+    )
+    first, second = attempts[:2]
     assert first == unknown
     assert second.attempt_id != first.attempt_id
-    assert received == [received[0], received[0]]
+    assert all(item == received[0] for item in received if item["issue"]["number"] == 1)
+    if issue_count == 2:
+        assert store.get_issue("run", 2).llm_state == "succeeded"
+        assert len(store.list_attempts("run", 2)) == 1
 
 
 @pytest.mark.parametrize("unknown", [False, True])
@@ -714,7 +755,21 @@ def test_terminal_retry_does_not_hide_unfinished_sibling_work(
     assert sent == ([1, 2, 1] if remaining == "unknown" else [1, 1])
 
 
-def test_retry_exception_restores_previous_control_state(tmp_path, monkeypatch, clean_runtime):
+@pytest.mark.parametrize(
+    "previous_status,error_type,expected_status",
+    [
+        ("AWAITING_REVIEW", KeyboardInterrupt, "INTERRUPTED"),
+        ("AWAITING_REVIEW", SystemExit, "INTERRUPTED"),
+        ("AWAITING_REVIEW", RuntimeError, "FAILED"),
+        ("RUNNING", RuntimeError, "FAILED"),
+        ("FAILED", KeyboardInterrupt, "INTERRUPTED"),
+        ("INTERRUPTED", RuntimeError, "FAILED"),
+        ("FAILED", RuntimeError, "FAILED"),
+    ],
+)
+def test_retry_exception_records_current_execution_state(
+    tmp_path, monkeypatch, clean_runtime, previous_status, error_type, expected_status
+):
     from repo_issue_intelligence.agent_resume import retry_issue_llm
 
     store = new_store(tmp_path / "private")
@@ -730,12 +785,27 @@ def test_retry_exception_restores_previous_control_state(tmp_path, monkeypatch, 
             run_id="run",
             as_of=NOW,
         )
-        store.set_run_status("run", "FAILED", expected_status="AWAITING_REVIEW")
+        store.set_run_status("run", previous_status, expected_status="AWAITING_REVIEW")
+        before = store.get_run_summary("run")
+        failure = error_type("synthetic retry failure")
 
         def broken_analysis(*args, **kwargs):
-            raise RuntimeError("synthetic retry failure")
+            raise failure
 
         monkeypatch.setattr(analyzer, "analyze_v2", broken_analysis)
-        with pytest.raises(RuntimeError, match="synthetic retry failure"):
+        with pytest.raises(error_type, match="synthetic retry failure") as caught:
             retry_issue_llm("run", 1, store, llm_analyzer=analyzer, allow_external_llm=True)
-    assert store.get_run("run").status == "FAILED"
+    assert caught.value is failure
+    with store.writer_lock():
+        after = store.get_run_summary("run")
+    assert after.status == expected_status
+    assert after.issues[0].deterministic_report == before.issues[0].deterministic_report
+    assert after.issues[0].evidence_set_id == before.issues[0].evidence_set_id
+    attempts = store.list_attempts("run", 1)
+    assert attempts[0] == before.issues[0].latest_attempt
+    assert attempts[-1].state == ("unknown" if expected_status == "INTERRUPTED" else "failure")
+    shown = CliRunner().invoke(
+        cli.app, ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output)["status"] == expected_status

@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,7 @@ from test_issue_execution import NOW, issues, repository, successful_response
 from typer.testing import CliRunner
 
 from repo_issue_intelligence import cli, run_configuration
+from repo_issue_intelligence.agent_store_v2 import StoreConflict, StoreError
 from repo_issue_intelligence.issue_execution import run_agent_v2
 from repo_issue_intelligence.llm_client import OpenAICompatibleIssueAnalyzer
 from repo_issue_intelligence.protocol_v2_models import RepositoryCaptureMode
@@ -340,6 +342,65 @@ def test_clean_engine_resumes_across_real_process_exit_without_runtime_stubs(
     )
     assert shown.exit_code == 0, shown.output
     assert json.loads(shown.output)["status"] == expected_status
+
+
+def test_resume_final_read_contention_records_failure_without_losing_results(
+    tmp_path, monkeypatch, clean_runtime
+):
+    from repo_issue_intelligence.agent_resume import resume_agent_run
+
+    store = new_store(tmp_path / "private")
+    run_agent_v2(issues(1), repository(tmp_path / "repo"), 1, store, run_id="run", as_of=NOW)
+    store.set_run_status("run", "INTERRUPTED", expected_status="AWAITING_REVIEW")
+    before = store.list_issues("run")
+    read_issues = store.list_issues
+
+    def contended_read(run_id):
+        blocker = sqlite3.connect(store.path)
+        try:
+            blocker.execute("BEGIN EXCLUSIVE")
+            return read_issues(run_id)
+        finally:
+            blocker.rollback()
+            blocker.close()
+
+    with monkeypatch.context() as fault:
+        fault.setattr(store, "list_issues", contended_read)
+        with pytest.raises(StoreConflict, match="SQLite contention"):
+            resume_agent_run("run", store)
+    with store.writer_lock():
+        assert store.get_run("run").status == "FAILED"
+    assert store.list_issues("run") == before
+    shown = CliRunner().invoke(
+        cli.app, ["agent-show", "run", "--protocol", "v2", "--database", str(store.path)]
+    )
+    assert shown.exit_code == 0, shown.output
+    assert json.loads(shown.output)["status"] == "FAILED"
+
+
+def test_resume_status_readback_failure_does_not_leave_a_running_run(
+    tmp_path, monkeypatch, clean_runtime
+):
+    from repo_issue_intelligence.agent_resume import resume_agent_run
+
+    store = new_store(tmp_path / "private")
+    run_agent_v2(issues(1), repository(tmp_path / "repo"), 1, store, run_id="run", as_of=NOW)
+    store.set_run_status("run", "INTERRUPTED", expected_status="AWAITING_REVIEW")
+    set_status = store.set_run_status
+    failure = StoreError("synthetic failure reading the committed RUNNING transition")
+
+    def fail_after_running_commit(run_id, status, **kwargs):
+        result = set_status(run_id, status, **kwargs)
+        if status == "RUNNING":
+            raise failure
+        return result
+
+    monkeypatch.setattr(store, "set_run_status", fail_after_running_commit)
+    with pytest.raises(StoreError) as caught:
+        resume_agent_run("run", store)
+    assert caught.value is failure
+    with store.writer_lock():
+        assert store.get_run("run").status == "FAILED"
 
 
 def test_configuration_reconstruction_rejects_unknown_budget_origin_keys():

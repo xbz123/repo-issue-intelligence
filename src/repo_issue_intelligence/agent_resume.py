@@ -23,23 +23,37 @@ from .repository_view import prepare_repository_view
 
 
 @contextmanager
-def _stopped_attempts(store, attempts):
-    # Acquire every guard before changing any retained state. Keep them through the new start.
+def _recovery_execution(run: RunV2, store: AgentStoreV2, attempts):
+    # Prove local stop before mutation; keep guards through settlement and execution.
     with ExitStack() as guards:
         for attempt in attempts:
             guards.enter_context(store.execution_lock(attempt.attempt_id))
-        for attempt in attempts:
-            if attempt.state == "in_progress":
-                store.finalize_attempt(
-                    attempt.attempt_id,
-                    AttemptTerminalFields(
-                        state="unknown",
-                        error=AttemptError(
-                            category="interrupted", detail="Local guarded execution stopped"
+        try:
+            run = store.set_run_status(run.run_id, "RUNNING", expected_status=run.status)
+            for attempt in attempts:
+                if attempt.state == "in_progress":
+                    store.finalize_attempt(
+                        attempt.attempt_id,
+                        AttemptTerminalFields(
+                            state="unknown",
+                            error=AttemptError(
+                                category="interrupted", detail="Local guarded execution stopped"
+                            ),
                         ),
-                    ),
+                    )
+            yield run
+        except (Exception, KeyboardInterrupt, SystemExit) as error:
+            try:
+                store.set_run_status(
+                    run.run_id,
+                    "INTERRUPTED"
+                    if isinstance(error, (KeyboardInterrupt, SystemExit))
+                    else "FAILED",
+                    expected_status="RUNNING",
                 )
-        yield
+            except StoreError:
+                error.add_note("Recovery failure could not be persisted")
+            raise
 
 
 def validate_recovery_configuration(
@@ -95,6 +109,13 @@ def _finish_recovery(run_id: str, store: AgentStoreV2) -> RunV2:
         if any(
             item.deterministic_state != "succeeded"
             or item.llm_state in {"pending", "in_progress", "interrupted_unknown"}
+            or (
+                item.selected_analysis_attempt_id is None
+                and any(
+                    attempt.state == "unknown"
+                    for attempt in store.list_attempts(run_id, item.issue_number)
+                )
+            )
             for item in issues
         )
         else "AWAITING_REVIEW"
@@ -131,32 +152,21 @@ def resume_agent_run(
         ]
         with (
             prepare_repository_view(run.snapshot, deterministic_resume=True) as view,
-            _stopped_attempts(store, abandoned),
+            _recovery_execution(run, store, abandoned) as run,
         ):
-            run = store.set_run_status(run_id, "RUNNING", expected_status=run.status)
-            try:
-                repository_map = build_repository_map(view)
-                by_number = {issue.number: issue for issue in run.inputs.issues}
-                for number in run.selection.selected_issue_numbers:
-                    process_issue(
-                        run,
-                        by_number[number].to_issue(),
-                        repository_map,
-                        view,
-                        store,
-                        llm_analyzer,
-                        resume=True,
-                    )
-            except (Exception, KeyboardInterrupt, SystemExit) as error:
-                store.set_run_status(
-                    run_id,
-                    "INTERRUPTED"
-                    if isinstance(error, (KeyboardInterrupt, SystemExit))
-                    else "FAILED",
-                    expected_status="RUNNING",
+            repository_map = build_repository_map(view)
+            by_number = {issue.number: issue for issue in run.inputs.issues}
+            for number in run.selection.selected_issue_numbers:
+                process_issue(
+                    run,
+                    by_number[number].to_issue(),
+                    repository_map,
+                    view,
+                    store,
+                    llm_analyzer,
+                    resume=True,
                 )
-                raise
-        return _finish_recovery(run_id, store)
+            return _finish_recovery(run_id, store)
 
 
 def retry_issue_llm(
@@ -194,24 +204,15 @@ def retry_issue_llm(
         uncertain = [a for a in attempts if a.state in {"unknown", "in_progress"}]
         if uncertain and not recover_unknown:
             raise StoreConflict("Unknown history requires explicit recover_unknown authorization")
-        with _stopped_attempts(store, uncertain):
-            previous_status = run.status
-            run = store.set_run_status(run_id, "RUNNING", expected_status=previous_status)
-            try:
-                record = next(item for item in run.inputs.issues if item.number == issue_number)
-                result = analyze_sealed_issue(
-                    run,
-                    record.to_issue(),
-                    store,
-                    llm_analyzer,
-                    retry=True,
-                    recover_unknown=recover_unknown,
-                )
-                _finish_recovery(run_id, store)
-                return result
-            except (Exception, KeyboardInterrupt, SystemExit) as error:
-                try:
-                    store.set_run_status(run_id, previous_status, expected_status="RUNNING")
-                except StoreError:
-                    error.add_note("Retry control status could not be restored")
-                raise
+        with _recovery_execution(run, store, uncertain) as run:
+            record = next(item for item in run.inputs.issues if item.number == issue_number)
+            result = analyze_sealed_issue(
+                run,
+                record.to_issue(),
+                store,
+                llm_analyzer,
+                retry=True,
+                recover_unknown=recover_unknown,
+            )
+            _finish_recovery(run_id, store)
+            return result
