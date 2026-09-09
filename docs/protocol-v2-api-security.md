@@ -86,7 +86,10 @@ is not a sandbox against hostile same-UID path replacement or a remote tenant.
 
 HTTP creates a missing legacy ledger only in an owner-only directory (`0700`)
 with a private regular database (`0600`). Existing unsafe directories, files,
-hardlinks, symlinks or SQLite sidecars are refused, not chmod-ed or migrated.
+hardlinks, user-created symlinks or SQLite sidecars are refused, not chmod-ed or
+migrated. Database ancestors retain the existing Store's exact `/tmp` and `/var`
+system-alias exceptions; this does not permit a symlink database entry or other
+symlinked directories. Canonical analysis-root requirements are unchanged.
 V2 data/backup/export protection continues to use the existing private database
 and export tools; see [data protection](protocol-v2-data-protection.md).
 No backups, output files or source archives are published by this API change.
@@ -113,12 +116,16 @@ cleanup remain manual; no encryption at rest or historical cleanup is implied.
 | Single JSON text / total JSON text (including supplied evidence) | 100,000 / 250,000 characters |
 | JSON structure | 32 nesting levels, 20,000 visited values |
 | `limit` / `page_size` query parameters | 1–100 (actual V2 pagination is PR7A) |
-| Scanned source file / total scanned bytes | 2,000,000 / 32,000,000 bytes |
+| Indexed source file / total indexed source bytes | 2,000,000 / 32,000,000 bytes |
 | Scanned directory/file entries | 20,000 |
 | Concurrent state-building HTTP requests | 1 per supported server process; excess returns 503 |
 
 Raw-body and payload checks precede model/state construction; source checks
 precede indexing/workflow execution. Chunked bodies do not trust Content-Length.
+Source byte accounting uses the indexer's shared language classifier, including
+case-insensitive source extensions and shipped JSON schemas. Non-source assets
+do not consume that byte budget, but still count toward the entry limit and
+undergo link/special-file checks. The resource limit values are unchanged.
 Compressed requests are refused. Execution capacity is released on failure as
 well as success, while health/read requests remain available. These are bounded
 local API limits, not a general distributed quota or job scheduler.
@@ -135,7 +142,7 @@ Retained-scope authorization and unreadable walks were separately reproduced
 before repair. A real loopback subprocess verifies startup, authentication,
 proxy refusal, local launcher identity and secret-free logs, then is shut down.
 
-Final local validation passed `62` focused security/workflow/evaluation/baseline
+Initial implementation validation passed `62` focused security/workflow/evaluation/baseline
 tests and `967` full-suite tests, with one existing Starlette deprecation warning.
 Ruff, formatting of the new/HTTP boundary files, compileall and diff whitespace
 checks passed. The first full run (`2 failed, 964 passed`) exposed old raw-error
@@ -150,3 +157,28 @@ evidence. Head-specific CI is recorded with the implementation PR, which remains
 unmerged. This document does not claim real provider
 calls, V2 HTTP retry integration, native Windows, physical power loss, remote
 exactly-once or multi-tenant security.
+
+## Review repair: source budgets and system database aliases
+
+GitHub review of `96280a7` identified two P2 compatibility defects: non-source
+assets were incorrectly charged to source byte budgets, and valid database paths
+under system aliases were rejected before the existing private-path handler.
+These repair the existing PR6 boundary, without weakening source limits or file
+permissions and without extending the analysis-root alias policy.
+
+Before repair, the asset selection gave `4 failed, 3 passed`, and the native
+macOS system-alias selection also gave `4 failed, 3 passed`. Tests exercise both
+index and run with a large asset or aggregate small assets; oversized source,
+uppercase extensions and JSON schemas remain refused. Native `/tmp` and `/var/tmp`
+tests cover new/existing database paths, create/read/review and unsafe permissions.
+Arbitrary user directory/database/SQLite-sidecar links remain rejected. Linux CI
+executes the same path cases but does not claim to emulate macOS system symlinks.
+
+Repair local validation passed `52` security tests and `981` full-suite tests,
+with one existing Starlette deprecation warning. Ruff, changed-file formatting,
+compileall and diff whitespace checks passed. Independent increment reviews
+against `96280a7` found no documented Standards violations or actionable smells,
+and no confirmed Spec gaps, incorrect behavior or scope expansion for R5 PR6
+6.4/6.8/6.9 and the existing data-protection alias contract. Static review and
+executed tests are separate evidence. Repair-head CI is recorded on PR71; the
+earlier 967-test evidence does not validate this repair.

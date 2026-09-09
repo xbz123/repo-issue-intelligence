@@ -519,3 +519,123 @@ def test_unreadable_source_walk_is_not_silently_accepted(monkeypatch, tmp_path):
     monkeypatch.setattr(os, "scandir", deny_subtree)
     with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
         assert client.post("/v1/repository/index", json={"path": str(tmp_path)}).status_code == 403
+
+
+@pytest.mark.parametrize("operation", ["index", "run"])
+@pytest.mark.parametrize("assets", ["single", "aggregate"])
+def test_large_non_source_assets_do_not_consume_source_budget(
+    monkeypatch, tmp_path, operation, assets
+):
+    from test_api import issue_payload
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "service.py").write_text("def refresh(): return 1\n")
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(root)]))
+    monkeypatch.setenv("AGENT_DB_PATH", str(tmp_path / "private" / "runs.sqlite3"))
+    count, size = (1, 33_000_000) if assets == "single" else (23, 1_500_000)
+    for number in range(count):
+        with (root / f"asset-{number}.png").open("wb") as asset:
+            asset.truncate(size)
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        url = "/v1/repository/index" if operation == "index" else "/v1/agent/runs"
+        payload = (
+            {"path": str(root)}
+            if operation == "index"
+            else {"repository_path": str(root), "issues": [issue_payload()]}
+        )
+        response = client.post(url, json=payload)
+        assert response.status_code == (200 if operation == "index" else 201)
+        if operation == "index":
+            assert [item["path"] for item in response.json()["files"]] == ["service.py"]
+        else:
+            assert response.json()["status"] == "awaiting_review"
+        (root / "linked-asset.png").symlink_to(tmp_path / "outside.png")
+        assert client.post(url, json=payload).status_code == 403
+
+
+@pytest.mark.parametrize("kind", ["upper_source", "schema", "aggregate_source"])
+def test_indexed_source_bytes_remain_bounded(monkeypatch, tmp_path, kind):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(tmp_path)]))
+    names = {
+        "upper_source": ["large.PY"],
+        "schema": ["large.SCHEMA.JSON"],
+        "aggregate_source": [f"source-{number}.js" for number in range(17)],
+    }[kind]
+    for name in names:
+        with (tmp_path / name).open("wb") as source:
+            source.truncate(1_900_000 if kind == "aggregate_source" else 2_000_001)
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        response = client.post("/v1/repository/index", json={"path": str(tmp_path)})
+        assert response.status_code == 413
+
+
+@pytest.mark.parametrize("alias", ["/tmp", "/var"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_system_database_aliases_support_create_read_and_review(
+    monkeypatch, tmp_path, alias, existing
+):
+    import os
+    import stat
+    import tempfile
+    from pathlib import Path
+
+    from test_api import issue_payload
+
+    if os.name != "posix":
+        pytest.skip("private HTTP storage requires POSIX")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "service.py").write_text("def refresh(): return 1\n")
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(root)]))
+    parent = "/tmp" if alias == "/tmp" else "/var/tmp"
+    with tempfile.TemporaryDirectory(prefix="rii-pr71-alias-", dir=parent) as directory:
+        database = Path(directory) / "private" / "runs.sqlite3"
+        with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+            if existing:
+                monkeypatch.setenv("AGENT_DB_PATH", str(database.resolve()))
+                assert client.get("/v1/agent/runs/missing").status_code == 404
+            monkeypatch.setenv("AGENT_DB_PATH", str(database))
+            created = client.post(
+                "/v1/agent/runs",
+                json={
+                    "repository_path": str(root),
+                    "issues": [issue_payload()],
+                },
+            )
+            assert created.status_code == 201
+            url = f"/v1/agent/runs/{created.json()['run_id']}"
+            assert client.get(url).status_code == 200
+            assert client.post(url + "/review", json={"decision": "approved"}).status_code == 200
+            assert stat.S_IMODE(database.stat().st_mode) == 0o600
+            assert stat.S_IMODE(database.parent.stat().st_mode) == 0o700
+            database.chmod(0o644)
+            assert client.get(url).status_code == 503
+            assert stat.S_IMODE(database.stat().st_mode) == 0o644
+
+
+@pytest.mark.parametrize("link", ["directory", "database", "sidecar"])
+def test_user_database_links_are_still_refused(monkeypatch, tmp_path, link):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    database = tmp_path / "private" / "runs.sqlite3"
+    monkeypatch.setenv("AGENT_DB_PATH", str(database))
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        assert client.get("/v1/agent/runs/missing").status_code == 404
+        if link == "directory":
+            alias = tmp_path / "directory-link"
+            alias.symlink_to(database.parent, target_is_directory=True)
+            monkeypatch.setenv("AGENT_DB_PATH", str(alias / database.name))
+        elif link == "database":
+            alias = database.with_name("database-link.sqlite3")
+            alias.symlink_to(database)
+            monkeypatch.setenv("AGENT_DB_PATH", str(alias))
+        else:
+            database.with_name(database.name + "-wal").symlink_to(tmp_path / "missing-wal")
+        assert client.get("/v1/agent/runs/missing").status_code == 503

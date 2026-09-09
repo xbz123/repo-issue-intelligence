@@ -18,7 +18,7 @@ from starlette.responses import JSONResponse
 from .agent_database import _private_destination
 from .agent_store import AgentStore
 from .config import Settings
-from .repository_index import SKIP_DIRS
+from .repository_index import SKIP_DIRS, repository_file_language
 from .run_configuration import normalize_endpoint
 
 MAX_REQUEST_BYTES = 1_048_576
@@ -71,7 +71,14 @@ def private_legacy_store() -> AgentStore:
     """Protect the HTTP legacy ledger without migrating it or changing CLI defaults."""
     try:
         path = Settings().agent_db_path.absolute()
-        if os.name != "posix" or any(part.is_symlink() for part in (path, *path.parents)):
+        if (
+            os.name != "posix"
+            or path.is_symlink()
+            or any(
+                part.is_symlink() and part not in (Path("/tmp"), Path("/var"))
+                for part in path.parents
+            )
+        ):
             raise ValueError
         if not path.exists():
             path = _private_destination(path)
@@ -162,11 +169,12 @@ def authorize_repository_operation(
             for current, directories, files in os.walk(root, followlinks=False, onerror=unreadable):
                 directories[:] = [name for name in directories if name not in SKIP_DIRS]
                 for name in (*directories, *files):
-                    info = (Path(current) / name).lstat()
+                    path = Path(current) / name
+                    info = path.lstat()
                     entries += 1
                     if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
                         raise HTTPException(403, "Repository scope refuses links or special files")
-                    if stat.S_ISREG(info.st_mode):
+                    if stat.S_ISREG(info.st_mode) and repository_file_language(path) is not None:
                         size += info.st_size
                         if info.st_size > MAX_SOURCE_FILE_BYTES or size > MAX_SOURCE_BYTES:
                             raise HTTPException(413, "Repository source exceeds limits")
