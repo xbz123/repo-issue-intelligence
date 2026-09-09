@@ -1,0 +1,263 @@
+# Protocol v2 PR5B: committed resume and explicit LLM retry
+
+Scope: frozen R5 5B.1–5B.8, based on PR69 merged as
+`226b9f50c1374a15529048c12ba5ba46deab8455`. V1 remains the default. This PR
+adds no HTTP authorization, review writer, schema or owner/generation fields.
+
+## Commands and configuration
+
+```text
+rii agent-resume RUN_ID --protocol v2 --database PRIVATE_DATABASE
+rii agent-retry-llm RUN_ID --issue NUMBER --protocol v2 --database PRIVATE_DATABASE --allow-external-llm
+rii agent-retry-llm RUN_ID --issue NUMBER --protocol v2 --database PRIVATE_DATABASE --allow-external-llm --recover-unknown
+```
+
+There is no `agent-recover` command. LLM-enabled resume also needs the current
+`--allow-external-llm` permission. Recovery compares current analyzer settings,
+endpoint/CLI version, engine/runtime and protocol with the frozen record;
+CLI recovery also reconstructs current budgets and preserves captured parameter
+origins. Re-supply the original explicit analyzer options when necessary.
+Changed settings are refused before dispatch, not silently adopted. Reported
+model/usage remain observations and are not required to match earlier responses.
+
+Strict recovery requires a known clean Git engine at the same recorded source
+revision/runtime. Dirty, unknown, upgraded or moved engine identity is refused.
+To change model/prompt/budgets, use a new `agent-run --protocol v2` with
+`--parent-run-id RUN_ID` and the desired inputs/options. The original run,
+reports, attempts and reviews remain unchanged; no new command is introduced.
+
+Optional `--output` uses the existing atomic owner-only JSON publisher and
+refuses database/SQLite sidecars, writer locks and attempt execution guards,
+including file aliases. Recovery defaults to a compact status message.
+
+## Stage continuation
+
+Committed resume uses the original captured revision/manifest, original Issue
+snapshots and selected ordinals. It builds one repository map, skips committed
+deterministic reports, continues missing evidence sealing, and starts only
+Issues with no previous attempt. Uncommitted deterministic running/failed
+stages can continue; already committed results are never overwritten.
+
+Any retained attempt prevents automatic provider replay. Confirmed failures
+need explicit `agent-retry-llm`; successful or reviewed Issues need a new run.
+Pure LLM retry reads only the original Issue, report, sealed evidence and
+configuration, even if the target checkout was changed or removed.
+`tracked_worktree` deterministic resume remains unsupported, but its sealed
+evidence is usable for same-configuration LLM retry.
+
+## Proving local execution stopped
+
+The database foreground lock still serializes run orchestration. For adapters
+declaring the synchronous HTTP lifetime contract, a unique owner-only attempt
+guard is created with exclusive/no-follow flags and locked before attempt
+insertion. It stays locked through the synchronous call and terminal commit.
+The guard is retained after close; JSON export cannot replace it.
+
+Recovery opens the existing guard without creating it and obtains a new
+nonblocking exclusive lock. Missing, unsupported, busy or unsafe guards refuse
+recovery before run/attempt mutation. Guards remain held while settling old
+`in_progress` rows to `unknown` and starting an explicitly authorized retry.
+The old unknown terminal is never rewritten; the retry gets a different ID.
+
+This is local stop evidence only, not a lease or proof of a remote outcome.
+No TTL, PID guess, asserted stopped boolean or forced takeover is accepted.
+The private same-user directory is trusted; malicious same-UID file replacement
+is outside the local Store threat model. Never delete retained guard files.
+
+Codex CLI and custom background/subprocess adapters do not currently provide
+the full local-chain lifetime guarantee. Their abandoned/unknown attempts
+therefore fail closed even with `--recover-unknown`. Merely passing a descriptor
+to a launcher or seeing its parent exit would not prove that descendants
+stopped. Normal same-configuration Codex continuation and confirmed-failure
+retry are not replaced by an unsafe unknown-recovery shortcut.
+
+## Acceptance and validation
+
+Tests cover config/runtime drift, dirty/unknown provenance, all five interruption
+checkpoints, committed versus tracked-worktree recovery, exact persisted retry
+inputs, explicit permission, review/success refusal, real process exit and
+cross-process lock contention, and private export aliases. A clean synthetic
+engine test uses two real processes and actual Git/runtime capture without a
+runtime stub. Other synthetic cases stub OS/runtime observations only; providers
+are fake and no real requests are sent.
+
+Initial regressions failed before their implementations: missing public/CLI
+entries, unverified runtime acceptance, report/seal continuation gaps,
+uncommitted deterministic stages, parent linkage and guard export aliases.
+A process-test cleanup initially waited on a terminated multiprocessing Event;
+that unsuccessful run was interrupted and is not counted as validation.
+
+Initial implementation validation on 2026-09-09 (historical):
+
+- Initial full suite: `907 passed`, one existing Starlette deprecation warning.
+- Final recovery/retry selection: `43 passed`, including Codex confirmed-failure
+  retry, version drift and unproven subprocess-stop refusal.
+- Earlier affected Store/execution/CLI selection: `188 passed`. This preceded
+  the final closed-origin regression and three Codex cases; it does not replace
+  the final full-suite gate.
+- The final closed-origin regression first failed because arbitrary `budget.*`
+  fields were silently ignored. Only the two defined derived budget markers
+  are now regenerated; unknown origin fields remain rejected.
+- Ruff, compileall, changed-file/range formatting and diff whitespace checks
+  passed. All 153 unique task IDs and 306 plan-anchor references were checked.
+- After the full run, the test-only remote-completion interruption was moved
+  to after the fake analyzer returned a complete response and before finalization;
+  all five checkpoint cases passed again. Production behavior was unchanged.
+
+Independent review against merged baseline `226b9f5`:
+
+- Standards: no confirmed blockers or actionable heuristic smells, including
+  the final test-only checkpoint refinement.
+- Spec: no confirmed blockers for 5B.1–5B.8 and RFC stage/unknown boundaries.
+  The unavailable reviewer test environment is not counted as a passed test
+  run; the actual test results above were executed separately from static review.
+
+No user database was migrated; no physical power-loss, native Windows or
+remote exactly-once behavior is claimed.
+
+## GitHub validation
+
+[PR70](https://github.com/xbz123/repo-issue-intelligence/pull/70) remains open
+and unmerged. Code head `e1ae1a365b00605cdb8b31920d7067949260a97a` passed
+[CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34313136749):
+Python 3.11 and 3.12 each passed Ruff and `907 tests`, one existing warning each.
+Both checkout logs identify merge ref `cc0b51bf3bc98cda9b1b2cd9ed74b756880b3129`,
+combining baseline `226b9f5` with the code head. Its tree
+`8a8b5f541f6651085b306ccee92c17e899e62745` exactly equals the checked local head.
+
+That initial gate recorded 5B.1–5B.8 as `verified`, not `merged`; the later
+repair status is recorded below. GitHub bot review is a separate signal on
+the PR; Copilot's quota-blocked review did
+not execute and is not counted as approval. PR6–PR8 and G1 remain planned.
+
+## Post-review control-status repair
+
+GitHub Codex review of `e1ae1a3` found
+[P2: stale Run status after retry](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3964846411).
+The finding reproduces on documentation head `9a24787`: direct guarded recovery
+after real process termination can leave `RUNNING`, and completed retries can
+restore stale `FAILED`/`INTERRUPTED` states. The three regression cases failed
+before the repair; earlier validation does not close this later finding.
+
+After a retry returns normally, the control status now reflects remaining
+Issue stages: an outstanding deterministic failure keeps `FAILED`; pending,
+active or uncertain work keeps `INTERRUPTED`; fully completed reviewable work
+enters `AWAITING_REVIEW`. The existing reader still derives mixed/final review
+status. If retry raises, its prior control state is restored without masking
+the original exception if that restoration also fails.
+
+The repair also checks incomplete/failed/unknown siblings and exception
+restoration. Recovery/retry selection: `50 passed`; full local suite:
+`914 passed`, one existing Starlette deprecation warning. Ruff, compileall and
+diff whitespace checks passed. Independent Standards and Spec increment reviews
+against `9a24787` found no confirmed blockers; Standards also found no actionable
+heuristic smells. These are separate from GitHub Codex's original finding.
+No old attempt or review record is rewritten.
+
+Repair code head `c8ff6534d86bab0aa1c522296980e1390863ed84` passed
+[CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34315300560):
+Python 3.11 and 3.12 each passed Ruff and `914 tests`, one existing warning each.
+Both checkout logs identify merge ref `c5e66bc75c97e6cd5ca0a5a254fdea0eb8cd697a`,
+combining baseline `226b9f5` with that repair head. Its tree
+`3b29ad1e83c6233e79ec5f4f11467f27f28f49cd` exactly equals the locally tested and
+reviewed repair tree. Runner-deprecation and transient cache-service annotations
+did not fail either job.
+
+The completed repair gates restore checklist 5B.1–5B.8 to `verified`, not
+`merged`. The documentation-only final-head CI and any subsequent GitHub review
+are recorded on PR70; the original bot finding is not approval of the repair.
+
+## Post-review resume setup repair
+
+[The setup-status finding](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3965056866)
+on `9cc6570` was reproduced twice despite a later no-major-issues review of the
+same unchanged head: after actual process exit, an injected map-construction
+exception left both the retained Run and `agent-show` reporting `RUNNING`.
+The same exception in Issue processing correctly produced `FAILED`.
+
+Map construction now runs inside the existing execution failure handler, after
+the Run enters `RUNNING`. Ordinary setup exceptions produce `FAILED`;
+`KeyboardInterrupt` and `SystemExit` produce `INTERRUPTED`. Configuration,
+repository-view and stop-proof preflight refusals remain outside this transition.
+No old attempt, review or committed Issue result is rewritten.
+
+The existing clean-engine, real-process recovery test now covers a stdlib parser
+`MemoryError`, `KeyboardInterrupt`, `SystemExit`, and the original success path.
+The real map builder, Store and CLI remain in use; the test checks retained
+Issue results, writer-lock release and `agent-show`. Before the repair it gave
+`3 failed, 1 passed`; the repaired recovery/retry selection passed `53 tests`.
+Full local suite: `917 passed`, one existing Starlette deprecation warning.
+Ruff, changed-file formatting, compileall and diff whitespace checks passed.
+These are injected failure paths, not evidence of physical memory exhaustion.
+Independent increment review and repair-head CI evidence are recorded on PR70;
+earlier 914-test gates do not validate this increment.
+
+## Post-review unknown aggregation repair
+
+[The unknown-status finding](https://github.com/xbz123/repo-issue-intelligence/pull/70#discussion_r3966676630)
+was reproduced on `b44865c`: after guarded process exit, resume retained the
+unknown attempt without replay, but incorrectly returned `AWAITING_REVIEW`.
+Both a single unknown Issue and an unknown Issue with a completed sibling showed
+the same incorrect persisted/CLI status; the successful-attempt control passed.
+
+Resume and retry now share the existing retry completion rule. Remaining failed
+deterministic work keeps `FAILED`; unfinished or uncertain work keeps
+`INTERRUPTED`; otherwise the control state becomes `AWAITING_REVIEW` and the
+reader derives any review state. A later resume of an already unknown attempt
+stays interrupted without resending it. Explicit successful retry can finish
+the Run without rewriting the old unknown attempt. Stop proofs, current
+permission, frozen configuration and exception handling remain unchanged.
+
+The existing interruption-checkpoint and real-process tests were strengthened
+instead of adding a new test framework: the started/remote/abandoned cases
+failed before repair (`3 failed, 4 passed`), while the repaired recovery/retry
+selection passed `53 tests`. Checks include `agent-show`, repeated resume,
+unchanged evidence/report/attempt history and successful sibling preservation.
+This repair's full local suite passed `917 tests`, one existing Starlette warning;
+the count is unchanged because existing tests were strengthened. Ruff, changed-file
+formatting, compileall and diff whitespace checks passed. Independent Standards
+and Spec increment reviews against `b44865c` found no confirmed blockers;
+Standards also found no actionable smells. Repair-head CI evidence is recorded
+on PR70; previous review and CI results do not cover this repair.
+
+## Full-review lifecycle repairs
+
+The full PR review at `1697aeb` identified three P2 gaps, beyond the earlier
+single-call checks. Its temporary combination harness produced `7 failed,
+3 passed`: failed explicit recovery could hide an older unknown, retry exceptions
+restored stale control states, and final aggregation failures left `RUNNING`.
+These findings supersede the scope of earlier no-blocker increment reviews.
+
+Normal completion now checks both the latest Issue state and retained unknown
+attempt history. Without a selected success, an older unknown still requires
+`INTERRUPTED` after an appended confirmed failure. A later successful explicit
+retry can enter review while retaining that old unknown record unchanged.
+
+Resume and retry share one execution failure boundary. Configuration, permission,
+Issue eligibility, view preparation and acquisition of every required old guard
+remain before state mutation. After those checks, setting `RUNNING`, settling
+stopped attempts, executing stages and final aggregation are covered by the same
+handler. Keyboard/process interruption produces `INTERRUPTED`; other execution
+errors produce `FAILED`. Failure to persist that status adds a note without
+replacing the original exception. The handler does not restore a historical Run
+state after execution has started. Guards remain held during settlement and work.
+
+Permanent regression coverage now includes unknown → failed recovery → repeated
+resume without dispatch → successful explicit retry, both alone and with a
+successful sibling; old-state/error combinations; actual SQLite final-read
+contention; and a fault after committing `RUNNING` but before returning its
+readback. Before their repairs these selections gave `2 failed, 2 passed`,
+`7 failed, 1 passed`, and `1 failed`, respectively. They check retained history,
+correct `agent-show` state and released locks, alongside existing preflight
+refusal tests. This is injected/temporary-database evidence, not physical
+power-loss or real provider evidence.
+
+The final recovery/retry selection passed `64 tests`; the full local suite
+passed `928 tests`, with one existing Starlette deprecation warning. Ruff,
+changed-file formatting, compileall and diff whitespace checks passed.
+Independent Standards increment review against `1697aeb` found no confirmed
+violations or actionable smells. Independent Spec increment review against the
+same head, in the full PR/R5 context, found no confirmed missing requirements,
+implementation errors or scope expansion. Static review is separate from
+executed tests. Repair-head CI is recorded on PR70; earlier 917-test totals do
+not validate this lifecycle increment.

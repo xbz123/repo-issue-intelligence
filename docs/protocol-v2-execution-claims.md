@@ -72,8 +72,9 @@ of this gate.
 
 ## GitHub validation and delivery
 
-[PR69](https://github.com/xbz123/repo-issue-intelligence/pull/69) is open and
-unmerged. Code head `660d04dba317de4e7eedc687d3696ccfec435051` passed
+[PR69](https://github.com/xbz123/repo-issue-intelligence/pull/69) merged on
+2026-09-09 as `226b9f50c1374a15529048c12ba5ba46deab8455`.
+Code head `660d04dba317de4e7eedc687d3696ccfec435051` passed
 [CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34275717360):
 Python 3.11 and 3.12 each passed Ruff and `864 tests`, with one existing test
 warning per job.
@@ -83,7 +84,13 @@ Both checkout logs identify merge ref
 the code head. Its tree, `0af0f80a2662662033e2198ccef1533219a4f7b5`, exactly
 matches the locally validated and independently reviewed head tree.
 
-The checklist records 5A.1–5A.7 as `verified`, not `merged`. GitHub bot review
-status remains separate from these local/CI gates and is reported on the PR.
+[Post-merge main CI](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34308097353)
+passed Ruff and `864 tests` on Python 3.11 and 3.12, one existing warning each.
+The actual merged tree equals final documentation head `86db66e`'s tree
+`a73ff1b6f4136dbcab12cd2ea0f6c10db1e88f59`. The checklist records 5A.1–5A.7
+as `merged`. GitHub Codex review completed for code head `660d04d` with a
+thumbs-up and no inline findings; this is not a separate review of the final
+documentation-only commit or a formal human approval.
 Copilot's quota-blocked review did not execute and is not counted as approval.
-PR5B–PR8 and G1 remain planned; V1 remains the default.
+PR5B progress is recorded in [resume and retry](protocol-v2-resume.md);
+PR6–PR8 and G1 remain planned, and V1 remains the default.

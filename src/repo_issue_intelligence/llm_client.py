@@ -187,6 +187,8 @@ class LLMProviderError(RuntimeError):
 
 class OpenAICompatibleIssueAnalyzer:
     backend = "api"
+    # The synchronous adapter has no local child/background execution after post unwinds.
+    local_execution_scope_v2 = "synchronous-http-v1"
 
     def __init__(
         self,

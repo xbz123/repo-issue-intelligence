@@ -15,6 +15,18 @@ def validate_private_export_output(output: Path, databases: Sequence[Path] = ())
         resolved = output.resolve()
         for database in databases:
             protected = [database, *(database.with_name(database.name + s) for s in suffixes)]
+            guard_prefix = database.name + ".attempt-"
+            if (
+                resolved.parent == database.parent.resolve()
+                and resolved.name.startswith(guard_prefix)
+                and resolved.name.endswith(".lock")
+            ):
+                raise ValueError("V2 output must not replace the database or its sidecars")
+            protected.extend(
+                path
+                for path in database.parent.iterdir()
+                if path.name.startswith(guard_prefix) and path.name.endswith(".lock")
+            )
             for path in protected:
                 if resolved == path.resolve() or (
                     output.exists() and path.exists() and output.samefile(path)
