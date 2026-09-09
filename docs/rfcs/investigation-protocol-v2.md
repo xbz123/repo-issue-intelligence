@@ -17,10 +17,11 @@ T0 验证记录见 [protocol-v2-acceptance.md](../protocol-v2-acceptance.md)。T
 于 2026-09-06 合并为 `0d8f4bdfc448b01b715eea4d983914088f8ae9c6`；PR1A 已于
 2026-09-06 随 `d386dc8` 合并，PR1B 已随 `d83f051` 合并。PR1B 的本地实现、门禁和独立
 有界复核记录同见验收文档；PR2A 已合并，PR2B、PR3 已随 PR64（`927e42f`）、
-PR65（`31930db`）合并。PR66/67/68 已合并至 `7cbf600`。
+PR65（`31930db`）合并。PR66/67/68 已合并，PR69（PR5A）已合并为 `226b9f5`。
 PR4/G0 当前进度单独记录在 [CLI beta 验收](../protocol-v2-execution.md)；
-本分支推进 [PR5A 执行权与并发保护](../protocol-v2-execution-claims.md)，
-后续 PR5B–PR8、G1 尚未完成，V2 仍未默认启用。
+PR5A 的证据见 [执行权与并发保护](../protocol-v2-execution-claims.md)。本分支推进
+[PR5B 恢复与显式重试](../protocol-v2-resume.md)；后续 PR6–PR8、G1 尚未完成，
+V2 仍未默认启用。
 
 ## 1. 范围与发布边界
 

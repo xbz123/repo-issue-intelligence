@@ -491,6 +491,10 @@ def agent_run_command(
     max_llm_attempts: Annotated[
         int, typer.Option("--max-llm-attempts", min=1, help="V2 per-Issue attempt budget.")
     ] = 2,
+    parent_run_id: Annotated[
+        str | None,
+        typer.Option("--parent-run-id", help="Create a new V2 run linked to an existing run."),
+    ] = None,
     top_k: Annotated[
         int,
         typer.Option("--top-k", min=1, help="Number of ranked issues to investigate."),
@@ -526,6 +530,8 @@ def agent_run_command(
     output: Path | None = None,
 ) -> None:
     """Run the synchronous LangGraph workflow up to human review."""
+    if parent_run_id is not None and protocol is not AgentProtocol.V2:
+        raise typer.BadParameter("--parent-run-id requires --protocol v2")
     if protocol is AgentProtocol.V2 and llm and not allow_external_llm:
         raise typer.BadParameter("V2 model analysis requires --allow-external-llm")
     v2_store = _v2_store(database) if protocol is AgentProtocol.V2 else None
@@ -563,6 +569,7 @@ def agent_run_command(
                 max_evidence_lines=settings.llm_max_lines_per_evidence,
                 max_attempts=max_llm_attempts,
                 run_id=run_id,
+                parent_run_id=parent_run_id,
                 parameter_origins=_v2_parameter_origins(ctx, settings, analyzer),
             )
             run = v2_store.get_run_summary(run_id)
@@ -630,6 +637,162 @@ def agent_show_command(
     if run is None:
         raise typer.BadParameter(f"Run {run_id} was not found")
     console.print_json(run.model_dump_json())
+
+
+def _recover_v2_command(
+    run_id,
+    protocol,
+    database,
+    allow_external_llm,
+    analyzer_options,
+    *,
+    issue_number=None,
+    recover_unknown=False,
+    output=None,
+):
+    if protocol is not AgentProtocol.V2:
+        raise typer.BadParameter("Recovery commands require explicit --protocol v2")
+    store = _v2_store(database)
+    run = store.get_run(run_id)
+    if run is None:
+        raise typer.BadParameter("Run was not found")
+    if run.configuration.llm_enabled and not allow_external_llm:
+        raise typer.BadParameter("V2 model recovery requires --allow-external-llm")
+    if output is not None:
+        try:
+            validate_private_export_output(output, (store.path,))
+        except ValueError as error:
+            raise typer.BadParameter(str(error), param_hint="--output") from None
+    from .agent_resume import resume_agent_run, retry_issue_llm
+    from .issue_execution import capture_execution_configuration
+
+    analyzer = None
+    try:
+        settings = Settings()
+        if run.configuration.llm_enabled:
+            analyzer = _build_issue_analyzer(settings, **analyzer_options)
+        current = capture_execution_configuration(
+            analyzer,
+            top_k=run.configuration.protocol.top_k,
+            max_evidence_chars=settings.llm_max_evidence_chars,
+            max_evidence_lines=settings.llm_max_lines_per_evidence,
+            max_attempts=run.configuration.budgets.retry_policy["max_attempts"],
+            parameter_origins=run.configuration.parameter_origins,
+        )
+        options = {
+            "llm_analyzer": analyzer,
+            "allow_external_llm": allow_external_llm,
+            "current_configuration": current,
+        }
+        if issue_number is None:
+            resume_agent_run(run_id, store, **options)
+        else:
+            if recover_unknown:
+                typer.echo(
+                    "Explicit unknown recovery may duplicate remote calls and cost.",
+                    err=True,
+                )
+            retry_issue_llm(
+                run_id,
+                issue_number,
+                store,
+                recover_unknown=recover_unknown,
+                **options,
+            )
+        summary = store.get_run_summary(run_id)
+        if output is not None:
+            write_private_json(output, summary.model_dump_json(indent=2), (store.path,))
+    except (StoreError, RepositoryContextError, RepositoryViewError, ValueError):
+        typer.echo(
+            "V2 recovery refused; check frozen configuration, current permission and local "
+            "execution guards. Retained state remains readable with agent-show.",
+            err=True,
+        )
+        raise typer.Exit(2) from None
+    except Exception:
+        typer.echo("V2 recovery failed; retained state remains readable with agent-show.", err=True)
+        raise typer.Exit(2) from None
+    finally:
+        if analyzer is not None:
+            analyzer.close()
+    console.print(f"Run {run_id} is {summary.status}")
+
+
+@app.command("agent-resume")
+def agent_resume_command(
+    run_id: str,
+    protocol: Annotated[AgentProtocol, typer.Option("--protocol")] = AgentProtocol.V1,
+    database: Annotated[Path | None, typer.Option("--database")] = None,
+    allow_external_llm: Annotated[bool, typer.Option("--allow-external-llm")] = False,
+    llm_backend: Annotated[LLMBackend | None, typer.Option("--llm-backend")] = None,
+    llm_model: Annotated[str | None, typer.Option("--llm-model")] = None,
+    llm_base_url: Annotated[str | None, typer.Option("--llm-base-url")] = None,
+    llm_provider: Annotated[str | None, typer.Option("--llm-provider")] = None,
+    llm_fast: Annotated[bool, typer.Option("--llm-fast")] = False,
+    temperature: Annotated[float | None, typer.Option(min=0, max=2)] = None,
+    seed: Annotated[int | None, typer.Option()] = None,
+    output: Path | None = None,
+) -> None:
+    """Continue committed V2 stages; never automatically resend an existing attempt."""
+    _recover_v2_command(
+        run_id,
+        protocol,
+        database,
+        allow_external_llm,
+        {
+            "backend": llm_backend,
+            "model": llm_model,
+            "base_url": llm_base_url,
+            "provider": llm_provider,
+            "fast": llm_fast,
+            "temperature": temperature,
+            "seed": seed,
+        },
+        output=output,
+    )
+
+
+@app.command("agent-retry-llm")
+def agent_retry_llm_command(
+    run_id: str,
+    issue: Annotated[int, typer.Option("--issue", min=1)],
+    protocol: Annotated[AgentProtocol, typer.Option("--protocol")] = AgentProtocol.V1,
+    database: Annotated[Path | None, typer.Option("--database")] = None,
+    allow_external_llm: Annotated[bool, typer.Option("--allow-external-llm")] = False,
+    recover_unknown: Annotated[
+        bool,
+        typer.Option(
+            "--recover-unknown", help="May repeat remote calls; requires local stop proof."
+        ),
+    ] = False,
+    llm_backend: Annotated[LLMBackend | None, typer.Option("--llm-backend")] = None,
+    llm_model: Annotated[str | None, typer.Option("--llm-model")] = None,
+    llm_base_url: Annotated[str | None, typer.Option("--llm-base-url")] = None,
+    llm_provider: Annotated[str | None, typer.Option("--llm-provider")] = None,
+    llm_fast: Annotated[bool, typer.Option("--llm-fast")] = False,
+    temperature: Annotated[float | None, typer.Option(min=0, max=2)] = None,
+    seed: Annotated[int | None, typer.Option()] = None,
+    output: Path | None = None,
+) -> None:
+    """Explicitly retry one failed, unreviewed Issue using only its sealed input."""
+    _recover_v2_command(
+        run_id,
+        protocol,
+        database,
+        allow_external_llm,
+        {
+            "backend": llm_backend,
+            "model": llm_model,
+            "base_url": llm_base_url,
+            "provider": llm_provider,
+            "fast": llm_fast,
+            "temperature": temperature,
+            "seed": seed,
+        },
+        issue_number=issue,
+        recover_unknown=recover_unknown,
+        output=output,
+    )
 
 
 @app.command("agent-review")

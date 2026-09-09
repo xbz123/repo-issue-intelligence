@@ -12,7 +12,7 @@ from contextlib import closing, contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 try:
     import fcntl
@@ -93,6 +93,7 @@ class AgentStoreV2:
         self.path = Path(path).absolute()
         self._identity: tuple[int, int] | None = None
         self._schema_version: int | None = None
+        self._stopped_execution_guards: set[str] = set()
         with self._connect() as connection:
             if inspect_agent_database(connection).kind != DatabaseKind.KNOWN_V2:
                 raise StoreError("Store requires an explicitly initialized V2 database")
@@ -137,14 +138,47 @@ class AgentStoreV2:
     @contextmanager
     def writer_lock(self):
         """Refuse a second foreground V2 executor without locking SQLite readers."""
+        with self._process_lock(".writer.lock", os.O_CREAT):
+            yield
+
+    @contextmanager
+    def execution_lock(self, attempt_id: str, *, create: bool = False):
+        """Retained local-lifetime guard; missing/unsafe guards never prove a stopped call."""
+        try:
+            identifier = str(UUID(attempt_id))
+        except (ValueError, TypeError, AttributeError):
+            raise StoreConflict("Attempt has no verifiable local execution guard") from None
+        with self._process_lock(
+            f".attempt-{identifier}.lock",
+            os.O_CREAT | os.O_EXCL if create else 0,
+        ) as descriptor:
+            marker = b"synchronous-http-v1\n"
+            if create:
+                os.write(descriptor, marker)
+                os.fsync(descriptor)
+            elif os.read(descriptor, len(marker) + 1) != marker:
+                raise StoreConflict("Attempt has no supported local execution guard")
+            if not create:
+                self._stopped_execution_guards.add(attempt_id)
+            try:
+                yield
+            finally:
+                if not create:
+                    self._stopped_execution_guards.discard(attempt_id)
+
+    @contextmanager
+    def _process_lock(self, suffix: str, creation_flags: int):
         identity = self._check_path()
         # A flock on the database itself also blocks SQLite writes on macOS.
-        lock_path = self.path.with_name(self.path.name + ".writer.lock")
-        descriptor = os.open(
-            lock_path,
-            os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW,
-            0o600,
-        )
+        lock_path = self.path.with_name(self.path.name + suffix)
+        try:
+            descriptor = os.open(
+                lock_path,
+                os.O_RDWR | creation_flags | os.O_CLOEXEC | os.O_NOFOLLOW,
+                0o600,
+            )
+        except OSError:
+            raise StoreConflict("Local execution lock is unavailable or unsafe") from None
         try:
             info = os.fstat(descriptor)
             if (
@@ -165,7 +199,7 @@ class AgentStoreV2:
                 info.st_ino,
             ):
                 raise StoreError("Store target changed during writer lock acquisition")
-            yield
+            yield descriptor
         finally:
             # Keep the sidecar: unlinking it could allow two separately locked inodes.
             os.close(descriptor)
@@ -452,11 +486,15 @@ class AgentStoreV2:
         run_id: str,
         issue_number: int,
         state: str,
+        *,
+        resume: bool = False,
     ) -> IssueExecutionV2:
         """Record only started/failed; success always requires the frozen report."""
         if state not in {"running", "failed"}:
             raise StoreError("deterministic success must be saved with its report")
         allowed = ("pending",) if state == "running" else ("pending", "running")
+        if resume and state == "running":
+            allowed = ("pending", "running", "failed")
         with self._connect() as connection:
             changed = connection.execute(
                 "UPDATE agent_v2_issues SET deterministic_state=? "
@@ -631,8 +669,10 @@ class AgentStoreV2:
         requested_configuration: AttemptRequest,
         *,
         attempt_id: str | None = None,
+        retry: bool = False,
+        recover_unknown: bool = False,
     ) -> AttemptV2:
-        """Claim a sealed Issue in a running run; unknown history is never replayed here."""
+        """Claim a sealed Issue; unknown retries need explicit held local-stop guards."""
         request = AttemptRequest.model_validate(
             requested_configuration.model_dump(exclude_unset=True)
         )
@@ -704,12 +744,33 @@ class AgentStoreV2:
                     "attempt requires current nonempty evidence and no selected success"
                 )
             if (
-                connection.execute(
-                    "SELECT 1 FROM agent_v2_llm_attempts "
-                    "WHERE run_id=? AND issue_number=? AND state='unknown' LIMIT 1",
+                issue["review_version"]
+                or connection.execute(
+                    "SELECT 1 FROM agent_v2_reviews WHERE run_id=? AND issue_number=? LIMIT 1",
                     (run_id, issue_number),
                 ).fetchone()
-                is not None
+            ):
+                raise StoreConflict("reviewed Issue requires a new run")
+            if retry:
+                latest = connection.execute(
+                    "SELECT state FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
+                    "ORDER BY ordinal DESC LIMIT 1",
+                    (run_id, issue_number),
+                ).fetchone()
+                if latest is None or latest["state"] not in (
+                    {"failure", "unknown"} if recover_unknown else {"failure"}
+                ):
+                    raise StoreConflict("retry requires an explicitly failed attempt")
+            unknown_ids = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT attempt_id FROM agent_v2_llm_attempts "
+                    "WHERE run_id=? AND issue_number=? AND state='unknown'",
+                    (run_id, issue_number),
+                )
+            }
+            if unknown_ids and (
+                not recover_unknown or not unknown_ids <= self._stopped_execution_guards
             ):
                 raise StoreConflict("unknown attempt requires explicit recovery; new start refused")
             ordinal = connection.execute(
