@@ -389,6 +389,70 @@ class AgentStoreV2:
             )
         )
 
+    def list_issues_page(
+        self, run_id: str, *, limit: int, offset: int
+    ) -> tuple[IssueExecutionV2, ...]:
+        if not 1 <= limit <= 100 or offset < 0:
+            raise StoreError("Page requires limit 1–100 and nonnegative offset")
+        run = self.get_run(run_id)
+        if run is None:
+            return ()
+        numbers = run.selection.selected_issue_numbers[offset : offset + limit]
+        values = []
+        with self._connect() as connection:
+            connection.execute("BEGIN")
+            for number in numbers:
+                row = connection.execute(
+                    "SELECT run_id,issue_number,deterministic_state,evidence_set_id,"
+                    "selected_analysis_attempt_id,review_version "
+                    "FROM agent_v2_issues WHERE run_id=? AND issue_number=?",
+                    (run_id, number),
+                ).fetchone()
+                if row is None:
+                    raise StoreError("Stored run is missing a selected Issue")
+                latest = connection.execute(
+                    "SELECT state FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
+                    "ORDER BY ordinal DESC LIMIT 1",
+                    (run_id, number),
+                ).fetchone()
+                attempt_count = connection.execute(
+                    "SELECT count(*) FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=?",
+                    (run_id, number),
+                ).fetchone()[0]
+                item_count = (
+                    connection.execute(
+                        "SELECT count(*) FROM agent_v2_evidence_items WHERE evidence_set_id=?",
+                        (row["evidence_set_id"],),
+                    ).fetchone()[0]
+                    if row["evidence_set_id"]
+                    else None
+                )
+                llm_state = "pending" if run.configuration.llm_enabled else "disabled"
+                if run.configuration.llm_enabled and item_count == 0:
+                    llm_state = "skipped_no_evidence"
+                if latest:
+                    llm_state = {
+                        "in_progress": "in_progress",
+                        "success": "succeeded",
+                        "failure": "failed",
+                        "unknown": "interrupted_unknown",
+                    }[latest["state"]]
+                values.append(
+                    IssueExecutionV2(
+                        run_id=run_id,
+                        issue_number=number,
+                        deterministic_state=row["deterministic_state"],
+                        deterministic_report=None,
+                        evidence_set_id=row["evidence_set_id"],
+                        selected_analysis_attempt_id=row["selected_analysis_attempt_id"],
+                        review_version=row["review_version"],
+                        llm_state=llm_state,
+                        attempt_count=attempt_count,
+                        analysis=None,
+                    )
+                )
+        return tuple(values)
+
     def get_run_summary(self, run_id: str) -> RunSummaryV2 | None:
         """Derive the CLI view from committed stages, attempts and review records."""
         summaries = []
@@ -661,6 +725,73 @@ class AgentStoreV2:
         }
         return tuple(lookup), MappingProxyType(lookup)
 
+    def read_evidence_page(
+        self, run_id: str, issue_number: int, *, limit: int, offset: int
+    ) -> tuple[dict[str, object], tuple[dict[str, object], ...]] | None:
+        if not 1 <= limit <= 100 or offset < 0:
+            raise StoreError("Page requires limit 1–100 and nonnegative offset")
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT evidence.evidence_set_id,evidence.sealed_at "
+                "FROM agent_v2_evidence_sets AS evidence "
+                "JOIN agent_v2_issues AS issue ON issue.evidence_set_id=evidence.evidence_set_id "
+                "WHERE issue.run_id=? AND issue.issue_number=? AND evidence.sealed=1",
+                (run_id, issue_number),
+            ).fetchone()
+            if row is None:
+                return None
+            total = connection.execute(
+                "SELECT count(*) FROM agent_v2_evidence_items WHERE evidence_set_id=?",
+                (row["evidence_set_id"],),
+            ).fetchone()[0]
+            items = connection.execute(
+                "SELECT evidence_id,ordinal,candidate_rank,selection_kind,file,symbol,"
+                "requested_range,actual_range,truncation_reason,char_count,collector_protocol "
+                "FROM agent_v2_evidence_items WHERE evidence_set_id=? "
+                "ORDER BY ordinal LIMIT ? OFFSET ?",
+                (row["evidence_set_id"], limit, offset),
+            ).fetchall()
+        return (
+            {
+                "evidence_set_id": row["evidence_set_id"],
+                "sealed_at": row["sealed_at"],
+                "total": total,
+            },
+            tuple(
+                {
+                    **dict(item),
+                    "requested_range": json.loads(item["requested_range"]),
+                    "actual_range": json.loads(item["actual_range"]),
+                }
+                for item in items
+            ),
+        )
+
+    def read_evidence_item(
+        self, run_id: str, issue_number: int, evidence_id: str, evidence_set_id: str
+    ) -> EvidenceItemV2 | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM agent_v2_evidence_sets AS evidence "
+                "JOIN agent_v2_issues AS issue ON issue.evidence_set_id=evidence.evidence_set_id "
+                "WHERE issue.run_id=? AND issue.issue_number=? AND evidence.sealed=1 "
+                "AND evidence.evidence_set_id=?",
+                (run_id, issue_number, evidence_set_id),
+            ).fetchone()
+            if row is None:
+                return None
+            item = connection.execute(
+                "SELECT * FROM agent_v2_evidence_items WHERE evidence_set_id=? AND evidence_id=?",
+                (evidence_set_id, evidence_id),
+            ).fetchone()
+        if item is None:
+            return None
+        fields = dict(item)
+        del fields["evidence_set_id"]
+        fields["requested_range"] = json.loads(fields["requested_range"])
+        fields["actual_range"] = json.loads(fields["actual_range"])
+        return EvidenceItemV2.model_validate(fields)
+
     def start_attempt(
         self,
         run_id: str,
@@ -837,6 +968,23 @@ class AgentStoreV2:
                 (run_id, issue_number),
             ).fetchall()
         return tuple(self._attempt(row) for row in rows)
+
+    def list_attempts_page(
+        self, run_id: str, issue_number: int, *, limit: int, offset: int
+    ) -> tuple[tuple[AttemptV2, ...], int]:
+        if not 1 <= limit <= 100 or offset < 0:
+            raise StoreError("Page requires limit 1–100 and nonnegative offset")
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
+                "ORDER BY ordinal LIMIT ? OFFSET ?",
+                (run_id, issue_number, limit, offset),
+            ).fetchall()
+            total = connection.execute(
+                "SELECT count(*) FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=?",
+                (run_id, issue_number),
+            ).fetchone()[0]
+        return tuple(self._attempt(row) for row in rows), total
 
     def finalize_attempt(
         self,

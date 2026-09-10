@@ -119,6 +119,6 @@ V2 evaluation CLI outputs must also remain outside its private retention tree.
 These guards do not change V1 export behavior and do not repair previously
 overwritten databases or retroactively secure historical exports.
 
-HTTP evidence access, authorization, recovery/retry and review services remain in
-their later R5 work packages. Local Store availability grants no provider-transfer
+PR7A provides authenticated HTTP evidence reads and explicit CLI source export;
+HTTP recovery/retry and per-Issue review writes remain PR7B work. Local Store availability grants no provider-transfer
 permission and does not change the G0/G1 release gates.

@@ -13,6 +13,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from . import agent_queries
 from .agent_database import create_v2_database, inspect_database, migrate_legacy_database
 from .agent_evaluation import run_agent_analysis_evaluation, save_agent_analysis_run
 from .agent_store import AgentStore
@@ -116,6 +117,14 @@ class LLMBackend(StrEnum):
 class AgentProtocol(StrEnum):
     V1 = "v1"
     V2 = "v2"
+
+
+class QueryView(StrEnum):
+    SUMMARY = "summary"
+    ISSUES = "issues"
+    ISSUE = "issue"
+    EVIDENCE = "evidence"
+    ATTEMPTS = "attempts"
 
 
 def _v2_store(database: Path | None) -> AgentStoreV2:
@@ -639,6 +648,54 @@ def agent_show_command(
     if run is None:
         raise typer.BadParameter(f"Run {run_id} was not found")
     console.print_json(run.model_dump_json())
+
+
+@app.command("agent-query")
+def agent_query_command(
+    run_id: str,
+    database: Annotated[Path, typer.Option("--database")],
+    view: Annotated[QueryView, typer.Option("--view")] = QueryView.SUMMARY,
+    issue: Annotated[int | None, typer.Option("--issue", min=1)] = None,
+    evidence_id: Annotated[str | None, typer.Option("--evidence-id")] = None,
+    evidence_set_id: Annotated[str | None, typer.Option("--evidence-set-id")] = None,
+    include_content: Annotated[bool, typer.Option("--include-content")] = False,
+    limit: Annotated[int, typer.Option(min=1, max=100)] = 50,
+    offset: Annotated[int, typer.Option(min=0)] = 0,
+    output: Annotated[Path | None, typer.Option("--output")] = None,
+) -> None:
+    """Read an explicit V2 database; source content requires an explicit single-item option."""
+    if view in {QueryView.ISSUE, QueryView.EVIDENCE, QueryView.ATTEMPTS} and issue is None:
+        raise typer.BadParameter("This view requires --issue")
+    if issue is not None and view in {QueryView.SUMMARY, QueryView.ISSUES}:
+        raise typer.BadParameter("--issue requires an Issue/evidence/attempts view")
+    if (evidence_id or evidence_set_id or include_content) and view is not QueryView.EVIDENCE:
+        raise typer.BadParameter("Evidence options require --view evidence")
+    if (include_content or evidence_set_id) and evidence_id is None:
+        raise typer.BadParameter("Source/set selection requires --evidence-id")
+    store = _v2_store(database)
+    try:
+        if view is QueryView.SUMMARY:
+            result = agent_queries.run_summary(store, run_id)
+        elif view is QueryView.ISSUES:
+            result = agent_queries.issue_page(store, run_id, limit=limit, offset=offset)
+        elif view is QueryView.ISSUE:
+            result = agent_queries.issue_detail(store, run_id, issue)
+        elif view is QueryView.ATTEMPTS:
+            result = agent_queries.attempt_page(store, run_id, issue, limit=limit, offset=offset)
+        elif evidence_id is None:
+            result = agent_queries.evidence_page(store, run_id, issue, limit=limit, offset=offset)
+        else:
+            result = agent_queries.evidence_item(
+                store, run_id, issue, evidence_id, evidence_set_id=evidence_set_id,
+                include_content=include_content,
+            )
+        payload = json.dumps(result, ensure_ascii=False)
+        if output is not None:
+            write_private_json(output, payload, (store.path,))
+        else:
+            console.print_json(payload)
+    except (StoreError, OSError, ValueError):
+        raise typer.BadParameter("V2 query or private output refused") from None
 
 
 def _recover_v2_command(

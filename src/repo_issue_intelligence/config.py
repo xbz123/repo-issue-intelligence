@@ -16,6 +16,7 @@ class APITransferGrant(BaseModel):
 
 
 class Settings(BaseSettings):
+    api_v2_database: Path | None = Field(default=None, validation_alias="RII_API_V2_DATABASE")
     api_external_grants: tuple[APITransferGrant, ...] = Field(
         default=(),
         validation_alias="RII_API_EXTERNAL_GRANTS",
