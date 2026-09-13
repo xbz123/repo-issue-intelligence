@@ -122,6 +122,38 @@ def test_v2_api_requires_auth_and_existing_explicit_database(monkeypatch, tmp_pa
     assert not missing.exists()
 
 
+def test_v2_issue_review_is_authenticated_idempotent_and_versioned(monkeypatch, tmp_path):
+    root, store, run = setup_run(monkeypatch, tmp_path)
+    issue = store.get_issue(run.run_id, 1)
+    assert issue is not None
+    url = f"/v2/agent/runs/{run.run_id}/issues/1/reviews"
+    payload = {
+        "decision": "approved",
+        "notes": "verified",
+        "corrections": [{"file": "service.py", "symbol": "refresh_token"}],
+        "evidence_set_id": issue.evidence_set_id,
+        "selected_attempt_id": issue.selected_analysis_attempt_id,
+        "expected_review_version": 0,
+        "idempotency_key": "api-review-1",
+    }
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        first = client.post(url, json=payload)
+        assert first.status_code == 200, first.text
+        assert first.json()["review_version"] == 1
+        assert client.post(url, json=payload).json() == first.json()
+        stale = client.post(
+            url,
+            json={
+                **payload,
+                "idempotency_key": "api-review-2",
+                "expected_review_version": 0,
+            },
+        )
+        assert stale.status_code == 409
+        forged = client.post(url, json={**payload, "principal_id": "forged"})
+        assert forged.status_code == 422
+
+
 def test_v2_query_routes_publish_sparse_openapi_schema(monkeypatch, tmp_path):
     setup_run(monkeypatch, tmp_path)
     with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
@@ -130,3 +162,113 @@ def test_v2_query_routes_publish_sparse_openapi_schema(monkeypatch, tmp_path):
     route = schema["paths"]["/v2/agent/runs/{run_id}"]["get"]
     schema_ref = route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
     assert schema_ref.endswith("/QueryResponseModel")
+
+
+def test_review_replay_after_sealing_still_requires_current_authorization(monkeypatch, tmp_path):
+    _, store, run = setup_run(monkeypatch, tmp_path)
+    url = f"/v2/agent/runs/{run.run_id}/issues/2/reviews"
+    payload = {
+        "decision": "approved",
+        "corrections": [{"file": "service.py"}],
+        "expected_review_version": 0,
+        "idempotency_key": "review-before-sealing",
+    }
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        first = client.post(url, json=payload)
+        assert first.status_code == 200
+        store.seal_evidence_set(
+            run.run_id,
+            2,
+            [],
+            EvidenceCollectionContext(
+                snapshot_commit=run.snapshot.commit_oid, collector_protocol="test"
+            ),
+        )
+        replay = client.post(url, json=payload)
+        assert replay.status_code == 200, replay.text
+        assert replay.json() == first.json()
+        changed = client.post(url, json={**payload, "notes": "different payload"})
+        assert changed.status_code == 409
+        monkeypatch.setenv("RII_API_TOKEN", "x" * 40)
+        assert client.post(url, json=payload).status_code == 401
+        monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+        monkeypatch.setenv("RII_API_OPERATIONS", '["read"]')
+        assert client.post(url, json=payload).status_code == 403
+        monkeypatch.setenv("RII_API_OPERATIONS", '["read", "review"]')
+        monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", "[]")
+        assert client.post(url, json=payload).status_code == 403
+    assert store.get_issue(run.run_id, 2).review_version == 1
+
+
+def test_review_entrypoints_preserve_legacy_source_and_readonly_migrated_copy(
+    monkeypatch, tmp_path
+):
+    from typer.testing import CliRunner
+
+    from repo_issue_intelligence.agent_database import migrate_legacy_database
+    from repo_issue_intelligence.agent_store import AgentStore
+    from repo_issue_intelligence.agent_workflow import run_agent
+    from repo_issue_intelligence.cli import app as cli_app
+
+    monkeypatch.chdir(tmp_path)
+    root = repository(tmp_path / "repo")
+    source = tmp_path / "legacy.sqlite3"
+    run = run_agent(issues(1), root, 1, AgentStore(source))
+    source.chmod(0o600)
+    target = tmp_path / "private" / "copy.sqlite3"
+    migrate_legacy_database(source, target)
+    target_before = target.read_bytes()
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(root)]))
+    monkeypatch.setenv("RII_API_V2_DATABASE", str(target))
+    monkeypatch.setenv("AGENT_DB_PATH", str(source))
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        assert (
+            client.post(
+                f"/v1/agent/runs/{run.run_id}/review", json={"decision": "approved"}
+            ).status_code
+            == 200
+        )
+        response = client.post(
+            f"/v2/agent/runs/{run.run_id}/issues/1/reviews",
+            json={
+                "decision": "approved",
+                "idempotency_key": "legacy",
+                "expected_review_version": 0,
+            },
+        )
+        assert response.status_code == 404
+        monkeypatch.setenv("AGENT_DB_PATH", str(target))
+        assert (
+            client.post(
+                f"/v1/agent/runs/{run.run_id}/review", json={"decision": "rejected"}
+            ).status_code
+            == 503
+        )
+        assert (
+            client.post(
+                f"/v2/agent/runs/{run.run_id}/review", json={"decision": "approved"}
+            ).status_code
+            == 404
+        )
+    runner = CliRunner()
+    for command, options in (
+        ("agent-review", ["--decision", "rejected"]),
+        (
+            "agent-review-v2",
+            [
+                "--issue",
+                "1",
+                "--decision",
+                "rejected",
+                "--expected-review-version",
+                "0",
+                "--idempotency-key",
+                "legacy-cli",
+            ],
+        ),
+    ):
+        refused = runner.invoke(cli_app, [command, run.run_id, "--database", str(target), *options])
+        assert refused.exit_code != 0
+    assert target.read_bytes() == target_before
+    assert AgentStore(source).get_run(run.run_id).status.value == "approved"
