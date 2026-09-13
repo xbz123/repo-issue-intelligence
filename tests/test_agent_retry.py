@@ -26,6 +26,122 @@ from repo_issue_intelligence.protocol_v2_models import EngineRuntime, Repository
 from repo_issue_intelligence.run_configuration import RunConfigurationError
 
 
+def _retry_with_local_transport(database, runtime, go, dispatched, release, results):
+    from repo_issue_intelligence.agent_resume import retry_issue_llm
+
+    run_configuration.capture_engine_runtime = lambda *a, **kw: EngineRuntime.model_validate(
+        runtime
+    )
+    calls = []
+
+    def handler(request):
+        calls.append(True)
+        dispatched.set()
+        assert release.wait(timeout=20)
+        return httpx.Response(400, json={"error": "synthetic failure"})
+
+    assert go.wait(timeout=20)
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        try:
+            retry_issue_llm(
+                "run",
+                1,
+                AgentStoreV2(database),
+                llm_analyzer=OpenAICompatibleIssueAnalyzer("test-key", client=client),
+                allow_external_llm=True,
+            )
+        except StoreConflict:
+            results.put(("conflict", len(calls)))
+        else:
+            results.put(("retried", len(calls)))
+
+
+@pytest.mark.parametrize("first", ["review", "retry"])
+def test_http_review_competes_with_existing_retry_service_without_external_calls(
+    tmp_path, monkeypatch, clean_runtime, first
+):
+    from fastapi.testclient import TestClient
+    from test_api_security import AUTH, TOKEN
+
+    from repo_issue_intelligence.api import app
+
+    monkeypatch.chdir(tmp_path)
+    root = repository(tmp_path / "repo")
+    store = new_store(tmp_path / "private")
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(400, json={"error": "fake"}))
+    ) as client:
+        run = run_agent_v2(
+            issues(1),
+            root,
+            1,
+            store,
+            llm_analyzer=OpenAICompatibleIssueAnalyzer("test-key", client=client),
+            allow_external_llm=True,
+            run_id="run",
+            as_of=NOW,
+        )
+    original = store.list_attempts("run", 1)
+    issue = store.get_issue("run", 1)
+    monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+    monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", json.dumps([str(root)]))
+    monkeypatch.setenv("RII_API_V2_DATABASE", str(store.path))
+    context = multiprocessing.get_context("spawn")
+    go, dispatched, release, results = (
+        context.Event(),
+        context.Event(),
+        context.Event(),
+        context.Queue(),
+    )
+    process = context.Process(
+        target=_retry_with_local_transport,
+        args=(
+            str(store.path),
+            run.configuration.engine.model_dump(),
+            go,
+            dispatched,
+            release,
+            results,
+        ),
+    )
+    process.start()
+    try:
+        if first == "retry":
+            go.set()
+            assert dispatched.wait(timeout=20)
+        with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+            response = client.post(
+                "/v2/agent/runs/run/issues/1/reviews",
+                json={
+                    "decision": "approved",
+                    "idempotency_key": "review-versus-retry",
+                    "expected_review_version": 0,
+                    "evidence_set_id": issue.evidence_set_id,
+                },
+            )
+        assert response.status_code == (200 if first == "review" else 409), response.text
+        go.set()
+        release.set()
+        assert results.get(timeout=20) == (("conflict", 0) if first == "review" else ("retried", 1))
+    finally:
+        go.set()
+        release.set()
+        process.join(timeout=20)
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=5)
+        results.close()
+        results.join_thread()
+    assert process.exitcode == 0
+    attempts = store.list_attempts("run", 1)
+    assert attempts[:1] == original
+    assert len(attempts) == (1 if first == "review" else 2)
+    current = store.get_issue("run", 1)
+    assert current.review_version == (1 if first == "review" else 0)
+    assert current.deterministic_report == issue.deterministic_report
+    assert current.evidence_set_id == issue.evidence_set_id
+
+
 @pytest.mark.parametrize("capture_mode", list(RepositoryCaptureMode))
 def test_retry_uses_only_frozen_issue_evidence_and_request_after_checkout_is_removed(
     tmp_path, clean_runtime, capture_mode
