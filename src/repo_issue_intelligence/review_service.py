@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .agent_store_v2 import AgentStoreV2, StoreConflict, StoreError
+from .agent_store_v2 import AgentStoreV2, StoreError
 
 
 class Correction(BaseModel):
@@ -32,35 +31,6 @@ class ReviewSubmission(BaseModel):
     selected_attempt_id: str | None = None
 
 
-def _safe_relative_path(value: str) -> str:
-    path = PurePosixPath(value)
-    if path.is_absolute() or "\\" in value or ".." in path.parts:
-        raise StoreConflict("correction target is unsafe")
-    return value
-
-
-def _validate_corrections(
-    store: AgentStoreV2, run_id: str, issue_number: int, request: ReviewSubmission
-):
-    evidence = store.read_evidence(run_id, issue_number)
-    run = store.get_run(run_id)
-    if run is None:
-        raise StoreConflict("review target is unavailable")
-    known_files = (
-        {item.file for item in evidence.items}
-        if evidence is not None
-        else {item.path for item in run.snapshot.manifest}
-    )
-    for correction in request.corrections:
-        _safe_relative_path(correction.file)
-        if correction.file not in known_files and not correction.proposed_new_location:
-            raise StoreConflict("correction target is outside the analyzed scope")
-        if correction.symbol is not None and (
-            "\n" in correction.symbol or "\r" in correction.symbol
-        ):
-            raise StoreConflict("correction symbol is unsafe")
-
-
 def submit_issue_review(
     store: AgentStoreV2,
     *,
@@ -78,7 +48,6 @@ def submit_issue_review(
         raise StoreError("review identity is required")
     if expected_review_version < 0:
         raise StoreError("review version must be nonnegative")
-    _validate_corrections(store, run_id, issue_number, request)
     payload = {
         "decision": request.decision,
         "notes": request.notes,

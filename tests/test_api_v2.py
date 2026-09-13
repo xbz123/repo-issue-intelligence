@@ -162,3 +162,39 @@ def test_v2_query_routes_publish_sparse_openapi_schema(monkeypatch, tmp_path):
     route = schema["paths"]["/v2/agent/runs/{run_id}"]["get"]
     schema_ref = route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
     assert schema_ref.endswith("/QueryResponseModel")
+
+
+def test_review_replay_after_sealing_still_requires_current_authorization(monkeypatch, tmp_path):
+    _, store, run = setup_run(monkeypatch, tmp_path)
+    url = f"/v2/agent/runs/{run.run_id}/issues/2/reviews"
+    payload = {
+        "decision": "approved",
+        "corrections": [{"file": "service.py"}],
+        "expected_review_version": 0,
+        "idempotency_key": "review-before-sealing",
+    }
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        first = client.post(url, json=payload)
+        assert first.status_code == 200
+        store.seal_evidence_set(
+            run.run_id,
+            2,
+            [],
+            EvidenceCollectionContext(
+                snapshot_commit=run.snapshot.commit_oid, collector_protocol="test"
+            ),
+        )
+        replay = client.post(url, json=payload)
+        assert replay.status_code == 200, replay.text
+        assert replay.json() == first.json()
+        changed = client.post(url, json={**payload, "notes": "different payload"})
+        assert changed.status_code == 409
+        monkeypatch.setenv("RII_API_TOKEN", "x" * 40)
+        assert client.post(url, json=payload).status_code == 401
+        monkeypatch.setenv("RII_API_TOKEN", TOKEN)
+        monkeypatch.setenv("RII_API_OPERATIONS", '["read"]')
+        assert client.post(url, json=payload).status_code == 403
+        monkeypatch.setenv("RII_API_OPERATIONS", '["read", "review"]')
+        monkeypatch.setenv("RII_API_ANALYSIS_ROOTS", "[]")
+        assert client.post(url, json=payload).status_code == 403
+    assert store.get_issue(run.run_id, 2).review_version == 1

@@ -10,7 +10,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from contextlib import closing, contextmanager
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from uuid import UUID, uuid4
 
@@ -370,6 +370,11 @@ class AgentStoreV2:
             if active is not None:
                 raise StoreConflict("review target has an active attempt")
 
+            # Only new requests validate mutable correction scope. Use this writer
+            # transaction so evidence cannot be sealed between validation and INSERT.
+            self._validate_review_corrections(
+                connection, run_id, evidence_set_id, payload["corrections"]
+            )
             review_id = str(uuid4())
             response = {
                 "protocol": "v2",
@@ -405,6 +410,39 @@ class AgentStoreV2:
                 ),
             )
         return response
+
+    @staticmethod
+    def _validate_review_corrections(
+        connection: sqlite3.Connection,
+        run_id: str,
+        evidence_set_id: str | None,
+        corrections: list[dict],
+    ) -> None:
+        if not corrections:
+            return
+        if evidence_set_id is not None:
+            known_files = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT DISTINCT file FROM agent_v2_evidence_items WHERE evidence_set_id=?",
+                    (evidence_set_id,),
+                )
+            }
+        else:
+            row = connection.execute(
+                "SELECT snapshot_json FROM agent_v2_runs WHERE run_id=?", (run_id,)
+            ).fetchone()
+            snapshot = RepositorySnapshot.model_validate_json(row["snapshot_json"])
+            known_files = {item.path for item in snapshot.manifest}
+        for correction in corrections:
+            file, symbol = correction["file"], correction["symbol"]
+            path = PurePosixPath(file)
+            if path.is_absolute() or "\\" in file or ".." in path.parts:
+                raise StoreConflict("correction target is unsafe")
+            if file not in known_files and not correction["proposed_new_location"]:
+                raise StoreConflict("correction target is outside the analyzed scope")
+            if symbol is not None and ("\n" in symbol or "\r" in symbol):
+                raise StoreConflict("correction symbol is unsafe")
 
     def _issue(
         self,
