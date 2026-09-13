@@ -6,6 +6,8 @@ import argparse
 import json
 import math
 import os
+import re
+import stat
 import tempfile
 from collections import Counter
 from pathlib import Path, PurePosixPath
@@ -24,6 +26,21 @@ PROVENANCE = {
     "requested_provider",
     "reported_model",
     "reported_provider",
+}
+PROVENANCE_TYPES = {
+    "manifest_version": (int,),
+    "index_version": (int,),
+    "retrieval_protocol": (str, dict),
+    "requested_model": (str,),
+    "requested_provider": (str,),
+    "reported_model": (str,),
+    "reported_provider": (str,),
+    "requested_reasoning_effort": (str,),
+    "requested_service_tier": (str,),
+    "requested_parameters": (dict,),
+    "source_commit": (str,),
+    "evaluation_protocol": (str,),
+    "metric_protocol": (str,),
 }
 DISPLAY = {
     "file_localization": ("cases", "file_recall_at_20", "mrr"),
@@ -96,8 +113,15 @@ def _pointer(value, pointer: str | None):
         raise ValueError("Facts require explicit JSON pointers")
     try:
         for token in pointer[1:].split("/"):
+            if re.search(r"~(?![01])", token):
+                raise ValueError("Invalid JSON Pointer escape")
             token = token.replace("~1", "/").replace("~0", "~")
-            value = value[int(token)] if isinstance(value, list) else value[token]
+            if isinstance(value, list):
+                if re.fullmatch(r"0|[1-9][0-9]*", token) is None:
+                    raise ValueError("Invalid JSON Pointer array index")
+                value = value[int(token)]
+            else:
+                value = value[token]
     except (KeyError, IndexError, TypeError, ValueError) as error:
         raise ValueError(f"Unavailable source fact: {pointer}") from error
     return value
@@ -116,6 +140,25 @@ def entry_metrics(root: Path, entry: Entry) -> dict:
     ):
         raise ValueError("Metrics must reference finite source numbers")
     return values
+
+
+def _validate_provenance(facts: dict) -> None:
+    if not PROVENANCE <= facts.keys():
+        raise ValueError("Provenance must distinguish requested, reported and unknown facts")
+    for name, value in facts.items():
+        expected = PROVENANCE_TYPES.get(name)
+        if expected is None:
+            raise ValueError(f"Unsupported provenance field: {name}")
+        if value is None and name != "manifest_version":
+            continue
+        if type(value) not in expected:
+            raise ValueError(f"Invalid provenance value type: {name}")
+        if isinstance(value, str) and not value.strip():
+            raise ValueError(f"Empty provenance identifier: {name}")
+        if type(value) is int and value < 1:
+            raise ValueError(f"Invalid provenance version: {name}")
+        if name == "retrieval_protocol" and value == {}:
+            raise ValueError("Empty retrieval protocol")
 
 
 def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
@@ -139,17 +182,13 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
         if entry.artifact == CATALOG_PATH or entry.details == CATALOG_PATH:
             raise ValueError("The catalog is not a result artifact")
         facts = entry_facts(root, entry)
-        if not PROVENANCE <= facts.keys():
-            raise ValueError("Provenance must distinguish requested, reported and unknown facts")
+        _validate_provenance(facts)
         for name in ("reported_model", "reported_provider"):
             pointer = entry.provenance[name]
             if pointer is not None and not any("reported" in part for part in pointer.split("/")):
                 raise ValueError("Requested configuration is not a reported observation")
         if facts["manifest_version"] != catalog.datasets[entry.dataset].version:
             raise ValueError("Result and dataset manifest versions differ")
-        index = facts["index_version"]
-        if index is not None and (type(index) is not int or index < 1):
-            raise ValueError("Index version must be a positive source integer or unknown")
         metrics = entry_metrics(root, entry)
         if not set(DISPLAY[entry.evaluation_type]) <= metrics.keys():
             raise ValueError("Missing summary metric references")
@@ -258,6 +297,10 @@ def publish_catalog(root: Path, payload: dict) -> None:
     """Validate already-published artifacts, then atomically replace only the catalog."""
     catalog = validate_catalog(root, payload)
     destination = _path(root, CATALOG_PATH)
+    try:
+        mode = stat.S_IMODE(destination.stat().st_mode)
+    except FileNotFoundError:
+        mode = 0o644
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -270,6 +313,7 @@ def publish_catalog(root: Path, payload: dict) -> None:
             temporary = Path(stream.name)
             stream.write(catalog.model_dump_json(indent=2) + "\n")
             stream.flush()
+            os.fchmod(stream.fileno(), mode)
             os.fsync(stream.fileno())
         os.replace(temporary, destination)
     finally:

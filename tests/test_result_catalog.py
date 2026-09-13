@@ -1,6 +1,8 @@
 import copy
 import json
+import os
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -148,7 +150,10 @@ def _copy_inputs(destination):
     return payload, {path: (destination / path).read_bytes() for path in paths}
 
 
-def test_publication_is_atomic_and_does_not_overwrite_historical_results(tmp_path, monkeypatch):
+@pytest.mark.parametrize("failure_operation", ["replace", "fchmod"])
+def test_publication_is_atomic_and_does_not_overwrite_historical_results(
+    tmp_path, monkeypatch, failure_operation
+):
     payload, original = _copy_inputs(tmp_path)
     payload["entries"]["pool-v037-summary"]["notes"] += " Updated catalog annotation."
 
@@ -156,7 +161,7 @@ def test_publication_is_atomic_and_does_not_overwrite_historical_results(tmp_pat
         raise OSError("synthetic publication interruption")
 
     with monkeypatch.context() as fault:
-        fault.setattr(result_catalog.os, "replace", interrupted)
+        fault.setattr(result_catalog.os, failure_operation, interrupted)
         with pytest.raises(OSError):
             publish_catalog(tmp_path, payload)
     assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
@@ -184,3 +189,104 @@ def test_incomplete_or_symlinked_source_prevents_catalog_publication(tmp_path):
     with pytest.raises(ValueError, match="symlink"):
         publish_catalog(tmp_path, payload)
     assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.parametrize("mode", [0o644, 0o640, 0o600, None])
+def test_publication_preserves_permission_bits(tmp_path, mode):
+    payload, _ = _copy_inputs(tmp_path)
+    destination = tmp_path / CATALOG_PATH
+    if mode is None:
+        destination.unlink()  # This test's copied catalog, to test first publication.
+    else:
+        destination.chmod(mode)
+    publish_catalog(tmp_path, payload)
+    assert stat.S_IMODE(destination.stat().st_mode) == (0o644 if mode is None else mode)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("retrieval_protocol", 20),
+        ("retrieval_protocol", []),
+        ("requested_model", 200),
+        ("requested_provider", {"name": "not-a-provider-string"}),
+        ("reported_model", 200),
+        ("reported_provider", {"name": "not-a-provider-string"}),
+        ("requested_model", ""),
+    ],
+)
+def test_publication_rejects_provenance_value_types(tmp_path, field, value):
+    payload, original = _copy_inputs(tmp_path)
+    entry = payload["entries"][payload["current"]["hybrid_rerank"]]
+    artifact = tmp_path / entry["artifact"]
+    source = json.loads(artifact.read_text())
+    source["provenance_probe"] = {"reported": value}
+    artifact.write_text(json.dumps(source))
+    entry["provenance"][field] = "/provenance_probe/reported"
+    with pytest.raises(ValueError):
+        publish_catalog(tmp_path, payload)
+    assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+
+
+@pytest.mark.parametrize("index", ["-1", "01", "+1", " 1", "\u0661"])
+def test_metric_pointer_rejects_non_rfc_array_indices(index):
+    catalog = load_catalog(ROOT)
+    entry = catalog.entries[catalog.current["agent_analysis"]].model_copy(
+        update={"metrics": {"attempts": f"/agent_analysis/runs/{index}/attempts"}}
+    )
+    with pytest.raises(ValueError):
+        entry_metrics(ROOT, entry)
+
+
+def test_metric_pointers_keep_valid_arrays_numeric_keys_and_escapes(tmp_path):
+    payload, _ = _copy_inputs(tmp_path)
+    catalog = validate_catalog(tmp_path, payload)
+    entry = catalog.entries[catalog.current["agent_analysis"]]
+    artifact = tmp_path / entry.artifact
+    source = json.loads(artifact.read_text())
+    source["pointer_probe"] = {"01": 7, "-1": 11, "a/b": 13, "a~b": 17, "bad~2key": 19}
+    artifact.write_text(json.dumps(source))
+    valid = entry.model_copy(
+        update={
+            "metrics": {
+                "first": "/agent_analysis/runs/0/attempts",
+                "second": "/agent_analysis/runs/1/attempts",
+                "numeric": "/pointer_probe/01",
+                "negative_key": "/pointer_probe/-1",
+                "slash": "/pointer_probe/a~1b",
+                "tilde": "/pointer_probe/a~0b",
+            }
+        }
+    )
+    assert entry_metrics(tmp_path, valid) == {
+        "first": 51,
+        "second": 50,
+        "numeric": 7,
+        "negative_key": 11,
+        "slash": 13,
+        "tilde": 17,
+    }
+    with pytest.raises(ValueError):
+        entry_metrics(
+            tmp_path, entry.model_copy(update={"metrics": {"bad": "/pointer_probe/bad~2key"}})
+        )
+
+
+def test_reported_provenance_accepts_observed_strings_and_explicit_unknown(tmp_path):
+    payload, _ = _copy_inputs(tmp_path)
+    raw_entry = payload["entries"][payload["current"]["hybrid_rerank"]]
+    artifact = tmp_path / raw_entry["artifact"]
+    source = json.loads(artifact.read_text())
+    source["reported"] = {"model": "observed-model", "provider": None}
+    artifact.write_text(json.dumps(source))
+    raw_entry["provenance"].update(
+        {
+            "reported_model": "/reported/model",
+            "reported_provider": "/reported/provider",
+        }
+    )
+    catalog = validate_catalog(tmp_path, payload)
+    facts = entry_facts(tmp_path, catalog.entries[catalog.current["hybrid_rerank"]])
+    assert facts["reported_model"] == "observed-model"
+    assert facts["reported_provider"] is None

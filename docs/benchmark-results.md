@@ -39,7 +39,13 @@ Provenance includes manifest/index/retrieval information and separates requested
 provider/model from reported observations. A `null` reference means unknown or
 not applicable, not a successful observation. New reported-model/provider
 references must select an explicitly reported field, not the requested `model`
-field. The catalog is not a V2 Run adapter and imports no V2 Store or provider.
+field. Resolved provenance values are checked too: versions are positive integers,
+model/provider and other identifiers are nonempty strings, and a retrieval protocol
+is a nonempty identifier or structured object. Unknown optional facts remain `null`.
+Array JSON Pointer tokens must be `0` or an ASCII nonzero digit followed by digits;
+negative indices, leading zeros, signs and whitespace are refused. Numeric object
+keys remain literal keys, and only `~0`/`~1` pointer escapes are accepted.
+The catalog is not a V2 Run adapter and imports no V2 Store or provider.
 `summary-only` describes what is retained with that selected entry; it makes no
 claim about untracked files elsewhere. A `full` entry points to its own details.
 
@@ -64,6 +70,11 @@ For a separately authorized future evaluation:
    uv run ruff check .
    git diff --check
    ```
+
+Publication preserves existing POSIX permission bits, including a deliberately private
+`0600` catalog; an initial catalog uses `0644`. This does not claim to preserve
+ownership or ACLs across an inode replacement. Failure to apply permissions aborts
+before replacement and leaves the old catalog intact.
 
 Commit the catalog, new result and documentation together. A staging failure
 leaves the old catalog readable; a successful atomic replacement refers only to
