@@ -1,9 +1,82 @@
 # Real-Project File Localization Benchmark
 
+The source-backed [current result catalog](../benchmarks/results/current-results.json) separates
+metrics by evaluation type, dataset, index/retrieval configuration and retained artifact.
+Manifest v20 is **regression/development**, not an independent holdout. Its historical
+main/calibration/generalization tier names and 17/11/172 counts are unchanged; a new
+independent holdout remains future F1 work. "Current" selects retained evidence, not a new
+run of today's code. Requested model settings are not provider-reported observations.
+
+<!-- current-results:start -->
+
+| Evaluation | Source | Dataset role | Completeness | Source metrics |
+|---|---|---|---|---|
+| file_localization | [deterministic-v037-summary](../benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json) | regression/development | summary-only | cases=200; file_recall_at_20=0.8732; mrr=0.5471 |
+| symbol_localization | [symbol-v036-summary](../benchmarks/results/deterministic-symbol-metrics-index-v25-manifest-v20-summary.json) | regression/development | summary-only | targets=160; recall_at_3=0.5426; mrr=0.5739 |
+| candidate_pool | [pool-v037-summary](../benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json) | regression/development | summary-only | matched=247; targets=267; misses=20 |
+| hybrid_rerank | [luna-fast-v034-summary](../benchmarks/results/gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json) | regression/development | summary-only | cases=200; valid=200; file_recall_at_20=0.9023 |
+| agent_analysis | [bounded-agent-v8-summary](../benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json) | historical-regression | summary-only | case_runs=150; valid=150; failures=0 |
+| hypothesis_grounding | [hypothesis-grounding-v1-summary](../benchmarks/results/hypothesis-quality-v1-deepseek-run1-summary.json) | regression/development | summary-only | cases=24; hits=18; hit_rate=0.75 |
+
+<!-- current-results:end -->
+
+All current entries above are summary-only: full raw/detail artifacts are not supplied by
+these catalog entries. Symbol recall/MRR is file-conditioned and case-macro, not target-micro;
+the hypothesis row measures file grounding, not causal correctness. The Fast rerank used its own
+earlier 246-target pool and must not be combined with the later 247-target pool summary. See
+[publication and provenance rules](#catalog-updates).
+
+## Catalog updates
+
+`current-results.json` schema version 1 has three explicit maps: `datasets`,
+`entries` and one `current` pointer per evaluation type. Dataset records name an
+existing frozen manifest, its version/case count, its present role and unchanged
+historical tier counts. Entries name an existing JSON artifact, JSON pointers for
+metrics and provenance, a completeness level, a detail path (or `null`), and any
+same-dataset/type results they supersede. Superseded artifacts are never deleted.
+
+Provenance includes manifest/index/retrieval information and separates requested
+provider/model from reported observations. A `null` reference means unknown or
+not applicable, not a successful observation. New reported-model/provider
+references must select an explicitly reported field, not the requested `model`
+field. The catalog is not a V2 Run adapter and imports no V2 Store or provider.
+`summary-only` describes what is retained with that selected entry; it makes no
+claim about untracked files elsewhere. A `full` entry points to its own details.
+
+For a separately authorized future evaluation:
+
+1. Write its result to a new, unused file; keep every historical artifact intact.
+2. Prepare a candidate catalog with explicit source pointers and provenance.
+   Do not re-label an existing result as a newly executed run or reuse its detail
+   file for a different summary.
+3. Validate all referenced files, fields, counts, dataset roles and supersession
+   links, then atomically replace only the catalog:
+
+   ```sh
+   uv run python -m repo_issue_intelligence.result_catalog --publish candidate-catalog.json
+   ```
+
+4. Use the printed source-backed table to update the controlled blocks in this
+   document and README (links here need a `../` prefix), then run:
+
+   ```sh
+   uv run pytest tests/test_result_catalog.py -q
+   uv run ruff check .
+   git diff --check
+   ```
+
+Commit the catalog, new result and documentation together. A staging failure
+leaves the old catalog readable; a successful atomic replacement refers only to
+already-validated complete JSON files. This is not a transaction across mutable
+external files or a physical-power-loss guarantee. No evaluation, upload,
+provider call, historical rewrite or default-protocol switch is performed by
+the catalog command. PR7B HTTP retry remains outstanding before G1.
+
 ## Current result: manifest v20 on 200 frozen cases
 
-Manifest v20 contains 200 reviewed Issue/Fix-PR cases across 58 public repositories: 17 main,
-11 calibration, and 172 generalization cases. It records 267 production-file targets and 177 reviewed
+Manifest v20 contains 200 regression/development Issue/Fix-PR cases across 58 public repositories.
+Historical tier labels/counts are main=17, calibration=11 and generalization=172, not independent
+holdout groups. It records 267 production-file targets and 177 reviewed
 symbol targets across 143 cases. Every case embeds the complete Issue snapshot, merged same-repository
 fix PR, parent of the first ordered PR commit, and reviewed ground truth. Evaluation indexes only
 Git-tracked files at the frozen pre-fix commit.
@@ -57,7 +130,7 @@ The v0.35 retrieval-only follow-up keeps the deterministic Top-20 path unchanged
 bounded Top-40 signal families: normalized long CLI options with compound source-identifier
 matching, low-frequency Rust filename stems, and root Python `setup.py` dependency metadata under
 release or deprecation context. One 200-case deterministic replay completed 200/200 with all
-aggregate file and symbol metrics exactly matching index v25. The accepted full pool audit retrieves
+aggregate file and symbol metrics exactly matching index v25. The historical v0.35 full pool audit retrieves
 246/267 production
 targets and leaves 21 misses, recovering nine prior misses without adding a new miss. An initial
 broader audit was rejected after high-cardinality dotted identifiers and cross-language filename
@@ -100,8 +173,8 @@ Across the 143 labeled cases, current Symbol Recall@1/5/10/20 is
 production targets are absent from deterministic Top-20. The five retained-suite misses are
 `paramiko/common.py`, `boto3/compat.py`, `src/tox/tox_env/python/runner.py`,
 `pylint/config/callback_actions.py`, and `tornado/locks.py`; index v25 recovers the earlier
-Matplotlib `cbook/__init__.py` miss. The complete current Top-40 miss taxonomy is recorded in the
-index-v25 audit and remains the concrete retrieval backlog.
+Matplotlib `cbook/__init__.py` miss. The index-v25 full audit retains the historical 21-miss
+taxonomy. The current 20-miss summary is separate; no complete current per-target audit is committed.
 
 Those historical `symbol_recall_at_*` values use the candidate file rank for both the primary
 symbol and up to two directly supported alternates. They are retained as legacy file-cutoff metrics
@@ -455,10 +528,13 @@ cache hits and 189 misses. A prior index-v24 run was rejected after exposing a J
 regression; separating same-class receiver calls from the legacy direct-caller vote restored the
 target in a four-case check before this final full run. No third run was required.
 
-The current v0.37/index-v25 audit reproduces 247/267 reviewed production targets inside the
-deterministic Top-40 pool and records all 20 misses: eight Python, six Rust, five TypeScript, and one
+The current v0.37/index-v25 retained summary reports 247/267 reviewed production targets inside the
+deterministic Top-40 pool and counts 20 misses: eight Python, six Rust, five TypeScript, and one
 C++ target. Two misses rank 41-60 in the diagnostic wide run, four rank 61-100, four rank 101-200,
 and ten rank beyond 200. The wide rank is diagnostic and does not alter production selection.
+This is summary-only evidence: its full per-target audit remains outside Git. The older
+`candidate-pool-miss-audit-index-v25.json` is retained unchanged with 21 misses and is
+explicitly superseded as the current pool result, not relabeled as a 20-miss full audit.
 
 ## Index-v25 Luna Fast hybrid result
 

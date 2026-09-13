@@ -181,14 +181,14 @@ uv run rii agent-evaluate benchmarks/cases.json \
   --case-id typer-option-envvar \
   --case-id textual-remove-children-reflow \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/agent-analysis-latest.json
+  --output benchmarks/results/agent-analysis-new-run-001.json
 
 uv run rii agent-evaluate benchmarks/cases.json \
   --case-id starlette-streaming-denial-response \
   --llm-backend codex-cli \
   --llm-model gpt-5.6-luna \
   --llm-fast \
-  --output benchmarks/results/agent-analysis-luna-latest.json
+  --output benchmarks/results/agent-analysis-luna-new-run-001.json
 ```
 
 This is separate from the rank-only localization benchmark. Each case runs through LangGraph,
@@ -233,12 +233,14 @@ stay reproducible across provider-default changes. The authorized 50-case diagno
 immediately preceding explicit-cap run under the older provider-generated-validation contract;
 omitting the field did not improve that contract's reliability.
 
-Run the frozen real-project benchmark:
+Run the frozen real-project benchmark. The `new-run-001`/`new-run-002` names below
+are placeholders: choose a never-used output for each new run. Only the explicit resume
+example reuses its unfinished run output; never resume into a retained catalog artifact.
 
 ```bash
 uv run rii benchmark benchmarks/cases.json \
   --variant deterministic \
-  --output benchmarks/results/deterministic-v0.27-final-200-cases-run1.json
+  --output benchmarks/results/deterministic-new-run.json
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
@@ -246,7 +248,7 @@ uv run rii benchmark benchmarks/cases.json \
   --llm-model gpt-5.6-luna \
   --llm-fast \
   --llm-delay-seconds 0 \
-  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-new-run-001.json
 ```
 
 Long runs can checkpoint each completed case to an ignored SQLite database. The command prints the
@@ -258,7 +260,7 @@ uv run rii benchmark benchmarks/cases.json \
   --llm-backend codex-cli \
   --llm-model gpt-5.6-luna \
   --state-db benchmarks/state/localization.sqlite3 \
-  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-new-run-002.json
 
 uv run rii benchmark benchmarks/cases.json \
   --variant hybrid \
@@ -267,7 +269,7 @@ uv run rii benchmark benchmarks/cases.json \
   --state-db benchmarks/state/localization.sqlite3 \
   --resume-run <run-id> \
   --retry-failed \
-  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-latest.json
+  --output benchmarks/results/hybrid-gpt-5.6-luna-pool40-new-run-002.json
 ```
 
 Resume requires the exact stored configuration, including selected Issue snapshots, frozen SHAs,
@@ -283,14 +285,16 @@ Audit reviewed production targets that remain outside the deterministic Top-40 c
 
 ```bash
 uv run rii benchmark-miss-audit benchmarks/cases.json \
-  --output benchmarks/results/candidate-pool-miss-audit-index-v25.json
+  --output benchmarks/results/candidate-pool-miss-audit-new-run.json
 ```
 
 The audit reuses the frozen Issue snapshots, pre-fix repositories, and repository-map cache. It
 records each missing target's language, repository, diagnostic wide rank, and available evidence;
 the wide rank is diagnostic and does not change production candidate selection.
-The current v0.37/index-v25 audit retrieves 247/267 reviewed production targets inside Top-40 and
-records the remaining 20 misses.
+The current v0.37/index-v25 retained summary reports 247/267 targets and 20 misses.
+Its full audit is not committed. The preserved index-v25 full audit file contains the older
+246/267 and 21-miss result; the catalog marks it superseded, not current detail.
+Use an unused output path for any separately authorized evaluation; never overwrite old artifacts.
 
 The Hybrid benchmark defaults to Codex CLI `gpt-5.6-luna`; `--llm-backend api` selects the configured
 OpenAI-compatible API instead. Install and authenticate Codex CLI before using the local backend.
@@ -502,8 +506,35 @@ records the documentation checks and implementation boundaries.
 
 ## Evaluation
 
-The current frozen benchmark contains 200 closed issues with linked fix PRs across 58 projects:
-17 main, 11 calibration, and 172 generalization cases. It records 267 reviewed production-file
+The source-backed [current result catalog](benchmarks/results/current-results.json) separates
+metrics by evaluation type, dataset, index/retrieval configuration and retained artifact.
+Manifest v20 is **regression/development**, not an independent holdout. Its historical
+main/calibration/generalization tier names and 17/11/172 counts are unchanged; a new
+independent holdout remains future F1 work. "Current" selects retained evidence, not a new
+run of today's code. Requested model settings are not provider-reported observations.
+
+<!-- current-results:start -->
+
+| Evaluation | Source | Dataset role | Completeness | Source metrics |
+|---|---|---|---|---|
+| file_localization | [deterministic-v037-summary](benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json) | regression/development | summary-only | cases=200; file_recall_at_20=0.8732; mrr=0.5471 |
+| symbol_localization | [symbol-v036-summary](benchmarks/results/deterministic-symbol-metrics-index-v25-manifest-v20-summary.json) | regression/development | summary-only | targets=160; recall_at_3=0.5426; mrr=0.5739 |
+| candidate_pool | [pool-v037-summary](benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json) | regression/development | summary-only | matched=247; targets=267; misses=20 |
+| hybrid_rerank | [luna-fast-v034-summary](benchmarks/results/gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json) | regression/development | summary-only | cases=200; valid=200; file_recall_at_20=0.9023 |
+| agent_analysis | [bounded-agent-v8-summary](benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json) | historical-regression | summary-only | case_runs=150; valid=150; failures=0 |
+| hypothesis_grounding | [hypothesis-grounding-v1-summary](benchmarks/results/hypothesis-quality-v1-deepseek-run1-summary.json) | regression/development | summary-only | cases=24; hits=18; hit_rate=0.75 |
+
+<!-- current-results:end -->
+
+All current entries above are summary-only: full raw/detail artifacts are not supplied by
+these catalog entries. Symbol recall/MRR is file-conditioned and case-macro, not target-micro;
+the hypothesis row measures file grounding, not causal correctness. The Fast rerank used its own
+earlier 246-target pool and must not be combined with the later 247-target pool summary. See
+[publication and provenance rules](docs/benchmark-results.md#catalog-updates).
+
+The frozen regression/development benchmark contains 200 closed issues with linked fix PRs
+across 58 projects. Historical tier labels/counts are main=17, calibration=11 and
+generalization=172; these are not independent holdout groups. It records 267 reviewed production-file
 targets and 177 reviewed symbols across 143 cases. Each case uses a committed Issue snapshot and the
 parent of the first ordered fix-PR commit as its pre-fix SHA. Only Git-tracked files are eligible
 for candidate retrieval.
