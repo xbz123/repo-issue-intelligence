@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 
 from . import agent_queries
 from .agent_store import AgentStore
-from .agent_store_v2 import AgentStoreV2, StoreError
+from .agent_store_v2 import AgentStoreV2, StoreConflict, StoreError
 from .agent_workflow import run_agent
 from .api_security import (
     APIBoundary,
@@ -27,6 +27,7 @@ from .models import (
     ReviewDecision,
 )
 from .repository_index import build_repository_map
+from .review_service import Correction, ReviewSubmission, submit_issue_review
 from .run_configuration import normalize_endpoint
 from .scoring import score_issue
 from .service import rank_issues
@@ -72,6 +73,24 @@ class AgentReviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     decision: ReviewDecision
     notes: str | None = None
+
+
+class V2ReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approved", "rejected", "needs_information"]
+    notes: str | None = Field(default=None, max_length=512)
+    corrections: tuple[Correction, ...] = ()
+    evidence_set_id: str | None = None
+    selected_attempt_id: str | None = None
+    expected_review_version: int = Field(ge=0)
+    idempotency_key: str = Field(min_length=1, max_length=256)
+
+
+class V2RetryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recover_unknown: bool = False
 
 
 def get_agent_store() -> AgentStore:
@@ -188,6 +207,40 @@ def v2_attempts(
 ) -> QueryResponse:
     _authorize_v2(store, run_id, principal, "read")
     return agent_queries.attempt_page(store, run_id, issue_number, limit=limit, offset=offset)
+
+
+@app.post(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}/reviews",
+    response_model=agent_queries.QueryResponseModel,
+)
+def v2_review(
+    run_id: str,
+    issue_number: int,
+    request: V2ReviewRequest,
+    store: V2Store,
+    principal: Principal,
+) -> QueryResponse:
+    _authorize_v2(store, run_id, principal, "review")
+    try:
+        return submit_issue_review(
+            store,
+            run_id=run_id,
+            issue_number=issue_number,
+            principal_id=principal.name,
+            idempotency_key=request.idempotency_key,
+            expected_review_version=request.expected_review_version,
+            request=ReviewSubmission(
+                decision=request.decision,
+                notes=request.notes,
+                corrections=request.corrections,
+                evidence_set_id=request.evidence_set_id,
+                selected_attempt_id=request.selected_attempt_id,
+            ),
+        )
+    except StoreConflict as error:
+        raise HTTPException(409, "Review conflicts with current state") from error
+    except StoreError as error:
+        raise HTTPException(400, "Review request refused") from error
 
 
 @app.exception_handler(RequestValidationError)

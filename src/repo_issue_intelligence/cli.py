@@ -57,6 +57,7 @@ from .protocol_v2_models import RepositoryCaptureMode
 from .repository_context import RepositoryContextError
 from .repository_index import build_repository_map, save_repository_map
 from .repository_view import RepositoryViewError
+from .review_service import ReviewSubmission, submit_issue_review
 from .service import rank_issues
 
 app = typer.Typer(no_args_is_help=True)
@@ -877,6 +878,53 @@ def agent_review_command(
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     console.print(f"Run {run.run_id} is now {run.status}")
+
+
+@app.command("agent-review-v2")
+def agent_review_v2_command(
+    run_id: str,
+    issue: Annotated[int, typer.Option("--issue", min=1)],
+    decision: Annotated[
+        str,
+        typer.Option("--decision", help="approved, rejected, or needs_information"),
+    ],
+    expected_review_version: Annotated[int, typer.Option("--expected-review-version", min=0)],
+    idempotency_key: Annotated[str, typer.Option("--idempotency-key", min=1)],
+    database: Annotated[Path, typer.Option("--database")],
+    evidence_set_id: Annotated[str | None, typer.Option("--evidence-set-id")] = None,
+    selected_attempt_id: Annotated[str | None, typer.Option("--selected-attempt-id")] = None,
+    notes: Annotated[str | None, typer.Option("--notes")] = None,
+    corrections_json: Annotated[
+        str | None,
+        typer.Option("--corrections-json", help="JSON array of correction objects."),
+    ] = None,
+) -> None:
+    """Append one authenticated-local V2 Issue review with explicit idempotency."""
+    try:
+        corrections = json.loads(corrections_json) if corrections_json else []
+        if not isinstance(corrections, list):
+            raise ValueError
+        store = _v2_store(database)
+        result = submit_issue_review(
+            store,
+            run_id=run_id,
+            issue_number=issue,
+            principal_id=Settings().api_principal,
+            idempotency_key=idempotency_key,
+            expected_review_version=expected_review_version,
+            request=ReviewSubmission(
+                decision=decision,
+                notes=notes,
+                corrections=tuple(corrections),
+                evidence_set_id=evidence_set_id,
+                selected_attempt_id=selected_attempt_id,
+            ),
+        )
+    except (StoreError, OSError, ValueError, TypeError):
+        raise typer.BadParameter(
+            "V2 review refused; check target, version and private database"
+        ) from None
+    console.print_json(json.dumps(result))
 
 
 @app.command("agent-evaluate")

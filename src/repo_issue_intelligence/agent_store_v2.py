@@ -318,6 +318,94 @@ class AgentStoreV2:
             connection.execute("BEGIN")
             return self._issue(connection, run, issue_number)
 
+    def append_review(
+        self,
+        *,
+        run_id: str,
+        issue_number: int,
+        principal_id: str,
+        idempotency_key: str,
+        expected_review_version: int,
+        evidence_set_id: str | None,
+        selected_attempt_id: str | None,
+        decision: str,
+        payload: dict,
+    ) -> dict:
+        """Atomically append a bound review and advance its Issue version."""
+        payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                "SELECT payload_json,response_json FROM agent_v2_reviews "
+                "WHERE run_id=? AND issue_number=? AND principal_id=? "
+                "AND idempotency_key=? AND operation='review'",
+                (run_id, issue_number, principal_id, idempotency_key),
+            ).fetchone()
+            if existing is not None:
+                if existing["payload_json"] != payload_json:
+                    raise StoreConflict("IDEMPOTENCY_PAYLOAD_MISMATCH")
+                return json.loads(existing["response_json"])
+
+            issue = connection.execute(
+                "SELECT deterministic_state,deterministic_report_json,evidence_set_id,"
+                "selected_analysis_attempt_id,review_version "
+                "FROM agent_v2_issues WHERE run_id=? AND issue_number=?",
+                (run_id, issue_number),
+            ).fetchone()
+            if issue is None or issue["deterministic_state"] != "succeeded":
+                raise StoreConflict("review target is unavailable")
+            if issue["deterministic_report_json"] is None:
+                raise StoreConflict("review target has no deterministic report")
+            if issue["review_version"] != expected_review_version:
+                raise StoreConflict("review version is stale")
+            if issue["evidence_set_id"] != evidence_set_id:
+                raise StoreConflict("review evidence binding is stale")
+            if issue["selected_analysis_attempt_id"] != selected_attempt_id:
+                raise StoreConflict("review attempt binding is stale")
+            active = connection.execute(
+                "SELECT 1 FROM agent_v2_llm_attempts "
+                "WHERE run_id=? AND issue_number=? AND state='in_progress'",
+                (run_id, issue_number),
+            ).fetchone()
+            if active is not None:
+                raise StoreConflict("review target has an active attempt")
+
+            review_id = str(uuid4())
+            response = {
+                "protocol": "v2",
+                "review_id": review_id,
+                "run_id": run_id,
+                "issue_number": issue_number,
+                "principal_id": principal_id,
+                "idempotency_key": idempotency_key,
+                "operation": "review",
+                "decision": decision,
+                "review_version": expected_review_version + 1,
+            }
+            connection.execute(
+                "INSERT INTO agent_v2_reviews "
+                "(review_id,run_id,issue_number,evidence_set_id,selected_attempt_id,"
+                "principal_id,idempotency_key,operation,expected_review_version,decision,"
+                "payload_json,response_json,created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    review_id,
+                    run_id,
+                    issue_number,
+                    evidence_set_id,
+                    selected_attempt_id,
+                    principal_id,
+                    idempotency_key,
+                    "review",
+                    expected_review_version,
+                    decision,
+                    payload_json,
+                    json.dumps(response, sort_keys=True, separators=(",", ":")),
+                    _now(),
+                ),
+            )
+        return response
+
     def _issue(
         self,
         connection: sqlite3.Connection,

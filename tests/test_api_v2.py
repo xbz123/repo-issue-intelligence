@@ -122,6 +122,38 @@ def test_v2_api_requires_auth_and_existing_explicit_database(monkeypatch, tmp_pa
     assert not missing.exists()
 
 
+def test_v2_issue_review_is_authenticated_idempotent_and_versioned(monkeypatch, tmp_path):
+    root, store, run = setup_run(monkeypatch, tmp_path)
+    issue = store.get_issue(run.run_id, 1)
+    assert issue is not None
+    url = f"/v2/agent/runs/{run.run_id}/issues/1/reviews"
+    payload = {
+        "decision": "approved",
+        "notes": "verified",
+        "corrections": [{"file": "service.py", "symbol": "refresh_token"}],
+        "evidence_set_id": issue.evidence_set_id,
+        "selected_attempt_id": issue.selected_analysis_attempt_id,
+        "expected_review_version": 0,
+        "idempotency_key": "api-review-1",
+    }
+    with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
+        first = client.post(url, json=payload)
+        assert first.status_code == 200, first.text
+        assert first.json()["review_version"] == 1
+        assert client.post(url, json=payload).json() == first.json()
+        stale = client.post(
+            url,
+            json={
+                **payload,
+                "idempotency_key": "api-review-2",
+                "expected_review_version": 0,
+            },
+        )
+        assert stale.status_code == 409
+        forged = client.post(url, json={**payload, "principal_id": "forged"})
+        assert forged.status_code == 422
+
+
 def test_v2_query_routes_publish_sparse_openapi_schema(monkeypatch, tmp_path):
     setup_run(monkeypatch, tmp_path)
     with TestClient(app, base_url="http://127.0.0.1", headers=AUTH) as client:
