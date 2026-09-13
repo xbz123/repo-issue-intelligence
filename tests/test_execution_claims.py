@@ -17,6 +17,113 @@ from repo_issue_intelligence.protocol_v2_models import (
     LocalObservation,
     ReportedObservation,
 )
+from repo_issue_intelligence.review_service import ReviewSubmission, submit_issue_review
+
+
+def _review_or_start(database, operation, retry, ready, go, done, results):
+    store = AgentStoreV2(database)
+    evidence = store.read_evidence("run", 1)
+    ready.wait(timeout=20)
+    assert go.wait(timeout=20)
+    try:
+        if operation == "review":
+            submit_issue_review(
+                store,
+                run_id="run",
+                issue_number=1,
+                principal_id="test-reviewer",
+                idempotency_key="one-review",
+                expected_review_version=0,
+                request=ReviewSubmission(
+                    decision="approved", evidence_set_id=evidence.evidence_set_id
+                ),
+            )
+        else:
+            store.start_attempt(
+                "run",
+                1,
+                evidence.evidence_set_id,
+                AttemptRequest(model="requested-A", temperature=0.2, seed=7),
+                retry=retry,
+            )
+    except StoreConflict:
+        results.put((operation, "conflict"))
+    else:
+        results.put((operation, "committed"))
+    finally:
+        done.set()
+
+
+@pytest.mark.parametrize("retry", [False, True])
+@pytest.mark.parametrize("first", ["review", "start", "race"])
+def test_review_and_start_or_retry_share_atomic_eligibility(tmp_path, retry, first):
+    store = new_store(tmp_path / "private")
+    create_run(store)
+    report = save_report(store)
+    evidence = seal(store)
+    if retry:
+        attempt = store.start_attempt(
+            "run",
+            1,
+            evidence.evidence_set_id,
+            AttemptRequest(model="requested-A", temperature=0.2, seed=7),
+        )
+        store.finalize_attempt(
+            attempt.attempt_id,
+            AttemptTerminalFields(
+                state="failure", error=AttemptError(category="provider", detail="Synthetic failure")
+            ),
+        )
+    original_attempts = store.list_attempts("run", 1)
+    context = multiprocessing.get_context("spawn")
+    ready, results = context.Barrier(3), context.Queue()
+    go = {name: context.Event() for name in ("review", "start")}
+    done = {name: context.Event() for name in go}
+    processes = [
+        context.Process(
+            target=_review_or_start,
+            args=(str(store.path), name, retry, ready, go[name], done[name], results),
+        )
+        for name in go
+    ]
+    try:
+        for process in processes:
+            process.start()
+        ready.wait(timeout=20)
+        if first == "race":
+            for event in go.values():
+                event.set()
+        else:
+            go[first].set()
+            assert done[first].wait(timeout=20)
+            go["start" if first == "review" else "review"].set()
+        outcomes = dict(results.get(timeout=20) for _ in processes)
+        assert sorted(outcomes.values()) == ["committed", "conflict"]
+        if first != "race":
+            assert outcomes[first] == "committed"
+    finally:
+        for event in go.values():
+            event.set()
+        for process in processes:
+            process.join(timeout=20)
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5)
+        results.close()
+        results.join_thread()
+    assert [process.exitcode for process in processes] == [0, 0]
+    issue = store.get_issue("run", 1)
+    assert issue.deterministic_report["confirmed_facts"] == tuple(report.confirmed_facts)
+    assert store.read_evidence("run", 1) == evidence
+    attempts = store.list_attempts("run", 1)
+    assert attempts[: len(original_attempts)] == original_attempts
+    if outcomes["review"] == "committed":
+        assert issue.review_version == 1
+        assert attempts == original_attempts
+    else:
+        assert issue.review_version == 0
+        assert len(attempts) == len(original_attempts) + 1
+        assert attempts[-1].state == "in_progress"
 
 
 @pytest.mark.parametrize("status", ["FAILED", "INTERRUPTED", "AWAITING_REVIEW"])

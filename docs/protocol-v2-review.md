@@ -52,7 +52,40 @@ ruff check .
 git diff --check
 ```
 
-HTTP retry/recover-unknown dispatch, review/start and review/retry race
-acceptance, and final legacy-boundary acceptance remain separate PR7B work.
+## Local concurrency and legacy acceptance
+
+The follow-up adds nine acceptance cases without changing production code:
+
+- Six independent-process checks exercise `submit_issue_review` against
+  `start_attempt`, with and without retry eligibility. They force review-first,
+  start-first, and simultaneous schedules. Exactly one operation commits;
+  the other conflicts, and retained reports, evidence and earlier attempts stay
+  unchanged. The existing short Store transactions provide this protection.
+- Two checks run the existing PR5B `retry_issue_llm` service in a separate
+  process using `httpx.MockTransport`, while review is submitted through the
+  authenticated HTTP endpoint. Review-first prevents any mock dispatch;
+  retry-first rejects the review with HTTP 409 while the attempt is active.
+- One check migrates a synthetic test database, verifies V1 source review still
+  works, and verifies HTTP/CLI review entrypoints cannot write the migrated
+  legacy copy. The target database bytes remain unchanged and the V2 run-level
+  review route remains absent.
+
+These checks cover the local review/start/retry interaction and legacy write
+boundary of 7B.5/7B.8. They do **not** exercise an HTTP retry endpoint: the
+7B.7 retry/recover-unknown authorization-to-dispatch implementation and its
+permission-revocation tests remain pending. The PR must remain Draft until
+the remaining PR7B implementation and acceptance gates are met.
+
+The combined execution-claim, PR5B retry, V2 API, review-service and V1-default
+compatibility selection passed 83 tests (one existing Starlette warning).
+Ruff, formatting of the three changed test files and diff whitespace checks
+also passed. Reproduce the combined selection with:
+
+```sh
+pytest tests/test_execution_claims.py tests/test_agent_retry.py tests/test_api_v2.py \
+  tests/test_review_service.py \
+  tests/test_agent_cli_v2.py::test_v1_default_run_show_review_preserve_legacy_database -q
+```
+
 No real provider call, user-database migration, default V2 switch, or PR8 work
-is part of this repair.
+is part of these tests; all stores and transport responses are synthetic.
