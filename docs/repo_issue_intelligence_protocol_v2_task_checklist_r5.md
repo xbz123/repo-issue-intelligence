@@ -207,13 +207,13 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| 8.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-1) |
-| F1.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-f1-1) |
-| 8.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-2) |
-| 8.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-3) |
-| 8.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-4) |
-| 8.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-5) |
-| 8.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-6) |
+| 8.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-1) |
+| F1.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-f1-1) |
+| 8.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-2) |
+| 8.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-3) |
+| 8.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-4) |
+| 8.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-5) |
+| 8.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr8) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-8-6) |
 
 ## G1
 

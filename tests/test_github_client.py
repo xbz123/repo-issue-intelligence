@@ -4,8 +4,22 @@ from datetime import UTC, datetime
 
 import httpx
 import pytest
+from pydantic import SecretStr
 
 from repo_issue_intelligence.github_client import GitHubClient
+
+
+@pytest.mark.parametrize("token", [None, "", SecretStr("")], ids=["none", "string", "secret"])
+def test_empty_token_omits_authorization(token):
+    def handler(request):
+        assert "authorization" not in request.headers
+        return httpx.Response(200, json=[])
+
+    client = GitHubClient(token, transport=httpx.MockTransport(handler), trust_env=False)
+    try:
+        assert client.fetch_open_issues("example/project") == []
+    finally:
+        client.close()
 
 
 @pytest.mark.parametrize("operation", ["issues", "files", "search"])

@@ -4,6 +4,29 @@ from pydantic import ValidationError
 from repo_issue_intelligence.config import Settings
 
 
+def test_empty_github_token_environment_keeps_requests_unauthenticated(monkeypatch):
+    import httpx
+
+    from repo_issue_intelligence.github_client import GitHubClient
+
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    settings = Settings(_env_file=None)
+    assert settings.github_token is not None
+    assert settings.github_token.get_secret_value() == ""
+
+    def handler(request):
+        assert "authorization" not in request.headers
+        return httpx.Response(200, json=[])
+
+    client = GitHubClient(
+        settings.github_token, transport=httpx.MockTransport(handler), trust_env=False
+    )
+    try:
+        assert client.fetch_open_issues("example/project") == []
+    finally:
+        client.close()
+
+
 def test_github_token_is_redacted_but_authorization_uses_its_value():
     import httpx
 

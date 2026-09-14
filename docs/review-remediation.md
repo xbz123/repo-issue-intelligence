@@ -1,7 +1,8 @@
 # Review assessment and compatibility-safe remediation
 
 The reviewed checkout was `7cbf600` (PR68). This remediation is based on merged
-`f19ee60` (PR73); PR74's result catalog is a separate, still-open change. Findings
+`f19ee60` (PR73), subsequently integrated with PR74's merged result catalog at
+`76f0bae`. Findings
 about missing functionality must be evaluated against the version actually run.
 An old local checkout does not acquire newer safety features just because they
 exist on the remote main branch.
@@ -26,13 +27,13 @@ exist on the remote main branch.
 | L1 | Confirmed. Remove only actual leading ./ prefixes, preserve dot-prefixed names, and do not erase parent traversal. |
 | L2 | Confirmed short-token false positives (e.g. os/posix and re/requests). Import evidence now uses component terms; the report's os/django example itself is not a substring match. |
 | L3 | Confirmed heuristic limitation (fixes -> fixe), not a demonstrated correctness contract or ranking improvement. No ad-hoc English stemmer expansion is made without retrieval evidence. |
-| L4 | Not reproduced: the two cited call/import branches are reachable and return their 8/5 capped bonuses. No dead-code deletion is justified. |
+| L4 | Corrected after follow-up review: the later 2-point branch has no matching evidence producer in the current graph pipeline. Earlier verification exercised the different 8/5-point branches and did not refute this finding. A fabricated input can reach the 2-point branch, but current generated evidence cannot. No production behavior is changed here. |
 | L5 | Confirmed. Repository names . and .. are rejected before HTTP, using the shared repository validator. |
 | L6 | Confirmed. GitHub tokens are SecretStr values in settings; the HTTP client unwraps them only for the Authorization header. |
 | L7 | Confirmed legacy race/lifecycle gap. Review eligibility and update share one immediate transaction, and connections close at context exit. V1 review does not become append-only or versioned. |
 | L8 | Confirmed. NUL-delimited Git filename output stays binary until filesystem decoding; no stripping or newline conversion corrupts path names. |
 | L9 | Confirmed. Directory exclusion is exact/boundary-aware rather than treating docker/docgen/documentation_lib as documentation. Curator approval remains mandatory. |
-| L10 | Confirmed for Git checkout defaults. Native tracked/unignored enumeration avoids ignored clone/cache trees while preserving tracked ignored files, new unignored source, explicit included-file lists and ordinary non-Git directory walking. Existing HTTP authorization/resource limits are not relaxed. |
+| L10 | Confirmed for Git checkout defaults. Native tracked/unignored enumeration avoids ignored clone/cache trees while preserving tracked ignored files, new unignored source, explicit included-file lists and ordinary non-Git directory walking. Compatibility limitation: when a .git marker exists, missing Git, timeout or enumeration failure stops indexing; it does not silently fall back to an unbounded walk. Explicit included_files remain supported by the Python API. More actionable diagnostics or an explicit bounded fallback remain follow-up work; safe.directory protections and HTTP authorization/resource limits are not relaxed. |
 
 ## Validation and boundaries
 
@@ -56,3 +57,9 @@ Independent Spec review found no confirmed blocking regression within the select
 Its residual observations were the existing path-suffix ambiguity above and malformed
 empty-string reports inserted only by bypassing SQLite CHECK constraints; the new state/report
 presence guard is not a complete audit of arbitrarily corrupted database contents.
+
+The later empty-SecretStr review finding was not reproduced: Pydantic 2.13.4
+implements `SecretStr.__len__`, so an empty secret is false-valued. Mock-transport
+checks for `None`, empty strings, empty secrets and `GITHUB_TOKEN=` all omit
+Authorization with the unchanged client implementation. Positive-token coverage
+still verifies that a real value is used only in the request header.
