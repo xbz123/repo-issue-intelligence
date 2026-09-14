@@ -57,6 +57,15 @@ cannot be reclaimed. Migrated legacy history is not a V2 retry target.
 
 ## Validation
 
+Delivery status checked on 2026-09-15: [PR76](https://github.com/xbz123/repo-issue-intelligence/pull/76)
+is draft and unmerged, with implementation head `a0c331f`. Both Python 3.11 and
+3.12 passed Ruff and 1209 tests in [CI run 34893193982](https://github.com/xbz123/repo-issue-intelligence/actions/runs/34893193982).
+Both jobs checked out `0bc5401`, merging that head with main `4b1ab24`.
+These results belong to the implementation head, not automatically to later
+documentation commits. Independent scoped failure-path review found no blocker;
+no completed GitHub bot review is claimed. The policy-check/transport interval
+remains a non-atomic boundary, as documented above.
+
 The initial two route tests failed with 404 before implementation and passed
 afterwards. Tests use synthetic repositories/private databases and
 `httpx.MockTransport` only; no real model call or evidence transfer was made.
