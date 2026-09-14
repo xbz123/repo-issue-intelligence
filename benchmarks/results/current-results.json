@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "datasets": {
+    "manifest-v20": {
+      "manifest": "benchmarks/cases.json",
+      "version": 20,
+      "case_count": 200,
+      "role": "regression/development",
+      "historical_tiers": {
+        "main": 17,
+        "calibration": 11,
+        "generalization": 172
+      }
+    },
+    "manifest-v8": {
+      "manifest": "benchmarks/cases-v0.13-expanded-50-cases.json",
+      "version": 8,
+      "case_count": 50,
+      "role": "historical-regression",
+      "historical_tiers": {
+        "main": 17,
+        "calibration": 11,
+        "generalization": 22
+      }
+    }
+  },
+  "entries": {
+    "deterministic-v037-summary": {
+      "evaluation_type": "file_localization",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/manifest_version",
+        "index_version": "/repository_map_index_version",
+        "retrieval_protocol": "/protocol",
+        "requested_model": null,
+        "requested_provider": null,
+        "reported_model": null,
+        "reported_provider": null,
+        "source_commit": "/source_commit"
+      },
+      "metrics": {
+        "cases": "/deterministic_validation/cases",
+        "file_recall_at_20": "/deterministic_validation/file_recall_at_20",
+        "mrr": "/deterministic_validation/mean_reciprocal_rank"
+      },
+      "notes": "Latest retained deterministic regression summary; no new evaluation or full per-case run is published here."
+    },
+    "symbol-v036-summary": {
+      "evaluation_type": "symbol_localization",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/deterministic-symbol-metrics-index-v25-manifest-v20-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/manifest_version",
+        "index_version": "/repository_map_index_version",
+        "retrieval_protocol": null,
+        "requested_model": null,
+        "requested_provider": null,
+        "reported_model": null,
+        "reported_provider": null,
+        "metric_protocol": "/symbol_metric_protocol",
+        "source_commit": "/validated_implementation_commit"
+      },
+      "metrics": {
+        "targets": "/run/file_conditioned_within_file/targets",
+        "recall_at_3": "/run/file_conditioned_within_file/case_macro_recall_at_3",
+        "mrr": "/run/file_conditioned_within_file/mean_reciprocal_rank"
+      },
+      "symbol_targets_by_tier": {
+        "main": "/by_tier/main/targets",
+        "calibration": "/by_tier/calibration/targets",
+        "generalization": "/by_tier/generalization/targets"
+      },
+      "notes": "File-conditioned case-macro metrics, not global symbol ranking; the denominator is 160 file-visible reviewed targets across 133 cases."
+    },
+    "pool-v035-full": {
+      "evaluation_type": "candidate_pool",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/candidate-pool-miss-audit-index-v25.json",
+      "completeness": "full",
+      "details": "benchmarks/results/candidate-pool-miss-audit-index-v25.json",
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/manifest_version",
+        "index_version": "/repository_map_index_version",
+        "retrieval_protocol": null,
+        "requested_model": null,
+        "requested_provider": null,
+        "reported_model": null,
+        "reported_provider": null,
+        "evaluation_protocol": "/protocol"
+      },
+      "metrics": {
+        "matched": "/candidate_pool_matched_targets",
+        "targets": "/production_targets",
+        "misses": "/candidate_pool_missing_targets"
+      },
+      "notes": "Historical complete 21-miss audit. Superseded only as the current pool summary; its detailed records remain historical."
+    },
+    "pool-v037-summary": {
+      "evaluation_type": "candidate_pool",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/structured-issue-components-pool40-manifest-v20-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [
+        "pool-v035-full"
+      ],
+      "provenance": {
+        "manifest_version": "/manifest_version",
+        "index_version": "/repository_map_index_version",
+        "retrieval_protocol": "/protocol",
+        "requested_model": null,
+        "requested_provider": null,
+        "reported_model": null,
+        "reported_provider": null,
+        "source_commit": "/full_audit_source_commit"
+      },
+      "metrics": {
+        "matched": "/candidate_pool_audit/matched_targets",
+        "targets": "/candidate_pool_audit/production_targets",
+        "misses": "/candidate_pool_audit/missing_targets"
+      },
+      "notes": "Current 20-miss summary only. The raw full audit is not committed; do not present the older 21 records as current detail."
+    },
+    "luna-fast-v034-summary": {
+      "evaluation_type": "hybrid_rerank",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/gpt-5.6-luna-fast-pool40-index-v25-manifest-v20-run1-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/manifest_version",
+        "index_version": "/repository_map_index_version",
+        "retrieval_protocol": "/protocol",
+        "requested_model": "/model",
+        "requested_provider": "/provider",
+        "reported_model": null,
+        "reported_provider": null,
+        "requested_reasoning_effort": "/reasoning_effort",
+        "requested_service_tier": "/service_tier",
+        "source_commit": "/source_commit"
+      },
+      "metrics": {
+        "cases": "/run/cases",
+        "valid": "/run/first_attempt_successes",
+        "file_recall_at_20": "/run/file_recall_at_20"
+      },
+      "notes": "One historical Fast-tier run, 246 pool targets under its own retrieval configuration. Not rerun on the later 247-target pool; no speed, variance or unseen-data claim."
+    },
+    "bounded-agent-v8-summary": {
+      "evaluation_type": "agent_analysis",
+      "dataset": "manifest-v8",
+      "artifact": "benchmarks/results/deepseek-bounded-input-manifest-v8-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/manifest/version",
+        "index_version": null,
+        "retrieval_protocol": null,
+        "requested_model": "/protocol/model",
+        "requested_provider": "/protocol/provider",
+        "reported_model": null,
+        "reported_provider": null,
+        "requested_parameters": "/protocol"
+      },
+      "metrics": {
+        "case_runs": "/agent_analysis/combined/case_runs",
+        "valid": "/agent_analysis/combined/valid",
+        "failures": "/agent_analysis/combined/failures"
+      },
+      "notes": "Three V1-era runs on 50 historical cases (150 case-runs); validates contract/persistence, not root-cause accuracy or Protocol v2."
+    },
+    "hypothesis-grounding-v1-summary": {
+      "evaluation_type": "hypothesis_grounding",
+      "dataset": "manifest-v20",
+      "artifact": "benchmarks/results/hypothesis-quality-v1-deepseek-run1-summary.json",
+      "completeness": "summary-only",
+      "details": null,
+      "supersedes": [],
+      "provenance": {
+        "manifest_version": "/source_manifest_version",
+        "index_version": null,
+        "retrieval_protocol": null,
+        "requested_model": "/model",
+        "requested_provider": "/provider",
+        "reported_model": null,
+        "reported_provider": null,
+        "evaluation_protocol": "/protocol"
+      },
+      "metrics": {
+        "cases": "/cases",
+        "hits": "/overall/hypothesis_expected_file_hits",
+        "hit_rate": "/overall/overall_hypothesis_expected_file_hit_rate"
+      },
+      "notes": "Selected 24-case manifest-v20 slice, not independent held-out retrieval data. File-grounding hits are not causal correctness scores; manual rubric is separately retained in benchmarks/hypothesis-quality-v1-review.json."
+    }
+  },
+  "current": {
+    "file_localization": "deterministic-v037-summary",
+    "symbol_localization": "symbol-v036-summary",
+    "candidate_pool": "pool-v037-summary",
+    "hybrid_rerank": "luna-fast-v034-summary",
+    "agent_analysis": "bounded-agent-v8-summary",
+    "hypothesis_grounding": "hypothesis-grounding-v1-summary"
+  }
+}
