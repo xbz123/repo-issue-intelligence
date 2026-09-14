@@ -1,6 +1,6 @@
-# Protocol v2 review writes (PR7B draft)
+# Protocol v2 review writes (partial PR7B delivery)
 
-The current draft provides per-Issue review writes through the review service,
+The merged PR73 slice provides per-Issue review writes through the review service,
 `POST /v2/agent/runs/{run_id}/issues/{issue_number}/reviews`, and
 `agent-review-v2`. V1 remains the default protocol. This document does not claim
 that the remaining PR7B retry/recovery integration is complete.
@@ -73,8 +73,8 @@ The follow-up adds nine acceptance cases without changing production code:
 These checks cover the local review/start/retry interaction and legacy write
 boundary of 7B.5/7B.8. They do **not** exercise an HTTP retry endpoint: the
 7B.7 retry/recover-unknown authorization-to-dispatch implementation and its
-permission-revocation tests remain pending. The PR must remain Draft until
-the remaining PR7B implementation and acceptance gates are met.
+permission-revocation tests remain pending. PR73 merged this review slice only;
+full PR7B and G1 acceptance still require the remaining implementation and gates.
 
 The combined execution-claim, PR5B retry, V2 API, review-service and V1-default
 compatibility selection passed 83 tests (one existing Starlette warning).

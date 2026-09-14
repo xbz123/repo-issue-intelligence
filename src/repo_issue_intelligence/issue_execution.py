@@ -223,10 +223,11 @@ def analyze_sealed_issue(
             except LLMProviderError as error:
                 observations = getattr(error, "observations", {})
                 local = LocalObservation.model_validate(observations.get("local", {}))
-                uncertain = error.category in {"transport", "timeout", "interrupted"} and (
-                    local.http_status is None
+                uncertain = error.category == "outcome_uncertain" or (
+                    error.category in {"transport", "timeout", "interrupted"}
+                    and local.http_status is None
                 )
-                if uncertain:
+                if uncertain and error.category in {"transport", "timeout", "interrupted"}:
                     local = local.model_copy(update={"category": error.category})
                 category = (
                     "invalid_response"

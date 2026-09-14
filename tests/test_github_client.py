@@ -8,6 +8,34 @@ import pytest
 from repo_issue_intelligence.github_client import GitHubClient
 
 
+@pytest.mark.parametrize("operation", ["issues", "files", "search"])
+def test_pagination_has_a_finite_request_budget(monkeypatch, operation):
+    from repo_issue_intelligence import github_client
+
+    monkeypatch.setattr(github_client, "MAX_PAGINATION_PAGES", 2, raising=False)
+    pages = []
+
+    def handler(request):
+        page = int(request.url.params["page"])
+        pages.append(page)
+        assert page <= 2, "pagination exceeded its request budget"
+        items = [payload_item(page * 100 + i, pull_request=True) for i in range(100)]
+        return httpx.Response(200, json={"items": items} if operation == "search" else items)
+
+    client = GitHubClient(None, transport=httpx.MockTransport(handler), trust_env=False)
+    try:
+        with pytest.raises(ValueError, match="page limit"):
+            if operation == "issues":
+                client.fetch_open_issues("example/project", limit=1)
+            elif operation == "files":
+                client.fetch_pull_request_files("example/project", 1)
+            else:
+                client.search_closed_linked_issues("example/project", limit=1)
+    finally:
+        client.close()
+    assert pages == [1, 2]
+
+
 def payload_item(number: int, *, pull_request: bool = False) -> dict:
     timestamp = datetime(2026, 7, 27, tzinfo=UTC).isoformat().replace("+00:00", "Z")
     item = {
@@ -66,10 +94,15 @@ def test_pagination_uses_stable_page_size_and_filters_pull_requests() -> None:
         "owner/project/extra",
         "owner name/project",
         "owner/project name",
+        "owner/.",
+        "owner/..",
     ],
 )
 def test_rejects_invalid_repository_name(repository: str) -> None:
-    client = GitHubClient(token=None, trust_env=False)
+    def forbidden(request):
+        raise AssertionError("invalid repository must be rejected before HTTP")
+
+    client = GitHubClient(token=None, trust_env=False, transport=httpx.MockTransport(forbidden))
     try:
         with pytest.raises(ValueError, match="owner/name"):
             client.fetch_open_issues(repository, limit=1)

@@ -66,6 +66,30 @@ def test_run_is_frozen_and_issues_keep_selected_order(tmp_path):
     assert store.get_run("absent") is None
 
 
+@pytest.mark.parametrize("has_report", [False, True])
+@pytest.mark.parametrize("reader", ["issue", "summary", "page"])
+def test_inconsistent_deterministic_state_is_refused_by_readers(tmp_path, has_report, reader):
+    from test_evidence_ledger import save_report
+
+    store = new_store(tmp_path / "private")
+    create_run(store)
+    if has_report:
+        save_report(store)
+    with store._connect() as connection:
+        connection.execute(
+            "UPDATE agent_v2_issues SET deterministic_state=? "
+            "WHERE run_id='run' AND issue_number=1",
+            ("pending" if has_report else "succeeded",),
+        )
+    with pytest.raises(StoreError, match="deterministic"):
+        if reader == "issue":
+            store.get_issue("run", 1)
+        elif reader == "summary":
+            store.get_run_summary("run")
+        else:
+            store.list_issues_page("run", limit=100, offset=0)
+
+
 def test_foreground_writer_lock_refuses_second_process_but_keeps_readers(tmp_path):
     store = new_store(tmp_path / "private")
     create_run(store)

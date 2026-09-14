@@ -75,7 +75,8 @@ writer may execute against a database. See [PR4 CLI usage and G0 boundaries](doc
 V2 resume/retry and trusted-local HTTP authorization are available. PR7A adds
 read-only query/evidence APIs and explicit CLI queries; see
 [query and compatibility boundaries](docs/protocol-v2-api-query.md). Per-Issue
-review/retry HTTP writes remain PR7B work. The default protocol remains V1.
+review HTTP writes are available; HTTP retry/recover-unknown remains unfinished PR7B work.
+The default protocol remains V1.
 
 Run the included offline demo:
 
@@ -315,8 +316,9 @@ Issue snapshots across 58 repositories, corrected pre-fix SHAs, and 177 manually
 targets across 143 cases. Older deterministic and DeepSeek artifacts remain committed as historical
 provenance; the current runtime variants are deterministic and Codex CLI rank-only hybrid.
 Repository indexing is restricted to `git ls-files`; live Issue edits and ignored artifacts in
-reused workspaces therefore cannot change benchmark inputs. A cached commit is reused without a
-network request. The runner also keeps an ignored repository-map cache under the benchmark
+reused workspaces therefore cannot change benchmark inputs. A fully materialized cached commit
+can be reused without fetching; a partial clone with missing blobs may still fetch during checkout.
+The V1 benchmark preparation path is not an offline-mode guarantee. The runner keeps an ignored repository-map cache under the benchmark
 workspace, keyed by repository, exact pre-fix SHA, tracked/materialized file scope, index schema,
 and complete interpreter identity. Missing, stale, or invalid cache entries are rebuilt, and each
 case records whether it was a cold miss or warm hit. Cache write failures do not fail the benchmark.
@@ -501,6 +503,13 @@ The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issu
 records the documentation checks and implementation boundaries.
 
 ## Evaluation
+
+New benchmark exports label the existing file metrics as `completed_cases` and additionally
+report `all_case_file_metrics`: execution failures receive zero credit over all requested cases.
+The CLI displays both denominators. Historical JSON files and their metric values are not
+rewritten; absent denominator/coverage fields remain unknown when loading old exports.
+Index v26 fixes source parsing and Git-aware file enumeration; historical index-v25 results
+below remain historical evidence, not newly measured v26 scores.
 
 The current frozen benchmark contains 200 closed issues with linked fix PRs across 58 projects:
 17 main, 11 calibration, and 172 generalization cases. It records 267 reviewed production-file

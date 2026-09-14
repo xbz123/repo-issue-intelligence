@@ -33,6 +33,16 @@ MERGE_SHA = "b" * 40
 PRE_FIX_SHA = "a" * 40
 
 
+@pytest.mark.parametrize(
+    "directory", ["docker", "docgen", "documentation_lib", "benchmarking", "examplex"]
+)
+def test_auxiliary_prefixes_do_not_hide_production_packages(directory):
+    (result,) = classify_changed_files(
+        [{"filename": f"src/{directory}/core.py", "status": "modified"}]
+    )
+    assert result.eligible_source
+
+
 def issue(number: int = 42) -> IssueRecord:
     timestamp = datetime(2026, 7, 30, tzinfo=UTC)
     return IssueRecord(

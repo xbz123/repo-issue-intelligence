@@ -44,6 +44,118 @@ def write_source(repository: Path, relative_path: str, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def test_python_bom_preserves_symbols_and_imports(tmp_path):
+    write_source(tmp_path, "module.py", "\ufeffimport os\ndef main():\n    return os.getcwd()\n")
+    (file,) = build_repository_map(tmp_path).files
+    assert [symbol.name for symbol in file.symbols] == ["main"]
+    assert "os" in file.imports
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_git_index_ignores_caches_but_keeps_tracked_and_new_source(tmp_path, nested):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    root = tmp_path / "package" if nested else tmp_path
+    root.mkdir(exist_ok=True)
+    (root / ".gitignore").write_text("cache/\nignored.py\n")
+    for name in ["tracked.py", "new.py", "ignored.py", "cache/clone/source.py"]:
+        write_source(root, name, "def worker(): pass\n")
+    subprocess.run(
+        ["git", "-C", str(root), "add", "-f", "tracked.py", "ignored.py"],
+        check=True,
+        capture_output=True,
+    )
+    assert {file.path for file in build_repository_map(root).files} == {
+        "tracked.py",
+        "new.py",
+        "ignored.py",
+    }
+    assert [
+        file.path
+        for file in build_repository_map(root, included_files=["cache/clone/source.py"]).files
+    ] == ["cache/clone/source.py"]
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        "https://docs.example.com/pkg/util.py",
+        "https://example.com/download?file=pkg/util.py",
+        "../pkg/util.py",
+        "www.example.com/pkg/util.py",
+        "example.com/pkg/util.py",
+    ],
+)
+def test_url_and_parent_references_do_not_become_exact_source_evidence(tmp_path, reference):
+    write_source(tmp_path, "pkg/util.py", "def worker():\n    pass\n")
+    record = issue("Documentation link", reference)
+    candidates = locate_candidates(record, build_repository_map(tmp_path))
+    assert not any(
+        "Issue references this exact source path" in candidate.evidence for candidate in candidates
+    )
+
+
+def test_path_matching_preserves_dot_names_and_component_boundaries():
+    assert investigator_module._normalize_path_reference("./.env.py") == ".env.py"
+    assert investigator_module._normalize_path_reference("../pkg/util.py") == "../pkg/util.py"
+    assert not investigator_module._path_is_referenced("util.py", frozenset({"notutil.py"}))
+    assert investigator_module._path_is_referenced(
+        "pkg/util.py", frozenset({"/checkout/pkg/util.py"})
+    )
+    assert investigator_module._path_is_referenced(
+        "example.com/pkg/util.py", frozenset({"example.com/pkg/util.py"})
+    )
+
+
+def test_import_terms_do_not_match_inside_other_components(tmp_path):
+    write_source(tmp_path, "unrelated.py", "import posix\nimport requests\ndef worker(): pass\n")
+    candidates = locate_candidates(issue("os", "os"), build_repository_map(tmp_path))
+    assert not any("Imports match component terms: os" in c.evidence for c in candidates)
+
+
+def test_source_content_reads_are_bounded_before_loading_entire_file(tmp_path, monkeypatch):
+    import io
+
+    write_source(tmp_path, "large.py", "def worker():\n    pass\n")
+    repository_map = build_repository_map(tmp_path)
+    original_open = Path.open
+    reads = []
+
+    class BoundedReader(io.StringIO):
+        def read(self, size=-1):
+            reads.append(size)
+            assert 0 <= size <= 1_000_001, "source reads must have a finite character budget"
+            return super().read(size)
+
+    def open_source(path, *args, **kwargs):
+        if path == tmp_path / "large.py":
+            return BoundedReader("needle " * 150_000)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_source)
+    locate_candidates(issue("needle", "needle"), repository_map)
+    assert reads == [1_000_001]
+
+
+def test_oversized_historical_blob_is_refused_before_capture(tmp_path, monkeypatch):
+    (tmp_path / ".git").mkdir()
+
+    def run(command, **kwargs):
+        assert command[2] == "-s", "must inspect blob size before capturing contents"
+        return subprocess.CompletedProcess(command, 0, b"4000001\n", b"")
+
+    monkeypatch.setattr(investigator_module.subprocess, "run", run)
+    assert investigator_module._source_at_revision(tmp_path, "a" * 40, "large.py") is None
+
+
+@pytest.mark.parametrize("separator", ["\f", "\v", "\u2028", "\u2029", "\x85"])
+def test_rust_non_line_separators_do_not_split_comments_or_shift_lines(tmp_path, separator):
+    write_source(
+        tmp_path, "module.rs", f"// comment {separator} still comment\npub fn after() {{}}\n"
+    )
+    (file,) = build_repository_map(tmp_path).files
+    assert [(symbol.name, symbol.line) for symbol in file.symbols] == [("after", 2)]
+
+
 def test_repository_map_classifies_test_sources_without_filename_substrings(
     tmp_path: Path,
 ) -> None:

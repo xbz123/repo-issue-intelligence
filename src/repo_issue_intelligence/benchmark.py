@@ -203,6 +203,8 @@ class BenchmarkAggregate(BaseModel):
     candidate_pool_recall: float = 0
     mean_reciprocal_rank: float
     average_analysis_elapsed_ms: float
+    file_metric_denominator: Literal["completed_cases"] | None = None
+    all_case_file_metrics: dict[str, float] | None = None
     llm_success_rate: float | None = None
     llm_cases: int = 0
     llm_successes: int = 0
@@ -279,12 +281,12 @@ def _run_git(arguments: list[str], cwd: Path | None = None) -> str:
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
+        text="-z" not in arguments,
     )
     if completed.returncode:
         detail = (completed.stderr or completed.stdout).strip()[-500:]
         raise RuntimeError(f"git {' '.join(arguments[:2])} failed: {detail}")
-    return completed.stdout.strip()
+    return os.fsdecode(completed.stdout) if "-z" in arguments else completed.stdout.strip()
 
 
 def prepare_repository(case: BenchmarkCase, workspace: Path) -> Path:
@@ -887,12 +889,29 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         cases=len(results),
         completed=len(completed),
         failed=len(results) - len(completed),
-        file_recall_at_1=round(fmean(r.file_recall_at_1 for r in completed), 4)
-        if completed
-        else 0,
-        file_recall_at_5=round(fmean(r.file_recall_at_5 for r in completed), 4)
-        if completed
-        else 0,
+        file_metric_denominator="completed_cases",
+        all_case_file_metrics={
+            name: round(
+                sum(
+                    getattr(result, attribute) if result.execution_succeeded else 0
+                    for result in results
+                )
+                / len(results),
+                4,
+            )
+            for name, attribute in (
+                ("recall_at_1", "file_recall_at_1"),
+                ("recall_at_5", "file_recall_at_5"),
+                ("recall_at_10", "file_recall_at_10"),
+                ("recall_at_20", "file_recall_at_20"),
+                ("candidate_pool_recall", "candidate_pool_recall"),
+                ("mrr", "reciprocal_rank"),
+            )
+        }
+        if results
+        else None,
+        file_recall_at_1=round(fmean(r.file_recall_at_1 for r in completed), 4) if completed else 0,
+        file_recall_at_5=round(fmean(r.file_recall_at_5 for r in completed), 4) if completed else 0,
         file_recall_at_10=round(fmean(r.file_recall_at_10 for r in completed), 4)
         if completed
         else 0,
@@ -908,9 +927,7 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         mean_reciprocal_rank=round(fmean(r.reciprocal_rank for r in completed), 4)
         if completed
         else 0,
-        average_analysis_elapsed_ms=round(
-            fmean(r.analysis_elapsed_ms for r in completed), 3
-        )
+        average_analysis_elapsed_ms=round(fmean(r.analysis_elapsed_ms for r in completed), 3)
         if completed
         else 0,
         llm_success_rate=round(
@@ -929,9 +946,7 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         )
         if successful_llm_results
         else None,
-        average_llm_elapsed_ms=round(
-            fmean(result.llm_elapsed_ms for result in llm_results), 3
-        )
+        average_llm_elapsed_ms=round(fmean(result.llm_elapsed_ms for result in llm_results), 3)
         if llm_results
         else None,
         average_llm_success_elapsed_ms=round(
@@ -994,8 +1009,7 @@ def _aggregate(results: Sequence[BenchmarkCaseResult]) -> BenchmarkAggregate:
         else None,
         file_conditioned_symbol_cases=len(file_conditioned_symbol_results),
         file_conditioned_symbol_targets=sum(
-            result.file_conditioned_symbol_targets
-            for result in file_conditioned_symbol_results
+            result.file_conditioned_symbol_targets for result in file_conditioned_symbol_results
         ),
         file_conditioned_symbol_recall_at_1=round(
             fmean(

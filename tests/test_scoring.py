@@ -30,6 +30,21 @@ def test_reproducible_data_loss_is_p0() -> None:
     assert result.needs_information is False
 
 
+@pytest.mark.parametrize(
+    "title",
+    ["Update source documentation", "Force a rebuild", "Commerce feature", "Enforce formatting"],
+)
+def test_rce_acronym_does_not_match_inside_ordinary_words(title):
+    issue = make_issue("").model_copy(update={"title": title})
+    assert score_issue(issue).severity.value == "low"
+
+
+@pytest.mark.parametrize("title", ["RCE vulnerability", "Possible (rce)", "remote code execution"])
+def test_explicit_remote_execution_signal_remains_critical(title):
+    issue = make_issue("").model_copy(update={"title": title})
+    assert score_issue(issue).severity.value == "critical"
+
+
 def test_short_issue_requires_more_information() -> None:
     result = score_issue(
         make_issue("It crashes", labels=["bug"]),

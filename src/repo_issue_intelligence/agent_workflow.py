@@ -26,6 +26,7 @@ from .models import (
     EvidenceSnippet,
     InvestigationReport,
     IssueRecord,
+    LLMAnalysisResult,
     NodeTrace,
     PriorityResult,
     RepositoryMap,
@@ -104,7 +105,11 @@ def _traced_node(
                 attempt_traces.append(trace)
                 store.append_trace(run_id, trace)
                 retryable = getattr(error, "retryable", None)
-                should_retry = attempt < max_attempts and retryable is not False
+                if retryable is None and node_name in {
+                    "build_repository_map", "collect_code_evidence"
+                }:
+                    retryable = isinstance(error, OSError)
+                should_retry = attempt < max_attempts and retryable is True
                 if not should_retry:
                     failed_state = dict(state)
                     failed_state["traces"] = [*state.get("traces", []), *attempt_traces]
@@ -192,6 +197,7 @@ def _collect_code_evidence_node(
 def _llm_analyze_node(
     state: AgentGraphState,
     analyzer: IssueAnalyzer,
+    completed: dict[int, LLMAnalysisResult],
 ) -> dict[str, Any]:
     updated_reports: list[InvestigationReport] = []
     results = []
@@ -203,7 +209,9 @@ def _llm_analyze_node(
             skipped_no_evidence_issue_numbers.append(report.issue.number)
             updated_reports.append(report)
             continue
-        result = analyzer.analyze(report.issue, report, evidence)
+        if report.issue.number not in completed:
+            completed[report.issue.number] = analyzer.analyze(report.issue, report, evidence)
+        result = completed[report.issue.number]
         results.append(result)
         analyzed_issue_numbers.append(report.issue.number)
         updated_reports.append(report.model_copy(update={"llm_analysis": result}))
@@ -222,6 +230,18 @@ def _llm_analyze_node(
             "request_elapsed_ms": round(sum(result.elapsed_ms for result in results), 3),
         },
     }
+
+
+def _llm_analyze_with_retries(state, analyzer, store, run_id, max_attempts):
+    # The cache belongs to one node execution, never another graph invocation.
+    completed: dict[int, LLMAnalysisResult] = {}
+    return _traced_node(
+        "llm_analyze",
+        lambda current: _llm_analyze_node(current, analyzer, completed),
+        store,
+        run_id,
+        max_attempts,
+    )(state)
 
 
 def _human_review_node(state: AgentGraphState) -> dict[str, Any]:
@@ -260,7 +280,9 @@ def build_agent_graph(
                 ),
                 (
                     "llm_analyze",
-                    lambda state: _llm_analyze_node(state, llm_analyzer),
+                    lambda state: _llm_analyze_with_retries(
+                        state, llm_analyzer, store, run_id, max_attempts
+                    ),
                 ),
             ]
         )
@@ -268,7 +290,9 @@ def build_agent_graph(
     for node_name, function in nodes:
         builder.add_node(
             node_name,
-            _traced_node(node_name, function, store, run_id, max_attempts),
+            function
+            if node_name == "llm_analyze"
+            else _traced_node(node_name, function, store, run_id, max_attempts),
         )
     builder.add_edge(START, "rank_issues")
     builder.add_edge("rank_issues", "route_top_k")

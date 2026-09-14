@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -28,7 +30,8 @@ class AgentStore:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
         try:
@@ -44,11 +47,11 @@ class AgentStore:
                     "use 'rii agent-db inspect' to inspect it and a separate legacy database "
                     "for V1 runs."
                 )
-        except BaseException:
+            connection.execute("PRAGMA foreign_keys = ON")
+            with connection:
+                yield connection
+        finally:
             connection.close()
-            raise
-        connection.execute("PRAGMA foreign_keys = ON")
-        return connection
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -170,13 +173,24 @@ class AgentStore:
         ]
 
     def review(self, run_id: str, decision: ReviewDecision, notes: str | None = None) -> AgentRun:
-        run = self.get_run(run_id)
-        if run is None:
-            raise KeyError(run_id)
-        if run.status is not AgentRunStatus.AWAITING_REVIEW:
-            raise ValueError(f"Run {run_id} is not awaiting review")
-        run.status = AgentRunStatus(decision.value)
-        run.review_notes = notes
-        run.updated_at = datetime.now(UTC)
-        self.save_run(run)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT status,payload FROM agent_runs WHERE run_id=?", (run_id,)
+            ).fetchone()
+            if row is None:
+                raise KeyError(run_id)
+            run = AgentRun.model_validate_json(row["payload"])
+            if (
+                run.status is not AgentRunStatus.AWAITING_REVIEW
+                or row["status"] != run.status.value
+            ):
+                raise ValueError(f"Run {run_id} is not awaiting review")
+            run.status = AgentRunStatus(decision.value)
+            run.review_notes = notes
+            run.updated_at = datetime.now(UTC)
+            connection.execute(
+                "UPDATE agent_runs SET status=?,updated_at=?,payload=? WHERE run_id=?",
+                (run.status.value, run.updated_at.isoformat(), run.model_dump_json(), run_id),
+            )
         return run

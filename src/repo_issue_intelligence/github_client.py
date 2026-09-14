@@ -4,17 +4,19 @@ import re
 from datetime import datetime
 
 import httpx
+from pydantic import SecretStr
 
 from .models import IssueRecord
 
-REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9_.-]+")
+REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/(?!\.{1,2}$)[A-Za-z0-9_.-]+")
 COMMIT_SHA_PATTERN = re.compile(r"[0-9a-fA-F]{40}")
+MAX_PAGINATION_PAGES = 100
 
 
 class GitHubClient:
     def __init__(
         self,
-        token: str | None,
+        token: str | SecretStr | None,
         api_url: str = "https://api.github.com",
         *,
         transport: httpx.BaseTransport | None = None,
@@ -26,7 +28,8 @@ class GitHubClient:
             "User-Agent": "repo-issue-intelligence",
         }
         if token:
-            headers["Authorization"] = f"Bearer {token}"
+            value = token.get_secret_value() if isinstance(token, SecretStr) else token
+            headers["Authorization"] = f"Bearer {value}"
         self.client = httpx.Client(
             base_url=api_url.rstrip("/"),
             headers=headers,
@@ -78,9 +81,8 @@ class GitHubClient:
         params: dict[str, str | int] | None = None,
     ) -> list[dict]:
         items: list[dict] = []
-        page = 1
         per_page = 100
-        while True:
+        for page in range(1, MAX_PAGINATION_PAGES + 1):
             response = self.client.get(
                 path,
                 params={**(params or {}), "per_page": per_page, "page": page},
@@ -94,7 +96,7 @@ class GitHubClient:
             items.extend(payload)
             if len(payload) < per_page:
                 return items
-            page += 1
+        raise ValueError("GitHub pagination exceeded the page limit")
 
     def search_closed_linked_issues(
         self,
@@ -106,9 +108,8 @@ class GitHubClient:
             raise ValueError("limit must be at least 1")
         query = f"repo:{owner}/{repo} is:issue is:closed linked:pr"
         records: list[IssueRecord] = []
-        page = 1
         per_page = 100
-        while len(records) < limit:
+        for page in range(1, MAX_PAGINATION_PAGES + 1):
             response = self.client.get(
                 "/search/issues",
                 params={
@@ -132,9 +133,10 @@ class GitHubClient:
                 records.append(self._issue_record(item))
                 if len(records) >= limit:
                     break
-            if len(items) < per_page:
+            if len(items) < per_page or len(records) >= limit:
                 break
-            page += 1
+        else:
+            raise ValueError("GitHub search pagination exceeded the page limit")
         return records
 
     def fetch_issue_timeline(
@@ -199,10 +201,9 @@ class GitHubClient:
             raise ValueError("limit must be at least 1")
 
         collected: list[IssueRecord] = []
-        page = 1
         per_page = 100
 
-        while len(collected) < limit:
+        for page in range(1, MAX_PAGINATION_PAGES + 1):
             response = self.client.get(
                 f"/repos/{owner}/{repo}/issues",
                 params={"state": "open", "per_page": per_page, "page": page},
@@ -216,14 +217,17 @@ class GitHubClient:
 
             for item in payload:
                 # GitHub's issues endpoint also returns pull requests.
+                if not isinstance(item, dict):
+                    raise ValueError("GitHub issue response items must be objects")
                 if "pull_request" in item:
                     continue
                 collected.append(self._issue_record(item))
                 if len(collected) >= limit:
                     break
 
-            if len(payload) < per_page:
+            if len(payload) < per_page or len(collected) >= limit:
                 break
-            page += 1
+        else:
+            raise ValueError("GitHub issue pagination exceeded the page limit")
 
         return collected

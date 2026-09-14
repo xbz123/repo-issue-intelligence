@@ -64,6 +64,14 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _validate_deterministic_state(state: str, has_report: bool) -> None:
+    if (
+        state not in {"pending", "running", "succeeded", "failed"}
+        or (state == "succeeded") != has_report
+    ):
+        raise StoreError("Stored deterministic state and report are inconsistent")
+
+
 def _decode_run_configuration(serialized: str) -> RunConfiguration:
     configuration = json.loads(serialized)
     # Only stored data uses legacy null-default recovery; in-memory copies must
@@ -470,6 +478,9 @@ class AgentStoreV2:
         )
         if row is None:
             return None
+        _validate_deterministic_state(
+            row["deterministic_state"], row["deterministic_report_json"] is not None
+        )
         llm_state = "pending" if run.configuration.llm_enabled else "disabled"
         if run.configuration.llm_enabled and item_count == 0:
             llm_state = "skipped_no_evidence"
@@ -530,12 +541,14 @@ class AgentStoreV2:
             for number in numbers:
                 row = connection.execute(
                     "SELECT run_id,issue_number,deterministic_state,evidence_set_id,"
-                    "selected_analysis_attempt_id,review_version "
+                    "selected_analysis_attempt_id,review_version,"
+                    "deterministic_report_json IS NOT NULL AS has_report "
                     "FROM agent_v2_issues WHERE run_id=? AND issue_number=?",
                     (run_id, number),
                 ).fetchone()
                 if row is None:
                     raise StoreError("Stored run is missing a selected Issue")
+                _validate_deterministic_state(row["deterministic_state"], bool(row["has_report"]))
                 latest = connection.execute(
                     "SELECT state FROM agent_v2_llm_attempts WHERE run_id=? AND issue_number=? "
                     "ORDER BY ordinal DESC LIMIT 1",
