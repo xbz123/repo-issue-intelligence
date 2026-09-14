@@ -293,6 +293,54 @@ def test_reported_provenance_accepts_observed_strings_and_explicit_unknown(tmp_p
 
 
 @pytest.mark.parametrize(
+    "field,pointer",
+    [
+        ("requested_model", "/reported/model"),
+        ("requested_provider", "/reported/provider"),
+        ("reported_model", "/requested/model"),
+        ("reported_provider", "/requested/provider"),
+        ("reported_model", "/not_reported_model"),
+        ("reported_provider", "/not_reported_provider"),
+        ("reported_model", "/unreported/model"),
+        ("reported_provider", "/reported/provider_name"),
+        ("reported_model", "/reported/provider"),
+        ("requested_provider", "/model"),
+        ("reported_model", "/requested/reported/model"),
+        ("reported_model", "/reported~1model"),
+    ],
+)
+def test_publication_rejects_mislabeled_provenance_roles(tmp_path, field, pointer):
+    payload, original = _copy_inputs(tmp_path)
+    entry = payload["entries"][payload["current"]["hybrid_rerank"]]
+    artifact = tmp_path / entry["artifact"]
+    source = json.loads(artifact.read_text())
+    source.update(
+        {
+            "requested": {
+                "model": "requested-model",
+                "provider": "requested-provider",
+                "reported": {"model": "not-an-observation"},
+            },
+            "reported": {
+                "model": "observed-model",
+                "provider": "observed-provider",
+                "provider_name": "unrelated-value",
+            },
+            "unreported": {"model": "not-an-observation"},
+            "not_reported_model": "not-an-observation",
+            "not_reported_provider": "not-an-observation",
+            "reported/model": "not-an-observation",
+        }
+    )
+    artifact.write_text(json.dumps(source))
+    entry["provenance"][field] = pointer
+    with pytest.raises(ValueError):
+        publish_catalog(tmp_path, payload)
+    assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+    assert not list((tmp_path / CATALOG_PATH).parent.glob(".current-results-*"))
+
+
+@pytest.mark.parametrize(
     "pointer",
     [
         "/run/cases",

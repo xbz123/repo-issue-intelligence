@@ -162,6 +162,21 @@ def _validate_provenance(facts: dict) -> None:
             raise ValueError("Empty retrieval protocol")
 
 
+def _validate_provenance_pointers(provenance: dict[str, str | None]) -> None:
+    """Keep requested configuration and reported observations on exact paths."""
+    for name, suffix in (("requested_model", "model"), ("requested_provider", "provider")):
+        pointer = provenance.get(name)
+        allowed = {f"/{suffix}", f"/protocol/{suffix}", f"/requested/{suffix}"}
+        if pointer is not None and pointer not in allowed:
+            raise ValueError("Requested provenance must reference its exact configuration field")
+    for name in ("reported_model", "reported_provider"):
+        pointer = provenance.get(name)
+        if pointer is not None and pointer not in {
+            f"/reported/{name.removeprefix('reported_')}"
+        }:
+            raise ValueError("Reported provenance must reference its exact observation field")
+
+
 def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
     catalog = ResultCatalog.model_validate(payload)
     if set(catalog.current) != set(DISPLAY):
@@ -189,10 +204,7 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
             raise ValueError("The catalog is not a result artifact")
         facts = entry_facts(root, entry)
         _validate_provenance(facts)
-        for name in ("reported_model", "reported_provider"):
-            pointer = entry.provenance[name]
-            if pointer is not None and not any("reported" in part for part in pointer.split("/")):
-                raise ValueError("Requested configuration is not a reported observation")
+        _validate_provenance_pointers(entry.provenance)
         if facts["manifest_version"] != catalog.datasets[entry.dataset].version:
             raise ValueError("Result and dataset manifest versions differ")
         metrics = entry_metrics(root, entry)
