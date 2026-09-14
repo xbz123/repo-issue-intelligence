@@ -124,6 +124,18 @@ def test_catalog_rejects_inconsistent_count_relationships(mutation):
         validate_catalog(ROOT, payload)
 
 
+def test_catalog_rejects_malformed_manifest_shape(tmp_path):
+    payload = json.loads((ROOT / CATALOG_PATH).read_text())
+    original_json = result_catalog._json
+    result_catalog._json = lambda _root, _path: {}
+
+    try:
+        with pytest.raises(ValueError, match="Manifest metadata"):
+            validate_catalog(tmp_path, payload)
+    finally:
+        result_catalog._json = original_json
+
+
 @pytest.mark.parametrize(
     "document,prefix", [("README.md", ""), ("docs/benchmark-results.md", "../")]
 )
