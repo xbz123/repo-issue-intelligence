@@ -35,6 +35,13 @@ historical tier counts. Entries name an existing JSON artifact, JSON pointers fo
 metrics and provenance, a completeness level, a detail path (or `null`), and any
 same-dataset/type results they supersede. Superseded artifacts are never deleted.
 
+Symbol entries additionally supply `symbol_targets_by_tier`: source JSON pointers
+to each historical tier's file-visible target count. Their total must equal the
+declared symbol denominator, and each tier must fit the frozen manifest's
+`expected_symbols` count. This distinguishes the current 160 file-visible targets
+from the manifest's 177 reviewed targets; it does not force every reviewed target
+to be file-visible or turn case-macro recall/MRR into target-micro metrics.
+
 Provenance includes manifest/index/retrieval information and separates requested
 provider/model from reported observations. A `null` reference means unknown or
 not applicable, not a successful observation. New reported-model/provider

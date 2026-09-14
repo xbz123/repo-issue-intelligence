@@ -72,6 +72,11 @@
         "recall_at_3": "/run/file_conditioned_within_file/case_macro_recall_at_3",
         "mrr": "/run/file_conditioned_within_file/mean_reciprocal_rank"
       },
+      "symbol_targets_by_tier": {
+        "main": "/by_tier/main/targets",
+        "calibration": "/by_tier/calibration/targets",
+        "generalization": "/by_tier/generalization/targets"
+      },
       "notes": "File-conditioned case-macro metrics, not global symbol ranking; the denominator is 160 file-visible reviewed targets across 133 cases."
     },
     "pool-v035-full": {

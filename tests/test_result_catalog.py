@@ -290,3 +290,69 @@ def test_reported_provenance_accepts_observed_strings_and_explicit_unknown(tmp_p
     facts = entry_facts(tmp_path, catalog.entries[catalog.current["hybrid_rerank"]])
     assert facts["reported_model"] == "observed-model"
     assert facts["reported_provider"] is None
+
+
+@pytest.mark.parametrize(
+    "pointer",
+    [
+        "/run/cases",
+        "/run/legacy_file_cutoff/symbol_cases",
+        "/run/file_conditioned_within_file/cases",
+        "/run/failed",
+    ],
+)
+def test_symbol_target_denominator_rejects_unrelated_counts(tmp_path, pointer):
+    payload, original = _copy_inputs(tmp_path)
+    entry = payload["entries"][payload["current"]["symbol_localization"]]
+    entry["metrics"]["targets"] = pointer
+    with pytest.raises(ValueError, match="[Ss]ymbol"):
+        publish_catalog(tmp_path, payload)
+    assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+
+
+def test_symbol_targets_are_bounded_by_selected_manifest(tmp_path):
+    payload, original = _copy_inputs(tmp_path)
+    entry = payload["entries"][payload["current"]["symbol_localization"]]
+    manifest_path = tmp_path / payload["datasets"][entry["dataset"]]["manifest"]
+    manifest = json.loads(manifest_path.read_text())
+    for case in manifest["cases"]:
+        case["expected_symbols"] = []
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="[Ss]ymbol"):
+        publish_catalog(tmp_path, payload)
+    assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+
+
+def test_symbol_target_tiers_cannot_borrow_other_tiers_capacity(tmp_path):
+    payload, original = _copy_inputs(tmp_path)
+    entry = payload["entries"][payload["current"]["symbol_localization"]]
+    manifest = json.loads(
+        (tmp_path / payload["datasets"][entry["dataset"]]["manifest"]).read_text()
+    )
+    main_limit = sum(
+        len(case.get("expected_symbols", []))
+        for case in manifest["cases"]
+        if case["tier"] == "main"
+    )
+    artifact = tmp_path / entry["artifact"]
+    source = json.loads(artifact.read_text())
+    delta = main_limit + 1 - source["by_tier"]["main"]["targets"]
+    source["by_tier"]["main"]["targets"] += delta
+    source["by_tier"]["generalization"]["targets"] -= delta
+    assert sum(tier["targets"] for tier in source["by_tier"].values()) == 160
+    artifact.write_text(json.dumps(source))
+    with pytest.raises(ValueError, match="[Ss]ymbol"):
+        publish_catalog(tmp_path, payload)
+    assert (tmp_path / CATALOG_PATH).read_bytes() == original[CATALOG_PATH]
+
+
+def test_symbol_file_visible_denominator_is_a_subset_not_the_whole_manifest():
+    catalog = load_catalog(ROOT)
+    entry = catalog.entries[catalog.current["symbol_localization"]]
+    manifest = json.loads((ROOT / catalog.datasets[entry.dataset].manifest).read_text())
+    eligible = sum(len(case.get("expected_symbols", [])) for case in manifest["cases"])
+    metrics = entry_metrics(ROOT, entry)
+    assert eligible == 177
+    assert metrics["targets"] == 160 < eligible
+    assert metrics["recall_at_3"] == 0.5426
+    assert metrics["mrr"] == 0.5739

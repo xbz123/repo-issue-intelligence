@@ -73,6 +73,7 @@ class Entry(CatalogModel):
     supersedes: tuple[str, ...] = ()
     provenance: dict[str, str | None]
     metrics: dict[str, str]
+    symbol_targets_by_tier: dict[str, str] | None = None
     notes: str
 
 
@@ -165,7 +166,8 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
     catalog = ResultCatalog.model_validate(payload)
     if set(catalog.current) != set(DISPLAY):
         raise ValueError("Each evaluation type needs one current result")
-    for dataset in catalog.datasets.values():
+    symbol_limits = {}
+    for dataset_id, dataset in catalog.datasets.items():
         manifest = _json(root, dataset.manifest)
         if (
             manifest["version"] != dataset.version
@@ -175,6 +177,10 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
             raise ValueError("Dataset metadata must match the frozen manifest")
         if dataset.version == 20 and dataset.role != "regression/development":
             raise ValueError("Manifest v20 is regression/development, not independent holdout")
+        limits = Counter()
+        for case in manifest["cases"]:
+            limits[case["tier"]] += len(case.get("expected_symbols", []))
+        symbol_limits[dataset_id] = limits
     superseded = set()
     for identifier, entry in catalog.entries.items():
         if entry.evaluation_type not in DISPLAY or entry.dataset not in catalog.datasets:
@@ -211,6 +217,26 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
             metrics["matched"] + metrics["misses"] != metrics["targets"]
         ):
             raise ValueError("Candidate pool counts must balance")
+        if entry.evaluation_type == "symbol_localization":
+            limits = symbol_limits[entry.dataset]
+            if metrics["targets"] > sum(limits.values()):
+                raise ValueError("Symbol targets exceed the frozen dataset's expected symbols")
+            if entry.symbol_targets_by_tier is None or set(entry.symbol_targets_by_tier) != set(
+                limits
+            ):
+                raise ValueError("Symbol targets require source counts for every dataset tier")
+            source = _json(root, entry.artifact)
+            counts = {
+                tier: _pointer(source, pointer)
+                for tier, pointer in entry.symbol_targets_by_tier.items()
+            }
+            if any(
+                type(count) is not int or not 0 <= count <= limits[tier]
+                for tier, count in counts.items()
+            ):
+                raise ValueError("Symbol tier targets exceed their eligible expected symbols")
+            if sum(counts.values()) != metrics["targets"]:
+                raise ValueError("Symbol target denominator must equal source tier totals")
         if (
             "cases" in metrics
             and not 1 <= metrics["cases"] <= catalog.datasets[entry.dataset].case_count
