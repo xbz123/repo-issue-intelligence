@@ -75,7 +75,7 @@ writer may execute against a database. See [PR4 CLI usage and G0 boundaries](doc
 V2 resume/retry and trusted-local HTTP authorization are available. PR7A adds
 read-only query/evidence APIs and explicit CLI queries; see
 [query and compatibility boundaries](docs/protocol-v2-api-query.md). Per-Issue
-review HTTP writes are available; HTTP retry/recover-unknown remains unfinished PR7B work.
+review and [explicit HTTP retry/recover-unknown](docs/protocol-v2-http-retry.md) writes are available.
 The default protocol remains V1.
 
 Run the included offline demo:

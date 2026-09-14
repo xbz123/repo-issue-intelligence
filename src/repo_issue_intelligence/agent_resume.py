@@ -1,5 +1,6 @@
 """Strict recovery of committed Protocol v2 work; no implicit provider replay."""
 
+from collections.abc import Callable
 from contextlib import ExitStack, contextmanager
 
 from . import run_configuration
@@ -178,6 +179,7 @@ def retry_issue_llm(
     allow_external_llm: bool = False,
     current_configuration: RunConfiguration | None = None,
     recover_unknown: bool = False,
+    before_provider_attempt: Callable[[], None] | None = None,
 ) -> IssueExecutionV2:
     """Explicit same-configuration retry without sync, ranking or repository reads."""
     with store.writer_lock():
@@ -204,6 +206,8 @@ def retry_issue_llm(
         uncertain = [a for a in attempts if a.state in {"unknown", "in_progress"}]
         if uncertain and not recover_unknown:
             raise StoreConflict("Unknown history requires explicit recover_unknown authorization")
+        if before_provider_attempt is not None:
+            before_provider_attempt()
         with _recovery_execution(run, store, uncertain) as run:
             record = next(item for item in run.inputs.issues if item.number == issue_number)
             result = analyze_sealed_issue(
@@ -213,6 +217,7 @@ def retry_issue_llm(
                 llm_analyzer,
                 retry=True,
                 recover_unknown=recover_unknown,
+                before_provider_attempt=before_provider_attempt,
             )
             _finish_recovery(run_id, store)
             return result

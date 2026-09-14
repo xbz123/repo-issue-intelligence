@@ -200,8 +200,12 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 | 7B.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-4) |
 | 7B.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-5) |
 | 7B.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-6) |
-| 7B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-7) |
+| 7B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-7) |
 | 7B.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-8) |
+
+7B.7 HTTP retry/recover-unknown 已在独立实现分支接入；当前授权、配置与并发
+验证见 [HTTP retry 记录](protocol-v2-http-retry.md)。交付仍待该分支审查/CI/合并，
+不将 G1 标为完成。PR73 已合并的 review 子集与其历史证据保持不变。
 
 ## PR8
 
