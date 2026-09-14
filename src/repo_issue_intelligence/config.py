@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         validation_alias="RII_API_PRINCIPAL",
         pattern=r"^[A-Za-z0-9_.:-]{1,80}$",
     )
-    github_token: str | None = None
+    github_token: SecretStr | None = None
     agent_db_path: Path = Path("data/agent-runs.sqlite3")
     llm_backend: str = Field(default="api", pattern=r"^(api|codex-cli)$")
     llm_api_key: SecretStr | None = Field(

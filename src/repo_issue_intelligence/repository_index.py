@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import re
+import subprocess
 import symtable
 import unicodedata
 import warnings
@@ -70,7 +71,7 @@ FRAMEWORK_IMPORTS = {
 
 # Bump this whenever repository-map construction semantics change. Benchmark
 # caches use the value as a fail-closed invalidation boundary.
-REPOSITORY_MAP_INDEX_VERSION = 25
+REPOSITORY_MAP_INDEX_VERSION = 26
 
 # warnings.catch_warnings() mutates process-global state on Python 3.11/3.12.
 # Serialize the narrow filter-changing parse section used by concurrent API calls.
@@ -203,7 +204,7 @@ def is_test_source_path(path: str | Path) -> bool:
 def _rust_declaration_source(path: Path) -> str:
     """Return Rust source with non-declaration token trees replaced."""
     try:
-        lines = path.read_text(encoding="utf-8-sig").splitlines()
+        lines = path.read_text(encoding="utf-8-sig").split("\n")
     except (OSError, UnicodeDecodeError):
         return ""
 
@@ -1118,7 +1119,7 @@ def _python_metadata(
     relative_path: str,
 ) -> _PythonMetadata:
     try:
-        source = path.read_text(encoding="utf-8")
+        source = path.read_text(encoding="utf-8-sig")
         with _PYTHON_WARNING_FILTER_LOCK:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", SyntaxWarning)
@@ -1402,6 +1403,41 @@ def _repository_files(
     root: Path,
     included_files: Iterable[str] | None,
 ) -> Iterable[tuple[Path, Path]]:
+    if included_files is None and any(
+        (parent / ".git").exists() for parent in (root, *root.parents)
+    ):
+        try:
+            listing = subprocess.run(
+                [
+                    "git",
+                    "--no-pager",
+                    "-c",
+                    "core.fsmonitor=false",
+                    "-c",
+                    "core.untrackedCache=false",
+                    "ls-files",
+                    "--cached",
+                    "--others",
+                    "--exclude-standard",
+                    "-z",
+                    "--",
+                    ".",
+                ],
+                cwd=root,
+                capture_output=True,
+                check=False,
+                timeout=10,
+                env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_NO_LAZY_FETCH": "1"},
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise ValueError("Could not enumerate Git source files") from error
+        if listing.returncode:
+            raise ValueError("Could not enumerate Git source files")
+        included_files = [
+            os.fsdecode(value)
+            for value in listing.stdout.split(b"\0")
+            if value and not set(Path(os.fsdecode(value)).parts[:-1]) & SKIP_DIRS
+        ]
     if included_files is not None:
         for value in sorted(set(included_files)):
             relative = Path(value)
@@ -1721,8 +1757,8 @@ def build_repository_map(
 ) -> RepositoryMap:
     # ``RepositoryView`` is intentionally duck-typed here to keep the V1
     # indexer independent from the Protocol v2 lifecycle module.  A view
-    # supplies one materialized root plus provenance; a normal Path retains
-    # the established checkout walk and output shape.
+    # supplies one materialized root plus provenance. Git checkouts honor
+    # tracked/unignored paths; ordinary directories retain their filesystem walk.
     repository_view = root if hasattr(root, "materialized_root") else None
     view_root = getattr(repository_view, "materialized_root", None)
     root = Path(view_root if view_root is not None else root).expanduser().resolve()

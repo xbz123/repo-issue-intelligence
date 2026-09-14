@@ -93,6 +93,104 @@ class FailIfCalledAnalyzer:
         raise AssertionError("analyzer must not be called without evidence")
 
 
+def test_retry_does_not_reanalyze_earlier_successful_issues(tmp_path, monkeypatch):
+    from repo_issue_intelligence import agent_workflow
+
+    monkeypatch.setattr(agent_workflow, "sleep", lambda delay: None)
+
+    class LateFailure(FakeAnalyzer):
+        def __init__(self):
+            self.calls = []
+
+        def analyze(self, record, report, evidence):
+            self.calls.append(record.number)
+            if record.number == 3 and self.calls.count(3) == 1:
+                raise LLMProviderError("synthetic transient", retryable=True, category="rate_limit")
+            return super().analyze(record, report, evidence)
+
+    analyzer = LateFailure()
+    result = run_agent(
+        [
+            issue(1, "Data loss", "persist_data loses data"),
+            issue(2, "Crash", "persist_data crashes"),
+            issue(3, "Formatting", "persist_data needs formatting"),
+        ],
+        create_repository(tmp_path),
+        3,
+        AgentStore(tmp_path / "state.sqlite3"),
+        llm_analyzer=analyzer,
+    )
+    assert result.status is AgentRunStatus.AWAITING_REVIEW
+    assert analyzer.calls == [1, 2, 3, 3]
+
+
+@pytest.mark.parametrize("error_type", [ValueError, OSError])
+def test_unclassified_programming_error_is_not_retried(tmp_path, error_type):
+    class Broken(FakeAnalyzer):
+        calls = 0
+
+        def analyze(self, *args):
+            self.calls += 1
+            raise error_type("synthetic programming error")
+
+    analyzer = Broken()
+    with pytest.raises(error_type):
+        run_agent(
+            [issue(1, "Data loss", "persist_data fails")],
+            create_repository(tmp_path),
+            1,
+            AgentStore(tmp_path / "state.sqlite3"),
+            llm_analyzer=analyzer,
+            max_attempts=3,
+        )
+    assert analyzer.calls == 1
+
+
+def test_legacy_store_connection_is_closed_after_context(tmp_path):
+    import sqlite3
+
+    store = AgentStore(tmp_path / "state.sqlite3")
+    with store._connect() as connection:
+        assert connection.execute("SELECT 1").fetchone()[0] == 1
+    with pytest.raises(sqlite3.ProgrammingError):
+        connection.execute("SELECT 1")
+
+
+def test_concurrent_legacy_reviews_do_not_overwrite_a_committed_decision(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    database = tmp_path / "state.sqlite3"
+    store = AgentStore(database)
+    run = run_agent(
+        [issue(1, "Failure", "persist_data fails")], create_repository(tmp_path), 1, store
+    )
+    stores = [AgentStore(database), AgentStore(database)]
+    barrier = Barrier(2)
+    original_get = AgentStore.get_run
+
+    def aligned_read(self, run_id):
+        result = original_get(self, run_id)
+        barrier.wait(timeout=10)
+        return result
+
+    monkeypatch.setattr(AgentStore, "get_run", aligned_read)
+
+    def review(index):
+        try:
+            return (
+                stores[index]
+                .review(run.run_id, [ReviewDecision.APPROVED, ReviewDecision.REJECTED][index])
+                .status.value
+            )
+        except ValueError:
+            return "conflict"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(review, [0, 1]))
+    assert outcomes.count("conflict") == 1
+
+
 class InvalidResponseAnalyzer:
     provider = "opencode"
     model = "deepseek-v4-flash"

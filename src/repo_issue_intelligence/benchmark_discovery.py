@@ -298,7 +298,10 @@ def _is_excluded_source_path(path: str) -> str | None:
     parts = tuple(part.lower() for part in Path(path).parts)
     if any(
         part in EXCLUDED_PATH_PARTS
-        or any(part.startswith(prefix) for prefix in EXCLUDED_PATH_PREFIXES)
+        or any(
+            part.startswith((prefix + "-", prefix + "_", prefix + "s-", prefix + "s_"))
+            for prefix in EXCLUDED_PATH_PREFIXES
+        )
         for part in parts[:-1]
     ):
         return "test, documentation, example, generated, or vendored path"

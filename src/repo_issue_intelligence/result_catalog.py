@@ -184,16 +184,25 @@ def validate_catalog(root: Path, payload: dict) -> ResultCatalog:
     symbol_limits = {}
     for dataset_id, dataset in catalog.datasets.items():
         manifest = _json(root, dataset.manifest)
+        if not isinstance(manifest, dict) or "version" not in manifest or "cases" not in manifest:
+            raise ValueError("Manifest metadata is incomplete")
+        cases = manifest["cases"]
+        if not isinstance(cases, list):
+            raise ValueError("Manifest cases must be a list")
+        try:
+            historical_tiers = dict(Counter(case["tier"] for case in cases))
+        except (KeyError, TypeError) as error:
+            raise ValueError("Manifest cases must include tier") from error
         if (
             manifest["version"] != dataset.version
-            or len(manifest["cases"]) != dataset.case_count
-            or dict(Counter(case["tier"] for case in manifest["cases"])) != dataset.historical_tiers
+            or len(cases) != dataset.case_count
+            or historical_tiers != dataset.historical_tiers
         ):
             raise ValueError("Dataset metadata must match the frozen manifest")
         if dataset.version == 20 and dataset.role != "regression/development":
             raise ValueError("Manifest v20 is regression/development, not independent holdout")
         limits = Counter()
-        for case in manifest["cases"]:
+        for case in cases:
             limits[case["tier"]] += len(case.get("expected_symbols", []))
         symbol_limits[dataset_id] = limits
     superseded = set()

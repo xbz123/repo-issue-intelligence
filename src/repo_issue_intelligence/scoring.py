@@ -31,7 +31,9 @@ AFFECTED_TERMS = {"all users", "many users", "production", "multiple customers"}
 
 
 def _contains_any(text: str, terms: set[str]) -> list[str]:
-    return sorted(term for term in terms if term in text)
+    return sorted(
+        term for term in terms if (re.search(r"\brce\b", text) if term == "rce" else term in text)
+    )
 
 
 def _severity(issue: IssueRecord) -> tuple[Severity, float, list[str]]:

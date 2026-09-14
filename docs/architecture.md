@@ -186,9 +186,12 @@ rank_issues
   -> human_review
 ```
 
-Each node records its input/output summary, status, attempt number, error, and elapsed time. Generic
-runtime failures retain one compatibility retry before the run is marked failed. Provider errors
-are error-aware: invalid JSON/schema and evidence-contract failures receive one additional strict
+Each node records its input/output summary, status, attempt number, error, and elapsed time.
+Unclassified programming or provider errors are not retried. Errors explicitly marked
+`retryable=True` permit bounded retries; compatibility retries for `OSError` are limited to the
+read-only repository-map and code-evidence collection nodes and use backoff. Successful LLM
+results are reused within the same node invocation if a later Issue needs a retry.
+Retryable provider errors are error-aware: invalid JSON/schema and evidence-contract failures receive one additional strict
 attempt, while transport, HTTP 429, and HTTP 5xx errors use bounded exponential backoff. A positive
 `retry-after` value is used as the minimum delay, with every wait capped at 30 seconds. Retried
 contract output must pass the unchanged schema and evidence checks; malformed output is never
@@ -260,9 +263,13 @@ Failure categories distinguish invalid JSON/schema, incomplete observation cover
 evidence IDs.
 
 Localization evaluation uses a separate rank-only model contract. `benchmark.py` checks out each
-frozen pre-fix SHA, reusing a locally cached commit without a network request, loads the complete
+frozen pre-fix SHA, reusing fully materialized cached data when available, loads the complete
 Issue snapshot from the manifest rather than the live GitHub API, verifies that the labeled fix
-files exist, and indexes only paths returned by `git ls-files`. Repository maps are cached outside
+files exist, and indexes only paths returned by `git ls-files`. Partial clones can still need
+network hydration during checkout; the V1 benchmark preparer does not promise offline operation.
+Headline legacy file metrics are explicitly completed-case metrics; new exports also provide
+all-case file metrics with execution failures scored as zero. Historical exports are unchanged.
+Repository maps are cached outside
 the checkout and reused only when repository identity, exact SHA, tracked/materialized file scope,
 index/cache schema, and complete interpreter identity all match. Cached maps rebind their absolute root to the
 current checkout; corrupt or stale entries rebuild through an atomic replacement and cannot change

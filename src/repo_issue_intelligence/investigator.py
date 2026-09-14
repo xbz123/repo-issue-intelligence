@@ -979,9 +979,13 @@ def extract_issue_signals(issue: IssueRecord) -> IssueSignals:
         if "." not in identifier
         for term in _terms(identifier)
     )
+    # URLs are not local path evidence; immutable source links have their own
+    # revision-aware source_line_references path below.
+    path_text = re.sub(r"\b[a-z][a-z0-9+.-]*://[^\s`<>\"']+", " ", text, flags=re.IGNORECASE)
     paths = {
         match.group(0).replace("\\", "/").strip("'\"()[]{}:,")
-        for match in PATH_REFERENCE_PATTERN.finditer(text)
+        for match in PATH_REFERENCE_PATTERN.finditer(path_text)
+        if _safe_path_reference(match.group(0))
     }
     return IssueSignals(
         terms=frozenset(_terms(text)),
@@ -1621,14 +1625,38 @@ def _alternate_symbol_locations(
 def _path_is_referenced(file_path: str, references: frozenset[str]) -> bool:
     normalized = _normalize_path_reference(file_path)
     return any(
-        _normalize_path_reference(reference).endswith(normalized)
-        or normalized.endswith(_normalize_path_reference(reference))
+        normalized == _normalize_path_reference(reference)
+        or (
+            _path_reference_has_context_prefix(reference)
+            and _normalize_path_reference(reference).endswith("/" + normalized)
+        )
+        or normalized.endswith("/" + _normalize_path_reference(reference))
         for reference in references
+        if _safe_path_reference(reference)
     )
 
 
 def _normalize_path_reference(value: str) -> str:
-    return value.lower().replace("\\", "/").rstrip("/").lstrip("./")
+    value = value.lower().replace("\\", "/").rstrip("/")
+    while value.startswith("./"):
+        value = value.removeprefix("./")
+    return value
+
+
+def _safe_path_reference(value: str) -> bool:
+    value = value.replace("\\", "/")
+    return (
+        bool(value)
+        and "://" not in value
+        and not value.startswith("//")
+        and ".." not in value.split("/")
+    )
+
+
+def _path_reference_has_context_prefix(value: str) -> bool:
+    """Absolute checkout paths and conventional Git diff prefixes carry context."""
+    value = value.replace("\\", "/")
+    return value.startswith(("/", "~/", "a/", "b/")) or re.match(r"^[A-Za-z]:/", value) is not None
 
 
 def _symbol_scoped_paths(
@@ -1641,6 +1669,8 @@ def _symbol_scoped_paths(
     }
     scoped_paths: set[str] = set()
     for reference in references:
+        if not _safe_path_reference(reference):
+            continue
         normalized_reference = _normalize_path_reference(reference)
         relative_matches = {
             path
@@ -1653,7 +1683,8 @@ def _symbol_scoped_paths(
         absolute_matches = [
             path
             for path, normalized_path in normalized_paths.items()
-            if normalized_reference.endswith(f"/{normalized_path}")
+            if _path_reference_has_context_prefix(reference)
+            and normalized_reference.endswith(f"/{normalized_path}")
         ]
         if absolute_matches:
             longest_length = max(
@@ -1936,20 +1967,37 @@ def _source_at_revision(
     else:
         git_path = path
     try:
+        environment = {
+            **os.environ,
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_NO_LAZY_FETCH": "1",
+            "GIT_NO_REPLACE_OBJECTS": "1",
+        }
+        size = subprocess.run(
+            ["git", "cat-file", "-s", f"{revision}:{git_path}"],
+            cwd=source_root,
+            check=False,
+            capture_output=True,
+            env=environment,
+            timeout=3,
+        )
+        if size.returncode or not 0 <= int(size.stdout) <= 4_000_000:
+            return None
         completed = subprocess.run(
             ["git", "cat-file", "blob", f"{revision}:{git_path}"],
             cwd=source_root,
             check=False,
             capture_output=True,
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_NO_LAZY_FETCH": "1"},
+            env=environment,
             timeout=3,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, ValueError, subprocess.TimeoutExpired):
         return None
     if completed.returncode:
         return None
     try:
-        return completed.stdout.decode("utf-8")
+        source = completed.stdout.decode("utf-8")
+        return source if len(source) <= 1_000_000 and "\x00" not in source else None
     except UnicodeDecodeError:
         return None
 
@@ -2026,11 +2074,8 @@ def _source_snippet_ranges(
     path = (root / relative_path).resolve()
     if not path.is_relative_to(root) or not path.is_file():
         return ()
-    try:
-        source = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return ()
-    if "\x00" in source or len(source) > 1_000_000:
+    source = _bounded_source_text(path)
+    if source is None:
         return ()
 
     source_lines = _normalize_source_snippet_lines(source.splitlines())
@@ -2157,6 +2202,15 @@ def _source_snippet_positions_by_path(
     return positions_by_path
 
 
+def _bounded_source_text(path: Path) -> str | None:
+    try:
+        with path.open(encoding="utf-8") as stream:
+            text = stream.read(1_000_001)
+    except (OSError, UnicodeDecodeError):
+        return None
+    return None if "\x00" in text or len(text) > 1_000_000 else text
+
+
 def _source_content(
     root: Path,
     relative_path: str,
@@ -2168,11 +2222,8 @@ def _source_content(
     path = (root / relative_path).resolve()
     if not path.is_relative_to(root) or not path.is_file():
         return set(), set(), set(), None
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return set(), set(), set(), None
-    if "\x00" in text or len(text) > 1_000_000:
+    text = _bounded_source_text(path)
+    if text is None:
         return set(), set(), set(), None
 
     all_identifiers = signals.identifiers | signals.explicit_identifiers
@@ -3404,7 +3455,7 @@ def locate_candidates(
             if path_term_counts[term] <= SPECIFIC_PATH_TERM_MAX_FILES
         }
         import_overlap = {
-            word for word in keywords if any(word in item.lower() for item in file.imports)
+            word for word in keywords if any(word in _terms(item) for item in file.imports)
         }
         exact_path = _path_is_referenced(file.path, signals.paths)
         path_identifier_hits = {

@@ -8,7 +8,9 @@ import pytest
 
 from repo_issue_intelligence.benchmark import (
     REPOSITORY_MAP_CACHE_SCHEMA_VERSION,
+    BenchmarkAggregate,
     BenchmarkCase,
+    BenchmarkCaseResult,
     BenchmarkManifest,
     BenchmarkRun,
     BenchmarkSymbolCandidate,
@@ -45,6 +47,47 @@ def benchmark_issue(updated_at: datetime) -> IssueRecord:
         created_at=updated_at,
         updated_at=updated_at,
     )
+
+
+def test_tracked_filenames_keep_whitespace_and_carriage_returns(tmp_path):
+    names = [" leading.py", "carriage\rname.py", "trailing .py"]
+    for name in names:
+        (tmp_path / name).write_text("value = 1\n")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "add", "--", *names], check=True, capture_output=True
+    )
+    assert set(tracked_repository_files(tmp_path)) == set(names)
+
+
+def test_failed_cases_have_explicit_zero_credit_all_case_metrics():
+    good = BenchmarkCaseResult(
+        case_id="good",
+        tier="main",
+        repository="example/project",
+        issue_number=1,
+        issue_url="",
+        fix_pr_url="",
+        pre_fix_sha="a" * 40,
+        issue_updated_at=datetime(2026, 9, 14, tzinfo=UTC),
+        expected_files=["a.py"],
+        file_recall_at_1=1,
+        file_recall_at_5=1,
+        file_recall_at_10=1,
+        file_recall_at_20=1,
+        candidate_pool_recall=1,
+        reciprocal_rank=1,
+    )
+    failed = good.model_copy(update={"case_id": "failed", "execution_succeeded": False})
+    aggregate = _aggregate([good, failed])
+    assert aggregate.file_recall_at_20 == 1  # Preserve historical completed-case fields.
+    assert aggregate.file_metric_denominator == "completed_cases"
+    assert set(aggregate.all_case_file_metrics.values()) == {0.5}
+    assert aggregate.cases == 2 and aggregate.failed == 1
+    historical = aggregate.model_dump(exclude={"file_metric_denominator", "all_case_file_metrics"})
+    restored = BenchmarkAggregate.model_validate(historical)
+    assert restored.file_metric_denominator is None
+    assert restored.all_case_file_metrics is None
 
 
 def benchmark_case(updated_at: datetime) -> BenchmarkCase:

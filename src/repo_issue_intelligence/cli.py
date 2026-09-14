@@ -1275,12 +1275,19 @@ def benchmark(
             analyzer.close()
     console.print(
         f"{run.variant} benchmark: {run.overall.completed}/{run.overall.cases} completed; "
-        f"Recall@1={run.overall.file_recall_at_1:.4f}, "
+        f"completed-case Recall@1={run.overall.file_recall_at_1:.4f}, "
         f"Recall@5={run.overall.file_recall_at_5:.4f}, "
         f"Recall@10={run.overall.file_recall_at_10:.4f}, "
         f"Recall@20={run.overall.file_recall_at_20:.4f}, "
         f"MRR={run.overall.mean_reciprocal_rank:.4f}"
     )
+    if run.overall.all_case_file_metrics is not None:
+        coverage = run.overall.all_case_file_metrics
+        console.print(
+            f"All-case file metrics (failed cases receive zero credit): "
+            f"Recall@20={coverage['recall_at_20']:.4f}, MRR={coverage['mrr']:.4f}; "
+            f"failed={run.overall.failed}/{run.overall.cases}"
+        )
     cache_hits = sum(
         result.repository_map_cache_hit is True for result in run.results
     )

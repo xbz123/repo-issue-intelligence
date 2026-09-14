@@ -4,13 +4,59 @@ from pydantic import ValidationError
 from repo_issue_intelligence.config import Settings
 
 
+def test_empty_github_token_environment_keeps_requests_unauthenticated(monkeypatch):
+    import httpx
+
+    from repo_issue_intelligence.github_client import GitHubClient
+
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+    settings = Settings(_env_file=None)
+    assert settings.github_token is not None
+    assert settings.github_token.get_secret_value() == ""
+
+    def handler(request):
+        assert "authorization" not in request.headers
+        return httpx.Response(200, json=[])
+
+    client = GitHubClient(
+        settings.github_token, transport=httpx.MockTransport(handler), trust_env=False
+    )
+    try:
+        assert client.fetch_open_issues("example/project") == []
+    finally:
+        client.close()
+
+
+def test_github_token_is_redacted_but_authorization_uses_its_value():
+    import httpx
+
+    from repo_issue_intelligence.github_client import GitHubClient
+
+    settings = Settings(_env_file=None, github_token="synthetic-private-token")
+    assert "synthetic-private-token" not in repr(settings)
+    assert "synthetic-private-token" not in str(settings.model_dump())
+    assert "synthetic-private-token" not in settings.model_dump_json()
+
+    def handler(request):
+        assert request.headers["authorization"] == "Bearer synthetic-private-token"
+        return httpx.Response(200, json=[])
+
+    client = GitHubClient(
+        settings.github_token, transport=httpx.MockTransport(handler), trust_env=False
+    )
+    try:
+        assert client.fetch_open_issues("example/project") == []
+    finally:
+        client.close()
+
+
 def test_settings_loads_github_token_from_dotenv(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".env").write_text("GITHUB_TOKEN=example-token\n", encoding="utf-8")
 
     settings = Settings()
 
-    assert settings.github_token == "example-token"
+    assert settings.github_token.get_secret_value() == "example-token"
 
 
 def test_settings_keeps_opencode_key_secret(tmp_path, monkeypatch) -> None:

@@ -15,6 +15,31 @@ from repo_issue_intelligence.llm_client import OpenAICompatibleIssueAnalyzer
 from repo_issue_intelligence.models import IssueRecord
 from repo_issue_intelligence.run_configuration import RunConfigurationError
 
+
+def test_explicit_uncertain_adapter_error_is_not_recorded_as_failure(tmp_path):
+    from repo_issue_intelligence.llm_client import LLMProviderError
+
+    def handler(request):
+        raise LLMProviderError(
+            "synthetic unknown outcome", category="outcome_uncertain", retryable=True
+        )
+
+    store = new_store(tmp_path / "private")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        run = run_agent_v2(
+            issues(1),
+            repository(tmp_path / "repo"),
+            1,
+            store,
+            llm_analyzer=OpenAICompatibleIssueAnalyzer("test-key", client=client),
+            allow_external_llm=True,
+            max_attempts=2,
+        )
+    (attempt,) = store.list_attempts(run.run_id, 1)
+    assert attempt.state == "unknown"
+    assert attempt.error.category == "outcome_uncertain"
+
+
 NOW = datetime(2026, 9, 8, tzinfo=UTC)
 
 
@@ -58,7 +83,7 @@ def test_disabled_run_keeps_frozen_inputs_and_immediate_deterministic_report(tmp
 
     assert run.status == "AWAITING_REVIEW"
     assert run.inputs.as_of == NOW
-    assert run.configuration.protocol.index_version == "repository-index-v25"
+    assert run.configuration.protocol.index_version == "repository-index-v26"
     assert run.selection.selected_issue_numbers == (1,)
     issue = store.get_issue(run.run_id, 1)
     assert issue.deterministic_state == "succeeded"
