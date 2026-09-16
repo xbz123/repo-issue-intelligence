@@ -4,12 +4,12 @@
 
 共 153 个任务：第一阶段 122，第二阶段 31。F1.1 沿用原编号，归属第一阶段 PR8。状态可用 planned / in_progress / blocked / verified / merged。
 
-## 当前进度（2026-09-15 核对）
+## 当前进度（2026-09-16 核对）
 
-远端 `main` 为 `4b1ab24`（PR75 已合并）。[PR76](https://github.com/xbz123/repo-issue-intelligence/pull/76)
-仍为 Draft；实现提交 `a0c331f` 的本地全量和 Python 3.11/3.12 CI 均为 `1209 passed`，
-独立 failure-path 审查无阻塞。`verified` 表示已有验证证据，不表示已合并或正式发布。
-CI 证据绑定实现提交，不自动覆盖其后的文档提交；最新检查以 PR 为准。
+远端 `main` 为 `3d440c2`：[PR76](https://github.com/xbz123/repo-issue-intelligence/pull/76)
+已合并，最终实现提交 `a8284e6` 的 Python 3.11/3.12 CI 各 `1213 passed`。
+G1 独立分支正在增加发布演练与跨平台证据，见 [G1 验收记录](protocol-v2-release.md)。
+`verified` 表示已有验证证据，不表示已合并或正式发布；历史 CI 不自动覆盖新改动。
 
 | 工作包 | 当前交付状态 | 可定位证据 |
 |---|---|---|
@@ -17,16 +17,18 @@ CI 证据绑定实现提交，不自动覆盖其后的文档提交；最新检�
 | PR6（6.1–6.9） | PR71 已合并，`48e13be` | [API 安全](protocol-v2-api-security.md) |
 | PR7A（7A.1–7A.8） | PR72 已合并，`f73cd7c` | [查询与兼容](protocol-v2-api-query.md) |
 | PR7B review 子集（7B.1–7B.6、7B.8） | PR73 已合并，`f19ee60`；HTTP retry 集成单列下一行 | [审查与并发证据](protocol-v2-review.md) |
-| PR7B HTTP retry（7B.7） | PR76 已验证、未合并 | [HTTP retry 与安全边界](protocol-v2-http-retry.md) |
+| PR7B HTTP retry（7B.7） | PR76 已合并，`3d440c2` | [HTTP retry 与安全边界](protocol-v2-http-retry.md) |
 | PR8（8.1–8.6、F1.1） | PR74 已合并，`76f0bae` | [当前结果目录](../benchmarks/results/current-results.json)、[结果说明](benchmark-results.md) |
 | 审查后加固 | PR75 已合并，`4b1ab24`；不另计 R5 新任务 | [逐项修复与残余限制](review-remediation.md) |
-| G1.1–G1.10 | 尚未完成正式发布验收 | [G1 定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) |
+| G1.1–G1.10 | 验收进行中；默认切换仍待前置门禁 | [G1 验收记录](protocol-v2-release.md) |
 | F1.2–F1.7、F2–F4 | 后续阶段，未启动完整工作包 | [第二阶段定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#f1) |
 | F5、F6 | 按需选做，未自动授权启动 | [F5](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#f5)、[F6](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#f6) |
 
-按任务行统计：第一阶段 104 项 `merged`、8 项 `verified`（G0 七项及 7B.7）、
-10 项 `planned`（G1）；第二阶段 31 项 `planned`。这是交付状态计数，不是质量或工作量完成率。
-下一步是 PR76 审查/合并，再按 G1 完成跨平台、迁移、失败链路、排名回归、规模、
+按任务行统计：第一阶段 105 项 `merged`、7 项 `verified`（G0）、8 项 `in_progress`、
+2 项 `blocked`（G1.4/G1.8）；第二阶段 31 项 `planned`。这是交付状态计数，不是质量或工作量完成率。
+真实仓库对照发现跨 revision 源码链接导致符号选择差异；已记录复现和反事实诊断，
+完整 200-case 回归尚未通过，不能提前默认切换。详见 [G1 阻塞记录](protocol-v2-release.md#g14-blocking-compatibility-finding)。
+下一步按 G1 完成跨平台、迁移、失败链路、排名回归、规模、
 终态会计、安全、默认切换与回退验收。已有局部测试不等于这些完整门禁已通过。
 默认仍为 V1；不因文档更新切换协议、迁移用户库或启动真实模型评测。
 
@@ -215,12 +217,12 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 | 7B.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-4) |
 | 7B.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-5) |
 | 7B.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-6) |
-| 7B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | verified | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-7) |
+| 7B.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-7) |
 | 7B.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#pr7b) | merged | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-7b-8) |
 
 7B.7 HTTP retry/recover-unknown 已在 PR76 实现并通过本地/CI 验证与独立审查，
-仍未合并；详见 [HTTP retry 记录](protocol-v2-http-retry.md)。PR73 已合并的 review
-子集与其历史证据保持不变；整包发布及 G1 不因 7B.7 的 `verified` 状态而完成。
+随后合并为 `3d440c2`；详见 [HTTP retry 记录](protocol-v2-http-retry.md)。PR73 的 review
+子集与其历史证据保持不变；G1 不因 PR7B 合并而自动完成。
 
 ## PR8
 
@@ -238,16 +240,16 @@ Ruff、compileall 和 `git diff --check` 均退出码 0。此前全量 `500 pass
 
 | ID | dependency | status | plan link |
 |---|---|---|---|
-| G1.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-1) |
-| G1.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-2) |
-| G1.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-3) |
-| G1.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-4) |
-| G1.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-5) |
-| G1.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-6) |
-| G1.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-7) |
-| G1.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-8) |
-| G1.9 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-9) |
-| G1.10 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | planned | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-10) |
+| G1.1 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-1) |
+| G1.2 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-2) |
+| G1.3 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-3) |
+| G1.4 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | blocked | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-4) |
+| G1.5 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-5) |
+| G1.6 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-6) |
+| G1.7 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-7) |
+| G1.8 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | blocked | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-8) |
+| G1.9 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-9) |
+| G1.10 | [工作包前置](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#g1) | in_progress | [任务定义](repo_issue_intelligence_protocol_v2_execution_plan_r5.md#task-g1-10) |
 
 ## F1
 

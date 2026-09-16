@@ -23,7 +23,7 @@ from .protocol_v2_models import (
     RepositorySnapshot,
     RepositoryStatusEntry,
 )
-from .run_configuration import _fully_percent_decode
+from .run_configuration import _credential_path_violation, _fully_percent_decode
 
 
 class RepositoryContextError(ValueError):
@@ -515,7 +515,11 @@ def _normalize_remote_url(value: str) -> tuple[str | None, bool]:
         if port is not None and port not in {22, 80, 443}:
             host = f"{host}:{port}"
     host = host.strip().lower().rstrip(".")
+    if "=" in host:
+        return None, True
     path_text = path_text.replace("\\", "/").strip("/")
+    if _credential_path_violation(path_text):
+        return None, True
     if path_text.endswith(".git"):
         path_text = path_text[:-4].rstrip("/")
     if not host or not path_text or any(part in {"", ".", ".."} for part in path_text.split("/")):

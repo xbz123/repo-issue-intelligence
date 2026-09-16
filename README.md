@@ -500,11 +500,11 @@ tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_che
 The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-protocol-v2.md),
 and its executable baseline plus future-gate boundary is recorded in
 [protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md).
-Delivery snapshot checked on 2026-09-15: main at `4b1ab24` includes T0, PR1A–PR5B,
-PR6, PR7A, the PR7B review slice, PR8/F1.1 and PR75 hardening; G0 is a verified
+Delivery snapshot checked on 2026-09-16: main at `3d440c2` includes T0, PR1A–PR5B,
+PR6, PR7A, PR7B review/retry, PR8/F1.1 and PR75 hardening; G0 is a verified
 opt-in CLI beta. [PR76](https://github.com/xbz123/repo-issue-intelligence/pull/76)
-contains verified HTTP retry/recover-unknown integration at `a0c331f` but remains
-draft and unmerged. G1 release acceptance is not complete. The task index records
+has merged. [G1 release rehearsals](docs/protocol-v2-release.md) are in progress;
+default cutover remains gated. The task index records
 merge/validation evidence separately; F1.2–F1.7 and F2–F4 remain later work,
 while F5/F6 are optional demand-driven workstreams.
 The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
