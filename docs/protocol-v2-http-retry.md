@@ -19,6 +19,11 @@ configuration and engine/runtime. Runs originally using incompatible CLI
 overrides require matching server configuration or a new run, not silent
 adoption of the current defaults.
 
+CLI and HTTP share the Settings-to-analyzer constructor in `analyzer_factory.py`.
+The CLI retains option compatibility checks before passing explicit overrides;
+HTTP passes only server Settings. This removes duplicate configuration mapping
+without importing the CLI or widening the HTTP request schema.
+
 Enable only the required operation in `RII_API_OPERATIONS`: `retry` and
 `recover-unknown` are separate permissions, absent from the defaults. Add an
 explicit `RII_API_EXTERNAL_GRANTS` entry matching the server principal,

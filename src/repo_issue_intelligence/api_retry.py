@@ -5,35 +5,10 @@ from fastapi import HTTPException, Request
 from . import agent_queries
 from .agent_resume import retry_issue_llm
 from .agent_store_v2 import AgentStoreV2
+from .analyzer_factory import build_issue_analyzer
 from .api_security import authorize_repository_operation, revalidate_principal
-from .codex_cli import CodexCLIIssueAnalyzer
 from .config import Settings
 from .issue_execution import capture_execution_configuration
-from .llm_client import OpenAICompatibleIssueAnalyzer
-
-
-def _server_analyzer(settings: Settings):
-    # HTTP accepts no analyzer overrides; current server configuration must match the run.
-    if settings.llm_backend == "codex-cli":
-        return CodexCLIIssueAnalyzer(
-            executable=settings.codex_cli_executable,
-            model=settings.codex_cli_model,
-            timeout_seconds=settings.codex_cli_timeout_seconds,
-            reasoning_effort=settings.codex_cli_reasoning_effort,
-        )
-    if not settings.llm_api_key:
-        raise ValueError("Server analyzer unavailable")
-    return OpenAICompatibleIssueAnalyzer(
-        api_key=settings.llm_api_key.get_secret_value(),
-        base_url=settings.llm_api_base_url,
-        model=settings.llm_model,
-        provider=settings.llm_api_provider,
-        max_output_tokens=settings.llm_max_output_tokens,
-        timeout_seconds=settings.llm_timeout_seconds,
-        temperature=settings.llm_temperature,
-        reasoning_effort=settings.llm_reasoning_effort,
-        response_format_json=settings.llm_response_format_json,
-    )
 
 
 def retry_from_http(
@@ -65,7 +40,7 @@ def retry_from_http(
     authorize_attempt()
     if store.get_issue(run_id, issue_number) is None:
         raise HTTPException(404, "Issue not found")
-    analyzer = _server_analyzer(settings)
+    analyzer = build_issue_analyzer(settings)
     try:
         current = capture_execution_configuration(
             analyzer,

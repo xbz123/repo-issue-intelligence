@@ -20,6 +20,7 @@ from .agent_store import AgentStore
 from .agent_store_migrations import MigrationError
 from .agent_store_v2 import AgentStoreV2, StoreError
 from .agent_workflow import run_agent
+from .analyzer_factory import build_issue_analyzer
 from .benchmark import (
     BenchmarkCaseResult,
     BenchmarkTier,
@@ -45,7 +46,7 @@ from .benchmark_discovery import (
     save_curated_expansion,
 )
 from .benchmark_store import BenchmarkStore
-from .codex_cli import CodexCLIIssueAnalyzer, CodexCLIReranker
+from .codex_cli import CodexCLIReranker
 from .config import Settings
 from .duplicates import detect_duplicates
 from .github_client import GitHubClient
@@ -283,19 +284,16 @@ def _build_api_analyzer(
         raise typer.BadParameter(
             "LLM_API_KEY (or legacy OPENCODE_API_KEY) is required for the API backend"
         )
-    return OpenAICompatibleIssueAnalyzer(
-        api_key=settings.llm_api_key.get_secret_value(),
-        base_url=settings.llm_api_base_url if base_url is None else base_url,
-        model=settings.llm_model if model is None else model,
-        provider=settings.llm_api_provider if provider is None else provider,
-        max_output_tokens=(
-            None if omit_max_tokens else settings.llm_max_output_tokens
-        ),
-        timeout_seconds=timeout_seconds or settings.llm_timeout_seconds,
-        temperature=(settings.llm_temperature if temperature is None else temperature),
+    return build_issue_analyzer(
+        settings,
+        backend="api",
+        model=model,
+        base_url=base_url,
+        provider=provider,
+        omit_max_tokens=omit_max_tokens,
+        timeout_seconds=timeout_seconds,
+        temperature=temperature,
         seed=seed,
-        reasoning_effort=settings.llm_reasoning_effort,
-        response_format_json=settings.llm_response_format_json,
     )
 
 
@@ -344,12 +342,12 @@ def _build_issue_analyzer(
     _validate_codex_options(base_url, provider, temperature, seed)
     if omit_max_tokens:
         raise typer.BadParameter("--omit-max-tokens is only valid for the API backend")
-    return CodexCLIIssueAnalyzer(
-        executable=settings.codex_cli_executable,
-        model=settings.codex_cli_model if model is None else model,
-        timeout_seconds=timeout_seconds or settings.codex_cli_timeout_seconds,
-        reasoning_effort=settings.codex_cli_reasoning_effort,
-        service_tier="fast" if fast else None,
+    return build_issue_analyzer(
+        settings,
+        backend="codex-cli",
+        model=model,
+        timeout_seconds=timeout_seconds,
+        fast=fast,
     )
 
 

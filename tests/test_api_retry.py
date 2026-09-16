@@ -9,13 +9,91 @@ from test_agent_store_v2 import new_store
 from test_api_security import AUTH, TOKEN
 from test_issue_execution import NOW, issues, repository, successful_response
 
-from repo_issue_intelligence import agent_resume, api, cli, issue_execution, run_configuration
+from repo_issue_intelligence import (
+    agent_resume,
+    api,
+    api_retry,
+    cli,
+    issue_execution,
+    run_configuration,
+)
 from repo_issue_intelligence.agent_store_v2 import AgentStoreV2
 from repo_issue_intelligence.config import Settings
 from repo_issue_intelligence.issue_execution import run_agent_v2
 from repo_issue_intelligence.protocol_v2_models import EngineRuntime
 
 URL = "/v2/agent/runs/run/issues/1/llm-retry"
+
+
+@pytest.mark.parametrize("backend", ["api", "codex-cli"])
+def test_cli_and_http_analyzer_settings_match(backend):
+    settings = Settings(
+        _env_file=None,
+        llm_backend=backend,
+        llm_api_key="synthetic-key",
+        llm_api_base_url="https://example.invalid/v1",
+        llm_api_provider="synthetic",
+        llm_model="configured-model",
+        llm_temperature=0,
+        llm_max_output_tokens=123,
+        llm_timeout_seconds=17,
+        llm_reasoning_effort="none",
+        llm_response_format_json=False,
+        codex_cli_executable="synthetic-codex",
+        codex_cli_model="configured-codex",
+        codex_cli_timeout_seconds=23,
+        codex_cli_reasoning_effort="high",
+    )
+    http_analyzer = api_retry.build_issue_analyzer(settings)
+    cli_analyzer = cli._build_issue_analyzer(settings)
+    try:
+        assert (
+            http_analyzer.requested_configuration_v2() == cli_analyzer.requested_configuration_v2()
+        )
+        for field in ("base_url", "executable", "model", "timeout_seconds"):
+            assert getattr(http_analyzer, field, None) == getattr(cli_analyzer, field, None)
+        if backend == "api":
+            assert http_analyzer.model == "configured-model"
+            assert http_analyzer.temperature == 0
+            assert http_analyzer.max_output_tokens == 123
+            assert http_analyzer.response_format_json is False
+        else:
+            assert http_analyzer.model == "configured-codex"
+            assert http_analyzer.executable == "synthetic-codex"
+            assert http_analyzer.timeout_seconds == 23
+    finally:
+        http_analyzer.close()
+        cli_analyzer.close()
+
+
+@pytest.mark.parametrize("backend", ["api", "codex-cli"])
+def test_cli_analyzer_overrides_stay_local_to_cli(backend):
+    settings = Settings(_env_file=None, llm_backend=backend, llm_api_key="synthetic-key")
+    options = (
+        {
+            "base_url": "https://example.invalid/v1",
+            "provider": "synthetic",
+            "temperature": 0,
+            "seed": 0,
+            "omit_max_tokens": True,
+        }
+        if backend == "api"
+        else {"fast": True}
+    )
+    analyzer = cli._build_issue_analyzer(
+        settings, model="override-model", timeout_seconds=19, **options
+    )
+    try:
+        assert analyzer.model == "override-model" and analyzer.timeout_seconds == 19
+        if backend == "api":
+            assert analyzer.base_url == "https://example.invalid/v1/"
+            assert analyzer.provider == "synthetic"
+            assert analyzer.temperature == analyzer.seed == 0
+            assert analyzer.max_output_tokens is None
+        else:
+            assert analyzer.service_tier == "fast"
+    finally:
+        analyzer.close()
 
 
 def setup_retry(tmp_path, monkeypatch, *, unknown=False):
