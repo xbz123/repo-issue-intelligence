@@ -37,11 +37,22 @@ def _needs_work_slot(scope) -> bool:
         return False
     path = get_route_path(scope).rstrip("/")
     segments = path.split("/")
-    return path in {"/v1/repository/index", "/v1/agent/runs"} or (
-        len(segments) == 6
-        and segments[:4] == ["", "v1", "agent", "runs"]
-        and bool(segments[4])
-        and segments[5] == "review"
+    return (
+        path in {"/v1/repository/index", "/v1/agent/runs"}
+        or (
+            len(segments) == 8
+            and segments[:4] == ["", "v2", "agent", "runs"]
+            and bool(segments[4])
+            and segments[5] == "issues"
+            and bool(segments[6])
+            and segments[7] == "llm-retry"
+        )
+        or (
+            len(segments) == 6
+            and segments[:4] == ["", "v1", "agent", "runs"]
+            and bool(segments[4])
+            and segments[5] == "review"
+        )
     )
 
 
@@ -224,6 +235,23 @@ def require_principal(request: Request) -> LocalPrincipal | None:
     principal = getattr(request.state, "principal", None)
     if not isinstance(principal, LocalPrincipal):
         raise HTTPException(401, "Authentication required", headers={"WWW-Authenticate": "Bearer"})
+    return principal
+
+
+def revalidate_principal(request: Request) -> LocalPrincipal:
+    """Recheck the original bearer credential immediately before external dispatch."""
+    settings = Settings()
+    token = _configured_token(settings)
+    authorization = request.headers.getlist("authorization")
+    if (
+        not token
+        or len(authorization) != 1
+        or not compare_digest(authorization[0].encode("utf-8"), f"Bearer {token}".encode())
+    ):
+        raise HTTPException(401, "Authentication required")
+    principal = require_principal(request)
+    if principal is None or principal.name != settings.api_principal:
+        raise HTTPException(403, "Principal no longer permitted")
     return principal
 
 

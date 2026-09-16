@@ -25,6 +25,10 @@ AUTH = {"Authorization": f"Bearer {TOKEN}"}
         ("POST", "/v1/issues/score", "", False),
         ("POST", "/v1/issues/rank", "", False),
         ("GET", "/v1/agent/runs/abc/review", "", False),
+        ("POST", "/v2/agent/runs/abc/issues/1/llm-retry", "", True),
+        ("POST", "/service/v2/agent/runs/abc/issues/1/llm-retry/", "/service", True),
+        ("GET", "/v2/agent/runs/abc/issues/1/llm-retry", "", False),
+        ("POST", "/v2/agent/runs/abc/issues/1/llm-retry/extra", "", False),
     ],
 )
 def test_work_slot_covers_only_state_writing_routes(method, path, root_path, expected):

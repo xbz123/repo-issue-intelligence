@@ -3,8 +3,9 @@
 Scope: R5 6.1–6.9, based on PR70 merged as `bf17ac6`. G0 and PR1A are already
 available. This is a deliberate security change to the existing V1 HTTP API,
 not a default V2 switch. PR7A now adds [V2 query/evidence reads](protocol-v2-api-query.md);
-review/retry HTTP writes remain PR7B work.
-The authorization service is available for their later integration; it does not
+PR7B adds [review writes](protocol-v2-review.md) and
+[explicit HTTP retry/recovery](protocol-v2-http-retry.md).
+The authorization service is reused by those integrations; it does not itself
 send a provider request or replace the CLI's current external-transfer consent.
 
 ## Supported deployment and identity
@@ -31,7 +32,7 @@ potential credentials.
 `RII_API_PRINCIPAL` is a server-derived logical identity for the shared token.
 It is not proof of distinct people. The token is never stored as a principal or
 passed to run/attempt services. The existing V1 review representation remains V1;
-per-Issue principal-bound review records are not claimed before PR7B.
+per-Issue principal-bound review records are implemented by PR7B.
 
 ## Configuration
 
@@ -50,8 +51,9 @@ Use a protected environment or a private `.env` file; do not commit credentials.
 Configuration is read on each request/authorization check. A private `.env`
 change is visible to subsequent checks; changes to a shell's environment require
 restarting the server. Revoking roots, operations or transfer grants denies
-subsequent operations. PR7B must authenticate and authorize again immediately
-before retry/recovery dispatch; this PR tests decisions, not that future endpoint.
+subsequent operations. PR7B authenticates and authorizes again immediately
+before retry/recovery dispatch; its endpoint tests are recorded separately
+from the original PR6 decision tests below.
 
 Hosts must identify loopback. A supplied Origin must be the exact request origin
 or an explicitly allowed loopback origin. Duplicate Host/Authorization/Origin

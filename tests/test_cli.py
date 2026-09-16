@@ -587,7 +587,7 @@ def test_agent_run_llm_uses_injected_analyzer(tmp_path: Path, monkeypatch) -> No
 
     monkeypatch.setenv("OPENCODE_API_KEY", "test-key")
     monkeypatch.setattr(
-        "repo_issue_intelligence.cli.OpenAICompatibleIssueAnalyzer",
+        "repo_issue_intelligence.analyzer_factory.OpenAICompatibleIssueAnalyzer",
         FakeAnalyzer,
     )
     output = tmp_path / "agent-run-llm.json"
