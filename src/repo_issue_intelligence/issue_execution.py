@@ -176,6 +176,7 @@ def analyze_sealed_issue(
     llm_analyzer: IssueAnalyzerV2,
     *,
     before_provider_case: Callable[[], None] | None = None,
+    before_provider_attempt: Callable[[], None] | None = None,
     retry: bool = False,
     recover_unknown: bool = False,
 ) -> IssueExecutionV2:
@@ -191,6 +192,8 @@ def analyze_sealed_issue(
     policy = run.configuration.budgets.retry_policy
     with ExitStack() as lifetimes:
         for ordinal in range(policy["max_attempts"]):
+            if before_provider_attempt is not None:
+                before_provider_attempt()
             request = _assert_current_configuration(run, llm_analyzer)
             if ordinal == 0 and before_provider_case is not None:
                 before_provider_case()
@@ -209,6 +212,8 @@ def analyze_sealed_issue(
             )
             started = perf_counter()
             try:
+                if before_provider_attempt is not None:
+                    before_provider_attempt()
                 response = llm_analyzer.analyze_v2(issue, report, input_ids, lookup)
                 if response.prompt_version != run.configuration.protocol.prompt_version:
                     raise RunConfigurationError(

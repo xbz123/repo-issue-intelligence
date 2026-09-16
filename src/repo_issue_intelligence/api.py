@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.responses import JSONResponse
 
-from . import agent_queries
+from . import agent_queries, api_retry
 from .agent_store import AgentStore
 from .agent_store_v2 import AgentStoreV2, StoreConflict, StoreError
 from .agent_workflow import run_agent
@@ -90,7 +90,7 @@ class V2ReviewRequest(BaseModel):
 class V2RetryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    recover_unknown: bool = False
+    recover_unknown: bool = Field(default=False, strict=True)
 
 
 def get_agent_store() -> AgentStore:
@@ -241,6 +241,28 @@ def v2_review(
         raise HTTPException(409, "Review conflicts with current state") from error
     except StoreError as error:
         raise HTTPException(400, "Review request refused") from error
+
+
+@app.post(
+    "/v2/agent/runs/{run_id}/issues/{issue_number}/llm-retry",
+    response_model=agent_queries.QueryResponseModel,
+)
+def v2_retry(
+    run_id: str,
+    issue_number: int,
+    payload: V2RetryRequest,
+    request: Request,
+    store: V2Store,
+    principal: Principal,
+) -> QueryResponse:
+    try:
+        return api_retry.retry_from_http(
+            request, store, run_id, issue_number, recover_unknown=payload.recover_unknown
+        )
+    except StoreConflict as error:
+        raise HTTPException(409, "Retry conflicts with current state") from error
+    except ValueError as error:
+        raise HTTPException(409, "Retry configuration refused") from error
 
 
 @app.exception_handler(RequestValidationError)

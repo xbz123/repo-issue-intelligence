@@ -75,7 +75,7 @@ writer may execute against a database. See [PR4 CLI usage and G0 boundaries](doc
 V2 resume/retry and trusted-local HTTP authorization are available. PR7A adds
 read-only query/evidence APIs and explicit CLI queries; see
 [query and compatibility boundaries](docs/protocol-v2-api-query.md). Per-Issue
-review HTTP writes are available; HTTP retry/recover-unknown remains unfinished PR7B work.
+review and [explicit HTTP retry/recover-unknown](docs/protocol-v2-http-retry.md) writes are available.
 The default protocol remains V1.
 
 Run the included offline demo:
@@ -494,15 +494,19 @@ src/repo_issue_intelligence/
 See `docs/architecture.md` for system boundaries and
 `docs/benchmark-expansion.md` for candidate acceptance and expansion protocol.
 
-The current proposed Protocol v2 design is the
+The frozen Protocol v2 implementation plan is the
 [R5 execution plan](docs/repo_issue_intelligence_protocol_v2_execution_plan_r5.md), with progress
 tracked in the [R5 task index](docs/repo_issue_intelligence_protocol_v2_task_checklist_r5.md).
 The T0 contract is recorded in the [investigation RFC](docs/rfcs/investigation-protocol-v2.md),
 and its executable baseline plus future-gate boundary is recorded in
-[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md). T0, PR1A, PR1B and PR2A
-have merged; PR2B and PR3 merged through PR64 and PR65. This branch integrates
-their code for [PR4/G0](docs/protocol-v2-execution.md), including the base repairs from PR67;
-the open PRs are not a G1 release or a default-protocol switch.
+[protocol-v2-acceptance.md](docs/protocol-v2-acceptance.md).
+Delivery snapshot checked on 2026-09-15: main at `4b1ab24` includes T0, PR1A–PR5B,
+PR6, PR7A, the PR7B review slice, PR8/F1.1 and PR75 hardening; G0 is a verified
+opt-in CLI beta. [PR76](https://github.com/xbz123/repo-issue-intelligence/pull/76)
+contains verified HTTP retry/recover-unknown integration at `a0c331f` but remains
+draft and unmerged. G1 release acceptance is not complete. The task index records
+merge/validation evidence separately; F1.2–F1.7 and F2–F4 remain later work,
+while F5/F6 are optional demand-driven workstreams.
 The default path remains V1 until G1. The [R5 feasibility review](docs/repo_issue_intelligence_protocol_v2_r5_review.md)
 records the documentation checks and implementation boundaries.
 
