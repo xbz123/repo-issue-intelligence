@@ -57,6 +57,11 @@ _SECRET_NAME = re.compile(
     r"(?:$|[_=:-])",
     re.I,
 )
+_CREDENTIAL_PATH_ASSIGNMENT = re.compile(
+    r"(?:^|[/;,&:\\])[\w.-]*(?:api[_-]?key|private[_-]?key|access[_-]?token|"
+    r"auth(?:orization)?|password|secret|token)\s*:",
+    re.I,
+)
 _SAFE_PARAMETER_NAMES = frozenset(
     {
         "reasoning_effort",
@@ -187,6 +192,16 @@ def _fully_percent_decode(value: str) -> str | None:
     return current if unquote(current) == current else None
 
 
+def _credential_path_violation(path: str) -> bool:
+    """Reject assignment-style paths, not arbitrary opaque route names."""
+    decoded = _fully_percent_decode(path)
+    return (
+        decoded is None
+        or "=" in decoded
+        or _CREDENTIAL_PATH_ASSIGNMENT.search(decoded) is not None
+    )
+
+
 def _url_security_violation(value: str) -> str | None:
     """Return a generic URL safety violation without exposing URL contents."""
 
@@ -204,6 +219,8 @@ def _url_security_violation(value: str) -> str | None:
         return "encoded"
     if username is not None or password is not None or "@" in decoded_netloc:
         return "userinfo"
+    if "=" in decoded_netloc:
+        return "credential_authority"
 
     # ``urlsplit`` treats ``user:password@example.com/repo`` as a custom
     # scheme named ``user`` rather than as an authority.  It is still a
@@ -233,6 +250,8 @@ def _url_security_violation(value: str) -> str | None:
         return "encoded"
     if "?" in decoded_path or "#" in decoded_path:
         return "query"
+    if _credential_path_violation(decoded_path):
+        return "credential_path"
     return None
 
 
@@ -357,7 +376,7 @@ def _validated_parameter(name: str, value: Any) -> Any:
 
 
 def normalize_endpoint(endpoint: str | None) -> str | None:
-    """Normalize an API endpoint while rejecting userinfo/query/fragment."""
+    """Normalize an API endpoint while rejecting credential-bearing URL components."""
 
     if endpoint is None:
         return None
@@ -369,6 +388,10 @@ def normalize_endpoint(endpoint: str | None) -> str | None:
         raise RunConfigurationError("Endpoint userinfo is not permitted", code="endpoint_userinfo")
     if violation == "invalid":
         raise RunConfigurationError("Endpoint must be a valid URL", code="invalid_endpoint")
+    if violation in {"credential_path", "credential_authority"}:
+        raise RunConfigurationError(
+            "Endpoint credential assignments are not permitted", code="endpoint_credentials"
+        )
     if violation in {"encoded", "query"}:
         raise RunConfigurationError(
             "Endpoint query/fragment is not permitted", code="endpoint_query"

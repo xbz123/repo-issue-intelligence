@@ -224,6 +224,14 @@ def test_capture_explicit_remote_precedes_ambiguous_configured_remotes(tmp_path:
         "ssh://example.com/org/repo%253Ftoken%253DsyntheticSecret.git",
         "https://example.com/org/repo%2523token%253DsyntheticSecret.git",
         "https://example%253Ftoken%253DsyntheticSecret/org/repo.git",
+        "https://example.com/api_key=syntheticSecret/org/repo.git",
+        "ssh://example.com/org/repo;token=syntheticSecret.git",
+        "git@example.com:api%255Fkey%253DsyntheticSecret/org/repo.git",
+        "https://example.com/client_secret=syntheticSecret/org/repo.git",
+        "git@example.com:org/private_key=syntheticSecret/repo.git",
+        "https://api_key=syntheticSecret.example.com/org/repo.git",
+        "ssh://api_key%253DsyntheticSecret.example.com/org/repo.git",
+        "git@api_key=syntheticSecret.example.com:org/repo.git",
     ],
 )
 def test_remote_query_or_encoded_query_is_not_retained(

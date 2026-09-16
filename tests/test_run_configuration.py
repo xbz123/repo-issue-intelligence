@@ -21,6 +21,53 @@ from repo_issue_intelligence.scoring import score_issue
 FIXED_TIME = datetime(2026, 9, 5, 12, 0, tzinfo=UTC)
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/v1/api_key=syntheticSecret",
+        "/v1/access-token=syntheticSecret",
+        "/v1/api%255Fkey%253DsyntheticSecret",
+        "/v1;password=syntheticSecret",
+        "/v1/client_secret=syntheticSecret",
+        "/v1/refresh_token=syntheticSecret",
+        "/v1/private_key=syntheticSecret",
+        "/v1/foo:token=syntheticSecret",
+        "/v1/client_secret:syntheticSecret",
+        "/v1/ordinary_name=syntheticValue",
+    ],
+)
+def test_credential_assignment_in_endpoint_path_is_rejected_before_capture(path):
+    endpoint = "https://example.invalid" + path
+    with pytest.raises(RunConfigurationError) as caught:
+        normalize_endpoint(endpoint)
+    assert "syntheticSecret" not in str(caught.value)
+    with pytest.raises(RunConfigurationError):
+        capture_requested_run_configuration(client={"endpoint": endpoint})
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/v1/tokenize", "/v1/password-reset", "/models/secret-sauce", "/v1%2Fchat", "/model:predict"],
+)
+def test_noncredential_route_names_remain_supported(path):
+    endpoint = "https://example.invalid" + path
+    assert normalize_endpoint(endpoint) == endpoint
+
+
+@pytest.mark.parametrize(
+    "authority",
+    [
+        "api_key=syntheticSecret.example.invalid",
+        "api_key%3DsyntheticSecret.example.invalid",
+        "client_secret%253DsyntheticSecret.example.invalid",
+    ],
+)
+def test_endpoint_authority_assignment_is_not_retained(authority):
+    with pytest.raises(RunConfigurationError) as caught:
+        capture_requested_run_configuration(client={"endpoint": f"https://{authority}/v1"})
+    assert "syntheticSecret" not in str(caught.value)
+
+
 def _issue(number: int, *, updated_at: datetime = FIXED_TIME) -> IssueRecord:
     return IssueRecord(
         number=number,
@@ -199,9 +246,7 @@ def test_configuration_rejects_credentials_and_unsafe_endpoint() -> None:
 
     with pytest.raises(RunConfigurationError) as error:
         capture_requested_run_configuration(
-            safe_cli_flags=(
-                "--base-url=https://u:syntheticSecret@example.com/v1",
-            ),
+            safe_cli_flags=("--base-url=https://u:syntheticSecret@example.com/v1",),
             captured_at=FIXED_TIME,
         )
     assert error.value.code == "secret_cli_flag"

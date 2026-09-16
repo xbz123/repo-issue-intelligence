@@ -69,6 +69,13 @@ do not isolate data from the local filesystem administrator.
 
 ## Evidence and diagnostics
 
+Endpoint URLs reject userinfo, query/fragment, any `=` authority/path assignment and
+credential-named colon assignments (also when percent encoded). Such Git remote
+identities are not retained. Assignment-style routes are deliberately unsupported,
+even when their values are not secrets. Credentials belong in secret settings, never URLs. Opaque
+host/route names cannot be universally classified as credentials; this guard does not
+scrub historical database rows or guarantee detection of arbitrary secret text.
+
 Sealed evidence retains exact content, ordered IDs and collection/truncation
 metadata. The explicit V2 collector uses a fixed repository view and whole-line
 truncation; the client-facing evidence lookup returns the stored snippets without

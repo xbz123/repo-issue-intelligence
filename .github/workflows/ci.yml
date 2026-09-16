@@ -27,4 +27,29 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
       - name: Pytest
-        run: uv run pytest -q
+        run: uv run pytest -q --junitxml=test-results.xml -o junit_family=xunit1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-${{ matrix.python-version }}-test-results
+          path: test-results.xml
+
+  macos-git-smoke:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev --python 3.12
+      - name: Git, symlink, migration and release smoke
+        run: >-
+          uv run pytest -q tests/test_repository_context.py tests/test_repository_view.py
+          tests/test_agent_database.py tests/test_protocol_v2_e2e.py
+          --junitxml=macos-results.xml -o junit_family=xunit1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-git-smoke-results
+          path: macos-results.xml
